@@ -21,7 +21,7 @@
 #include <set>
 #include <list>
 #include "../util/stackLog.h"
-#include "SQLStringUtil.h"
+#include "sqlStringUtil.h"
 #include "sqlParser.h"
 #include "../util/json.h"
 #ifdef OS_WIN
