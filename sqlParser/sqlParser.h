@@ -10,8 +10,6 @@
 #include <string>
 #include <map>
 #include "sqlParserHandle.h"
-//todo
-#define OS_WIN 1
 #ifdef  OS_WIN
 #include <wtypes.h>
 #endif //  OS_WIN
@@ -25,10 +23,10 @@ class sqlParser
 private:
     std::map<uint32_t, SQLWord *> m_parseTree;
     std::map<uint32_t, SQLWord *> m_parseTreeHead;
-#ifdef OS_LINUX
-    void * m_funcsHandle;
-#else ifdef OS_WIN
+#ifdef OS_WIN
 	HINSTANCE m_funcsHandle;
+#else
+    void * m_funcsHandle;
 #endif
     SQLWord* loadSQlWordFromJson(jsonValue *json);
 	void (*m_initUserDataFunc)(handle *h);

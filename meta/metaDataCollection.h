@@ -21,7 +21,6 @@ namespace SQL_PARSER
 class sqlParser;
 struct handle;
 };
-typedef std::unordered_map<const char *,const  charsetInfo*,StrHash,StrCompare> CharsetTree ;
 namespace META {
 	struct tableMeta;
 	struct columnMeta;
@@ -38,7 +37,7 @@ namespace META {
 	};
 	struct tableIDComparator
 	{
-		int operator()(const tableMetaWrap *& a, const tableMetaWrap *& b) const
+		int operator()( META::tableMetaWrap* const&a, META::tableMetaWrap* const& b) const
 		{
 			if (a->tableID < b->tableID)
 				return -1;
@@ -52,7 +51,6 @@ namespace META {
 	{
 	private:
 		trieTree m_dbs;
-		CharsetTree m_charsetSizeList;
 		const charsetInfo * m_defaultCharset;
 		leveldb::Arena m_arena;
 		tableIDComparator m_cmp;
@@ -68,7 +66,7 @@ namespace META {
 		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint);
 
 		tableMeta * getTableMetaFromRemote(uint64_t tableID);
-		tableMeta * getTableMetaFromRemote(const char * tableName, uint64_t offset);
+		tableMeta * getTableMetaFromRemote(const char * databaseName,const char * tableName, uint64_t offset);
 
 		int put(const char * database, uint64_t offset, dbInfo *db);
 		int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);

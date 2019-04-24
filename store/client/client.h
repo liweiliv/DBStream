@@ -1,22 +1,44 @@
 #pragma once
-#include "stream.h"
+#include <string>
+#include <stdint.h>
 namespace STORE {
-	class window :public DBStream {
+	class client {
 	public:
-		enum windowType {
-			W_TUMBLING,
-			W_SLIDING,
-			W_SESSION
+		enum CLIENT_STATUS{
+			IDLE,
+			DISCONNECTED,
+
 		};
-	protected:
-		DBStream * m_sourceStream;
-		windowType m_type;
-	};
-	class countWindow :public window {
 	private:
-		uint32_t m_count;
-	};
-	class timeWindow :public window {
-		uint32_t m_milSeconds;
+		CLIENT_STATUS m_status;
+		std::string m_host;
+		uint16_t m_port;
+		std::string m_user;
+		std::string m_passWord;
+	public:
+		CLIENT_STATUS getStatus()
+		{
+			return m_status;
+		}
+		int connect()
+		{
+
+		}
+		const char * askTableMeta(const char * database,const char * table,uint64_t offset)
+		{
+
+		}
+		const char * askTableMeta(uint64_t tableID)
+		{
+
+		}
+		const char * askDatabaseMeta(const char * database,uint64_t offset)
+		{
+
+		}
+		const char * askDatabaseMeta(uint64_t databaseID)
+		{
+
+		}
 	};
 }

@@ -1,4 +1,3 @@
-#pragma once
 #include "metaData.h"
 #include "../message/record.h"
 namespace META {
@@ -15,7 +14,7 @@ namespace META {
 		{
 			m_columns[i].m_columnIndex = i;
 			m_columns[i].m_columnName = msg->columnName(i);
-			if (msg->columns[i].charsetID < charsetCount)
+			if (msg->columns[i].charsetID < MAX_CHARSET)
 				m_columns[i].m_charset = &charsets[msg->columns[i].charsetID];
 			else
 				m_columns[i].m_charset = nullptr;
@@ -236,7 +235,7 @@ namespace META {
 			return -1;
 		return dropColumn(d->m_columnIndex);
 	}
-	int tableMeta::addColumn(const columnMeta* column, const char * addAfter = NULL)
+	int tableMeta::addColumn(const columnMeta* column, const char * addAfter)
 	{
 		if (getColumn(column->m_columnName.c_str()) != NULL)
 			return -1;
