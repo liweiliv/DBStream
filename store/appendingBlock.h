@@ -31,16 +31,16 @@ class appendingBlock: public block
 public:
     enum appendingBlockStaus
     {
-        OK, FULL, ILLEGAL, FAULT
+        B_OK, B_FULL, B_ILLEGAL, B_FAULT
     };
 private:
 	struct tableData
 	{
+		uint64_t blockID;
 		META::tableMeta * meta;
 		appendingIndex * primaryKey;
 		appendingIndex ** uniqueKeys;
-		linkList<uint32_t> recordIDs;
-		tableData(META::tableMeta * meta = nullptr, leveldb::Arena *arena = nullptr):meta(meta),primaryKey(nullptr), uniqueKeys(nullptr), recordIDs(arena)
+		tableData(uint64_t blockID,META::tableMeta * meta = nullptr, leveldb::Arena *arena = nullptr):blockID(blockID),meta(meta),primaryKey(nullptr), uniqueKeys(nullptr)
 		{
 			if (meta != nullptr)
 			{
@@ -64,9 +64,10 @@ private:
 				return 0;
 		}
 	};
+
     std::atomic<uint32_t> m_ref;
     char * m_buf;
-    recordID * m_recordIDs;
+    uint32_t * m_recordIDs;
     uint64_t m_startID;
     uint64_t m_endID;
     uint32_t m_bufSize;
@@ -78,6 +79,7 @@ private:
 	leveldb::Arena m_arena;
 	tableData m_defaultData;
 	leveldb::SkipList<tableData*, tableData> m_tables;
+	std::map<uint64_t,tableData*> m_tableDatas;
     fileHandle m_fd;
     fileHandle m_redoFd;
 
@@ -90,7 +92,7 @@ private:
 public:
     appendingBlock(uint32_t flag, const char * logDir, const char * logPrefix,
             uint32_t bufSize,int32_t redoFlushDataSize,int32_t redoFlushPeriod,uint64_t startID) :
-                m_startID(startID),m_fd(0),m_endID(startID),m_bufSize(bufSize), m_status(OK), m_defaultData(nullptr,&m_arena),m_tables(m_defaultData,&m_arena),
+                m_startID(startID),m_fd(0),m_endID(startID),m_bufSize(bufSize), m_status(B_OK), m_defaultData(m_blockID,nullptr,&m_arena),m_tables(m_defaultData,&m_arena),
 		m_redoFd(0),m_redoUnflushDataSize(0),m_redoFlushDataSize(redoFlushDataSize),
             m_redoFlushPeriod(redoFlushPeriod), m_lastFLushTime(0)
     {
@@ -98,7 +100,7 @@ public:
         sprintf(fileName, "%s/%s.%lu", logDir, logPrefix, m_blockID);
         m_path.assign(fileName);
         m_buf = (char*) malloc(bufSize);
-        m_recordIDs = (recordID*)m_arena.Allocate(sizeof(recordID)*1024*128);
+        m_recordIDs = (uint32_t*)m_arena.Allocate(sizeof(uint32_t)*1024*128);
     }
     int openRedoFile()
     {
@@ -134,14 +136,14 @@ public:
 	inline uint64_t findRecordIDByOffset(uint64_t offset)
 	{
 		uint64_t endID = m_endID;
-		if(m_startID==0|| ((DATABASE_INCREASE::recordHead*)( m_buf+m_recordIDs[0].pos))->logOffset<offset|| ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[endID - m_startID].pos))->logOffset>offset)
+		if(m_startID==0|| ((DATABASE_INCREASE::recordHead*)( m_buf+m_recordIDs[0]))->logOffset<offset|| ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[endID - m_startID]))->logOffset>offset)
 			return 0;
 		int s = 0, e = endID - m_startID,m;
 		uint64_t midOffset;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
-			midOffset = ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[m].pos))->logOffset;
+			midOffset = ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[m]))->logOffset;
 			if (midOffset > offset)
 				e = m - 1;
 			else if (midOffset < offset)
@@ -149,7 +151,7 @@ public:
 			else
 				return m_startID + m;
 		}
-		if (s >= 0 && s<endID - m_startID && ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[s].pos))->logOffset > offset)
+		if (s >= 0 && s<endID - m_startID && ((DATABASE_INCREASE::recordHead*)(m_buf + m_recordIDs[s]))->logOffset > offset)
 			return m_startID + s;
 		else
 			return 0;
@@ -207,7 +209,7 @@ public:
                 }
                 break;
             }
-            if(append(DATABASE_INCREASE::createRecord((const char*)head,mc))!=OK)
+            if(append(DATABASE_INCREASE::createRecord((const char*)head,mc))!=B_OK)
             {
                 LOG(ERROR)<<"recoveryFromRedo from  file :"<<m_path<<".redo failed for append data failed";
                 free(buf);
@@ -224,7 +226,7 @@ public:
     appendingBlockStaus writeRedo(const char * data)
     {
         if (m_redoFd < 0&&0!=openRedoFile())
-            return FAULT;
+            return B_FAULT;
         DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
         int writeSize;
         if(head->size!=(writeSize=writeFile(m_redoFd,data,head->size)))
@@ -233,13 +235,13 @@ public:
             {
                 LOG(WARNING)<<"write redo file:"<<m_path<<".redo failed for "<<strerror(errno)<<" reopen it";
                 if (0!=openRedoFile())
-                    return FAULT;
+                    return B_FAULT;
                 return writeRedo(data);
             }
             else
             {
                 LOG(ERROR)<<"write redo file :"<<m_path<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
-                return FAULT;
+                return B_FAULT;
             }
         }
 		clock_t now;
@@ -253,13 +255,13 @@ public:
             if(0!=fsync(m_redoFd))
             {
                 LOG(ERROR)<<"fsync redo file :"<<m_path<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
-                return FAULT;
+                return B_FAULT;
             }
             m_redoUnflushDataSize = 0;
             m_lastFLushTime = clock();
-            return OK;
+            return B_OK;
         }
-        return OK;
+        return B_OK;
     }
 
 
@@ -274,16 +276,16 @@ public:
                 if(nullptr == m_buf)
                 {
                     LOG(ERROR)<<"alloc "<<m_bufSize<<" byte memory failed";
-                    return FAULT;
+                    return B_FAULT;
                 }
 			}
 			else
-				return FULL;
+				return B_FULL;
 		}
 		if (m_flag&BLOCK_FLAG_HAS_REDO)
 		{
 			appendingBlockStaus rtv;
-			if (OK != (rtv = writeRedo(record->data)))
+			if (B_OK != (rtv = writeRedo(record->data)))
 			{
 				LOG(ERROR) << "write redo log failed";
 				return rtv;
@@ -293,21 +295,20 @@ public:
 		memcpy(m_buf + m_offset.load(std::memory_order_relaxed), record->data,
 			record->head->size);
 		m_offset.fetch_add(record->head->size, std::memory_order_relaxed);
-		m_recordIDs[m_endID - m_startID].id = m_endID;
-		m_recordIDs[m_endID - m_startID].pos = m_offset.load(std::memory_order_relaxed);
+		m_recordIDs[m_endID - m_startID] = m_offset.load(std::memory_order_relaxed);
 
 		if (record->head->type <= DATABASE_INCREASE::R_REPLACE) //build index
 		{
 			META::tableMeta * meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
 			tableData * table = nullptr;
-			if (meta->userData == nullptr)
+			if (meta->userData == nullptr||m_blockID!=static_cast<tableData*>(meta->userData)->blockID)
 			{
-				table = new tableData(meta, &m_arena);
+				table = new tableData(m_blockID,meta, &m_arena);
 				meta->userData = table;
+				m_tableDatas.insert(std::pair<uint64_t,tableData*>(meta->m_id,table));
 			}
 			else
 				table = static_cast<tableData*>(meta->userData);
-			table->recordIDs.put(m_endID);
 			if (table->primaryKey)
 				table->primaryKey->append((const DATABASE_INCREASE::DMLRecord*)record, m_endID - m_startID);
 			for (int i = 0; i < meta->m_uniqueKeysCount; i++)
@@ -315,13 +316,16 @@ public:
 		}
 		else
 		{
-			m_defaultData.recordIDs.put(m_endID);
 			if (record->head->type == DATABASE_INCREASE::R_COMMIT || record->head->type == DATABASE_INCREASE::R_DDL)
 				m_committedRecordID.store(m_endID, std::memory_order_acq_rel);
 		}
 		barrier;
 		m_endID++;
-		return OK;
+		return B_OK;
+	}
+	const char * toSolidBlock()
+	{
+
 	}
 	int flush()
 	{
