@@ -202,19 +202,19 @@ private:
         appendingBlock::appendingBlockStaus status = m_current->append(r);
         switch (status)
         {
-        case appendingBlock::OK:
+        case appendingBlock::B_OK:
             return 0;
-        case appendingBlock::FULL:
+        case appendingBlock::B_FULL:
             m_current->m_flag |= BLOCK_FLAG_FINISHED;
             if(!createNewBlock())
                 return -1;
             return insert(r);
-        case appendingBlock::FAULT:
+        case appendingBlock::B_FAULT:
             LOG(ERROR)<<"Fatal Error: insert record to current  block failed;"<<"record id :"<<
             r->head->recordID<<",record offset:"<<r->head->logOffset<<
             "record LogID:"<<r->head->logID;
             return -1;
-        case appendingBlock::ILLEGAL:
+        case appendingBlock::B_ILLEGAL:
             LOG(ERROR)<<"Fatal Error: insert record to current  block failed,record is illegal;"<<"record id :"<<
             r->head->recordID<<",record offset:"<<r->head->logOffset<<
             "record LogID:"<<r->head->logID;
