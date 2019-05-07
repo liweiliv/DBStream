@@ -11,7 +11,6 @@
 #include <string>
 #include "../util/trieTree.h"
 #include "../util/unorderMapUtil.h"
-#include "../util/skiplist.h"
 struct charsetInfo;
 namespace STORE{
 class client;
@@ -30,31 +29,12 @@ namespace META {
 	class newTableInfo;
 	struct Table;
 	struct databaseInfo;
-	struct tableMetaWrap
-	{
-		uint64_t tableID;
-		tableMeta * meta;
-	};
-	struct tableIDComparator
-	{
-		int operator()( META::tableMetaWrap* const&a, META::tableMetaWrap* const& b) const
-		{
-			if (a->tableID < b->tableID)
-				return -1;
-			else if (a->tableID > b->tableID)
-				return +1;
-			else
-				return 0;
-		}
-	};
 	class metaDataCollection
 	{
 	private:
 		trieTree m_dbs;
 		const charsetInfo * m_defaultCharset;
-		leveldb::Arena m_arena;
-		tableIDComparator m_cmp;
-		leveldb::SkipList<tableMetaWrap*, tableIDComparator> m_allTables;
+		tableIdTree m_allTables;
 		SQL_PARSER::sqlParser * m_SqlParser;
 		STORE::client * m_client;
 		uint64_t m_maxTableId;
