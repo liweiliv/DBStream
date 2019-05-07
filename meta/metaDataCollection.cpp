@@ -264,14 +264,11 @@ struct MetaInfo
 		return meta;
 	}
 	tableMeta *metaDataCollection::get(uint64_t tableID) {
-		tableMetaWrap t = { tableID,nullptr };
-		leveldb::SkipList<tableMetaWrap*, tableIDComparator>::Iterator iter(&m_allTables);
-		iter.Seek(&t);
-		if (iter.Valid())
-			return iter.key()->meta;
+		tableMeta * meta = m_allTables.get(tableID);
+		if (meta!=nullptr)
+			return meta;
 		if (m_client)
 		{
-			tableMeta * meta = nullptr;
 			if ((meta = getTableMetaFromRemote(tableID)) == nullptr)
 				return nullptr;
 			else
@@ -343,6 +340,7 @@ struct MetaInfo
 			barrier;
 			currentDB->tables.insert((const unsigned char*)table, metas);
 		}
+		m_allTables.put(meta);
 		return 0;
 	}
 	static void copyColumn(columnMeta & column, const newColumnInfo* src)
