@@ -13,6 +13,7 @@
 #include "../meta/charset.h"
 #include "../message/record.h"
 #include "metaChangeInfo.h"
+#define OS_WIN //todo
 #include "../util/barrier.h"
 #ifndef likely
 # define likely(x)  __builtin_expect(!!(x), 1)
@@ -23,30 +24,28 @@
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
-template<class T>
-struct MetaInfo
-{
-	T * meta;
-	uint64_t startPos;
-	uint64_t endPos;
-	MetaInfo<T> * prev;
-};
-	template<class T>
+	template<typename T>
 	class MetaTimeline
 	{
 	private:
-
-		MetaInfo<T> * m_current;
+		struct MetaInfo
+		{
+			T * meta;
+			uint64_t begin;
+			uint64_t end;
+			MetaInfo * prev;
+		};
+		MetaInfo * m_current;
 		uint64_t m_id;
 		uint16_t m_version;
 	public:
-		MetaTimeline(uint64_t id, T * meta = NULL, uint64_t checkpoint=0) :
+		MetaTimeline(uint64_t id, T * meta = NULL, uint64_t fileID = 0, uint64_t offset = 0) :
 			m_current(NULL), m_id(id), m_version(0)
 		{
 			if (meta != NULL)
 			{
-				put(meta, checkpoint);
-				meta->m_id = m_id | m_version;
+				put(meta, fileID, offset);
+				meta->id = m_id | m_version;
 			}
 		}
 		~MetaTimeline()
@@ -59,21 +58,22 @@ struct MetaInfo
 		/*can be concurrent*/
 		inline T * get(uint64_t originCheckPoint)
 		{
-			MetaInfo<T> *current = m_current,*newer;
+			MetaInfo * current = m_current, *first;
 			barrier;
-			if (likely(current->startPos <= originCheckPoint))
+			if (likely(current->begin <= originCheckPoint))
 			{
-				if (likely(current->endPos > originCheckPoint))
-					return current->meta;
+				if (likely(current->end > originCheckPoint))
+					return current;
 				else
 				{
+					first = current;
 					barrier;
-					newer = m_current;
-					if (newer->endPos < originCheckPoint)
+					MetaInfo * newer = m_current;
+					if (newer->end < originCheckPoint)
 						return NULL;
 					while (newer != current)
 					{
-						if (newer->startPos < originCheckPoint)
+						if (newer->begin < originCheckPoint)
 							return newer->meta;
 						else
 							newer = newer->prev;
@@ -83,11 +83,11 @@ struct MetaInfo
 			}
 			else
 			{
-				MetaInfo<T> * m = current->prev;
+				MetaInfo * m = current->prev;
 				while (m != NULL)
 				{
-					if (m->startPos < originCheckPoint)
-						return m->meta;
+					if (m->begin < originCheckPoint)
+						return m;
 					else
 						m = m->prev;
 				}
@@ -97,9 +97,10 @@ struct MetaInfo
 		/*must be serial*/
 		int put(T * meta, uint64_t originCheckPoint)
 		{
-			MetaInfo<T> * m = new MetaInfo<T>;
-			m->startPos = originCheckPoint;
-			m->endPos = 0xffffffffffffffffUL;
+			MetaInfo * m = new MetaInfo;
+			m->begin = originCheckPoint;
+			m->end.fileID = 0xffffffffffffffffUL;
+			m->end.offset = 0xffffffffffffffffUL;
 			m->meta = meta;
 			meta->m_id = m_id | (m_version++);
 			if (m_current == NULL)
@@ -110,13 +111,13 @@ struct MetaInfo
 			}
 			else
 			{
-				if (m_current->startPos <= m->startPos)
+				if (m_current->begin <= m->begin)
 				{
 					delete m;
 					return -1;
 				}
 				m->prev = m_current;
-				m_current->endPos = originCheckPoint;
+				m_current->end = originCheckPoint;
 				barrier;
 				m_current = m;
 				return 0;
@@ -128,10 +129,10 @@ struct MetaInfo
 		}
 		void purge(uint64_t originCheckPoint)
 		{
-			MetaInfo<T> * m = m_current;
+			MetaInfo * m = m_current;
 			while (m != NULL)
 			{
-				if (originCheckPoint < m->endPos)
+				if (originCheckPoint < m->end)
 					m = m->prev;
 				else
 					break;
@@ -140,7 +141,7 @@ struct MetaInfo
 				return;
 			while (m != NULL)
 			{
-				MetaInfo<T> * tmp = m->prev;
+				MetaInfo * tmp = m->prev;
 				if (m->meta != NULL)
 					delete m->meta;
 				delete m;
@@ -160,11 +161,13 @@ struct MetaInfo
 		std::string name;
 		const charsetInfo* charset;
 	};
-	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_allTables(m_cmp, &m_arena), m_client(client),
+	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_client(client),
 		m_dbs(), m_maxTableId(0)
 	{
 		m_defaultCharset = getCharset(defaultCharset);
 		m_SqlParser = new sqlParser();
+		for (uint16_t i = 0; i < MAX_CHARSET; i++)
+			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));
 	}
 	metaDataCollection::~metaDataCollection()
 	{
@@ -206,9 +209,9 @@ struct MetaInfo
 		put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, msg.head->logOffset);
 		return meta;
 	}
-	tableMeta *metaDataCollection::getTableMetaFromRemote(const char * database,const char * tableName, uint64_t offset) {
+	tableMeta *metaDataCollection::getTableMetaFromRemote(const char * tableName, uint64_t offset) {
 		const char * metaRecord = nullptr;
-		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database,tableName, offset)); i++)
+		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableName, offset)); i++)
 		{
 			if (m_client->getStatus() == STORE::client::IDLE)
 				return nullptr;
