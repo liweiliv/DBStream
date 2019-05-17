@@ -21,11 +21,10 @@ struct recordHead
     uint8_t type;
     uint8_t version;
     uint16_t flag;
-    uint32_t recordID;
-    uint64_t logID;
+    uint64_t recordId;
     uint64_t logOffset;
-    uint32_t timestamp;
-    uint32_t timestampUSec;
+    uint64_t timestamp;
+	uint32_t txnId;
 };
 #define UNSIGNED_COLUMN 0x01
 #define GENRATED_COLUMN 0x02
@@ -37,13 +36,12 @@ enum RecordType
 	R_UPDATE,
 	R_DELETE,
 	R_REPLACE,
-	R_BEGIN,
-	R_COMMIT,
 	R_ROLLBACK,
 	R_DDL,
 	R_TABLE_META,
 	R_DATABASE_META,
-    R_HEARTBEAT
+    R_HEARTBEAT,
+	R_MAX_RECORD_TYPE
 };
 #define COLUMN_FLAG_VIRTUAL 0x01
 #define COLUMN_FLAG_SIGNED 0x02
