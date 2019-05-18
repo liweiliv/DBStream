@@ -53,7 +53,7 @@ public:
     bool isPrimary;
     bool isUnique;
     bool generated;
-    newColumnInfo():type(0),after(false),index(-1),isString(false),size(0),precision(0),
+    newColumnInfo():type(0),after(false),index(-1),isString(false),charset(nullptr),size(0),precision(0),
             decimals(0),isSigned(true),isPrimary(false),isUnique(false),generated(false)
     {
 
@@ -136,7 +136,7 @@ public:
     list<string> oldColumns;
     list<newKeyInfo*> newKeys;
     list<string> oldKeys;
-    newTableInfo():type(MAX_TABLE_TYPE),createLike(false)
+    newTableInfo():type(MAX_TABLE_TYPE),createLike(false),defaultCharset(nullptr)
     {
     }
     ~newTableInfo()
@@ -186,7 +186,7 @@ struct databaseInfo
     databaseDDlType type;
     string name;
 	const charsetInfo * charset;
-    databaseInfo():type(MAX_DATABASEDDL_TYPE){}
+    databaseInfo():type(MAX_DATABASEDDL_TYPE),charset(nullptr){}
 };
 struct metaChangeInfo
 {

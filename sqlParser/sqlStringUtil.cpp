@@ -5,7 +5,7 @@
  *      Author: liwei
  */
 #include "../util/trieTree.h"
-#include "SQLStringUtil.h"
+#include "sqlParserUtil.h"
 using namespace std;
 static trieTree  * keyWords = NULL;
 static bool KeyChar[256] = {0};

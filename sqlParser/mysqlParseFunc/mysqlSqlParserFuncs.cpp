@@ -5,8 +5,9 @@
  *      Author: liwei
  */
 #include <assert.h>
-#include "../meta/metaChangeInfo.h"
-#include "sqlParserHandle.h"
+#include "../../meta/metaChangeInfo.h"
+#include "../../meta/charset.h"
+#include "../sqlParserHandle.h"
 using namespace META;
 namespace SQL_PARSER {
 #define  NOT_FIXED_DEC 31
@@ -671,6 +672,5 @@ extern "C" void destroyUserData(handle * h)
        getMeta(h)->database.charset = getCharset(sql.c_str());
        return OK;
    }
-
 }
 

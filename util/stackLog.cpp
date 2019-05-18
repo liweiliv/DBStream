@@ -11,10 +11,10 @@
 #include <thread>
 #include <mutex>
 #include <stdarg.h>
-#define OS_WIN //todo
 #ifdef OS_LINUX
 #include <execinfo.h>
-#else ifdef OS_WIN
+#endif
+#ifdef OS_WIN
 #include <Windows.h>
 #include <DbgHelp.h>
 #endif
@@ -192,7 +192,8 @@ void  getFullStackLog(string &log)
   
     return ;
 }
-#else ifdef OS_LINUX
+#endif
+# ifdef OS_LINUX
 /*
  * 写log，一般使用SET_STACE_LOG_AND_RETURN或者SET_STACE_LOG来调用
  */

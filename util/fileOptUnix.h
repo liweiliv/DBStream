@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <error.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <stdint.h>
 #define fileHandle int
@@ -18,9 +20,9 @@ static fileHandle openFile(const char *file, bool read, bool write, bool create)
 	int fd = 0;
 	int flag = 0;
 	if (read)
-		flag |= O_READ;
+		flag |= O_RDONLY;
 	if (write)
-		flag |= O_WRITE;
+		flag |= O_WRONLY;
 	if (create)
 		flag |= O_CREAT;
 	return (fd = open(file, flag, create ? S_IRUSR | S_IWUSR | S_IRGRP : 0));
@@ -111,6 +113,7 @@ static inline  int checkFileExist(const char *filename)
        }
    }
 }
+#define seekFile lseek64
 long getFileTime(const char * file)
 {
 	fileHandle fd = openFile(file, true, false, false);

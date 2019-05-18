@@ -7,7 +7,7 @@
 #include "trieTree.h"
 #include <string.h>
 #include <assert.h>
-#include "util/barrier.h"
+#include "barrier.h"
 #define TT_VALUE_MASK 0x8000000000000000UL
 #define TT_NODE_LOW_MASK 0x07
 #define TT_NODE_LOW_LEN 3

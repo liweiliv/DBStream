@@ -8,7 +8,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#define OS_WIN 1
 #ifdef OS_WIN
 #include "winString.h"
 #endif

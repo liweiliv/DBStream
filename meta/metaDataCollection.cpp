@@ -31,21 +31,21 @@ namespace META {
 		struct MetaInfo
 		{
 			T * meta;
-			uint64_t begin;
-			uint64_t end;
+			uint64_t startPos;
+			uint64_t endPos;
 			MetaInfo * prev;
 		};
 		MetaInfo * m_current;
 		uint64_t m_id;
 		uint16_t m_version;
 	public:
-		MetaTimeline(uint64_t id, T * meta = NULL, uint64_t fileID = 0, uint64_t offset = 0) :
+		MetaTimeline(uint64_t id, T * meta = NULL,uint64_t checkpoint = 0) :
 			m_current(NULL), m_id(id), m_version(0)
 		{
 			if (meta != NULL)
 			{
-				put(meta, fileID, offset);
-				meta->id = m_id | m_version;
+				put(meta, checkpoint);
+				meta->m_id = m_id | m_version;
 			}
 		}
 		~MetaTimeline()
@@ -60,20 +60,20 @@ namespace META {
 		{
 			MetaInfo * current = m_current, *first;
 			barrier;
-			if (likely(current->begin <= originCheckPoint))
+			if (likely(current->startPos <= originCheckPoint))
 			{
-				if (likely(current->end > originCheckPoint))
-					return current;
+				if (likely(current->endPos > originCheckPoint))
+					return current->meta;
 				else
 				{
 					first = current;
 					barrier;
 					MetaInfo * newer = m_current;
-					if (newer->end < originCheckPoint)
+					if (newer->endPos < originCheckPoint)
 						return NULL;
 					while (newer != current)
 					{
-						if (newer->begin < originCheckPoint)
+						if (newer->startPos < originCheckPoint)
 							return newer->meta;
 						else
 							newer = newer->prev;
@@ -86,8 +86,8 @@ namespace META {
 				MetaInfo * m = current->prev;
 				while (m != NULL)
 				{
-					if (m->begin < originCheckPoint)
-						return m;
+					if (m->startPos < originCheckPoint)
+						return m->meta;
 					else
 						m = m->prev;
 				}
@@ -98,9 +98,8 @@ namespace META {
 		int put(T * meta, uint64_t originCheckPoint)
 		{
 			MetaInfo * m = new MetaInfo;
-			m->begin = originCheckPoint;
-			m->end.fileID = 0xffffffffffffffffUL;
-			m->end.offset = 0xffffffffffffffffUL;
+			m->startPos = originCheckPoint;
+			m->endPos = 0xffffffffffffffffUL;
 			m->meta = meta;
 			meta->m_id = m_id | (m_version++);
 			if (m_current == NULL)
@@ -111,13 +110,13 @@ namespace META {
 			}
 			else
 			{
-				if (m_current->begin <= m->begin)
+				if (m_current->startPos <= m->startPos)
 				{
 					delete m;
 					return -1;
 				}
 				m->prev = m_current;
-				m_current->end = originCheckPoint;
+				m_current->endPos = originCheckPoint;
 				barrier;
 				m_current = m;
 				return 0;
@@ -132,7 +131,7 @@ namespace META {
 			MetaInfo * m = m_current;
 			while (m != NULL)
 			{
-				if (originCheckPoint < m->end)
+				if (originCheckPoint < m->endPos)
 					m = m->prev;
 				else
 					break;
@@ -209,9 +208,9 @@ namespace META {
 		put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, msg.head->logOffset);
 		return meta;
 	}
-	tableMeta *metaDataCollection::getTableMetaFromRemote(const char * tableName, uint64_t offset) {
+	tableMeta *metaDataCollection::getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint) {
 		const char * metaRecord = nullptr;
-		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableName, offset)); i++)
+		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database, table,originCheckPoint)); i++)
 		{
 			if (m_client->getStatus() == STORE::client::IDLE)
 				return nullptr;

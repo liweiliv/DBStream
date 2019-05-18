@@ -7,7 +7,6 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#define OS_WIN
 #include "../util/file.h"
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,7 +20,7 @@
 #include <set>
 #include <list>
 #include "../util/stackLog.h"
-#include "sqlStringUtil.h"
+#include "sqlParserUtil.h"
 #include "sqlParser.h"
 #include "../util/json.h"
 #ifdef OS_WIN
@@ -515,7 +514,8 @@ SQLWord* sqlParser::loadSQlWordFromJson(jsonValue *json)
                             (parseValue (*)(handle *, const string&)) dlsym(
                                     m_funcsHandle,
                                     static_cast<jsonString*>(value)->m_value.c_str())))
-#else ifdef OS_WIN
+#endif
+#ifdef OS_WIN
 			if (NULL
 				== (static_cast<SQLSingleWord*>(s)->m_parser =
 				(parseValue(*)(handle *, const string&)) GetProcAddress(
@@ -573,7 +573,8 @@ sqlParser::~sqlParser()
 #ifdef OS_LINUX
     if (m_funcsHandle)
         dlclose(m_funcsHandle);
-#else ifdef OS_WIN
+#endif
+#ifdef OS_WIN
 	if (m_funcsHandle)
 		FreeLibrary(m_funcsHandle);
 #endif
@@ -631,7 +632,8 @@ LOAD:
 	m_destroyUserDataFunc = (void(*)(handle *)) dlsym(m_funcsHandle, "destroyUserData");
     return 0;
 }
-#else ifdef OS_WIN
+#endif
+#ifdef OS_WIN
 int sqlParser::LoadFuncs(const char * fileName)
 {
 	if (m_funcsHandle != NULL)
@@ -676,7 +678,7 @@ int sqlParser::LoadParseTree(const char *config)
             if (jv->t != jsonObject::J_NUM)
             {
                 delete v;
-                SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect num");
+                SET_STACE_LOG_AND_RETURN_(-1, -1, "expect num");
             }
             id = static_cast<jsonNum*>(jv)->m_value;
         }
@@ -686,7 +688,7 @@ int sqlParser::LoadParseTree(const char *config)
             if (jv->t != jsonObject::J_BOOL)
             {
                 delete v;
-                SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect bool");
+                SET_STACE_LOG_AND_RETURN_(-1, -1, "expect bool");
             }
             head = static_cast<jsonBool*>(jv)->m_value;
         }
@@ -720,8 +722,8 @@ int sqlParser::LoadParseTreeFromFile(const char * file)
     fileHandle fd = openFile(file, true,false,false);
     if (fd < 0)
         return -1;
-    uint32_t size = seekFile(fd, 0, SEEK_END);
-	seekFile(fd, 0, SEEK_SET);
+    long size = seekFile(fd, 0, SEEK_END);
+    seekFile(fd, 0, SEEK_SET);
     char * buf = (char*) malloc(size + 1);
     if (size != readFile(fd, buf, size))
     {
