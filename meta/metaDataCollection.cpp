@@ -32,21 +32,16 @@ namespace META {
 		{
 			T * meta;
 			uint64_t startPos;
-			uint64_t endPos;
+			//uint64_t endPos;
 			MetaInfo * prev;
 		};
 		MetaInfo * m_current;
 		uint64_t m_id;
 		uint16_t m_version;
 	public:
-		MetaTimeline(uint64_t id, T * meta = NULL,uint64_t checkpoint = 0) :
+		MetaTimeline(uint64_t id) :
 			m_current(NULL), m_id(id), m_version(0)
 		{
-			if (meta != NULL)
-			{
-				put(meta, checkpoint);
-				meta->m_id = m_id | m_version;
-			}
 		}
 		~MetaTimeline()
 		{
@@ -58,28 +53,20 @@ namespace META {
 		/*can be concurrent*/
 		inline T * get(uint64_t originCheckPoint)
 		{
-			MetaInfo * current = m_current, *first;
+			MetaInfo * current = m_current;
 			barrier;
 			if (likely(current->startPos <= originCheckPoint))
 			{
-				if (likely(current->endPos > originCheckPoint))
-					return current->meta;
-				else
+				barrier;
+				MetaInfo * newer = m_current;
+				while (newer != current)
 				{
-					first = current;
-					barrier;
-					MetaInfo * newer = m_current;
-					if (newer->endPos < originCheckPoint)
-						return NULL;
-					while (newer != current)
-					{
-						if (newer->startPos < originCheckPoint)
-							return newer->meta;
-						else
-							newer = newer->prev;
-					}
-					abort();
+					if (newer->startPos < originCheckPoint)
+						return newer->meta;
+					else
+						newer = newer->prev;
 				}
+				return current->meta;
 			}
 			else
 			{
@@ -99,9 +86,8 @@ namespace META {
 		{
 			MetaInfo * m = new MetaInfo;
 			m->startPos = originCheckPoint;
-			m->endPos = 0xffffffffffffffffUL;
 			m->meta = meta;
-			meta->m_id = m_id | (m_version++);
+			meta->m_id = tableMeta::genTableId(m_id,m_version++);
 			if (m_current == NULL)
 			{
 				barrier;
@@ -110,13 +96,12 @@ namespace META {
 			}
 			else
 			{
-				if (m_current->startPos <= m->startPos)
+				if (m_current->startPos >= m->startPos)
 				{
 					delete m;
 					return -1;
 				}
 				m->prev = m_current;
-				m_current->endPos = originCheckPoint;
 				barrier;
 				m_current = m;
 				return 0;
@@ -131,7 +116,7 @@ namespace META {
 			MetaInfo * m = m_current;
 			while (m != NULL)
 			{
-				if (originCheckPoint < m->endPos)
+				if (originCheckPoint < m->startPos)
 					m = m->prev;
 				else
 					break;
@@ -160,8 +145,8 @@ namespace META {
 		std::string name;
 		const charsetInfo* charset;
 	};
-	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_client(client),m_SqlParser(nullptr),
-		m_dbs(), m_maxTableId(0)
+	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_dbs(),m_sqlParser(nullptr),m_client(client),
+		 m_maxTableId(0),m_maxDatabaseId(0)
 	{
 		m_defaultCharset = getCharset(defaultCharset);
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
@@ -169,23 +154,23 @@ namespace META {
 	}
 	int metaDataCollection::initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile)
 	{
-		m_SqlParser = new sqlParser();
-		if(0!=m_SqlParser->LoadFuncs(sqlParserFunclibFile))
+		m_sqlParser = new sqlParser();
+		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
 		{
-			delete m_SqlParser;
+			delete m_sqlParser;
 			return -1;
 		}
-		if(0!=m_SqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
+		if(0!=m_sqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
 		{
-			delete m_SqlParser;
+			delete m_sqlParser;
 			return -1;
 		}
 		return 0;
 	}
 	metaDataCollection::~metaDataCollection()
 	{
-		if (m_SqlParser != NULL)
-			delete m_SqlParser;
+		if (m_sqlParser != NULL)
+			delete m_sqlParser;
 	}
 	tableMeta * metaDataCollection::get(const char * database, const char * table,
 		uint64_t originCheckPoint)
@@ -300,7 +285,8 @@ namespace META {
 			(const unsigned char*)database));
 		if (db == NULL)
 		{
-			db = new MetaTimeline<dbInfo>(offset, dbmeta);
+			db = new MetaTimeline<dbInfo>(offset);
+			db->put(dbmeta,offset);
 			barrier;
 			if (0
 				!= m_dbs.insert(
@@ -345,12 +331,10 @@ namespace META {
 		if (metas == NULL)
 		{
 			newMeta = true;
-			metas = new MetaTimeline<tableMeta>(m_maxTableId++, meta, originCheckPoint);
+			metas = new MetaTimeline<tableMeta>(m_maxTableId++);
 		}
-		else
-		{
-			metas->put(meta, originCheckPoint);
-		}
+		metas->put(meta, originCheckPoint);//here meta id will be set
+
 		if (newMeta)
 		{
 			barrier;
@@ -627,7 +611,7 @@ namespace META {
 		{
 			if (0 != newMeta->dropColumn((*iter).c_str()))
 			{
-				printf("alter table drop column %s ,but %s is not exist in %s.%s\n",
+				printf("alter table drop column %s ,but it is not exist in %s.%s\n",
 					(*iter).c_str(), newTable.database.c_str(),
 					newTable.table.c_str());
 				delete newMeta;
@@ -751,7 +735,8 @@ namespace META {
 				current->charset = database->charset;
 				if (current->charset == nullptr)
 					current->charset = m_defaultCharset;
-				db = new MetaTimeline<dbInfo>(originCheckPoint, current);
+				db = new MetaTimeline<dbInfo>(m_maxDatabaseId++);
+				db->put(current,originCheckPoint);
 				barrier;
 				if (0
 					!= m_dbs.insert(
@@ -808,7 +793,7 @@ namespace META {
 	int metaDataCollection::processDDL(const char * ddl, uint64_t originCheckPoint)
 	{
 		handle * h = NULL;
-		if (OK != m_SqlParser->parse(h, ddl))
+		if (OK != m_sqlParser->parse(h, ddl))
 		{
 			printf("parse ddl %s failed\n", ddl);
 			return -1;

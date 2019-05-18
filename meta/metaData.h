@@ -88,7 +88,7 @@ namespace META {
 		bool m_isPrimary;
 		bool m_isUnique;
 		bool m_generated;
-		columnMeta() :m_columnType(0), m_srcColumnType(0), m_columnIndex(0), m_size(0), m_precision(0), m_decimals(0),
+		columnMeta() :m_columnType(0), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr),m_size(0), m_precision(0), m_decimals(0),
 			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_generated(false)
 		{}
 		columnMeta &operator =(const columnMeta &c)
@@ -205,7 +205,7 @@ namespace META {
 				}
 				break;
 			case MYSQL_TYPE_STRING:
-				sprintf(numBuf, "%u", m_size);
+				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
 				if (m_charset != nullptr)
 				{
 					sql.append("BINARY").append("(").append(numBuf).append(")");
@@ -216,10 +216,11 @@ namespace META {
 				}
 				break;
 			case MYSQL_TYPE_VARCHAR:
+				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
 				sql.append("VARCHAR").append("(").append(numBuf).append(") CHARACTER SET ").append(m_charset->name);
 				break;
 			case MYSQL_TYPE_VAR_STRING:
-				sprintf(numBuf, "%u", m_size);
+				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
 				if (m_charset != nullptr)
 				{
 					sql.append("VARBINARY").append("(").append(numBuf).append(")");
@@ -367,6 +368,10 @@ namespace META {
 		static inline uint64_t tableID(uint64_t tableIDInfo)
 		{
 			return tableIDInfo & 0xffffffffffff0000ul;
+		}
+		static inline uint64_t genTableId(uint64_t tableid,uint16_t version)
+		{
+			return (tableid<<16)|version;
 		}
 		tableMeta();
 		tableMeta(DATABASE_INCREASE::TableMetaMessage * msg);

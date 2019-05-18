@@ -24,6 +24,7 @@ public:
     };
     type t;
     jsonValue(type _t);
+    virtual ~jsonValue(){};
     virtual string toString()=0;
     static type getType(const char * data);
     static jsonValue * Parse(const char* data,int &size);
@@ -35,6 +36,7 @@ public:
     jsonString(const char * data=NULL);
     int parse(const char * data);
     string toString();
+    ~jsonString(){}
 };
 class jsonNum :public jsonValue
 {
@@ -43,6 +45,7 @@ public:
     jsonNum(const char * data = NULL);
     int parse(const char * data);
     string toString();
+    ~jsonNum(){}
 };
 class jsonObject :public jsonValue
 {

@@ -1,13 +1,14 @@
 #include "metaData.h"
 #include "../message/record.h"
 namespace META {
-	tableMeta::tableMeta() :m_charset(nullptr), m_columns(NULL), m_columnsCount(0), m_id(0), m_uniqueKeysCount(0), m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr), m_realIndexInRowFormat(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
-		m_fixedColumnOffsetsInRecord(nullptr)
+	tableMeta::tableMeta() :m_charset(nullptr), m_columns(NULL),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
+		m_columnsCount(0), m_id(0),  m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr),userData(nullptr)
 	{
 	}
-	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage * msg) :m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""), m_charset(&charsets[msg->metaHead.charsetId]), m_columnsCount(msg->metaHead.columnCount),
-		m_id(msg->metaHead.tableMetaID), m_uniqueKeysCount(msg->metaHead.uniqueKeyCount), m_realIndexInRowFormat(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
-		m_fixedColumnOffsetsInRecord(nullptr)
+	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage * msg) :m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""),
+			m_charset(&charsets[msg->metaHead.charsetId]), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
+			 m_columnsCount(msg->metaHead.columnCount),
+		m_id(msg->metaHead.tableMetaID),m_uniqueKeysCount(msg->metaHead.uniqueKeyCount)
 	{
 		m_columns = new columnMeta[m_columnsCount];
 		for (uint32_t i = 0; i < m_columnsCount; i++)
@@ -63,7 +64,7 @@ namespace META {
 	}
 	const char * tableMeta::createTableMetaRecord()
 	{
-
+		return nullptr;//todo
 	}
 	void tableMeta::clean()
 	{
@@ -111,6 +112,9 @@ namespace META {
 	tableMeta &tableMeta::operator =(const tableMeta &t)
 	{
 		clean();
+		m_tableName = t.m_tableName;
+		m_dbName = t.m_dbName;
+		m_charset = t.m_charset;
 		if ((m_columnsCount = t.m_columnsCount) > 0)
 		{
 			m_columns = new columnMeta[m_columnsCount];
@@ -149,15 +153,11 @@ namespace META {
 				m_varColumnCount++;
 		}
 		if (m_realIndexInRowFormat)
-		{
 			delete[] m_realIndexInRowFormat;
-			m_realIndexInRowFormat = new uint16_t[m_columnsCount];
-		}
+		m_realIndexInRowFormat = new uint16_t[m_columnsCount];
 		if (m_fixedColumnOffsetsInRecord)
-		{
 			delete[]m_fixedColumnOffsetsInRecord;
-			m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount];
-		}
+		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount];
 		m_fixedColumnCount = m_varColumnCount = 0;
 		uint32_t fixedOffset = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
@@ -408,14 +408,14 @@ namespace META {
 		sql.append(m_tableName).append("` (");
 		for (uint32_t idx = 0; idx < m_columnsCount; idx++)
 		{
-			if (idx != 0)
-				sql.append(",\n");
-			sql.append(m_columns[idx].toString());
+			if(idx!=0)
+				sql.append(",");
+			sql.append("\n\t").append(m_columns[idx].toString());
 		}
 		if (m_primaryKey.count > 0)
 		{
 			sql.append(",\n");
-			sql.append("PRIMARY KEY (");
+			sql.append("\tPRIMARY KEY (");
 			for (uint32_t idx = 0; idx < m_primaryKey.count; idx++)
 			{
 				if (idx > 0)
@@ -429,7 +429,7 @@ namespace META {
 			for (int idx = 0; idx < m_uniqueKeysCount; idx++)
 			{
 				sql.append(",\n");
-				sql.append("UNIQUE KEY `").append(m_uniqueKeys[idx].name).append("` (");
+				sql.append("\tUNIQUE KEY `").append(m_uniqueKeys[idx].name).append("` (");
 				for (uint32_t j = 0; j < m_uniqueKeys[idx].count; j++)
 				{
 					if (j > 0)

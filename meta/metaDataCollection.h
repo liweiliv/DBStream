@@ -39,10 +39,10 @@ namespace META {
 		CharsetTree m_charsetSizeList;
 		const charsetInfo * m_defaultCharset;
 		tableIdTree m_allTables;
-		SQL_PARSER::sqlParser * m_SqlParser;
+		SQL_PARSER::sqlParser * m_sqlParser;
 		STORE::client * m_client;
 		uint64_t m_maxTableId;
-
+		uint64_t m_maxDatabaseId;
 	public:
 		metaDataCollection(const char * defaultCharset,STORE::client *client = nullptr);
 		~metaDataCollection();
