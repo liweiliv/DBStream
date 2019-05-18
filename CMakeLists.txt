@@ -22,3 +22,6 @@ add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs
 #unit test
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)
 TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser meta dl)
+
+ADD_EXECUTABLE(testMetaDataCollection meta/unittest/testMetaDataCollection.cpp)
+TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta dl)

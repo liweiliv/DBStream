@@ -46,6 +46,7 @@ namespace META {
 	public:
 		metaDataCollection(const char * defaultCharset,STORE::client *client = nullptr);
 		~metaDataCollection();
+		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
 		tableMeta * get(uint64_t tableID);
 		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint);
 

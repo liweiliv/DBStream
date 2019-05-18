@@ -277,10 +277,12 @@ namespace META {
 		else
 		{
 			columnMeta * columns = new columnMeta[m_columnsCount + 1];
-			for (uint32_t idx = 0; idx <= m_columnsCount; idx++)
-				columns[idx] = m_columns[idx - 1];
+			for (uint32_t idx = 0; idx < m_columnsCount; idx++)
+				columns[idx] = m_columns[idx];
 			columns[m_columnsCount] = *column;
 			columns[m_columnsCount].m_columnIndex = m_columnsCount;
+			delete []m_columns;
+			m_columns = columns;
 		}
 		m_columnsCount++;
 		buildColumnOffsetList();
@@ -402,6 +404,7 @@ namespace META {
 	std::string tableMeta::toString()
 	{
 		std::string sql("CREATE TABLE `");
+		sql.append(m_dbName).append("`.`");
 		sql.append(m_tableName).append("` (");
 		for (uint32_t idx = 0; idx < m_columnsCount; idx++)
 		{
@@ -436,7 +439,7 @@ namespace META {
 				sql.append(")");
 			}
 		}
-		sql.append(".\n) ").append("CHARACTER SET").append(m_charset->name).append(";");
+		sql.append(" \n) ").append("CHARACTER SET ").append(m_charset->name).append(";");
 		return sql;
 	}
 }

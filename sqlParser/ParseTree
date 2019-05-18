@@ -819,7 +819,7 @@
 		{"OR":true,
 			"C" : [
 			{"K":"_S_:TABLE","F":"newTable"},
-			{"K":"_S_:SEQUENCE","COMMENT":"in rds,CREATE SEQUENCE is just like CREATE TABLE","F":"newTable"}
+			{"K":"_S_:SEQUENCE","COMMENT":"in aliyun rds,CREATE SEQUENCE is just like CREATE TABLE","F":"newTable"}
 		]},
 		{"OPT":true,"K":"_S_:IF NOT EXISTS"},
 		{

@@ -160,13 +160,27 @@ namespace META {
 		std::string name;
 		const charsetInfo* charset;
 	};
-	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_client(client),
+	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_client(client),m_SqlParser(nullptr),
 		m_dbs(), m_maxTableId(0)
 	{
 		m_defaultCharset = getCharset(defaultCharset);
-		m_SqlParser = new sqlParser();
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
 			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));
+	}
+	int metaDataCollection::initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile)
+	{
+		m_SqlParser = new sqlParser();
+		if(0!=m_SqlParser->LoadFuncs(sqlParserFunclibFile))
+		{
+			delete m_SqlParser;
+			return -1;
+		}
+		if(0!=m_SqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
+		{
+			delete m_SqlParser;
+			return -1;
+		}
+		return 0;
 	}
 	metaDataCollection::~metaDataCollection()
 	{
@@ -347,7 +361,8 @@ namespace META {
 	}
 	static void copyColumn(columnMeta & column, const newColumnInfo* src)
 	{
-		column.m_columnType = src->type;
+		column.m_srcColumnType = src->type;//todo
+		column.m_columnType = mysqlTypeMaps[src->type];
 		column.m_columnIndex = src->index;
 		column.m_columnName = src->name;
 		column.m_decimals = src->decimals;
@@ -384,19 +399,28 @@ namespace META {
 			printf("no database\n");
 			return -1;
 		}
-		databaseInfo * db = static_cast<databaseInfo*>(m_dbs.findNCase(
+		MetaTimeline<dbInfo> * db = static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
 			(const unsigned char*)newTable.database.c_str()));
 		if (db == NULL)
 		{
 			printf("unknown database :%s\n", newTable.database.c_str());
 			return -1;
 		}
+
+		dbInfo * currentDb = db->get(originCheckPoint);
+		if (currentDb == NULL)
+		{
+			printf("unknown database :%s\n", newTable.database.c_str());
+			return -1;
+		}
+
 		tableMeta * meta = new tableMeta;
 		meta->m_columns = new columnMeta[t->newColumns.size()];
 		meta->m_tableName = newTable.table;
+		meta->m_dbName = currentDb->name;
 		meta->m_charset = t->defaultCharset;
 		if (meta->m_charset == nullptr)
-			meta->m_charset = db->charset;
+			meta->m_charset = currentDb->charset;
 
 		for (std::list<newColumnInfo*>::const_iterator iter = t->newColumns.begin();
 			iter != t->newColumns.end(); iter++)
@@ -410,7 +434,7 @@ namespace META {
 					column.m_charset = meta->m_charset;
 				column.m_size *= column.m_charset->byteSizePerChar;
 			}
-			meta->m_columnsCount++;
+			column.m_columnIndex = meta->m_columnsCount++;
 		}
 		uint32_t ukCount = 0;
 		for (list<newKeyInfo*>::const_iterator iter = t->newKeys.begin();
@@ -434,6 +458,8 @@ namespace META {
 			}
 			else if (k->type == newKeyInfo::KEY)
 				continue;//todo
+			if(k->columns.size()>0)
+				key->keyIndexs = new uint16_t[k->columns.size()];
 			for (auto name : k->columns)
 			{
 				columnMeta * _c = meta->getColumn(
@@ -491,7 +517,7 @@ namespace META {
 			return -1;
 		}
 		tableMeta * likedMeta = get(likedTable.database.c_str(),
-			likedTable.table.c_str(), 0xffffffffffffffffUL);
+			likedTable.table.c_str(), originCheckPoint);
 		if (likedMeta == NULL)
 		{
 			printf("create liked table %s.%s is not exist",
@@ -524,7 +550,7 @@ namespace META {
 			return -1;
 		}
 		tableMeta * meta = get(newTable.database.c_str(), newTable.table.c_str(),
-			0xffffffffffffffffUL);
+				originCheckPoint);
 		if (meta == NULL)
 		{
 			printf("unknown table %s.%s\n", newTable.database.c_str(),
@@ -807,6 +833,7 @@ namespace META {
 			{
 				processOldTable(currentHandle, &(*iter), originCheckPoint);
 			}
+			currentHandle = currentHandle->next;
 		}
 		delete h;
 		return 0;

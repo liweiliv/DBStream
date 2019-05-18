@@ -436,6 +436,7 @@ extern "C" void destroyUserData(handle * h)
   extern "C" parseValue NewTableName(handle * h, const string& sql)
   {
       newTableInfo * t = getLastTable(h);
+      t->type = META::newTableInfo::CREATE_TABLE;
       t->table.table = sql;
       return OK;
   }
