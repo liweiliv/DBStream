@@ -10,7 +10,7 @@
 #include <thread>
 #include <string>
 #include <string.h>
-#include "index.h"
+#include "page.h"
 #include "block.h"
 #include "appendingBlock.h"
 #include "iterator.h"
@@ -57,9 +57,16 @@ private:
     uint32_t m_outdated;
     uint32_t m_maxUnflushedBlock;
 	uint64_t m_maxRecordId;
+	bufferPool *m_pool;
 public:
-    blockManager(const char * confPrefix,config * conf) :m_confPrefix(confPrefix),m_blocks(nullptr),
-            m_running(false), m_config(conf)
+	std::string getBlockFile(uint64_t id)
+	{
+		char numBuf[64];
+		sprintf(numBuf, "%lu", id);
+		return std::string(m_logDir).append("/").append(m_logPrefix).append(".").append(numBuf);
+	}
+    blockManager(const char * confPrefix,config * conf, bufferPool pool) :m_confPrefix(confPrefix),m_blocks(nullptr),
+            m_running(false), m_config(conf),m_pool(pool)
     {
         initConfig();
     }
@@ -170,7 +177,7 @@ private:
             flag |= BLOCK_FLAG_COMPRESS;
         appendingBlock *newBlock = new appendingBlock(flag,m_logDir,m_logPrefix,
                 m_blockDefaultSize,m_redoFlushDataSize,
-                m_redoFlushPeriod,m_maxRecordId);
+                m_redoFlushPeriod,m_maxRecordId,this);
 
         newBlock->m_blockID = ++m_maxBlockID;
         m_blocks.set(newBlock->m_blockID, newBlock);
@@ -195,8 +202,8 @@ private:
 		if (m_current == nullptr && !createNewBlock())
 		{
 			LOG(ERROR) << "Fatal Error: insert record failed for create new block failed;" << "record id :" <<
-				r->head->recordID << ",record offset:" << r->head->logOffset <<
-				"record LogID:" << r->head->logID;		
+				r->head->recordId << ",record offset:" << r->head->logOffset <<
+				"record LogID:" << r->head->logOffset;
 			return -1;
 		}
         appendingBlock::appendingBlockStaus status = m_current->append(r);
@@ -211,25 +218,62 @@ private:
             return insert(r);
         case appendingBlock::B_FAULT:
             LOG(ERROR)<<"Fatal Error: insert record to current  block failed;"<<"record id :"<<
-            r->head->recordID<<",record offset:"<<r->head->logOffset<<
-            "record LogID:"<<r->head->logID;
+            r->head->recordId<<",record offset:"<<r->head->logOffset<<
+            "record LogID:"<<r->head->logOffset;
             return -1;
         case appendingBlock::B_ILLEGAL:
             LOG(ERROR)<<"Fatal Error: insert record to current  block failed,record is illegal;"<<"record id :"<<
-            r->head->recordID<<",record offset:"<<r->head->logOffset<<
-            "record LogID:"<<r->head->logID;
+            r->head->recordId <<",record offset:"<<r->head->logOffset<<
+            "record LogID:"<<r->head->logOffset;
             return -1;
         default:
             LOG(ERROR)<<"Fatal Error: insert record to current  block failed,unknown error;"<<"record id :"<<
-            r->head->recordID<<",record offset:"<<r->head->logOffset<<
-            "record LogID:"<<r->head->logID;
+            r->head->recordId <<",record offset:"<<r->head->logOffset<<
+            "record LogID:"<<r->head->logOffset;
             return -1;
         }
     }
-    int recycleCache()
-    {
-
-    }
+public:
+	inline page * allocPage(uint64_t size)
+	{
+		page *p = (page*)m_pool->allocByLevel(0);
+		if (size > m_pool->maxSize())
+			p->pageData = (char*)malloc(size);
+		else
+			p->pageData = (char*)m_pool->alloc(size);
+		p->compressedSize = 0;
+		p->pageSize = size;
+		p->pageUsedSize = 0;
+		return p;
+	}
+	inline void *allocMem(size_t size)
+	{
+		return m_pool->alloc(size);
+	}
+	inline void freePage(page *p)
+	{
+		if (p->pageSize > m_pool->maxSize())
+			free(p->pageData);
+		else
+			m_pool->free(p->pageData);
+		m_pool->free(p);
+	}
+	inline void * allocMemForRecord(META::tableMeta * table, size_t size)
+	{
+		void *mem;
+		appendingBlockStaus status = m_current->allocMemForRecord(table, size, mem);
+		if (likely(status == B_OK))
+			return mem;
+		if (status == B_FULL)
+		{
+			m_current->m_flag |= BLOCK_FLAG_FINISHED;
+			if (!createNewBlock())
+				return nullptr;
+			return allocMemForRecord(table, size);
+		}
+		else
+			return nullptr;
+	}
     int flush()
     {
         block *b = nullptr;
