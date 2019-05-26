@@ -38,9 +38,7 @@ struct  tableDataInfo
 	uint32_t recordCount;
 	uint32_t recordIdsOffset;
 	uint16_t pageCount;
-	uint16_t startPageId;
-	uint32_t recordDataSize;
-	uint32_t indexsOffset;
+	uint16_t firstPageId;
 };
 #define setRecordPosition(p,pageId,offsetInPage) (p) = (pageId);(p) <<= 20;(p)+= (offsetInPage);
 #define pageId(p) ((p)>>20)
@@ -87,7 +85,6 @@ public:
     {
 		m_ref.unuse();
     }
-    virtual int flush() =0;
 };
 }
 

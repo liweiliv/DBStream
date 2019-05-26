@@ -14,11 +14,13 @@ class iterator
 public:
     enum status{
         OK,
+        UNINIT,
         BLOCKED,
         INVALID,
         ENDED
     };
 	status m_status;
+	std::string m_errInfo;
 	unsigned int m_flag;
 	//STORE::DBStream * m_stream;
 public:

@@ -21,11 +21,18 @@ struct arrayList
 	node * end;
 	uint32_t nodeCount;
 	leveldb::Arena *arena;
-	arrayList(leveldb::Arena * arena):head((node*)arena->Allocate(sizeof(node))),end(head), endSize(0), nodeCount(1),arena(arena)
+	arrayList(leveldb::Arena * arena):head((node*)arena->Allocate(sizeof(node))),end(head), nodeCount(1),arena(arena)
 	{}
+	inline void init(leveldb::Arena * _arena)
+	{
+		arena = _arena;
+		head = (node*)arena->Allocate(sizeof(node));
+		end = head;
+		nodeCount = 1;
+	}
 	inline void append(const T &d)
 	{
-		if (endSize < arrayListNodeSize)
+		if (end->size < arrayListNodeSize)
 		{
 			end->data[end->size] = d;
 			barrier;

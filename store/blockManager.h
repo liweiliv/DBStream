@@ -241,7 +241,6 @@ public:
 			p->pageData = (char*)malloc(size);
 		else
 			p->pageData = (char*)m_pool->alloc(size);
-		p->compressedSize = 0;
 		p->pageSize = size;
 		p->pageUsedSize = 0;
 		return p;

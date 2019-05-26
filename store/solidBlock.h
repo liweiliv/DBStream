@@ -10,7 +10,6 @@
 #include <stdint.h>
 #include "iterator.h"
 #include "block.h"
-#define OS_WIN //todo
 #include "../util/file.h"
 #include "../util/crcBySSE.h"
 #include <glog/logging.h>
@@ -19,9 +18,13 @@
 #include "../meta/metaDataCollection.h"
 #include "../util/barrier.h"
 #include "blockManager.h"
+#ifndef ALIGN
+#define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
+#endif
 namespace STORE
 {
 class solidBlockIterator;
+class appendingBlock;
 #pragma pack(1)
 class solidBlock :public block{
 	uint32_t solidBlockHeadPageRawSize;
@@ -29,16 +32,19 @@ class solidBlock :public block{
 	fileHandle m_fd;
 	tableDataInfo * m_tableInfo;
 	recordGeneralInfo * m_recordInfos;
+	uint32_t *m_recordIdOrderyTable;
 	tableFullData * m_tables;
 	uint64_t *pageOffsets;
-	page * pages;
+	page ** pages;
 	page *firstPage;
 	std::mutex m_fileLock;
 	META::metaDataCollection *m_metaDataCollection;
 	blockManager *m_blockManager;
+	friend class appendingBlock;
 	friend class solidBlockIterator;
-	solidBlock(META::metaDataCollection *metaDataCollection, blockManager *blockManager):block(), solidBlockHeadPageRawSize(0), solidBlockHeadPageSize(0), m_fd(0), m_tableInfo(nullptr), m_recordInfos(nullptr), m_tables(nullptr), pageOffsets(nullptr)
-		,pages(nullptr), firstPage(nullptr), m_metaDataCollection(metaDataCollection), m_blockManager(blockManager)
+public:
+	solidBlock(META::metaDataCollection *metaDataCollection, blockManager *blockManager):block(), solidBlockHeadPageRawSize(0), solidBlockHeadPageSize(0), m_fd(0), m_tableInfo(nullptr), m_recordInfos(nullptr),
+	m_recordIdOrderyTable(nullptr),m_tables(nullptr), pageOffsets(nullptr),pages(nullptr), firstPage(nullptr), m_metaDataCollection(metaDataCollection), m_blockManager(blockManager)
 	{
 	}
 	int load(uint64_t id)
@@ -76,47 +82,40 @@ class solidBlock :public block{
 			return -1;
 		char * pos = firstPage->pageData;
 		m_tableInfo = (tableDataInfo*)pos;
+
 		pos += sizeof(tableDataInfo)*m_tableCount;
-		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
-		{
-			LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
-			m_blockManager->freePage(firstPage);
-			firstPage = nullptr;
-			return -1;
-		}
+		goto FIRST_PAGE_SIZE_FAULT;
 		m_recordInfos = (recordGeneralInfo*)pos;
 		pos += sizeof(recordGeneralInfo)*m_recordCount;
 		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
-		{
-			LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
-			m_blockManager->freePage(firstPage);
-			firstPage = nullptr;
-			return -1;
-		}
-		pageOffsets = (uint64_t*)pos;
-		pos += sizeof(uint64_t)*m_pageCount;
+			goto FIRST_PAGE_SIZE_FAULT;
+
+		m_recordIdOrderyTable = (uint32_t *)pos;
+		pos+=sizeof(uint32_t)*m_recordCount;
 		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
-		{
-			LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
-			m_blockManager->freePage(firstPage);
-			firstPage = nullptr;
-			return -1;
-		}
-		pages = (page*)m_blockManager->allocMem(sizeof(page)*m_pageCount);
+			goto FIRST_PAGE_SIZE_FAULT;
+
+		pageOffsets = (uint64_t*)pos;
+		pos += sizeof(uint64_t)*(m_pageCount+1);
+		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
+			goto FIRST_PAGE_SIZE_FAULT;
+
+		pages = (page**)m_blockManager->allocMem(sizeof(page*)*m_pageCount);
 		if (pos+ m_pageCount*offsetof(page, ref) >= firstPage->pageData + firstPage->pageUsedSize)
-		{
-			LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
-			m_blockManager->freePage(firstPage);
-			firstPage = nullptr;
-			return -1;
-		}
+			goto FIRST_PAGE_SIZE_FAULT;
 		for (uint16_t idx = 0; idx < m_pageCount; idx++)
 		{
-			memcpy(&pages[idx], pos, offsetof(page, ref));
+			pages[idx] = (page*)m_blockManager->allocMem(sizeof(page));
+			memcpy(pages[idx], pos, offsetof(page, ref));
 			pos += offsetof(page, ref);
-			pages[idx].ref.store(0, std::memory_order_relaxed);
+			pages[idx]->ref.store(0, std::memory_order_relaxed);
 		}
 		return 0;
+FIRST_PAGE_SIZE_FAULT:
+		LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
+		m_blockManager->freePage(firstPage);
+		firstPage = nullptr;
+		return -1;
 	}
 	int loadPage(page *p,size_t size,size_t offset)
 	{
@@ -162,7 +161,7 @@ class solidBlock :public block{
 					int32_t decompressSize;
 					if ((decompressSize=LZ4_decompress_safe(realData, uncompressedData+ tmpSize, sizeArray[idx], p->pageUsedSize-tmpSize)) < 0)
 					{
-						LOG(ERROR) << "decompress page data in position:" << offset << " of block " << m_blockID << " failed ";
+						LOG(ERROR) << "deCompress page data in position:" << offset << " of block " << m_blockID << " failed ";
 						bufferPool::free(uncompressedData);
 						bufferPool::free(data);
 						return -1;
@@ -175,7 +174,7 @@ class solidBlock :public block{
 			{
 				if (LZ4_decompress_safe(data, uncompressedData, size, p->pageUsedSize) < 0)
 				{
-					LOG(ERROR) << "decompress page data in position:" << offset << " of block " << m_blockID << " failed ";
+					LOG(ERROR) << "deCompress page data in position:" << offset << " of block " << m_blockID << " failed ";
 					bufferPool::free(uncompressedData);
 					bufferPool::free(data);
 					return -1;
@@ -185,45 +184,133 @@ class solidBlock :public block{
 		}
 		return 0;
 	}
+	int64_t writepage(page* p,uint64_t offset,bool compress)
+	{
+		if(seekFile(m_fd,0,SEEK_CUR)!=offset)
+		{
+			if(seekFile(m_fd,offset,SEEK_SET)!=offset)
+			{
+				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << ","<<strerror(errno);
+				return -1;
+			}
+		}
+		if(compress)
+		{
+			p->crc = 0;
+			int64_t compressedSize = 0;
+			char * compressBuf = nullptr;
+			if(unlikely(p->pageUsedSize>LZ4_MAX_INPUT_SIZE))
+			{
+				uint32_t fullCount = p->pageUsedSize/LZ4_MAX_INPUT_SIZE;
+				uint32_t notFullTailSize = p->pageUsedSize%LZ4_MAX_INPUT_SIZE;
+				uint64_t compressBufSize = sizeof(uint32_t)*(fullCount+1+notFullTailSize?1:0)+fullCount*LZ4_COMPRESSBOUND(LZ4_MAX_INPUT_SIZE)+ notFullTailSize?LZ4_COMPRESSBOUND(p->pageUsedSize%LZ4_MAX_INPUT_SIZE):0;
+				compressBuf = (char*)m_blockManager->allocMem(compressBufSize);
+				char * compressPos = compressBuf+sizeof(uint32_t)*(fullCount+1+notFullTailSize?1:0),*dataPos = p->pageData;
+				uint32_t idx ;
+				for(idx=0;idx<fullCount;idx++)
+				{
+					((uint32_t*)compressBuf)[idx]=compressPos - compressBuf;
+					compressPos+=LZ4_compress_default(dataPos,compressPos,LZ4_MAX_INPUT_SIZE,LZ4_COMPRESSBOUND(LZ4_MAX_INPUT_SIZE));
+					dataPos +=LZ4_MAX_INPUT_SIZE;
+				}
+				if(notFullTailSize)
+				{
+					((uint32_t*)compressBuf)[idx++]=compressPos - compressBuf;
+					compressPos+=LZ4_compress_default(dataPos,compressPos,notFullTailSize,LZ4_COMPRESSBOUND(notFullTailSize));
+				}
+				((uint32_t*)compressBuf)[idx]=compressPos - compressBuf;
+				compressedSize = compressPos - compressBuf;
+			}
+			else
+			{
+				uint32_t compressBufSize = LZ4_COMPRESSBOUND(p->pageUsedSize);
+				compressBuf = (char*)m_blockManager->allocMem(compressBufSize);
+				compressedSize = LZ4_compress_default(p->pageData,compressBuf,p->pageUsedSize,compressBufSize);
+			}
+			if(compressedSize!=writeFile(m_fd,compressBuf,compressedSize))
+			{
+				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << ","<<strerror(errno);
+				bufferPool::free(compressBuf);
+				return -1;
+			}
+			bufferPool::free(compressBuf);
+			return compressedSize;
 
+		}
+		else
+		{
+			p->crc = hwCrc32c(0, p->pageData, p->pageUsedSize);
+			if(p->pageUsedSize!=writeFile(m_fd,p->pageData,p->pageUsedSize))
+			{
+				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << ","<<strerror(errno);
+				return -1;
+			}
+			return p->pageUsedSize;
+		}
+	}
 	inline const char * getRecord(uint32_t recordId)
 	{
 		if (recordId >= m_recordCount)
 			return nullptr;
-		if (0 != loadPage(pageId( m_recordInfos[recordId].offset)))
+		uint16_t pId = pageId( m_recordInfos[recordId].offset);
+		page *p = pages[pId];
+		if (unlikely(0 != loadPage(p,ALIGN(pageOffsets[pId],512),pageOffsets[pId+1]-ALIGN(pageOffsets[pId],512))))
 			return nullptr;
-		return pages[pageId(m_recordInfos[recordId].offset)]->pageData + offsetInPage(m_recordInfos[recordId].offset);
+		return p->pageData + offsetInPage(m_recordInfos[recordId].offset);
 	}
-	int writeToFile(const char * filename)
+
+	int writeToFile()
 	{
 		if (fileHandleValid(m_fd))
 			closeFile(m_fd);
-		std::string bakFile = filename;
-		bakFile.append(".bak");
-		remove(bakFile.c_str());
-		m_fd = openFile(bakFile.c_str(), true, true, true);
+		std::string file = m_blockManager->getBlockFile(m_blockID);
+		std::string tmpFile = file.append(".tmp");
+		remove(tmpFile.c_str());
+		m_fd = openFile(tmpFile.c_str(), true, true, true);
 		if (!fileHandleValid(m_fd))
 		{
-			LOG(ERROR) << "write block file "<< bakFile<< " failed for errno:"<<errno<<" ,"<<strerror(errno);
+			LOG(ERROR) << "write block file "<< tmpFile<< " failed for errno:"<<errno<<" ,"<<strerror(errno);
 			return -1;
 		}
 		int writeSize = 0;
 		int headSize = offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_version);
+
+		uint64_t pagePos = ALIGN(headSize+LZ4_COMPRESSBOUND(firstPage->pageUsedSize),512);
+		for(uint16_t pageIdx =0;pageIdx<m_pageCount;pageIdx++)
+		{
+			pageOffsets[pageIdx] = pagePos;
+			int64_t writedSize = writepage(pages[pageIdx],pagePos,true);
+			if(writedSize<0)
+				return -1;
+			pagePos = ALIGN(pagePos+writedSize,512);
+		}
+
+		solidBlockHeadPageSize = writepage(firstPage,headSize,true);
+		solidBlockHeadPageRawSize = firstPage->pageUsedSize;
+		if(seekFile(m_fd,0,SEEK_SET)!=0)
+		{
+			LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << ","<<strerror(errno);
+			return -1;
+		}
 		if (headSize != (writeSize = writeFile(m_fd, (char*)&m_version, headSize)))
 		{
-			LOG(ERROR) << "write head info to block file " << bakFile << " failed for errno:" << errno << " ," << strerror(errno);
+			LOG(ERROR) << "write head info to block file " << tmpFile << " failed for errno:" << errno << " ," << strerror(errno);
 			return -1;
 		}
-		if (writeDataPart((char*)m_tableInfo, sizeof(tableDataInfo)*m_tableCount, sizeof(tableDataInfo)*m_tableCount > 1024 * 32) != 0)
+
+		if(0!=fsync(m_fd))
 		{
-			LOG(ERROR) << "write tableInfo to block file " << bakFile << " failed for errno:" << errno << " ," << strerror(errno);
+			LOG(ERROR) << "flush block file "<< tmpFile<< " failed for errno:"<<errno<<" ,"<<strerror(errno);
 			return -1;
 		}
-		if (writeDataPart((char*)m_recordInfos, sizeof(recordGeneralInfo)*m_recordCount, sizeof(recordGeneralInfo)*m_recordCount > 1024 * 32) != 0)
+		closeFile(m_fd);
+		m_fd = 0;
+		if(0!=rename(tmpFile.c_str(),file.c_str()))
 		{
-			LOG(ERROR) << "write recordInfo to block file " << bakFile << " failed for errno:" << errno << " ," << strerror(errno);
+			LOG(ERROR) << "rename tmp block file "<< tmpFile<< " to "<<file<<" failed for errno:"<<errno<<" ,"<<strerror(errno);
 			return -1;
 		}
+		return 0;
 	}
 };
 class solidBlockIterator :public iterator{

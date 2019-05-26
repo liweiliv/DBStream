@@ -287,7 +287,7 @@ public:
 					*(uint32_t*)externCurretPos = k->count;
 					externCurretPos += sizeof(uint32_t);
 				}
-				memcpy(externCurretPos, k->subArray; sizeof(uint32_t)*k->count);
+				memcpy(externCurretPos, k->subArray, sizeof(uint32_t)*k->count);
 			}
 			indexPos += keySize + sizeof(uint32_t);
 		} while (iter.nextKey());
@@ -360,11 +360,9 @@ public:
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t)*k->count;
 		} while (iter.nextKey());
 	}
-	template<typename T>
-	const char *toString()
+	inline uint32_t toSolidIndexSize()
 	{
 		uint32_t size = 0;
-		uint32_t externOffset = 0;
 		uint16_t keySize = 0;
 		bool fixed = false;
 		if (m_columnCount == 1)
@@ -381,10 +379,28 @@ public:
 			size = (keySize + sizeof(uint32_t))*m_keyCount + (uint32_t)*(m_allCount - m_keyCount) * 2;
 		else
 			size = (keySize + sizeof(uint32_t))*m_keyCount + (uint32_t)*(m_allCount - m_keyCount) * 2 + m_varSize;
+		return size;
+	}
+	template<typename T>
+	const char *toString(char * data=nullptr)
+	{
+		uint16_t keySize = 0;
+		bool fixed = false;
+		if (m_columnCount == 1)
+		{
+			keySize = columnInfos[m_columnIdxs[0]].columnTypeSize;
+			fixed = columnInfos[m_columnIdxs[0]].fixed;
+		}
+		else
+		{
+			keySize = m_ukMeta.m_size;
+			fixed = m_ukMeta.m_fixed;
+		}
 		iterator<T> iter(this);
 		if (!iter.begin()||!iter.valid())
 			return nullptr;//no data
-		char * data = (char*)malloc(size);
+		if(data==nullptr)
+			data = (char*)malloc(toSolidIndexSize());
 		if (fixed)
 			createFixedSolidIndex(data, iter, keySize);
 		else
