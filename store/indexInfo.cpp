@@ -1,0 +1,236 @@
+#include<string.h>
+#include<assert.h>
+#include "indexInfo.h"
+#include"../util/arena.h"
+#include "../message/record.h"
+#include "../meta/metaData.h"
+namespace STORE {
+	binaryType::binaryType() :data(nullptr), size(0) {
+
+	}
+	binaryType::binaryType(const char* _data, uint16_t _size) : data(_data), size(_size) {
+
+	}
+	binaryType::binaryType(const binaryType & dest) : data(dest.data), size(dest.size)
+	{
+	}
+
+	binaryType binaryType::operator=(const binaryType & dest)
+	{
+		data = dest.data;
+		size = dest.size;
+		return *this;
+	}
+	int binaryType::compare(const binaryType & dest) const
+	{
+		if (size == dest.size)
+			return memcmp(data, dest.data, size);
+		else if (size > dest.size)
+		{
+			if (memcmp(data, dest.data, size) >= 0)
+				return -1;
+			else
+				return 1;
+		}
+		else
+		{
+			if (memcmp(data, dest.data, dest.size) > 0)
+				return 1;
+			else
+				return -1;
+		}
+	}
+	bool binaryType::operator< (const binaryType & dest) const
+	{
+		return  compare(dest) < 0;
+	}
+	bool binaryType::operator> (const binaryType & dest) const
+	{
+		return  compare(dest) > 0;
+	}
+	unionKey::unionKey() :key(nullptr), meta(nullptr) {}
+	unionKey::unionKey(const unionKey & dest) : key(dest.key), meta(dest.meta)
+	{
+	}
+	bool unionKeyMeta::init(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta) {
+		if (m_types)
+			delete[]m_types;
+		m_types = new uint8_t[columnCount];
+		m_fixed = true;
+		for (uint16_t i = 0; i < columnCount; i++)
+		{
+			m_types[i] = meta->getColumn(columnIndexs[i])->m_columnType;
+			if (!columnInfos[m_types[i]].asIndex)
+			{
+				delete[]m_types;
+				m_types = nullptr;
+				return false;
+			}
+			if (!columnInfos[m_types[i]].fixed)
+			{
+				if (m_fixed)
+					m_fixed = false;
+				m_size += sizeof(uint16_t);
+			}
+			else
+				m_size += columnInfos[m_types[i]].columnTypeSize;
+		}
+		m_keyCount = columnCount;
+	}
+	int unionKey::compare(const unionKey & dest) const
+	{
+		assert(meta == dest.meta);
+		const char * srcKey = key, *destKey = dest.key;
+		for (uint16_t i = 0; i < meta->m_keyCount; i++)
+		{
+			switch (meta->m_types[i])
+			{
+			case UINT8:
+				if (*(uint8_t*)srcKey != *(uint8_t*)destKey)
+					return *(uint8_t*)srcKey - *(uint8_t*)destKey;
+				break;
+			case INT8:
+				if (*(int8_t*)srcKey != *(int8_t*)destKey)
+					return *(int8_t*)srcKey - *(int8_t*)destKey;
+				break;
+			case UINT16:
+				if (*(uint16_t*)srcKey != *(uint16_t*)destKey)
+					return *(uint16_t*)srcKey - *(uint16_t*)destKey;
+				break;
+			case INT16:
+				if (*(int16_t*)srcKey != *(int16_t*)destKey)
+					return *(int16_t*)srcKey - *(int16_t*)destKey;
+				break;
+			case UINT32:
+				if (*(uint32_t*)srcKey != *(uint32_t*)destKey)
+					return *(uint32_t*)srcKey - *(uint32_t*)destKey;
+				break;
+			case INT32:
+				if (*(int32_t*)srcKey != *(int32_t*)destKey)
+					return *(int32_t*)srcKey - *(int32_t*)destKey;
+				break;
+			case UINT64:
+				if (*(uint64_t*)srcKey != *(uint64_t*)destKey)
+					if (*(uint64_t*)srcKey > *(uint64_t*)destKey)
+						return 1;
+					else
+						return -1;
+				break;
+			case INT64:
+				if (*(int64_t*)srcKey != *(int64_t*)destKey)
+					if (*(int64_t*)srcKey > *(int64_t*)destKey)
+						return 1;
+					else
+						return -1;
+				break;
+			case FLOAT:
+				if (*(float*)srcKey - *(float*)destKey > 0.000001f || *(float*)srcKey - *(float*)destKey < -0.000001f)
+					if (*(float*)srcKey > *(float*)destKey)
+						return 1;
+					else
+						return -1;
+				break;
+			case DOUBLE:
+				if (*(double*)srcKey - *(double*)destKey > 0.000001f || *(double*)srcKey - *(double*)destKey < -0.000001f)
+					if (*(double*)srcKey > *(double*)destKey)
+						return 1;
+					else
+						return -1;
+				break;
+			case STRING:
+			case BLOB:
+			{
+				binaryType s(srcKey + sizeof(uint16_t), *(uint16_t*)srcKey), d(destKey + sizeof(uint16_t), *(uint16_t*)destKey);
+				int c = s.compare(d);
+				if (c != 0)
+					return c;
+				srcKey += sizeof(uint16_t) + *(uint16_t*)srcKey;
+				destKey += sizeof(uint16_t) + *(uint16_t*)destKey;
+				break;
+			}
+			default:
+				abort();
+			}
+			srcKey += columnInfos[meta->m_types[i]].columnTypeSize;
+			destKey += columnInfos[meta->m_types[i]].columnTypeSize;
+		}
+		return 0;
+	}
+	bool unionKey::operator> (const unionKey & dest) const
+	{
+		return compare(dest) > 0;
+	}
+	/*
+	*format :
+	fixed:[column1][column2]...[column n]
+	var:[16bit length][if(fixed) column 1][if(var) column 2 value offset in extern data]...[column n]
+	*/
+	const char* unionKey::initKey(leveldb::Arena * arena, unionKeyMeta * keyMeta, uint16_t *columnIdxs, uint16_t columnCount, const DATABASE_INCREASE::DMLRecord * r, bool keyUpdated)
+	{
+		uint32_t externSize = 0;
+		char *  key = nullptr;
+		char *externPtr = nullptr;
+		if (!keyMeta->m_fixed)
+		{
+			for (uint16_t idx = 0; idx < keyMeta->m_keyCount; idx++)
+			{
+				if (!columnInfos[keyMeta->m_types[idx]].fixed)
+				{
+					if (keyUpdated)
+						externSize += r->oldVarColumnSizeOfUpdateType(columnIdxs[idx], r->oldColumnOfUpdateType(columnIdxs[idx])) + sizeof(uint16_t);
+					else
+						externSize += r->varColumnSize(columnIdxs[idx]);
+				}
+			}
+			key = arena->Allocate(keyMeta->m_size + externSize + sizeof(uint16_t));
+			externPtr = key + keyMeta->m_size;
+			*(uint16_t*)externPtr = keyMeta->m_size + externSize;
+			externPtr += sizeof(uint16_t);
+		}
+		else
+			key = arena->Allocate(keyMeta->m_size);
+		char * ptr = key;
+		if (r->head->type == DATABASE_INCREASE::R_INSERT || r->head->type == DATABASE_INCREASE::R_DELETE ||
+			((r->head->type == DATABASE_INCREASE::R_UPDATE || r->head->type == DATABASE_INCREASE::R_REPLACE)) && !keyUpdated)
+		{
+			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
+			{
+				if (columnInfos[keyMeta->m_types[i]].fixed)
+				{
+					memcpy(ptr, r->column(columnIdxs[i]), columnInfos[keyMeta->m_types[i]].columnTypeSize);
+					ptr += columnInfos[keyMeta->m_types[i]].columnTypeSize;
+				}
+				else
+				{
+					*(uint16_t*)ptr = externPtr - key;
+					*(uint16_t*)externPtr = r->varColumnSize(i);
+					memcpy(externPtr + sizeof(uint16_t), r->column(columnIdxs[i]), *(uint16_t*)externPtr);
+					externPtr += *(uint16_t*)externPtr + sizeof(uint16_t);
+					ptr += sizeof(uint16_t);
+				}
+			}
+		}
+		else
+		{
+			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
+			{
+				const char * value = r->oldColumnOfUpdateType(columnIdxs[i]);
+				if (columnInfos[keyMeta->m_types[i]].fixed)
+				{
+					memcpy(ptr, r->column(columnIdxs[i]), columnInfos[keyMeta->m_types[i]].columnTypeSize);
+					ptr += columnInfos[keyMeta->m_types[i]].columnTypeSize;
+				}
+				else
+				{
+					const char * v = r->column(columnIdxs[i]);
+					*(uint16_t*)ptr = externPtr - key;
+					*(uint16_t*)externPtr = r->oldVarColumnSizeOfUpdateType(i, v);
+					memcpy(externPtr + sizeof(uint16_t), v, *(uint16_t*)externPtr);
+					externPtr += *(uint16_t*)externPtr + sizeof(uint16_t);
+					ptr += sizeof(uint16_t);
+				}
+			}
+		}
+		return key;
+	}
+}
