@@ -4,6 +4,7 @@
 std::thread::id globalThreads[maxThreadCount] ;
 static int allActiveThreadCount = 0;
 std::mutex globalThreadsLock;
+thread_local int threadid = maxThreadCount + 1;
 bool initLocalThreadId()
 {
 	std::lock_guard<std::mutex> lock(globalThreadsLock);
@@ -16,7 +17,9 @@ bool initLocalThreadId()
 		{
 			globalThreads[i] = std::this_thread::get_id();
 			threadid = i;
+			return true;
 		}
 		continue;
 	}
+	return false;	
 }

@@ -18,6 +18,9 @@ add_library(meta SHARED ${metaDir})
 aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
+#store
+aux_source_directory(store storeDir)
+add_library(store SHARED ${storeDir})
 
 
 #unit test

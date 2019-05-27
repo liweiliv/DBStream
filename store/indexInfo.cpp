@@ -5,13 +5,13 @@
 #include "../message/record.h"
 #include "../meta/metaData.h"
 namespace STORE {
-	binaryType::binaryType() :data(nullptr), size(0) {
+	binaryType::binaryType() :size(0),data(nullptr){
 
 	}
-	binaryType::binaryType(const char* _data, uint16_t _size) : data(_data), size(_size) {
+	binaryType::binaryType(const char* _data, uint16_t _size) :size(_size), data(_data){
 
 	}
-	binaryType::binaryType(const binaryType & dest) : data(dest.data), size(dest.size)
+	binaryType::binaryType(const binaryType & dest) :size(dest.size), data(dest.data)
 	{
 	}
 
@@ -40,19 +40,12 @@ namespace STORE {
 				return -1;
 		}
 	}
-	bool binaryType::operator< (const binaryType & dest) const
-	{
-		return  compare(dest) < 0;
-	}
-	bool binaryType::operator> (const binaryType & dest) const
-	{
-		return  compare(dest) > 0;
-	}
 	unionKey::unionKey() :key(nullptr), meta(nullptr) {}
 	unionKey::unionKey(const unionKey & dest) : key(dest.key), meta(dest.meta)
 	{
 	}
-	bool unionKeyMeta::init(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta) {
+	bool unionKeyMeta::init(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta)
+	{
 		if (m_types)
 			delete[]m_types;
 		m_types = new uint8_t[columnCount];
@@ -76,6 +69,7 @@ namespace STORE {
 				m_size += columnInfos[m_types[i]].columnTypeSize;
 		}
 		m_keyCount = columnCount;
+		return true;
 	}
 	int unionKey::compare(const unionKey & dest) const
 	{
@@ -111,31 +105,39 @@ namespace STORE {
 				break;
 			case UINT64:
 				if (*(uint64_t*)srcKey != *(uint64_t*)destKey)
+				{
 					if (*(uint64_t*)srcKey > *(uint64_t*)destKey)
 						return 1;
 					else
 						return -1;
+				}
 				break;
 			case INT64:
 				if (*(int64_t*)srcKey != *(int64_t*)destKey)
+				{
 					if (*(int64_t*)srcKey > *(int64_t*)destKey)
 						return 1;
 					else
 						return -1;
+				}
 				break;
 			case FLOAT:
 				if (*(float*)srcKey - *(float*)destKey > 0.000001f || *(float*)srcKey - *(float*)destKey < -0.000001f)
+				{
 					if (*(float*)srcKey > *(float*)destKey)
 						return 1;
 					else
 						return -1;
+				}
 				break;
 			case DOUBLE:
 				if (*(double*)srcKey - *(double*)destKey > 0.000001f || *(double*)srcKey - *(double*)destKey < -0.000001f)
+				{
 					if (*(double*)srcKey > *(double*)destKey)
 						return 1;
 					else
 						return -1;
+				}
 				break;
 			case STRING:
 			case BLOB:
@@ -155,10 +157,6 @@ namespace STORE {
 			destKey += columnInfos[meta->m_types[i]].columnTypeSize;
 		}
 		return 0;
-	}
-	bool unionKey::operator> (const unionKey & dest) const
-	{
-		return compare(dest) > 0;
 	}
 	/*
 	*format :
@@ -191,7 +189,7 @@ namespace STORE {
 			key = arena->Allocate(keyMeta->m_size);
 		char * ptr = key;
 		if (r->head->type == DATABASE_INCREASE::R_INSERT || r->head->type == DATABASE_INCREASE::R_DELETE ||
-			((r->head->type == DATABASE_INCREASE::R_UPDATE || r->head->type == DATABASE_INCREASE::R_REPLACE)) && !keyUpdated)
+			((r->head->type == DATABASE_INCREASE::R_UPDATE || r->head->type == DATABASE_INCREASE::R_REPLACE) && !keyUpdated))
 		{
 			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
 			{
@@ -214,7 +212,6 @@ namespace STORE {
 		{
 			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
 			{
-				const char * value = r->oldColumnOfUpdateType(columnIdxs[i]);
 				if (columnInfos[keyMeta->m_types[i]].fixed)
 				{
 					memcpy(ptr, r->column(columnIdxs[i]), columnInfos[keyMeta->m_types[i]].columnTypeSize);

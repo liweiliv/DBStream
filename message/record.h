@@ -268,26 +268,27 @@ struct DMLRecord:public record
     {
         if(TEST_BITMAP(updatedBitmap,index))
         {
-			const char * pos = oldColumnsOfUpdateType;
-			for (uint16_t i = 0; i < meta->m_columnsCount; i++)
+		const char * pos = oldColumnsOfUpdateType;
+		for (uint16_t i = 0; i < meta->m_columnsCount; i++)
+		{
+			if (*(uint16_t*)(pos) < index)
 			{
-				if (*(uint16_t*)(pos) < index)
-				{
-					if (columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
-						pos += sizeof(uint16_t) + columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].columnTypeSize;
-					else
-						pos += sizeof(uint16_t) + sizeof(uint32_t) + *(uint32_t*)(pos + sizeof(uint16_t));
-				}
-				else if (*(uint16_t*)(pos) == index)
-				{
-					if (columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
-						return pos + sizeof(uint16_t);
-					else
-						return pos + sizeof(uint16_t) + sizeof(uint32_t);
-				}
+				if (columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
+					pos += sizeof(uint16_t) + columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].columnTypeSize;
 				else
-					return nullptr;
+					pos += sizeof(uint16_t) + sizeof(uint32_t) + *(uint32_t*)(pos + sizeof(uint16_t));
 			}
+			else if (*(uint16_t*)(pos) == index)
+			{
+				if (columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
+					return pos + sizeof(uint16_t);
+				else
+					return pos + sizeof(uint16_t) + sizeof(uint32_t);
+			}
+			else
+				return nullptr;
+		}
+		return nullptr;
         }
         else
         {

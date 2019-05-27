@@ -1,7 +1,7 @@
 #pragma once
 #include"likely.h"
 static constexpr int maxThreadCount = 256;
-static thread_local int threadid = maxThreadCount+1;
+extern thread_local int threadid;
 bool initLocalThreadId();
 template<class T>
 class threadLocal
@@ -30,7 +30,7 @@ public:
 		if (unlikely(threadid >= maxThreadCount))
 		{
 			if (!initLocalThreadId())
-				return nulptr;
+				return nullptr;
 		}
 		if (likely(m_var[threadid]!=nullptr))
 		{
