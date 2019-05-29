@@ -4,11 +4,11 @@
 pageTable p;
 uint64_t *base;
 uint64_t** to;
-#define c 1 
+#define c 10000000
 void testThread(unsigned long id)
 {
 	std::this_thread::sleep_for(std::chrono::nanoseconds(rand()%100000));
-	for (int i = 0; i < c; i++)
+	for (int i = 1; i < c; i++)
 	{
 		uint64_t v = ((id << 32) | i);
 		void *rtv = p.set(i, (void*)v);
@@ -22,8 +22,8 @@ void testThread(unsigned long id)
 			base[i] = v;
 			to[id][i] = v;
 		}
-		rtv = p.get(i);
-		assert(rtv==(void*)to[id][i]);
+		//rtv = p.get(i);
+		//assert(rtv==(void*)to[id][i]);
 	}
 }
 int main()
@@ -41,7 +41,7 @@ int main()
 		t[i]->join();
 	for (int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
 	{
-		for (int j = 0; j < c; j++)
+		for (int j = 1; j < c; j++)
 		{
 			void * v = p.get(j);
 			if (base[j] != to[i][j]||(uint64_t)v!=base[j])
