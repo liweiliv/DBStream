@@ -18,39 +18,44 @@
 #define PT_MID(id) (((id)&PT_MID_MASK)>>PT_LOW_OFFSET)
 #define PT_LOW(id) ((id)&PT_LOW_MASK)
 #include <stdint.h>
+#include <stdio.h>
 #include <atomic>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "barrier.h"
 class pageTable
 {
 private:
     struct lowNode
     {
-        std::atomic<void*> child[PT_LOW(0xffffffffu)];
+        std::atomic<void*> child[PT_LOW(0xffffffffu)+1];
         lowNode()
         {
-            for (uint16_t idx = 0; idx < PT_LOW(0xffffffffu); idx++)
+            for (uint16_t idx = 0; idx < PT_LOW(0xffffffffu)+1; idx++)
                 child[idx].store(nullptr, std::memory_order_relaxed);
+	    barrier;
         }
 
     };
     struct midNode
     {
-        std::atomic<lowNode*> child[PT_MID(0xffffffffu)];
+        std::atomic<lowNode*> child[PT_MID(0xffffffffu)+1];
         midNode()
         {
-            for (uint16_t idx = 0; idx < PT_MID(0xffffffffu); idx++)
+            for (uint16_t idx = 0; idx < PT_MID(0xffffffffu)+1; idx++)
                 child[idx].store(nullptr, std::memory_order_relaxed);
+            barrier;
         }
     };
     struct highNode
     {
-        std::atomic<midNode*> child[PT_HIGH(0xffffffffu)];
+        std::atomic<midNode*> child[PT_HIGH(0xffffffffu)+1];
         highNode()
         {
-            for (uint16_t idx = 0; idx < PT_HIGH(0xffffffffu); idx++)
+            for (uint16_t idx = 0; idx < PT_HIGH(0xffffffffu)+1; idx++)
                 child[idx].store(nullptr, std::memory_order_relaxed);
+           barrier;
         }
     };
     highNode root;
@@ -58,7 +63,7 @@ private:
     std::atomic<uint32_t> max;
     int (*destoryValueFunc)(void * data);
 public:
-    pageTable(int (*_destoryValueFunc)(void *)) :
+    pageTable(int (*_destoryValueFunc)(void *) = nullptr) :
             destoryValueFunc(_destoryValueFunc)
     {
         min.store(0, std::memory_order_relaxed);
@@ -102,21 +107,21 @@ public:
                 root.child[i].store(nullptr, std::memory_order_relaxed);
         }
     }
-    inline const void * get(uint32_t id)
+    inline void * get(uint32_t id)
     {
-        if (min.load(std::memory_order_release) > id
-                || max.load(std::memory_order_release) < id)
+        if (min.load(std::memory_order_relaxed) > id
+                || max.load(std::memory_order_relaxed) < id)
             return nullptr;
         uint8_t highId = PT_HIGH(id);
-        midNode * mid = root.child[highId].load(std::memory_order_release);
+        midNode * mid = root.child[highId].load(std::memory_order_relaxed);
         if (mid == nullptr)
             return nullptr;
         uint16_t midId = PT_MID(id);
-        lowNode * low = mid->child[midId].load(std::memory_order_release);
+        lowNode * low = mid->child[midId].load(std::memory_order_relaxed);
         if (low == nullptr)
             return nullptr;
-        uint16_t lowId = PT_LOW(id);
-        return low->child[lowId].load(std::memory_order_release);
+        uint32_t lowId = PT_LOW(id);
+        return low->child[lowId].load(std::memory_order_relaxed);
     }
     inline const void * operator[](uint32_t id)
     {
@@ -152,58 +157,58 @@ public:
                 return data;
         } while (1);
     }
-    inline void* set(uint32_t id, void * data)
+   inline void* set(uint32_t id, void * data)
     {
         uint8_t highId = PT_HIGH(id);
-        midNode * mid = root.child[highId].load(std::memory_order_release);
+        midNode * mid = root.child[highId].load(std::memory_order_relaxed);
         bool newMid = false, newLow = false;
         if (mid == nullptr)
         {
             mid = new midNode;
-            newMid = true;
+			midNode* nullData = nullptr;
+			while (!root.child[highId].compare_exchange_weak(nullData, mid,
+				std::memory_order_acq_rel, std::memory_order_acq_rel))
+			{
+				if (nullData != nullptr)
+				{
+					delete mid;
+					mid = nullData;
+					break;
+				}
+			}
         }
         uint16_t midId = PT_MID(id);
-        lowNode * low = mid->child[midId].load(std::memory_order_release);
+        lowNode * low = mid->child[midId].load(std::memory_order_relaxed);
         if (low == nullptr)
         {
             low = new lowNode;
-            newLow = true;
+			lowNode* nullData = nullptr;
+			while (!mid->child[midId].compare_exchange_weak(nullData, low,
+				std::memory_order_acq_rel, std::memory_order_acq_rel))
+			{
+				if (nullData != nullptr)
+				{
+					delete low;
+					low = nullData;
+					break;
+				}
+			}
         }
         uint16_t lowId = PT_LOW(id);
-        void * nullData = nullptr;
-        while (low->child[lowId].compare_exchange_weak(nullData, data,
+		void* tmpData = nullptr;
+		if ((tmpData = low->child[lowId].load(std::memory_order_relaxed)) != nullptr)
+			return tmpData;
+        while (!low->child[lowId].compare_exchange_weak(tmpData, data,
                 std::memory_order_acq_rel, std::memory_order_acq_rel))
         {
-            if ((nullData = low->child[lowId].load(std::memory_order_release))
-                    != nullptr)
-                return nullData;
+			if (tmpData != nullptr)
+				return tmpData;
         }
-        if (newLow)
-        {
-            lowNode * nullData = nullptr;
-            while (mid->child[midId].compare_exchange_weak(nullData, low,
-                    std::memory_order_acq_rel, std::memory_order_acq_rel))
-            {
-                if ((nullData = mid->child[midId].load(
-                        std::memory_order_release)) != nullptr)
-                    return nullData;
-            }
-        }
-        if (newMid)
-        {
-            midNode * nullData = nullptr;
-            while (root.child[midId].compare_exchange_weak(nullData, mid,
-                    std::memory_order_acq_rel, std::memory_order_acq_rel))
-            {
-                if ((nullData = root.child[highId].load(
-                        std::memory_order_release)) != nullptr)
-                    return nullData;
-            }
-        }
+	printf("success\n");
         uint32_t _min;
         do
         {
-            _min = min.load(std::memory_order_release);
+            _min = min.load(std::memory_order_relaxed);
             if (_min <= id)
                 break;
             if (min.compare_exchange_weak(_min, id, std::memory_order_acq_rel,
@@ -213,14 +218,14 @@ public:
         uint32_t _max;
         do
         {
-            _max = max.load(std::memory_order_release);
+            _max = max.load(std::memory_order_relaxed);
             if (_max >= id)
                 break;
             if (max.compare_exchange_weak(_max, id, std::memory_order_acq_rel,
                     std::memory_order_acq_rel))
                 break;
         } while (1);
-        return low->child[lowId];
+        return data;
     }
     inline void erase(uint32_t id)
     {
