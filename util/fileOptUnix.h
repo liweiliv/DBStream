@@ -98,7 +98,7 @@ static int closeFile(fileHandle fd)
  * 0 文件不存在
  * 其他为错误号
  */
-static inline  int checkFileExist(const char *filename, int mode)
+static inline  int checkFileExist(const char *fileName, int mode)
 {
 	return access(fileName, mode);
 }
