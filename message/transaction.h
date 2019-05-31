@@ -6,7 +6,6 @@
  */
 #include <stdlib.h>
 #include "record.h"
-#define __cplusplus  201103L
 #include <atomic>
 namespace DATABASE_INCREASE
 {

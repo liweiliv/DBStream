@@ -15,6 +15,7 @@
 #include <assert.h>
 #include "mysqlTypes.h"
 #include "charset.h"
+#include "../util/winDll.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }
@@ -49,7 +50,7 @@ namespace META {
 			{
 				for (uint32_t i = 0; i < m_Count; i++)
 				{
-					int32_t size = strlen(c.m_array[i]);
+					int32_t size = (int)strlen(c.m_array[i]);
 					m_array[i] = (char*)malloc(size + 1);
 					memcpy(m_array[i], c.m_array[i], size);
 					m_array[i][size] = '\0';
@@ -343,7 +344,7 @@ namespace META {
 		}
 	};
 
-	struct tableMeta
+	struct DLL_EXPORT tableMeta
 	{
 		std::string  m_dbName;
 		std::string  m_tableName;

@@ -12,6 +12,7 @@
 #include "../util/trieTree.h"
 #include "../util/unorderMapUtil.h"
 #include "tableIdTree.h"
+#include "../util/winDll.h"
 struct charsetInfo;
 namespace STORE{
 class client;
@@ -32,7 +33,7 @@ namespace META {
 	struct Table;
 	struct databaseInfo;
 
-	class metaDataCollection
+	class DLL_EXPORT metaDataCollection
 	{
 	private:
 		trieTree m_dbs;

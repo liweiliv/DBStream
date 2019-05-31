@@ -11,6 +11,7 @@
 #ifdef OS_WIN
 #include "winString.h"
 #endif
+
 jsonValue::type jsonValue::getType(const char * data)
 {
     if (data == NULL)
@@ -131,7 +132,7 @@ int jsonString::parse(const char * data)
     if (e == NULL)
         return -2;
     m_value.assign(ptr + 1, e - ptr - 1);
-    return e - data + 1;
+    return (int)(e - data + 1);
 }
 jsonNum::jsonNum(const char * data ) :
         jsonValue(J_NUM), m_value(0)
@@ -162,7 +163,7 @@ int jsonNum::parse(const char * data)
     }
     if (!flag)
         m_value = -m_value;
-    return ptr - data;
+    return (int)(ptr - data);
 }
 string jsonNum::toString()
 {
@@ -266,7 +267,7 @@ int jsonObject::parse(const char * data)
         }
         ptr++;
     }
-    return ptr - data + 1;
+    return (int)(ptr - data + 1);
 }
 string jsonObject::toString()
 {
@@ -346,7 +347,7 @@ int jsonArray::parse(const char * data)
         }
         ptr++;
     }
-    return ptr - data + 1;
+    return (int)(ptr - data + 1);
 }
 string jsonArray::toString()
 {
@@ -384,12 +385,12 @@ int jsonBool::parse(const char * data)
     if(strncasecmp(ptr,"true",4)==0)
     {
         m_value = true;
-        return 4+ptr-data;
+        return (int)(4+ptr-data);
     }
     else if(strncasecmp(ptr,"false",5)==0)
     {
         m_value = false;
-        return 5+ptr-data;
+        return (int)(5+ptr-data);
     }
     else
         return -1;

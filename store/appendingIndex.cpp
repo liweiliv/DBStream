@@ -265,7 +265,7 @@ namespace STORE{
 		{
 			if (!m_ukMeta.init(columnIdxs, columnCount, meta))
 				return;
-			m_type = UNION;
+			m_type = T_UNION;
 		}
 		else
 		{
@@ -273,53 +273,53 @@ namespace STORE{
 		}
         switch(m_type)
         {
-        case INT8:
+        case T_INT8:
 			m_comp = new keyComparator<int8_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<int8_t>*, keyComparator<int8_t> >(*static_cast<keyComparator<int8_t>*>(m_comp), m_arena);
 			break;
-		case UINT8:
+		case T_UINT8:
 			m_comp = new keyComparator<uint8_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<uint8_t>*, keyComparator<uint8_t> >(*static_cast<keyComparator<uint8_t>*>(m_comp), m_arena);
 			break;
-        case INT16:
+        case T_INT16:
 			m_comp = new keyComparator<int16_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<int16_t>*, keyComparator<int16_t> >(*static_cast<keyComparator<int16_t>*>(m_comp), m_arena);
 			break;
-		case UINT16:
+		case T_UINT16:
 			m_comp = new keyComparator<uint16_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<uint16_t>*, keyComparator<uint16_t> >(*static_cast<keyComparator<uint16_t>*>(m_comp), m_arena);
 			break;
-		case INT32:
+		case T_INT32:
 			m_comp = new keyComparator<int32_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<int32_t>*, keyComparator<int32_t> >(*static_cast<keyComparator<int32_t>*>(m_comp), m_arena);
 			break;
-		case UINT32:
+		case T_UINT32:
 			m_comp = new keyComparator<uint32_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<uint32_t>*, keyComparator<uint32_t> >(*static_cast<keyComparator<uint32_t>*>(m_comp), m_arena);
 			break;
-        case INT64:
+        case T_INT64:
 			m_comp = new keyComparator<int64_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >(*static_cast<keyComparator<int64_t>*>(m_comp), m_arena);
 			break;
-		case TIMESTAMP:
-		case UINT64:
+		case T_TIMESTAMP:
+		case T_UINT64:
 			m_comp = new keyComparator<uint64_t>;
 			m_index = new leveldb::SkipList< KeyTemplate<uint64_t>*, keyComparator<uint64_t> >(*static_cast<keyComparator<uint64_t>*>(m_comp), m_arena);
             break;
-		case FLOAT:
+		case T_FLOAT:
 			m_comp = new keyComparator<float>;
 			m_index = new leveldb::SkipList< KeyTemplate<float>*, keyComparator<float> >(*static_cast<keyComparator<float>*>(m_comp), m_arena);
 			break;
-		case DOUBLE:
+		case T_DOUBLE:
 			m_comp = new keyComparator<double>;
 			m_index = new leveldb::SkipList< KeyTemplate<double>*, keyComparator<double> >(*static_cast<keyComparator<double>*>(m_comp), m_arena);
 			break;
-		case BLOB:
-		case STRING:
+		case T_BLOB:
+		case T_STRING:
 			m_comp = new keyComparator<binaryType>;
 			m_index = new leveldb::SkipList< KeyTemplate<binaryType>*, keyComparator<binaryType> >(*static_cast<keyComparator<binaryType>*>(m_comp), m_arena);
 			break;
-		case UNION:
+		case T_UNION:
 			m_comp = new keyComparator<unionKey>;
 			m_index = new leveldb::SkipList< KeyTemplate<unionKey>*, keyComparator<unionKey> >(*static_cast<keyComparator<unionKey>*>(m_comp), m_arena);
 			break;
@@ -334,42 +334,42 @@ namespace STORE{
         {
             switch(m_type)
             {
-            case INT8:
+            case T_INT8:
                 delete static_cast<leveldb::SkipList< KeyTemplate<int8_t>*,keyComparator<int8_t> >*>(m_index);
                 break;
-            case UINT8:
+            case T_UINT8:
                 delete static_cast<leveldb::SkipList< KeyTemplate<uint8_t>*,keyComparator<uint8_t> >*>(m_index);
                 break;
-            case INT16:
+            case T_INT16:
                 delete static_cast<leveldb::SkipList< KeyTemplate<int16_t>*,keyComparator<int16_t> >*>(m_index);
                 break;
-            case UINT16:
+            case T_UINT16:
                 delete static_cast<leveldb::SkipList< KeyTemplate<uint16_t>*,keyComparator<uint16_t> >*>(m_index);
                 break;
-            case INT32:
+            case T_INT32:
                 delete static_cast<leveldb::SkipList< KeyTemplate<int32_t>*,keyComparator<int32_t> >*>(m_index);
                 break;
-            case UINT32:
+            case T_UINT32:
                 delete static_cast<leveldb::SkipList< KeyTemplate<uint32_t>*,keyComparator<uint32_t> >*>(m_index);
                 break;
-            case INT64:
+            case T_INT64:
                 delete static_cast<leveldb::SkipList< KeyTemplate<int64_t>*,keyComparator<int64_t> >*>(m_index);
                 break;
-			case TIMESTAMP:
-            case UINT64:
+			case T_TIMESTAMP:
+            case T_UINT64:
                 delete static_cast<leveldb::SkipList< KeyTemplate<uint64_t>*,keyComparator<uint64_t> >*>(m_index);
                 break;
-            case FLOAT:
+            case T_FLOAT:
                 delete static_cast<leveldb::SkipList< KeyTemplate<float>*,keyComparator<float> >*>(m_index);
                 break;
-            case DOUBLE:
+            case T_DOUBLE:
                 delete static_cast<leveldb::SkipList< KeyTemplate<double>*,keyComparator<double> >*>(m_index);
                 break;
-            case STRING:
-			case BLOB:
+            case T_STRING:
+			case T_BLOB:
                 delete static_cast<leveldb::SkipList< KeyTemplate<binaryType>*,keyComparator<binaryType> >*>(m_index);
                 break;
-			case UNION:
+			case T_UNION:
 				delete static_cast<leveldb::SkipList< KeyTemplate<unionKey>*, keyComparator<unionKey> >*>(m_index);
 				break;
             default:

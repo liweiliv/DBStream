@@ -124,6 +124,7 @@ void cleanStackLog()
     __cleanStackLog(getCurrentThreadStackLog());
 }
 #ifdef OS_WIN
+#if 0 
 long expt_handler(LPEXCEPTION_POINTERS ep)
 {
 	STACKFRAME64 sf = { 0 };
@@ -166,6 +167,7 @@ long expt_handler(LPEXCEPTION_POINTERS ep)
 	}
 	return EXCEPTION_EXECUTE_HANDLER;
 }
+#endif
 /*
  * 写log，一般使用SET_STACE_LOG_AND_RETURN或者SET_STACE_LOG来调用
  */

@@ -43,8 +43,14 @@ static int truncateFile(fileHandle fd, uint64_t offset)
 {
 	if (offset != seekFile(fd, offset, SEEK_SET))
 		return -1;
-	return SetEndOfFile(fd);
+	return SetEndOfFile(fd)?0:-1;
 }
+static bool fileHandleValid(fileHandle fd)
+{
+	return fd != INVALID_HANDLE_VALUE;
+}
+
+
 static int64_t writeFile(fileHandle fd, const char* data, uint64_t size)
 {
 	DWORD writed = 0;
@@ -103,7 +109,11 @@ static int closeFile(fileHandle fd)
 }
 static int fsync(fileHandle fd)
 {
-	return FlushFileBuffers(fd);
+	return FlushFileBuffers(fd)?0:-1;
+}
+static inline  int checkFileExist(const char* filename,int mode)
+{
+	return _access(filename, mode);
 }
 long getFileTime(const char * file)
 {

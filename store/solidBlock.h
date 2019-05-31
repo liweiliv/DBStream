@@ -9,15 +9,15 @@
 #include <mutex>
 #include <stdint.h>
 #include "iterator.h"
-#include "block.h"
 #include "../util/file.h"
 #include "../util/crcBySSE.h"
-#include <glog/logging.h>
+#include "../glog/logging.h"
 #include "../lz4/lz4.h"
 #include "../meta/metaData.h"
 #include "../meta/metaDataCollection.h"
 #include "../util/barrier.h"
 #include "blockManager.h"
+#include "block.h"
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
@@ -26,7 +26,7 @@ namespace STORE
 class solidBlockIterator;
 class appendingBlock;
 #pragma pack(1)
-class solidBlock :public block{
+class solidBlock :public STORE::block{
 	uint32_t solidBlockHeadPageRawSize;
 	uint32_t solidBlockHeadPageSize;
 	fileHandle m_fd;
@@ -39,24 +39,37 @@ class solidBlock :public block{
 	page *firstPage;
 	std::mutex m_fileLock;
 	META::metaDataCollection *m_metaDataCollection;
-	blockManager *m_blockManager;
 	friend class appendingBlock;
 	friend class solidBlockIterator;
 public:
-	solidBlock(META::metaDataCollection *metaDataCollection, blockManager *blockManager):block(), solidBlockHeadPageRawSize(0), solidBlockHeadPageSize(0), m_fd(0), m_tableInfo(nullptr), m_recordInfos(nullptr),
-	m_recordIdOrderyTable(nullptr),m_tables(nullptr), pageOffsets(nullptr),pages(nullptr), firstPage(nullptr), m_metaDataCollection(metaDataCollection), m_blockManager(blockManager)
+	solidBlock( blockManager *blockManager, META::metaDataCollection *metaDataCollection):block(blockManager, metaDataCollection), solidBlockHeadPageRawSize(0), solidBlockHeadPageSize(0), m_fd(0), m_tableInfo(nullptr), m_recordInfos(nullptr),
+	m_recordIdOrderyTable(nullptr),m_tables(nullptr), pageOffsets(nullptr),pages(nullptr), firstPage(nullptr)
 	{
+	}
+	~solidBlock()
+	{
+		assert(m_flag&BLOCK_FLAG_FLUSHED);
+		for (uint32_t i = 0; i < m_pageCount; i++)
+		{
+			if (pages[i] != nullptr)
+				m_blockManager->freePage(pages[i]);
+		}
+		m_blockManager->freePage(firstPage);
+		if (fileHandleValid(m_fd))
+			closeFile(m_fd);
 	}
 	int load(uint64_t id)
 	{
 		errno = 0;
+
 		std::string fileName = m_blockManager->getBlockFile(id);
 		m_fd = openFile(fileName.c_str(), true, false, false);
-		if (m_fd < 0)
+		if (!fileHandleValid(m_fd))
 		{
 			LOG(ERROR) << "load block file:" << fileName << " failed for open file failed, errno:" << errno << " ," << strerror(errno);
 			return -1;
 		}
+
 		int readSize = 0;
 		int headSize = offsetof(solidBlock, solidBlockHeadPageSize) - offsetof(solidBlock, m_version);
 		if (headSize != (readSize=readFile(m_fd, (char*)&m_version, headSize)))
@@ -108,8 +121,8 @@ public:
 			pages[idx] = (page*)m_blockManager->allocMem(sizeof(page));
 			memcpy(pages[idx], pos, offsetof(page, ref));
 			pos += offsetof(page, ref);
-			pages[idx]->ref.store(0, std::memory_order_relaxed);
 		}
+		m_flag |= BLOCK_FLAG_FLUSHED;
 		return 0;
 FIRST_PAGE_SIZE_FAULT:
 		LOG(ERROR) << "load block file:" << fileName << " failed for first page is illegal";
@@ -122,6 +135,16 @@ FIRST_PAGE_SIZE_FAULT:
 		if (p->pageData!=nullptr)
 			return 0;
 		m_fileLock.lock();
+		if (!fileHandleValid(m_fd))
+		{
+			std::string fileName = m_blockManager->getBlockFile(m_blockID);
+			m_fd = openFile(fileName.c_str(), true, false, false);
+			if (!fileHandleValid(m_fd))
+			{
+				LOG(ERROR) << "load block file:" << fileName << " failed for open file failed, errno:" << errno << " ," << strerror(errno);
+				return -1;
+			}
+		}
 		if (offset != seekFile(m_fd, offset, SEEK_SET))
 		{
 			m_fileLock.unlock();
@@ -261,6 +284,8 @@ FIRST_PAGE_SIZE_FAULT:
 
 	int writeToFile()
 	{
+		if (m_flag&BLOCK_FLAG_FLUSHED)
+			return 0;
 		if (fileHandleValid(m_fd))
 			closeFile(m_fd);
 		std::string file = m_blockManager->getBlockFile(m_blockID);
@@ -279,13 +304,13 @@ FIRST_PAGE_SIZE_FAULT:
 		for(uint16_t pageIdx =0;pageIdx<m_pageCount;pageIdx++)
 		{
 			pageOffsets[pageIdx] = pagePos;
-			int64_t writedSize = writepage(pages[pageIdx],pagePos,true);
+			int64_t writedSize = writepage(pages[pageIdx],pagePos,m_flag&BLOCK_FLAG_COMPRESS);
 			if(writedSize<0)
 				return -1;
 			pagePos = ALIGN(pagePos+writedSize,512);
 		}
 
-		solidBlockHeadPageSize = writepage(firstPage,headSize,true);
+		solidBlockHeadPageSize = writepage(firstPage,headSize, m_flag&BLOCK_FLAG_COMPRESS);
 		solidBlockHeadPageRawSize = firstPage->pageUsedSize;
 		if(seekFile(m_fd,0,SEEK_SET)!=0)
 		{
@@ -310,6 +335,7 @@ FIRST_PAGE_SIZE_FAULT:
 			LOG(ERROR) << "rename tmp block file "<< tmpFile<< " to "<<file<<" failed for errno:"<<errno<<" ,"<<strerror(errno);
 			return -1;
 		}
+		m_flag |= BLOCK_FLAG_FLUSHED;
 		return 0;
 	}
 };

@@ -12,8 +12,9 @@
 #include "userHandle.h"
 #include "userManager.h"
 #include "storeError.h"
-#include "sqlParser.h"
+#include "../sqlParser/sqlParser.h"
 #include "schedule.h"
+#include "../glog/logging.h"
 namespace STORE
 {
 #define CMD_AUTH 0x01
@@ -72,7 +73,7 @@ class command
 {
 private:
     userManager * m_userManager;
-    sqlParser::sqlParser m_sqlParser;
+    SQL_PARSER::sqlParser m_sqlParser;
     schedule m_schedule;
 public:
     int processCmd(userHandle * user, const char * cmd, uint32_t size)
@@ -95,7 +96,7 @@ public:
             {
                 user->setError(ERROR_NOT_LOGIN,
                         std::string("do not auth").c_str());
-                LOG(WARNING)<<"process sql failed for "<<user->getError();
+                LOG(ERROR)<<"process sql failed for "<<user->getError();
                 return -1;
             }
             if (user->m_user->roles & ROLE_READER)
@@ -103,7 +104,7 @@ public:
                 user->setError(ERROR_PERMISSION_DENIED,
                         std::string("user: ").append(user->m_user->username).append(
                                 " can not query sql").c_str());
-                LOG(WARNING)<<"process sql failed for "<<user->getError();
+                LOG(ERROR)<<"process sql failed for "<<user->getError();
                 return -1;
             }
             sqlCmd sql(cmd, size);
@@ -112,13 +113,13 @@ public:
                 user->setError(ERROR_ILLEGAL_CMD, "unknown command");
                 return -1;
             }
-            sqlParser::handle *h;
-            if (sqlParser::OK != m_sqlParser.parse(h, sql.sql))
+			SQL_PARSER::handle *h;
+            if (SQL_PARSER::OK != m_sqlParser.parse(h, sql.sql))
             {
                 user->setError(ERROR_ILLEGAL_CMD,
                         std::string("parse sql : ").append(sql.sql).append(
                                 " failed").c_str());
-                LOG(WARNING)<<"process sql failed for "<<user->getError();
+                LOG(ERROR)<<"process sql failed for "<<user->getError();
                 return -1;
             }
             return 0;

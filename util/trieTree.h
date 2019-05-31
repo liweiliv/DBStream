@@ -9,7 +9,8 @@
 #define _trieTree_H_
 #include <stdint.h>
 #include <stdlib.h>
-class trieTree
+#include "winDll.h"
+class DLL_EXPORT trieTree
 {
 private:
     struct node

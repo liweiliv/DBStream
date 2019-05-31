@@ -18,14 +18,15 @@ struct recordHead
 {
     uint64_t size;
     uint16_t headSize;
+	uint16_t flag;
     uint8_t type;
     uint8_t version;
-    uint16_t flag;
     uint64_t recordId;
     uint64_t logOffset;
     uint64_t timestamp;
 	uint32_t txnId;
 };
+#define ENDOF_REDO_NUM  0xfff8fff4fff2fff1
 #define UNSIGNED_COLUMN 0x01
 #define GENRATED_COLUMN 0x02
 #define PRIMARY_KEY_COLUMN 0x04

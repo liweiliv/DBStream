@@ -1,10 +1,11 @@
 #pragma once
 #include"likely.h"
+#include "winDll.h"
 static constexpr int maxThreadCount = 256;
 extern thread_local int threadid;
 bool initLocalThreadId();
 template<class T>
-class threadLocal
+class DLL_EXPORT threadLocal
 {
 protected:
 	T* m_var[maxThreadCount];

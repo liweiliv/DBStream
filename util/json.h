@@ -9,8 +9,11 @@
 #include <list>
 #include <string>
 #include <stdint.h>
+#include "winDll.h"
 using namespace std;
-class jsonValue
+
+
+class DLL_EXPORT jsonValue
 {
 public:
     enum type
@@ -22,6 +25,7 @@ public:
         J_BOOL,
         J_NULLTYPE
     };
+
     type t;
     jsonValue(type _t);
     virtual ~jsonValue(){};
@@ -29,7 +33,7 @@ public:
     static type getType(const char * data);
     static jsonValue * Parse(const char* data,int &size);
 };
-class jsonString :public jsonValue
+class DLL_EXPORT jsonString :public jsonValue
 {
 public:
     std::string m_value;
@@ -38,7 +42,7 @@ public:
     string toString();
     ~jsonString(){}
 };
-class jsonNum :public jsonValue
+class DLL_EXPORT jsonNum :public jsonValue
 {
 public:
     long m_value;
@@ -47,7 +51,7 @@ public:
     string toString();
     ~jsonNum(){}
 };
-class jsonObject :public jsonValue
+class DLL_EXPORT jsonObject :public jsonValue
 {
 public:
     struct ObjectKV
@@ -63,7 +67,7 @@ public:
     int parse(const char * data);
     string toString();
 };
-class jsonArray :public jsonValue
+class DLL_EXPORT jsonArray :public jsonValue
 {
 public:
     std::list<jsonValue*> m_values;
@@ -73,7 +77,7 @@ public:
     int parse(const char * data);
     string toString();
 };
-class jsonBool :public jsonValue
+class DLL_EXPORT jsonBool :public jsonValue
 {
 public:
     bool m_value;

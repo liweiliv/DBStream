@@ -15,12 +15,12 @@ struct ref {
 		} while (1);
 		return true;
 	}
-	inline void unuse()
+	inline bool unuse()
 	{
 		int ref = m_ref.load(std::memory_order_relaxed);
 		do {
 			if (m_ref.compare_exchange_weak(ref, ref - 1, std::memory_order_release, std::memory_order_relaxed))
-				break;
+				return ref - 1>0;
 		} while (1);
 	}
 };

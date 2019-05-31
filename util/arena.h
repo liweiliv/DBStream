@@ -10,11 +10,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "atomic_pointer.h"
+#include "winDll.h"
 //#include "port.h"
 
 namespace leveldb {
 
-class Arena {
+class DLL_EXPORT Arena {
  public:
   Arena();
   ~Arena();

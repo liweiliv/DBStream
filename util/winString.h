@@ -1,13 +1,13 @@
 #pragma once
 #ifdef OS_WIN
 #include <string.h>
-typedef unsigned char u_char;
+#include <cstddef>
 /*
  * This array is designed for mapping upper and lower case letter
  * together for a case independent comparison.  The mappings are
  * based upon ascii character sequences.
  */
-static const u_char charmap[] = {
+static const char charmap[] = {
 	'\000', '\001', '\002', '\003', '\004', '\005', '\006', '\007',
 	'\010', '\011', '\012', '\013', '\014', '\015', '\016', '\017',
 	'\020', '\021', '\022', '\023', '\024', '\025', '\026', '\027',
@@ -44,9 +44,9 @@ static const u_char charmap[] = {
 int
 strcasecmp(const char *s1, const char *s2)
 {
-	const u_char *cm = charmap;
-	const u_char *us1 = (const u_char *)s1;
-	const u_char *us2 = (const u_char *)s2;
+	const char*cm = charmap;
+	const char*us1 = (const char*)s1;
+	const char*us2 = (const char*)s2;
 	while (cm[*us1] == cm[*us2++])
 		if (*us1++ == '\0')
 			return (0);
@@ -56,9 +56,9 @@ int
 strncasecmp(const char *s1, const char *s2, size_t n)
 {
 	if (n != 0) {
-		const u_char *cm = charmap;
-		const u_char *us1 = (const u_char *)s1;
-		const u_char *us2 = (const u_char *)s2;
+		const char*cm = charmap;
+		const char*us1 = (const char*)s1;
+		const char*us2 = (const char*)s2;
 		do {
 			if (cm[*us1] != cm[*us2++])
 				return (cm[*us1] - cm[*--us2]);

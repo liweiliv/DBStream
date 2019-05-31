@@ -79,31 +79,31 @@ namespace STORE {
 		{
 			switch (meta->m_types[i])
 			{
-			case UINT8:
+			case T_UINT8:
 				if (*(uint8_t*)srcKey != *(uint8_t*)destKey)
 					return *(uint8_t*)srcKey - *(uint8_t*)destKey;
 				break;
-			case INT8:
+			case T_INT8:
 				if (*(int8_t*)srcKey != *(int8_t*)destKey)
 					return *(int8_t*)srcKey - *(int8_t*)destKey;
 				break;
-			case UINT16:
+			case T_UINT16:
 				if (*(uint16_t*)srcKey != *(uint16_t*)destKey)
 					return *(uint16_t*)srcKey - *(uint16_t*)destKey;
 				break;
-			case INT16:
+			case T_INT16:
 				if (*(int16_t*)srcKey != *(int16_t*)destKey)
 					return *(int16_t*)srcKey - *(int16_t*)destKey;
 				break;
-			case UINT32:
+			case T_UINT32:
 				if (*(uint32_t*)srcKey != *(uint32_t*)destKey)
 					return *(uint32_t*)srcKey - *(uint32_t*)destKey;
 				break;
-			case INT32:
+			case T_INT32:
 				if (*(int32_t*)srcKey != *(int32_t*)destKey)
 					return *(int32_t*)srcKey - *(int32_t*)destKey;
 				break;
-			case UINT64:
+			case T_UINT64:
 				if (*(uint64_t*)srcKey != *(uint64_t*)destKey)
 				{
 					if (*(uint64_t*)srcKey > *(uint64_t*)destKey)
@@ -112,7 +112,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case INT64:
+			case T_INT64:
 				if (*(int64_t*)srcKey != *(int64_t*)destKey)
 				{
 					if (*(int64_t*)srcKey > *(int64_t*)destKey)
@@ -121,7 +121,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case FLOAT:
+			case T_FLOAT:
 				if (*(float*)srcKey - *(float*)destKey > 0.000001f || *(float*)srcKey - *(float*)destKey < -0.000001f)
 				{
 					if (*(float*)srcKey > *(float*)destKey)
@@ -130,7 +130,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case DOUBLE:
+			case T_DOUBLE:
 				if (*(double*)srcKey - *(double*)destKey > 0.000001f || *(double*)srcKey - *(double*)destKey < -0.000001f)
 				{
 					if (*(double*)srcKey > *(double*)destKey)
@@ -139,8 +139,8 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case STRING:
-			case BLOB:
+			case T_STRING:
+			case T_BLOB:
 			{
 				binaryType s(srcKey + sizeof(uint16_t), *(uint16_t*)srcKey), d(destKey + sizeof(uint16_t), *(uint16_t*)destKey);
 				int c = s.compare(d);

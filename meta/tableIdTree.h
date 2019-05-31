@@ -74,7 +74,7 @@ namespace META {
 			{
 				if (n->serial)
 				{
-					uint16_t cid = (tableId - n->startId) / (1 << (n->level * 9));
+					uint16_t cid = (uint16_t)((tableId - n->startId) / (1 << (n->level * 9)));
 					if (cid >= 512)
 					{
 						assert(n == m_root);
@@ -161,7 +161,7 @@ namespace META {
 			{
 				if (n->serial)
 				{
-					uint16_t cid = (id - n->startId) >> (n->level * 9);
+					uint16_t cid = (uint16_t)((id - n->startId) >> (n->level * 9));
 					if (cid >= 512)
 						return nullptr;
 					if (n->child[cid] == nullptr)

@@ -12,13 +12,26 @@
 #include <shared_mutex>
 #include <stdio.h>
 #include <errno.h>
-#include <glog/logging.h>
+#include "../glog/logging.h"
 class config{
 private:
     std::map<std::string, std::map<std::string,std::string>* > m_sections;
     std::string m_filePath;
     std::shared_mutex m_lock;
 public:
+	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
+	{
+		assert(defaultValue <= max && defaultValue >= min && min <= max);
+		std::string c = get(section, key, NULL);
+		if (c.empty())
+			return defaultValue;
+		int64_t v = atol(c.c_str());
+		if (v < min)
+			return min;
+		if (v > max)
+			return max;
+		return v;
+	}
     std::string get(const char* section,const char* key,const char * defaultValue = NULL)
     {
 		m_lock.lock_shared();
@@ -113,9 +126,41 @@ public:
         fclose(fp);
         return 0;
     }
+	int save(const char* file)
+	{
+		remove(file);
+		FILE* fp = fopen(file, "w+");
+		if (fp == nullptr)
+		{
+			LOG(ERROR) << "save conf to file"<<file<<" failed for open file failed,errno"<<errno<<","<strerror(errno);
+			return -1;
+		}
+		for (std::map<std::string, std::map<std::string, std::string>* >::iterator secIter = m_sections.begin(); secIter != m_sections.end(); iter++)
+		{
+			if (secIter->first.size() != fwrite(secIter->first.c_str(), secIter->first.size(), fp)|| 1!=fwrite("\n", 1, fp))
+			{
+				LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," < strerror(errno);
+				return -1;
+			}
+			for (std::map<std::string, std::string>::iterator confIter = secIter->second->begin(); confIter != secIter->second->end(); confIter++)
+			{
+				if (confIter->first.size() != fwrite(confIter->first.c_str(), confIter->first.size(), fp) || 
+					3!= fwrite(" = ", 3, fp)||
+					confIter->second.size() != fwrite(confIter->second.c_str(), confIter->second.size(), fp) 
+					||1 != fwrite("\n", 1, fp))
+				{
+					LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," < strerror(errno);
+					return -1;
+				}
+			}
+		}
+		fclose(fp);
+		return 0;
+	}
 };
 
 
 
 
 #endif /* CONFIG_H_ */
+

@@ -27,6 +27,11 @@ static fileHandle openFile(const char *file, bool read, bool write, bool create)
 		flag |= O_CREAT;
 	return (fd = open(file, flag, create ? S_IRUSR | S_IWUSR | S_IRGRP : 0));
 }
+#define INVALID_HANDLE_VALUE -1;
+static bool fileHandleValid(fileHandle fd)
+{
+	return fd >=0;
+}
 static inline int64_t readFile(fileHandle fd, char *buf, uint64_t count)
 {
     uint64_t readbytes, save_count=0;
@@ -93,25 +98,9 @@ static int closeFile(fileHandle fd)
  * 0 文件不存在
  * 其他为错误号
  */
-static inline  int checkFileExist(const char *filename)
+static inline  int checkFileExist(const char *filename, int mode)
 {
-	fileHandle fd=open(filename,O_RDONLY);
-   if(fd>0)
-   {
-       close(fd);
-       return -1;
-   }
-   else
-   {
-       if(errno==ENOENT)
-       {
-           return 0;
-       }
-       else
-       {
-           return errno;
-       }
-   }
+	return access(fileName, mode);
 }
 #define seekFile lseek64
 long getFileTime(const char * file)
