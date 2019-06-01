@@ -55,8 +55,15 @@ class block;
 class blockManager
 {
 	friend class blockManagerIterator;
+	friend class threadPool<blockManager, void>;
+public:
+	enum BLOCK_MANAGER_STATUS {
+		BM_RUNNING,
+		BM_FAILED,
+		BM_UNINIT
+	};
 private:
-	bool m_running;
+	BLOCK_MANAGER_STATUS m_status;
 	const char * m_confPrefix;
 	pageTable m_blocks;
 	std::atomic<int> m_lastFlushedFileID;
@@ -81,14 +88,14 @@ private:
 	uint32_t m_maxUnflushedBlock;
 	uint32_t m_fileSysPageSize;
 	shared_mutex m_blockLock;//all read ,write thread use shared lock,purge thread use mutex lock,avoid the aba problem
-	threadPool<blockManager,void, blockManager*> m_threadPool;
+	threadPool<blockManager,void> m_threadPool;
 	std::atomic<uint32_t> m_firstBlockId;
 	std::atomic<uint32_t> m_lastBlockId;
 
 	std::atomic_int m_currentFlushThreadCount;
 public:
 	blockManager(const char * confPrefix, config * conf, bufferPool* pool,META::metaDataCollection* metaDataCollection) :m_running(false), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
-		, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, "blockManagerFlush"))
+		, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str()))
 	{
 		initConfig();
 	}
@@ -101,8 +108,8 @@ private:
 	bool createNewBlock();
 	int insert(DATABASE_INCREASE::record* r);
 	int flush(appendingBlock* block);
-	void createFlushThread();
-	void flushThread(blockManager* m);
+	void flushThread();
+	int purge();
 	static void purgeThread(blockManager* m);
 public:
 	inline std::string getBlockFile(uint64_t id)
@@ -113,7 +120,7 @@ public:
 	}
 	int start()//todo
 	{
-		createFlushThread();
+		m_status = BM_RUNNING;
 		return 0;
 	}
 	int stop() //todo

@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <stdint.h>
+#include <io.h>
 #define fileHandle HANDLE 
 
 static fileHandle openFile(const char *file,bool read,bool write,bool create)

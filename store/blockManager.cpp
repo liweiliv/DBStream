@@ -115,34 +115,34 @@ namespace STORE {
 	}
 	int blockManager::insert(DATABASE_INCREASE::record* r)
 	{
-		if (m_current == nullptr && !createNewBlock())
-		{
-			LOG(ERROR) << "Fatal Error: insert record failed for create new block failed;" << "record id :" <<
-				r->head->recordId << ",record offset:" << r->head->logOffset <<
-				"record LogID:" << r->head->logOffset;
+		if (unlikely(m_status != BM_RUNNING))
 			return -1;
-		}
 		appendingBlock::appendingBlockStaus status = m_current->append(r);
 		switch (status)
 		{
 		case appendingBlock::B_OK:
 			return 0;
 		case appendingBlock::B_FULL:
-			m_current->m_flag |= BLOCK_FLAG_FINISHED;
 			if (!createNewBlock())
+			{
+				m_status = BM_FAILED;
 				return -1;
+			}
 			return insert(r);
 		case appendingBlock::B_FAULT:
+			m_status = BM_FAILED;
 			LOG(ERROR) << "Fatal Error: insert record to current  block failed;" << "record id :" <<
 				r->head->recordId << ",record offset:" << r->head->logOffset <<
 				"record LogID:" << r->head->logOffset;
 			return -1;
 		case appendingBlock::B_ILLEGAL:
+			m_status = BM_FAILED;
 			LOG(ERROR) << "Fatal Error: insert record to current  block failed,record is illegal;" << "record id :" <<
 				r->head->recordId << ",record offset:" << r->head->logOffset <<
 				"record LogID:" << r->head->logOffset;
 			return -1;
 		default:
+			m_status = BM_FAILED;
 			LOG(ERROR) << "Fatal Error: insert record to current  block failed,unknown error;" << "record id :" <<
 				r->head->recordId << ",record offset:" << r->head->logOffset <<
 				"record LogID:" << r->head->logOffset;
@@ -165,13 +165,14 @@ namespace STORE {
 				return false;
 			}
 		}
-		while (!m_unflushedBlocks.push(m_current, 10))
+		while (!m_unflushedBlocks.push(m_current, 1000))
 		{
-			if (!m_running)
+			if (m_status!=BM_RUNNING)
 			{
 				delete newBlock;
 				return false;
 			}
+			m_threadPool.createNewThread();
 		}
 		m_blocks.set(newBlock->m_blockID, newBlock);
 		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_acquire);
@@ -280,19 +281,48 @@ RESET:
 		block->unuse();
 		return 0;
 	}
-	void blockManager::createFlushThread()
+	void blockManager::flushThread()
 	{
-		m_threadPool.createNewThread(this);
-	}
-	void blockManager::flushThread(blockManager* m)
-	{
-		while (m->m_running)
+		appendingBlock* block;
+		uint32_t idleRound = 0;
+		while (m_status==BM_RUNNING&&idleRound<1000)
 		{
-			appendingBlock* block;
-			m->m_unflushedBlocks.pop(block, 0);
+			if (!m_unflushedBlocks.pop(block, 10))
+			{
+				idleRound++;
+				continue;
+			}
+			if (0 != flush(block))
+			{
+				m_status = BM_FAILED;
+				return;
+			}
+			idleRound >>= 1;
 		}
 	}
-	static void purgeThread(blockManager* m);
+	int blockManager::purge()
+	{
+		block* b;
+		for (uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed); blockId < m_lastBlockId.load(std::memory_order_relaxed) - 1; blockId++)
+		{
+			std::string fileName = getBlockFile(blockId);
+			if (checkFileExist(fileName.c_str(),0) == 0)
+			{
+				if(getFileTime(fileName.c_str())
+				m_blockLock.lock();
+				if (nullptr == (b = static_cast<block*>(m_blocks.get(blockId))))
+				{
+					m_lastBlockId++;
+					remove(getBlockFile(blockId).c_str());
+				}
+			}
+		}
+	}
+
+	static void purgeThread(blockManager* m)
+	{
+
+	}
 	int blockManager::recoveryFromRedo(uint32_t from,uint32_t to)
 	{
 		for (uint32_t blockId = from; blockId <= to; blockId++)
