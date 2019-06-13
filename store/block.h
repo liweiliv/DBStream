@@ -12,8 +12,10 @@
 #include "page.h"
 #include "../util/file.h"
 #include "../glog/logging.h"
+#include "../util/crcBySSE.h"
 namespace META {
 	class metaDataCollection;
+	class tableMeta;
 }
 namespace STORE {
 #define BLOCK_FLAG_APPENDING    0x01
@@ -102,7 +104,7 @@ namespace STORE {
 		}
 		block(block* b)
 		{
-			memcpy(&m_blockManager, &b->m_blockManager, sizeof(block) - offsetof(solidBlock, m_blockManager));
+			memcpy(&m_blockManager, &b->m_blockManager, sizeof(block) - offsetof(block, m_blockManager));
 			m_loading.store(b->m_loading.load(std::memory_order_relaxed), std::memory_order_relaxed);
 		}
 		virtual ~block() {}
@@ -120,69 +122,8 @@ namespace STORE {
 		{
 			return m_minRecordId + m_recordCount - 1;
 		}
-		int loadBlockInfo(fileHandle h,uint32_t id)
-		{
-			uint8_t loadStatus = m_loading.load(std::memory_order_relaxed);
-			do {
-				if (loadStatus == BLOCK_UNLOAD)
-				{
-					if (m_loading.compare_exchange_weak(loadStatus, BLOCK_LOADING_HEAD, std::memory_order_relaxed,
-						std::memory_order_relaxed))
-						break;
-				}
-				else if (loadStatus == BLOCK_LOADING_HEAD)
-				{
-					std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
-					loadStatus = m_loading.load(std::memory_order_relaxed);
-				}
-				else if (loadStatus != BLOCK_LOAD_FAILED)
-					return 0;
-				else
-					return -1;
-			} while (1);
-			int readSize = 0;
-			int headSize = sizeof(block) - offsetof(solidBlock, m_version);
-			if (headSize != (readSize = readFile(h, (char*)& m_version, headSize)))
-			{
-				LOG(ERROR) << "load block file "<<id<<" failed for read head failed ";
-				if (errno != 0)
-					LOG(ERROR) << "errno:" << errno << " ," << strerror(errno);
-				else
-					LOG(ERROR) << "expect read " << headSize << " byte ,but only can read " << readSize << " byte";
-				return -1;
-			}
-			if (m_blockID != id)
-			{
-				LOG(ERROR) << "load block file " << id << " failed for id check failed,id in block is:"<<m_blockID;
-				return -1;
-			}
-			if (hwCrc32c(0, (const char*)& m_version, headSize - sizeof(m_crc)) != m_crc)
-			{
-				LOG(ERROR) << "load block file " << id << " failed for crc check failed";
-				return -1;
-			}
-			return 0;
-		}
-		static block* loadFromFile(uint32_t id, blockManager* blockManager, META::metaDataCollection* metaDataCollection=nullptr)
-		{
-			char fileName[512];
-			blockManager->genBlockFileName(id, fileName);
-			fileHandle h = openFile(fileName, true, false, false);
-			if (!fileHandleValid(h))
-			{
-				LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
-				return nullptr;
-			}
-			block* b = new block(blockManager, metaDataCollection);
-			if (0 != b->loadBlockInfo(h, id))
-			{
-				closeFile(h);
-				delete b;
-				return nullptr;
-			}
-			closeFile(h);
-			return b;
-		}
+		int loadBlockInfo(fileHandle h,uint32_t id);
+		static block* loadFromFile(uint32_t id, blockManager* blockManager, META::metaDataCollection* metaDataCollection=nullptr);
 	};
 }
 

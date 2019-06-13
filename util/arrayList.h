@@ -11,8 +11,8 @@ struct arrayList
 		uint8_t size;
 	};
 	struct iterator {
-		arrayList<T> * list;
-		node<T> * n;
+		arrayList * list;
+		node * n;
 		uint32_t idx;
 		inline T& value();
 		inline bool next();
@@ -59,19 +59,22 @@ struct arrayList
 		iter.n = head;
 		iter.idx = 0;
 	}
-	inline bool iterator::next()
-	{
-		if (++idx >= n->size)
-		{
-			if (n->next == nullptr)
-				return false;
-			n = n->next;
-			idx = 0;
-		}
-		return true;
-	}
-	inline T & iterator::value()
-	{
-		return n->data[idx];
-	}
 };
+template<class T>
+inline bool arrayList<T>::iterator::next()
+{
+       if (++idx >= n->size)
+       {
+             if (n->next == nullptr)
+                    return false;
+             n = n->next;
+             idx = 0;
+       }
+       return true;
+}
+template<class T>
+inline T & arrayList<T>::iterator::value()
+{
+       return n->data[idx];
+}
+

@@ -2,6 +2,7 @@
 #include <atomic>
 #include <mutex>
 #include "spinlock.h"
+#include <stddef.h>
 struct dualLinkListNode
 {
 	dualLinkListNode *prev;
@@ -9,15 +10,15 @@ struct dualLinkListNode
 	spinlock lock;
 };
 #ifndef container_of
-#define container_of(ptr, type, member) ({ \
-     const decltype( ((type *)0)->member ) *__mptr = (ptr); \
-     (type *)( (char *)__mptr - offsetof(type,member) );})
+#define container_of(ptr, type, member) ({\
+	decltype( ((type *)0)->member ) *__mptr = (ptr);\
+	(type *)( (char *)__mptr - offsetof(type,member) );})
 #endif
 struct dualLinkList
 {
 	dualLinkListNode head;
 	dualLinkListNode end;
-	std::atomic_int32_t count;
+	std::atomic<int32_t> count;
 	dualLinkList()
 	{
 		head.next = &end;

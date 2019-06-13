@@ -37,8 +37,8 @@ struct unblockedQueueNode
         unblockedQueueNode * node = static_cast<unblockedQueueNode*>(pool->allocData());
         memset(node->buf,0,sizeof(buf));
         node->next->store(NULL,std::memory_order_relaxed);
-        start.store(0,std::memory_order_relaxed);
-        end.store(0,std::memory_order_relaxed);
+        node->start.store(0,std::memory_order_relaxed);
+        node->end.store(0,std::memory_order_relaxed);
         return node;
     }
 };

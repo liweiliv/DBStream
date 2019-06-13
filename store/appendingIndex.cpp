@@ -391,5 +391,75 @@ namespace STORE{
         m_appendIndexFuncs[m_type](this,r,id);
 		m_allCount++;
     }
+    template<>
+    void appendingIndex::createFixedSolidIndex<unionKey>(char * data, appendingIndex::iterator<unionKey> &iter, uint16_t keySize)
+    {
+		char * indexPos = data + sizeof(uint32_t), *externCurretPos = data + keySize * m_keyCount;
+                *(uint32_t*)data = m_keyCount;
+                do
+                {
+                        const keyChildInfo * k = iter.keyDetail();
+                        memcpy(indexPos, iter.key().key, keySize);
+                        if (k->count == 1)
+                        {
+                                *(uint32_t*)(indexPos + keySize) = k->subArray[0];
+                        }
+                        else
+                        {
+                                if (k->count < 0x7f)
+                                {
+                                        *(uint32_t*)(indexPos + keySize) = (k->count << 24) | (externCurretPos - data);
+                                }
+                                else
+                                {
+                                        *(uint32_t*)(indexPos + keySize) = (0x80u << 24) | (externCurretPos - data);
+                                        *(uint32_t*)externCurretPos = k->count;
+                                        externCurretPos += sizeof(uint32_t);
+                                }
+                                memcpy(externCurretPos, k->subArray, sizeof(uint32_t)*k->count);
+                        }
+                        indexPos += keySize + sizeof(uint32_t);
+                } while (iter.nextKey());
+        }
+        template<>
+        void appendingIndex::createVarSolidIndex<unionKey>(char * data, appendingIndex::iterator<unionKey> &iter)
+        {
+                char * indexPos = data + sizeof(uint32_t), *externCurretPos = data + sizeof(uint32_t) * (m_keyCount + 1);
+                *(uint32_t*)data = m_keyCount;
+                do
+                {
+                        const keyChildInfo * k = iter.keyDetail();
+                        *(uint32_t*)indexPos = externCurretPos - data;
+                        indexPos += sizeof(uint32_t);
+                        *(uint16_t*)externCurretPos = m_ukMeta.m_size + *(uint16_t*)(iter.key().key + m_ukMeta.m_size);
+                        memcpy(externCurretPos + sizeof(uint16_t), iter.key().key, *(uint16_t*)externCurretPos);
+                        externCurretPos += sizeof(uint16_t) + *(uint16_t*)externCurretPos;
+                        *(uint32_t*)externCurretPos = k->count;
+                        memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t)*k->count);
+                        externCurretPos += sizeof(uint32_t) + sizeof(uint32_t)*k->count;
+                } while (iter.nextKey());
+                *(uint32_t*)indexPos = externCurretPos - data;
+        }
+        template<>
+        void appendingIndex::createVarSolidIndex<binaryType>(char * data, appendingIndex::iterator<binaryType> &iter)
+        {
+                char * indexPos = data + sizeof(uint32_t), *externCurretPos = data + sizeof(uint32_t) * (m_keyCount + 1);
+                *(uint32_t*)data = m_keyCount;
+                do
+                {
+                        const keyChildInfo * k = iter.keyDetail();
+                        *(uint32_t*)indexPos = externCurretPos - data;
+                        indexPos += sizeof(uint32_t);
+                        *(uint16_t*)externCurretPos = iter.key().size;
+                        memcpy(externCurretPos + sizeof(uint16_t), iter.key().data, *(uint16_t*)externCurretPos);
+                        externCurretPos += iter.key().size;
+                        *(uint32_t*)externCurretPos = k->count;
+                        memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t)*k->count);
+                        externCurretPos += sizeof(uint32_t) + sizeof(uint32_t)*k->count;
+                } while (iter.nextKey());
+                *(uint32_t*)indexPos = externCurretPos - data;
+        }
+
+
 }
 

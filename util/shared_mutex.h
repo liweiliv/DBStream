@@ -6,6 +6,7 @@ typedef shared_mutex std::shared_mutex
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
+#include <assert.h>
 //from boost
 #define BOOST_THREAD_USES_CHRONO
 
@@ -165,7 +166,7 @@ public:
 	void lock_shared()
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		shared_cond.wait(lk);
@@ -188,10 +189,10 @@ public:
 	bool timed_lock_shared(system_time const& timeout)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.timed_wait(lk, timeout, boost::bind(&state_data::can_lock_shared, boost::ref(state))))
+		if (!shared_cond.timed_wait(lk, timeout, std::bind(&state_data::can_lock_shared, std::ref(state))))
 		{
 			return false;
 		}
@@ -203,10 +204,10 @@ public:
 	bool timed_lock_shared(TimeDuration const& relative_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.timed_wait(lk, relative_time, boost::bind(&state_data::can_lock_shared, boost::ref(state))))
+		if (!shared_cond.timed_wait(lk, relative_time, std::bind(&state_data::can_lock_shared, std::ref(state))))
 		{
 			return false;
 		}
@@ -224,10 +225,10 @@ public:
 	bool try_lock_shared_until(const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.wait_until(lk, abs_time, boost::bind(&state_data::can_lock_shared, boost::ref(state))))
+		if (!shared_cond.wait_until(lk, abs_time, std::bind(&state_data::can_lock_shared, std::ref(state))))
 		{
 			return false;
 		}
@@ -263,7 +264,7 @@ public:
 	void lock()
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.exclusive_waiting_blocked = true;
@@ -275,11 +276,11 @@ public:
 	bool timed_lock(system_time const& timeout)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.exclusive_waiting_blocked = true;
-		if (!exclusive_cond.timed_wait(lk, timeout, boost::bind(&state_data::can_lock, boost::ref(state))))
+		if (!exclusive_cond.timed_wait(lk, timeout, std::bind(&state_data::can_lock, std::ref(state))))
 		{
 			state.exclusive_waiting_blocked = false;
 			release_waiters();
@@ -293,11 +294,11 @@ public:
 	bool timed_lock(TimeDuration const& relative_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.exclusive_waiting_blocked = true;
-		if (!exclusive_cond.timed_wait(lk, relative_time, boost::bind(&state_data::can_lock, boost::ref(state))))
+		if (!exclusive_cond.timed_wait(lk, relative_time, std::bind(&state_data::can_lock, std::ref(state))))
 		{
 			state.exclusive_waiting_blocked = false;
 			release_waiters();
@@ -317,11 +318,11 @@ public:
 	bool try_lock_until(const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.exclusive_waiting_blocked = true;
-		if (!exclusive_cond.wait_until(lk, abs_time, boost::bind(&state_data::can_lock, boost::ref(state))))
+		if (!exclusive_cond.wait_until(lk, abs_time, std::bind(&state_data::can_lock, std::ref(state))))
 		{
 			state.exclusive_waiting_blocked = false;
 			release_waiters();
@@ -356,7 +357,7 @@ public:
 	void lock_upgrade()
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		shared_cond.wait(lk);
@@ -368,10 +369,10 @@ public:
 	bool timed_lock_upgrade(system_time const& timeout)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.timed_wait(lk, timeout, boost::bind(&state_data::can_lock_upgrade, boost::ref(state))))
+		if (!shared_cond.timed_wait(lk, timeout, std::bind(&state_data::can_lock_upgrade, std::ref(state))))
 		{
 			return false;
 		}
@@ -384,10 +385,10 @@ public:
 	bool timed_lock_upgrade(TimeDuration const& relative_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.timed_wait(lk, relative_time, boost::bind(&state_data::can_lock_upgrade, boost::ref(state))))
+		if (!shared_cond.timed_wait(lk, relative_time, std::bind(&state_data::can_lock_upgrade, std::ref(state))))
 		{
 			return false;
 	}
@@ -406,10 +407,10 @@ public:
 	bool try_lock_upgrade_until(const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		if (!shared_cond.wait_until(lk, abs_time, boost::bind(&state_data::can_lock_upgrade, boost::ref(state))))
+		if (!shared_cond.wait_until(lk, abs_time, std::bind(&state_data::can_lock_upgrade, std::ref(state))))
 		{
 			return false;
 		}
@@ -451,7 +452,7 @@ public:
 	void unlock_upgrade_and_lock()
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.assert_lock_upgraded();
@@ -506,11 +507,11 @@ public:
 			const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.assert_lock_upgraded();
-		if (!shared_cond.wait_until(lk, abs_time, boost::bind(&state_data::one_shared, boost::ref(state))))
+		if (!shared_cond.wait_until(lk, abs_time, std::bind(&state_data::one_shared, std::ref(state))))
 		{
 			return false;
 		}
@@ -564,11 +565,11 @@ public:
 			const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.assert_lock_shared();
-		if (!shared_cond.wait_until(lk, abs_time, boost::bind(&state_data::one_shared, boost::ref(state))))
+		if (!shared_cond.wait_until(lk, abs_time, std::bind(&state_data::one_shared, std::ref(state))))
 		{
 			return false;
 		}
@@ -618,11 +619,11 @@ public:
 			const std::chrono::time_point<Clock, Duration>& abs_time)
 	{
 #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
-		boost::this_thread::disable_interruption do_not_disturb;
+		std::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.assert_lock_shared();
-		if (!exclusive_cond.wait_until(lk, abs_time, boost::bind(&state_data::can_lock_upgrade, boost::ref(state))))
+		if (!exclusive_cond.wait_until(lk, abs_time, std::bind(&state_data::can_lock_upgrade, std::ref(state))))
 		{
 			return false;
 		}

@@ -89,6 +89,7 @@ namespace STORE
 				LOG(ERROR) << "load block file:" << id << " failed ";
 				return -1;
 			}
+			return 0;
 		}
 	private:
 		int loadFirstPage()
@@ -146,13 +147,13 @@ namespace STORE
 				goto FIRST_PAGE_SIZE_FAULT;
 
 			pages = (page * *)m_blockManager->allocMem(sizeof(page*) * m_pageCount);
-			if (pos + m_pageCount * offsetof(page, ref) >= firstPage->pageData + firstPage->pageUsedSize)
+			if (pos + m_pageCount * offsetof(page, _ref) >= firstPage->pageData + firstPage->pageUsedSize)
 				goto FIRST_PAGE_SIZE_FAULT;
 			for (uint16_t idx = 0; idx < m_pageCount; idx++)
 			{
 				pages[idx] = (page*)m_blockManager->allocMem(sizeof(page));
-				memcpy(pages[idx], pos, offsetof(page, ref));
-				pos += offsetof(page, ref);
+				memcpy(pages[idx], pos, offsetof(page, _ref));
+				pos += offsetof(page, _ref);
 			}
 			m_flag |= BLOCK_FLAG_FLUSHED;
 			m_loading.store(BLOCK_LOADED, std::memory_order_relaxed);
@@ -181,14 +182,14 @@ namespace STORE
 					return -1;
 				}
 			}
-			if (offset != seekFile(m_fd, offset, SEEK_SET))
+			if (offset != (size_t)seekFile(m_fd, offset, SEEK_SET))
 			{
 				m_fileLock.unlock();
 				LOG(ERROR) << "seek to position:" << offset << " of block " << m_blockID << " failed for" << errno << "," << strerror(errno);
 				return -1;
 			}
 			char* data = (char*)m_blockManager->allocMem(size);
-			if (size != readFile(m_fd, data, size))
+			if (size != (size_t)readFile(m_fd, data, size))
 			{
 				m_fileLock.unlock();
 				LOG(ERROR) << "read page in position:" << offset << " of block " << m_blockID << " failed for" << errno << "," << strerror(errno);
@@ -244,9 +245,9 @@ namespace STORE
 		}
 		int64_t writepage(page* p, uint64_t offset, bool compress)
 		{
-			if (seekFile(m_fd, 0, SEEK_CUR) != offset)
+			if (seekFile(m_fd, 0, SEEK_CUR) != (int64_t)offset)
 			{
-				if (seekFile(m_fd, offset, SEEK_SET) != offset)
+				if (seekFile(m_fd, offset, SEEK_SET) != (int64_t)offset)
 				{
 					LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
 					return -1;
@@ -298,7 +299,7 @@ namespace STORE
 			else
 			{
 				p->crc = hwCrc32c(0, p->pageData, p->pageUsedSize);
-				if (p->pageUsedSize != writeFile(m_fd, p->pageData, p->pageUsedSize))
+				if (p->pageUsedSize != (uint32_t)writeFile(m_fd, p->pageData, p->pageUsedSize))
 				{
 					LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
 					return -1;

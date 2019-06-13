@@ -4,9 +4,7 @@
  *  Created on: 2019年1月23日
  *      Author: liwei
  */
-
-#ifndef FILEOPT_H_
-#define FILEOPT_H_
+#pragma once
 #include <errno.h>
 #include <error.h>
 #include <fcntl.h>
@@ -27,7 +25,7 @@ static fileHandle openFile(const char *file, bool read, bool write, bool create)
 		flag |= O_CREAT;
 	return (fd = open(file, flag, create ? S_IRUSR | S_IWUSR | S_IRGRP : 0));
 }
-#define INVALID_HANDLE_VALUE -1;
+#define INVALID_HANDLE_VALUE -1
 static bool fileHandleValid(fileHandle fd)
 {
 	return fd >=0;
@@ -59,7 +57,7 @@ static inline int64_t readFile(fileHandle fd, char *buf, uint64_t count)
     }
     return save_count;
 }
-static inline  int64_t writeFile(fileHandle fd,char *buf, size_t count)
+static inline  int64_t writeFile(fileHandle fd,const char *buf, size_t count)
 {
     uint64_t writebytes, save_count=0;
     for (;;)
@@ -103,7 +101,7 @@ static inline  int checkFileExist(const char *fileName, int mode)
 	return access(fileName, mode);
 }
 #define seekFile lseek64
-long getFileTime(const char * file)
+static long getFileTime(const char * file)
 {
 	fileHandle fd = openFile(file, true, false, false);
 	if (fd < 0)
@@ -113,4 +111,3 @@ long getFileTime(const char * file)
 	closeFile(fd);
 	return st.st_mtime;
 }
-#endif /* FILEOPT_H_ */

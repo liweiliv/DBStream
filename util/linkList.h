@@ -31,7 +31,7 @@ public:
 	inline void push(T *& n)
 	{
 		n->next = nullptr;
-		std::lock_guard(pushLock.lock);
+		std::lock_guard<std::mutex> lock(pushLock);
 		T * _head = head.load(std::memory_order_relaxed);
 		if (_head == nullptr)
 		{
@@ -45,7 +45,7 @@ public:
 	}
 	inline T* pop()
 	{
-		std::lock_guard(popLock.lock);
+		std::lock_guard<std::mutex> plock(popLock);
 		T * _end = end.load(std::memory_order_relaxed);
 		if (_end == nullptr)
 			return _end;
@@ -53,7 +53,7 @@ public:
 		{
 			if (head.load(std::memory_order_release) == _end)
 			{
-				std::lock_guard(pushLock.lock);
+				std::lock_guard<std::mutex> lock(pushLock);
 				if (head.load(std::memory_order_release) == _end)
 				{
 					head.store(nullptr, std::memory_order_relaxed);

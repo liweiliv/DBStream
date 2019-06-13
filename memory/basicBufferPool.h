@@ -15,7 +15,7 @@ class basicBufferPool
 private:
 	struct block;
 	struct basicBlock {
-		block * block;
+		block * _block;
 		basicBlock *next;
 		char mem[1];
 	};
@@ -42,7 +42,7 @@ private:
 			char * p = alignedStartPos;
 			while (p < alignedStartPos + blockSize)
 			{
-				((basicBlock*)p)->block = this;
+				((basicBlock*)p)->_block = this;
 				basicBlocks.pushFast((basicBlock*)p);
 			}
 		}
@@ -73,8 +73,8 @@ private:
 	uint64_t blockSize;
 	uint64_t maxMem;
 	uint64_t maxBlocks;
-	std::atomic_int32_t blockCount;
-	std::atomic_int32_t starvation;
+	std::atomic<int32_t> blockCount;
+	std::atomic<int32_t> starvation;
 public:
 	basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize), maxMem(_maxMem), blockCount(0), starvation(0)
 	{
@@ -166,7 +166,7 @@ private:
 			}
 			while (nullptr != (basic = wrap->blocks.pop()))
 			{
-				block *b = basic->block;
+				block *b = basic->_block;
 				b->dlNode.lock.lock();
 				b->basicBlocks.push(basic);
 				if (b->basicBlocks.m_count.load(std::memory_order_release) == 1)//used out
@@ -175,7 +175,7 @@ private:
 					m_usedOutBlocks.eraseWithHandleLock(&b->dlNode);
 					m_activeBlocks.insertForHandleLock(&b->dlNode);
 				}
-				else if (b->basicBlocks.m_count.load(std::memory_order_release) == basicBlockCount)//no use
+				else if (b->basicBlocks.m_count.load(std::memory_order_release) == (int32_t)basicBlockCount)//no use
 				{
 					while (!m_activeBlocks.tryEraseForHandleLock(&b->dlNode));
 					m_freeBlocks.insertForHandleLock(&b->dlNode);
@@ -214,7 +214,7 @@ public:
 					starvation--;
 				return basic;
 			}
-			if (blockCount.load(std::memory_order_relaxed) >= maxBlocks)
+			if (blockCount.load(std::memory_order_relaxed) >= (int32_t)maxBlocks)
 			{
 				if (!isStarvation)
 				{
@@ -243,13 +243,13 @@ public:
 	{
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
 		nonBlockStack<basicBlock> * localCache = m_cache2.get();
-		if (localCache->m_count.load(std::memory_order_relaxed) < basicBlockCount * 2)
+		if (localCache->m_count.load(std::memory_order_relaxed) < (int32_t)basicBlockCount * 2)
 		{
 			localCache->push(basic);
 			goto END;
 		}
 		localCache = m_cache1.get();
-		if (localCache->m_count.load(std::memory_order_relaxed) < basicBlockCount * 2)
+		if (localCache->m_count.load(std::memory_order_relaxed) < (int32_t)basicBlockCount * 2)
 		{
 			localCache->push(basic);
 			goto END;
@@ -269,6 +269,6 @@ public:
 	static inline void free(void * _block)
 	{
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
-		basic->block->pool->freeMem(_block);
+		basic->_block->pool->freeMem(_block);
 	}
 };

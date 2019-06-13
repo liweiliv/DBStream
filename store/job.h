@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include "schedule.h"
 #include "../util/threadLocal.h"
-#include "cond.h"
 namespace STORE {
+        extern thread_local job* currentJob;
 	class jobProcess {
 	public:
 		virtual bool process() = 0;
@@ -18,6 +18,7 @@ namespace STORE {
 			FINISH,
 			FAULT
 		};
+
 		job* next;
 		schedule * m_sc;
 		uint32_t m_vtime;
@@ -26,6 +27,7 @@ namespace STORE {
 		jobStatus m_status;
 		uint64_t checkpoint;
 		jobProcess * m_process;
+
 		job() :m_sc(nullptr), m_vtime(0), m_nice(0), m_threadId(0), m_status(WAIT_NEXT)
 		{
 

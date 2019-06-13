@@ -2,7 +2,7 @@
 #include "stream.h"
 #include "iterator.h"
 namespace STORE {
-	inline bool schedule::streamCmp::operator()(stream* a, stream* b) const
+	inline bool schedule::streamCmp::operator()(job* a, job* b) const
 	{
 		return a->m_vtime < b->m_vtime;
 	}
@@ -44,7 +44,6 @@ namespace STORE {
 	void schedule::process(job* j)
 	{
 		j->sign();
-		iterator::status nextStatus;
 		clock_t now, begin = clock();
 		while (m_running)
 		{
@@ -89,7 +88,6 @@ namespace STORE {
 					idleRound = 0;
 			}
 			process(j);
-			if()
 		}
 		return;
 	}

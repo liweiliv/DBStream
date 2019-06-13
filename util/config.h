@@ -17,7 +17,7 @@ class config{
 private:
     std::map<std::string, std::map<std::string,std::string>* > m_sections;
     std::string m_filePath;
-    std::shared_mutex m_lock;
+    shared_mutex m_lock;
 public:
 	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
 	{
@@ -71,7 +71,7 @@ public:
     static std::string trim(const char * str,size_t size)
     {
         const char *start = str,*end = str+size-1;
-        while(start-str<size&&(*start=='\t'||*start==' '||*start=='\n'))
+        while(start-str<(uint32_t)size&&(*start=='\t'||*start==' '||*start=='\n'))
             start++;
         while(end>=start&&(*end=='\t'||*end==' '||*end=='\n'))
             end--;
@@ -132,24 +132,24 @@ public:
 		FILE* fp = fopen(file, "w+");
 		if (fp == nullptr)
 		{
-			LOG(ERROR) << "save conf to file"<<file<<" failed for open file failed,errno"<<errno<<","<strerror(errno);
+			LOG(ERROR) << "save conf to file"<<file<<" failed for open file failed,errno"<<errno<<","<<strerror(errno);
 			return -1;
 		}
-		for (std::map<std::string, std::map<std::string, std::string>* >::iterator secIter = m_sections.begin(); secIter != m_sections.end(); iter++)
+		for (std::map<std::string, std::map<std::string, std::string>* >::iterator secIter = m_sections.begin(); secIter != m_sections.end(); secIter++)
 		{
-			if (secIter->first.size() != fwrite(secIter->first.c_str(), secIter->first.size(), fp)|| 1!=fwrite("\n", 1, fp))
+			if (secIter->first.size() != fwrite(secIter->first.c_str(),1, secIter->first.size(), fp)|| 1!=fwrite("\n", 1,1, fp))
 			{
-				LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," < strerror(errno);
+				LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);
 				return -1;
 			}
 			for (std::map<std::string, std::string>::iterator confIter = secIter->second->begin(); confIter != secIter->second->end(); confIter++)
 			{
-				if (confIter->first.size() != fwrite(confIter->first.c_str(), confIter->first.size(), fp) || 
-					3!= fwrite(" = ", 3, fp)||
-					confIter->second.size() != fwrite(confIter->second.c_str(), confIter->second.size(), fp) 
-					||1 != fwrite("\n", 1, fp))
+				if (confIter->first.size() != fwrite(confIter->first.c_str(),1, confIter->first.size(), fp) || 
+					3!= fwrite(" = ",1, 3, fp)||
+					confIter->second.size() != fwrite(confIter->second.c_str(),1, confIter->second.size(), fp) 
+					||1 != fwrite("\n", 1,1, fp))
 				{
-					LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," < strerror(errno);
+					LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);
 					return -1;
 				}
 			}
@@ -163,4 +163,3 @@ public:
 
 
 #endif /* CONFIG_H_ */
-

@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file crc32c_sse42.cpp
  * @brief CRC32 calculator based on Intel's Streaming SIMD Extensions 4.2

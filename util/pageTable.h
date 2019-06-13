@@ -210,7 +210,6 @@ public:
 	{
 		uint8_t highId = PT_HIGH(id);
 		midNode* mid = root.child[highId].load(std::memory_order_relaxed);
-		bool newMid = false, newLow = false;
 		if (mid == nullptr)
 		{
 			mid = new midNode;

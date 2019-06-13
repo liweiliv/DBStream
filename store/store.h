@@ -9,6 +9,10 @@
 #define STORE_H_
 #include "../util/config.h"
 #include <glog/logging.h>
+class bufferPool;
+namespace META{
+class metaDataCollection;
+}
 namespace STORE{
 #define MAIN_STREAM "mainStream"
 #define GENERATED_STREAM "generatedStream"
@@ -16,10 +20,12 @@ class blockManager;
 class schedule;
 class store{
 private:
-    schedule *m_schedule;
-    blockManager *m_mainStreamblockManager;
+	schedule *m_schedule;
+	blockManager *m_mainStreamblockManager;
 	blockManager *m_genratedStreamBlockManager;
-    config * m_conf;
+	META::metaDataCollection* m_metaDataCollection;
+	config * m_conf;
+	bufferPool* m_bufferPool;
 public:
 	store(config* conf);
 	int start();

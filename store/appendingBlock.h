@@ -192,11 +192,14 @@ public:
 	}
 	int openRedoFile(bool w)
 	{
-		m_redoFd = openFile((m_blockManager->getBlockFile(m_blockID) + ".redo").c_str(), true, true,
+		char fileName[512];
+		m_blockManager->genBlockFileName(m_blockID,fileName);
+		strcat(fileName,".redo");
+		m_redoFd = openFile(fileName ,true, true,
 			true);
 		if (!fileHandleValid(m_redoFd))
 		{
-			LOG(ERROR)<<"open redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+			LOG(ERROR)<<"open redo file :"<<fileName<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 			return -1;
 		}
 		if (w)
@@ -204,7 +207,7 @@ public:
 			int64_t size = seekFile(m_redoFd, 0, SEEK_END);
 			if (size < 0)
 			{
-				LOG(ERROR) << "open redo file :" << m_blockManager->getBlockFile(m_blockID) << ".redo failed for errno:" << errno << ",error info:" << strerror(errno);
+				LOG(ERROR) << "open redo file :" << fileName<< "failed for errno:" << errno << ",error info:" << strerror(errno);
 				closeFile(m_redoFd);
 				m_redoFd = INVALID_HANDLE_VALUE;
 				return -1;
@@ -213,7 +216,7 @@ public:
 			{
 				if (sizeof(m_minLogOffset) != writeFile(m_redoFd, (char*)& m_minLogOffset, sizeof(m_minLogOffset)))
 				{
-					LOG(ERROR) << "open redo file :" << m_blockManager->getBlockFile(m_blockID) << ".redo failed for errno:" << errno << ",error info:" << strerror(errno);
+					LOG(ERROR) << "open redo file :" << fileName << "failed for errno:" << errno << ",error info:" << strerror(errno);
 					closeFile(m_redoFd);
 					m_redoFd = INVALID_HANDLE_VALUE;
 					return -1;
@@ -233,11 +236,10 @@ public:
 	}
 	inline uint64_t findRecordIDByOffset(uint64_t offset)
 	{
-		DATABASE_INCREASE::recordHead* head;
 		uint32_t endID = m_recordCount-1;
 		if(m_recordCount ==0|| ((const DATABASE_INCREASE::recordHead*)getRecord(m_minRecordId))->logOffset<offset|| ((const DATABASE_INCREASE::recordHead*)getRecord(m_minRecordId+m_recordCount-1))->logOffset>offset)
 		return 0;
-		int s = 0, e = endID ,m;
+		int64_t s = 0, e = endID ,m;
 		uint64_t midOffset;
 		while (s <= e)
 		{
@@ -250,7 +252,7 @@ public:
 			else
 			return m_minRecordId + m;
 		}
-		if (s >= 0 && s<endID - m_minRecordId && ((const DATABASE_INCREASE::recordHead*)getRecord(m_minRecordId + s))->logOffset > offset)
+		if (s >= 0 && s<(int64_t)(endID - m_minRecordId) && ((const DATABASE_INCREASE::recordHead*)getRecord(m_minRecordId + s))->logOffset > offset)
 		return m_minRecordId + s;
 		else
 		return 0;
@@ -269,16 +271,16 @@ public:
 			closeFile(m_redoFd);
 		if(0>openRedoFile(false))
 		{
-			LOG(ERROR)<<"open redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+			LOG(ERROR)<<"open redo file of block"<<m_blockID<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 			return -1;
 		}
 		int size = seekFile(m_redoFd,0,SEEK_END); //get fileSize
 		if(size<0)
 		{
-			LOG(ERROR)<<"get size of  redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+			LOG(ERROR)<<"get size of  redo file of block :"<<m_blockID<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 			return -1;
 		}
-		if(size <sizeof(uint64_t)) //empty file
+		if(size <(int)sizeof(uint64_t)) //empty file
 			return 0;
 		char * buf = (char*)malloc(size);
 		if(buf == NULL)
@@ -289,13 +291,13 @@ public:
 		if(0!= seekFile(m_redoFd,0,SEEK_SET)) //seek to begin of file
 		{
 			free(buf);
-			LOG(ERROR)<<"leeek to begin of file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+			LOG(ERROR)<<"leeek to begin of redo file :"<<m_blockID<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 			return -1;
 		}
 		if(size!=readFile(m_redoFd,buf,size)) //read all data one time
 		{
 			free(buf);
-			LOG(ERROR)<<"read redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+			LOG(ERROR)<<"read redo file of block :"<<m_blockID<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
 			return -1;
 		}
 		m_flag &= (~BLOCK_FLAG_HAS_REDO); //unset BLOCK_FLAG_HAS_REDO,so call [append] will not write redo file
@@ -304,7 +306,7 @@ public:
 		while((char*)head<=buf+size)
 		{
 			/*redo end normally*/
-			if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::recordHead::size) == size) && head->size == ENDOF_REDO_NUM)
+			if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::recordHead::size) == (uint32_t)size) && head->size == ENDOF_REDO_NUM)
 			{
 				ret = 0;
 				break;
@@ -313,11 +315,11 @@ public:
 			/*redo truncated*/
 			if(((char*)head)+sizeof(DATABASE_INCREASE::recordHead)>buf+size||((char*)head)+head->size>buf+size) //unfinished write ,truncate
 			{
-				LOG(WARNING)<<"get an incomplete redo data in file:"<<m_blockManager->getBlockFile(m_blockID)<<".redo ,offset is "<<((char*)head)-buf<<",truncate it";
+				LOG(WARNING)<<"get an incomplete redo data in redo file of block:"<<m_blockID<<",offset is "<<((char*)head)-buf<<",truncate it";
 				
 				if (((char*)head) - buf != seekFile(m_redoFd, ((char*)head) - buf, SEEK_SET)|| truncateFile(m_redoFd, ((char*)head) - buf)!=0)
 				{
-					LOG(WARNING) << "truncate redo file :" << m_blockManager->getBlockFile(m_blockID) << ".redo failed for:errno" << errno << "," << strerror(errno);
+					LOG(WARNING) << "truncate redo file of block:" << m_blockID << "failed for:errno" << errno << "," << strerror(errno);
 					free(buf);
 					return -1;
 				}
@@ -325,7 +327,7 @@ public:
 			}
 			if(append(DATABASE_INCREASE::createRecord((const char*)head, m_metaDataCollection))!=B_OK)
 			{
-				LOG(ERROR)<<"recoveryFromRedo from  file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for append data failed";
+				LOG(ERROR)<<"recoveryFromRedo from redo file of block:"<<m_blockID<<" failed for append data failed";
 				free(buf);
 				m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
 				return -1;
@@ -333,7 +335,7 @@ public:
 			head = (DATABASE_INCREASE::recordHead*)(((char*)head)+ head->size);
 		}
 		m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
-		LOG(INFO)<<"recoveryFromRedo from  file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo success";
+		LOG(INFO)<<"recoveryFromRedo from redo file :"<<m_blockID<<" success";
 		free(buf);
 		return ret;
 	}
@@ -342,17 +344,17 @@ public:
 		if (!fileHandleValid(m_redoFd)&&0!=openRedoFile(true))
 			return B_FAULT;
 		DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
-		int writeSize;
-		if(head->size!=(writeSize=writeFile(m_redoFd,data,head->size)))
+		int64_t writeSize;
+		if(head->size!=(uint64_t)(writeSize=writeFile(m_redoFd,data,head->size)))
 		{
 			if(errno==EBADF) //maybe out time or other cause,reopen it
 			{
-				LOG(ERROR)<<"write redo file:"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for "<<strerror(errno)<<" reopen it";
+				LOG(ERROR)<<"write redo file of block:"<<m_blockID<<" failed for "<<strerror(errno)<<" reopen it";
 					return B_FAULT;
 			}
 			else
 			{
-				LOG(ERROR)<<"write redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+				LOG(ERROR)<<"write redo file of block :"<<m_blockID<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 				return B_FAULT;
 			}
 		}
@@ -366,7 +368,7 @@ public:
 		{
 			if(0!=fsync(m_redoFd))
 			{
-				LOG(ERROR)<<"fsync redo file :"<<m_blockManager->getBlockFile(m_blockID)<<".redo failed for errno:"<<errno<<",error info:"<<strerror(errno);
+				LOG(ERROR)<<"fsync redo file of block:"<<m_blockID<<" failed for errno:"<<errno<<",error info:"<<strerror(errno);
 				return B_FAULT;
 			}
 			m_redoUnflushDataSize = 0;
@@ -382,7 +384,7 @@ public:
 		uint64_t v = ENDOF_REDO_NUM;
 		if (sizeof(v) != writeFile(m_redoFd, (char*)& v, sizeof(v)))
 		{
-			LOG(ERROR) << "finish redo file :" << m_blockManager->getBlockFile(m_blockID) << ".redo failed for errno:" << errno << ",error info:" << strerror(errno);
+			LOG(ERROR) << "finish redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
 			closeFile(m_redoFd);
 			m_redoFd = INVALID_HANDLE_VALUE;
 			return -1;
@@ -395,14 +397,13 @@ public:
 		{
 			if (0 != fsync(m_redoFd))
 			{
-				LOG(ERROR) << "fsync redo file :" << m_blockManager->getBlockFile(m_blockID) << ".redo failed for errno:" << errno << ",error info:" << strerror(errno);
+				LOG(ERROR) << "fsync redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
 				return -1;
 			}
 			closeFile(m_redoFd);
 			m_redoFd = INVALID_HANDLE_VALUE;
 		}
-		else
-			return 0;
+		return 0;
 	}
 	inline tableData *getTableData(META::tableMeta * meta)
 	{
@@ -587,7 +588,7 @@ public:
 		if (!use())
 			return nullptr;
 		solidBlock * block = new solidBlock(m_blockManager, m_metaDataCollection);
-		uint32_t firstPageSize = sizeof(tableDataInfo)*m_tableCount+(sizeof(recordGeneralInfo)+sizeof(uint32_t))*m_recordCount+sizeof(uint64_t)*(m_pageCount+1)+m_pageCount*offsetof(page, ref);
+		uint32_t firstPageSize = sizeof(tableDataInfo)*m_tableCount+(sizeof(recordGeneralInfo)+sizeof(uint32_t))*m_recordCount+sizeof(uint64_t)*(m_pageCount+1)+m_pageCount*offsetof(page, _ref);
 		block->firstPage = m_blockManager->allocPage(firstPageSize);
 		block->pages = (page**)m_blockManager->allocMem(sizeof(page*)*m_pageCount);
 		memcpy(&block->m_version,&m_version,sizeof(block)-offsetof(STORE::block,m_version));
@@ -617,14 +618,16 @@ public:
 				if(t->primaryKey!=nullptr)
 				{
 					block->pages[pageId] = createSolidIndexPage(t->primaryKey,t->meta->m_primaryKey.keyIndexs,t->meta->m_primaryKey.count,t->meta);
-					block->pages[pageId]->pageId = pageId++;
+					block->pages[pageId]->pageId = pageId;
+					pageId++;
 				}
 				if(t->uniqueKeys!=nullptr)
 				{
 					for(uint16_t idx=0;idx<t->meta->m_uniqueKeysCount;idx++)
 					{
 						block->pages[pageId] = createSolidIndexPage(t->uniqueKeys[idx],t->meta->m_uniqueKeys[idx].keyIndexs,t->meta->m_uniqueKeys[idx].count,t->meta);
-						block->pages[pageId]->pageId = pageId++;
+						block->pages[pageId]->pageId = pageId;
+						pageId++;
 					}
 				}
 				block->m_tableInfo[tableIdx].tableId = t->meta->m_id;
@@ -636,7 +639,8 @@ public:
 			t->pages.begin(piter);
 			do{
 				block->pages[pageId] = piter.value();
-				block->pages[pageId]->pageId = pageId++;
+				block->pages[pageId]->pageId = pageId;
+				pageId++;
 			}while(piter.next());
 			arrayList<uint32_t>::iterator riter ;
 			t->recordIds.begin(riter);
@@ -787,11 +791,6 @@ find record by timestamp
 			next();
 		else
 			m_status = OK;
-	}
-	~appendingBlockIterator()
-	{
-		if (m_block != nullptr)
-			m_block->unuse();
 	}
 	inline const void* value() const
 	{

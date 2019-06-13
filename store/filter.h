@@ -24,12 +24,13 @@ namespace STORE{
 		uint32_t m_tableIdWhiteListSize;
 		uint64_t * m_tableIdBlackList;
 		uint32_t m_tableIdBlackListSize;
-		uint8_t m_typeBitmap[DATABASE_INCREASE::RecordType::R_MAX_RECORD_TYPE >> 3 + (DATABASE_INCREASE::RecordType::R_MAX_RECORD_TYPE & 0x7) ? 1 : 0];
+		uint8_t m_typeBitmap[(DATABASE_INCREASE::RecordType::R_MAX_RECORD_TYPE >> 3 )+ (DATABASE_INCREASE::RecordType::R_MAX_RECORD_TYPE & 0x7) ? 1 : 0];
         filter(uint32_t filterType):m_filterType(filterType){
 
         }
         int init(const char *filters)
         {
+		return 0;//todo
 
         }
 		inline bool onlyNeedGeneralInfo()

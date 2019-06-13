@@ -36,7 +36,7 @@ class schedule
 public:
 	struct streamCmp
 	{
-		inline bool operator()(stream* a, stream* b) const;
+		inline bool operator()(job* a, job* b) const;
 	};
 private:
 	std::priority_queue<stream*,std::vector<job*>, streamCmp> m_task;
@@ -44,12 +44,12 @@ private:
 	std::atomic<uint8_t> m_activeTask;
 	bool m_running;
 	uint32_t m_allScore;
-    uint16_t m_maxWorders;
-    int m_maxIdleRound;
-    config * m_config;
+	uint16_t m_maxWorders;
+	int m_maxIdleRound;
+	config * m_config;
 	threadPool<schedule, void> m_threadPool;
 public:
-    schedule(config * conf):m_running(false),m_config(conf), m_allScore(0), m_threadPool(createThreadPool(32,this,&worker, C_SCHEDULE))
+    schedule(config * conf):m_running(false), m_allScore(0),m_config(conf), m_threadPool(createThreadPool(32,this,&schedule::worker, C_SCHEDULE))
     {
         m_maxWorders = m_config->getLong("store",C_MAX_WORKERS,8,1,32);
 		m_maxIdleRound = m_config->getLong("store", C_MAX_IDLE_ROUND, 100, 1, 100000);
@@ -77,8 +77,8 @@ public:
 		m_threadPool.join();
 		while (!m_task.empty())
 		{
-			job* j = m_task.top();
-			j->kill();
+	//todo		job* j = m_task.top();
+	//		j->kill();
 			m_task.pop();
 		}
 		LOG(INFO)<<"schedule stopped";

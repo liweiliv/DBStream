@@ -219,6 +219,7 @@ namespace STORE {
 			b->unuse();
 			return sb;
 		}
+		return b;
 	}
 	block* blockManager::getBasciBlock(uint32_t blockId)
 	{
@@ -307,7 +308,6 @@ RESET:
 			{
 				m_blockLock.unlock_shared();
 				delete s;
-				checkBlockCanUse(tmp);
 			}
 		}
 		else if (unlikely(!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))
@@ -403,12 +403,14 @@ RESET:
 			else
 				m_lastBlockId++;
 		}
+		return 0;
 	}
 	int blockManager::gc()//todo
 	{
 		for (block * b = static_cast<block*>(m_blocks.begin());b!=nullptr;b = static_cast<block*>(m_blocks.get(b->m_blockID+1)))
 		{
 		}
+		return 0;
 	}
 
 	void blockManager::purgeThread(blockManager* m)
@@ -499,9 +501,9 @@ RESET:
 			dirent* file;
 			while ((file = readdir(dir)) != nullptr)
 			{
-				if (ptr->d_type != 8)
+				if (file->d_type != 8)
 					continue;
-				const char* fileName = ptr->d_name;
+				const char* fileName = file->d_name;
 #endif
 				if (strncmp(fileName, m_logPrefix, prefixSize) != 0)
 					continue;
@@ -538,7 +540,7 @@ RESET:
 					m_firstBlockId.store(*iter, std::memory_order_relaxed);
 					m_lastBlockId.store(*iter, std::memory_order_relaxed);
 				}
-				if (prev != -1 && *iter != prev + 1)
+				if (prev != -1 && *iter != (uint64_t)(prev + 1))
 				{
 					LOG(ERROR) << "block index is not increase strictly,block from:"<<prev+1<<" to "<<*iter - 1<<" are not exist";
 					int ret = recoveryFromRedo(prev + 1, *iter - 1);
@@ -621,7 +623,7 @@ RESET:
 
 		m_compress = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_COMPRESS), "off") == "on");
 
-		m_blockDefaultSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_BLOCK_DEFAULT_SIZE), 33554432, 32 * 1024, 8 * 1024 * 1024 * 1024);
+		m_blockDefaultSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_BLOCK_DEFAULT_SIZE), 33554432, 32 * 1024, 1024  * 1024 * 1024);
 
 		m_redoFlushDataSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_REDO_FLUSH_DATA_SIZE), -1,-1, m_blockDefaultSize);
 

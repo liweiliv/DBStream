@@ -8,8 +8,8 @@ class ringFixedQueue
 private:
 	T* array;
 	uint32_t arraySize;
-	std::atomic_int32_t head;
-	std::atomic_int32_t end;
+	std::atomic<int32_t> head;
+	std::atomic<int32_t> end;
 public:
 	ringFixedQueue(uint32_t size = 32):array(new T[size]),arraySize(size)
 	{
@@ -58,5 +58,6 @@ public:
 			}
 			v = array[e];
 		} while (!end.compare_exchange_weak(e,(e+1)%arraySize));
+		return true;
 	}
 };
