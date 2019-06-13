@@ -168,7 +168,7 @@ public:
 		boost::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		shared_cond.wait(lk, boost::bind(&state_data::can_lock_shared, boost::ref(state)));
+		shared_cond.wait(lk);
 		state.lock_shared();
 	}
 
@@ -267,7 +267,7 @@ public:
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
 		state.exclusive_waiting_blocked = true;
-		exclusive_cond.wait(lk, boost::bind(&state_data::can_lock, boost::ref(state)));
+		exclusive_cond.wait(lk);
 		state.exclusive = true;
 	}
 
@@ -359,7 +359,7 @@ public:
 		boost::this_thread::disable_interruption do_not_disturb;
 #endif
 		std::unique_lock<std::mutex> lk(state_change);
-		shared_cond.wait(lk, boost::bind(&state_data::can_lock_upgrade, boost::ref(state)));
+		shared_cond.wait(lk);
 		state.lock_shared();
 		state.upgrade = true;
 	}
@@ -456,7 +456,7 @@ public:
 		std::unique_lock<std::mutex> lk(state_change);
 		state.assert_lock_upgraded();
 		state.unlock_shared();
-		upgrade_cond.wait(lk, boost::bind(&state_data::no_shared, boost::ref(state)));
+		upgrade_cond.wait(lk);
 		state.upgrade = false;
 		state.exclusive = true;
 		state.assert_locked();

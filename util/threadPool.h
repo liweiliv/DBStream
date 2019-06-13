@@ -92,6 +92,17 @@ public:
 		delete[]m_threads;
 		delete[]m_threadStatus;
 	}
+	void join()
+	{
+		for (uint16_t i = 0; i < m_maxThreads; i++)
+		{
+			if (m_threadStatus[i].load(std::memory_order_relaxed) != T_IDLE)
+			{
+				m_threads[i].join();
+				m_threadStatus[i].store(T_IDLE);
+			}
+		}
+	}
 	void updateCurrentMaxThread(uint16_t currentMaxThread)
 	{
 		if (currentMaxThread > m_maxThreads)
@@ -123,6 +134,10 @@ public:
 			}
 		}
 		return false;
+	}
+	inline uint16_t getCurrentThreadNumber()
+	{
+		return m_currentThreadCount.load(std::memory_order_relaxed);
 	}
 };
 template <class T, class R, typename... P>

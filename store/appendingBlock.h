@@ -24,6 +24,7 @@
 #include "../util/barrier.h"
 #include "../lz4/lz4.h"
 #include "solidBlock.h"
+#include "cond.h"
 namespace STORE
 {
 class appendingBlockIterator;
@@ -148,6 +149,7 @@ private:
 	int32_t m_redoFlushPeriod; //micro second
 	uint64_t m_txnId;
 	clock_t m_lastFLushTime;
+	cond m_cond;
 	friend class appendingBlockIterator;
 	friend class appendingBlockLineIterator;
 public:
@@ -424,20 +426,32 @@ public:
 	inline appendingBlockStaus allocMemForRecord(tableData * t, size_t size, void *&mem)
 	{
 		if (m_recordCount >= maxRecordInBlock)
+		{
+			m_flag |= BLOCK_FLAG_FINISHED;
+			m_cond.wakeUp();
 			return B_FULL;
+		}
 		if (unlikely(t->current == nullptr || t->current->pageUsedSize + size > t->current->pageSize))
 		{
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if(t->current == nullptr)
 			{
-				if (m_pageNum + 1+t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount >= m_maxPageNum || m_size + psize >= m_maxSize)
+				if (m_pageNum + 1 + t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount >= m_maxPageNum || m_size + psize >= m_maxSize)
+				{
+					m_flag |= BLOCK_FLAG_FINISHED;
+					m_cond.wakeUp();
 					return B_FULL;
+				}
 				m_pageNum+=t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount;//every index look as a page
 			}
 			else
 			{
 				if (m_pageNum + 1 >= m_maxPageNum || m_size + psize >= m_maxSize)
+				{
+					m_flag |= BLOCK_FLAG_FINISHED;
+					m_cond.wakeUp();
 					return B_FULL;
+				}
 			}
 
 			t->current = m_blockManager->allocPage(psize);
@@ -512,6 +526,7 @@ public:
 		if (record->head->txnId > m_txnId || record->head->type == DATABASE_INCREASE::R_DDL)
 			m_committedRecordID.store(m_recordCount, std::memory_order_release);
 		m_txnId = record->head->txnId;
+		m_cond.wakeUp();
 		return B_OK;
 	}
 	page* createSolidIndexPage(appendingIndex *index,uint16_t *columnIdxs,uint16_t columnCount,META::tableMeta * meta)
@@ -643,121 +658,178 @@ public:
 		unuse();
 		return block;
 	}
-
 };
 
-class appendingBlockLineIterator: public iterator
-{
-private:
-	appendingBlock * m_block;
-	uint32_t m_recordID;
-	uint32_t m_searchedRecordID;
-	appendingBlockLineIterator(appendingBlock * block, filter * filter,
-			uint32_t flag = 0) :
-			iterator(flag, filter), m_block(block), m_recordID(0), m_searchedRecordID(
-					0)
-	{
-		m_block->use();
-	}
-	bool findOffset(uint64_t offset)
-	{
-		uint64_t recordID = m_block->findRecordIDByOffset(offset);
-		if (recordID <= 0)
-			return false;
-		m_recordID = m_searchedRecordID = recordID;
-		m_status = OK;
-		return true;
-	}
-	~appendingBlockLineIterator()
-	{
-		m_block->m_ref.fetch_sub(1);
-	}
-	inline const char * value()
-	{
-		return m_block->m_buf + m_block->m_recordIDs[m_recordID];
-	}
-
-	inline bool next()
-	{
-		do
-		{
-			if (m_recordID >= m_block->m_recordCount)
-			{
-				if (m_block->m_status != OK)
-				{
-					if (m_block->m_status == appendingBlock::B_FULL)
-						m_status = ENDED;
-					else
-						m_status = INVALID;
-				}
-				else
-				{
-					m_status = BLOCKED;
-					if (m_flag & ITER_FLAG_WAIT)
-						m_block->m_cond->m_waiting.push(m_id);
-				}
-			}
-
-		} while (m_filter->doFilter(value()));
-		return true;
-	}
-};
 class appendingBlockIterator: public iterator
 {
 private:
 	appendingBlock * m_block;
-	std::atomic<uint32_t> m_offset;
 	filter * m_filter;
-	uint32_t m_id;
+	uint32_t m_recordId;
+	uint32_t m_seekedId;
+public:
 	appendingBlockIterator(appendingBlock * block, filter * filter,
-			uint32_t offset = 0, uint32_t flag = 0) :
-			iterator(flag), m_block(block), m_filter(filter), m_offset(offset), m_id(
-					0)
+			uint32_t recordId = 0, uint32_t flag = 0) :
+			iterator(flag, filter), m_block(block), m_filter(filter), m_recordId(
+				recordId), m_seekedId(recordId)
 	{
-		m_block->m_ref.fetch_add(1);
-		assert(
-				m_offset.load(std::memory_order_relaxed)
-						<= m_block->m_offset.load(std::memory_order_release));
+		seekByRecordId(block->m_minRecordId);
 	}
 	~appendingBlockIterator()
 	{
-		m_block->m_ref.fetch_sub(1);
+		if (m_block != nullptr)
+			m_block->unuse();
 	}
-	inline void* value() const
+	/*
+find record by timestamp
+[IN]timestamp ,start time by micro second
+[IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
+[IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
+*/
+	bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter)//timestamp not increase strictly
 	{
-		return m_block->m_buf + m_offset.load(std::memory_order_relaxed);
+		m_status = UNINIT;
+		m_errInfo.clear();
+		if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+			return false;
+		m_recordId = -1;
+		while (next())
+		{
+			if (!valid())
+				return false;
+			const DATABASE_INCREASE::recordHead* h = static_cast<const DATABASE_INCREASE::recordHead*>(value());
+			if (h->timestamp >= timestamp)
+			{
+				if (!equalOrAfter)
+				{
+					m_status = OK;
+					return true;
+				}
+				else if (h->timestamp <= timestamp + interval)
+				{
+					m_status = OK;
+					return true;
+				}
+				else
+				{
+					m_recordId = 0xfffffffeu;
+					return false;
+				}
+			}
+		}
+		if (m_status != INVALID)
+			m_recordId = 0xfffffffeu;
+		return false;
 	}
-	inline bool next()
+	bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter)
+	{
+		m_status = UNINIT;
+		m_errInfo.clear();
+		if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
+			return false;
+		int s = 0, e = m_block->m_recordCount - 1, m;
+		while (s <= e)
+		{
+			m = (s + e) >> 1;
+			uint64_t offset = ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset;
+			if (logOffset > offset)
+				s = m + 1;
+			else if (logOffset < offset)
+				e = m - 1;
+			else
+				goto FIND;
+		}
+		if (equalOrAfter)
+			return false;
+		if (e < 0)
+			m = 0;
+	FIND:
+		m_recordId = m - 1;
+		if (!next())
+		{
+			m_recordId = 0xfffffffeu;
+			return false;
+		}
+		m_status = OK;
+		return true;
+	}
+	bool seekByRecordId(uint64_t recordId)
+	{
+		m_status = UNINIT;
+		m_errInfo.clear();
+		if (m_block == nullptr || m_block->m_minRecordId > recordId || m_block->m_minRecordId + m_block->m_recordCount < recordId)
+			return false;
+		m_recordId = recordId - m_block->m_minRecordId - 1;
+		if (!next())
+		{
+			m_recordId = 0xfffffffeu;
+			return false;
+		}
+		m_status = OK;
+		return true;
+	}
+	void resetBlock(appendingBlock* block,uint32_t id = 0)
+	{
+		if (m_block != nullptr)
+			m_block->unuse();
+		m_recordId = id;
+		if (m_recordId == 0 && block->m_recordCount == 0)
+		{
+			m_status = BLOCKED;
+			return;
+		}
+		if (!valid())
+		{
+			m_status = INVALID;
+			return;
+		}
+		if (!m_filter->filterByRecord(m_block->getRecord(id)))
+			next();
+		else
+			m_status = OK;
+	}
+	~appendingBlockIterator()
+	{
+		if (m_block != nullptr)
+			m_block->unuse();
+	}
+	inline const void* value() const
+	{
+		return m_block->getRecord(m_recordId);
+	}
+	inline status next()
 	{
 		do
 		{
-			if (m_offset.load(std::memory_order_relaxed)
-					== m_block->m_offset.load(std::memory_order_release))
+			if (m_seekedId +1>=m_block->m_recordCount)
 			{
-				if (m_block->m_status != OK)
-					return m_block->m_status;
-				m_block->m_cond->m_waiting.push(m_id);
+				if (m_block->m_flag & BLOCK_FLAG_FINISHED)
+					return m_status = ENDED;
+				if (m_flag & ITER_FLAG_SCHEDULE)
+				{
+					m_block->m_cond.wait();
+					return  m_status = BLOCKED;
+				}
+				if (m_flag & ITER_FLAG_WAIT)
+				{
+					std::this_thread::sleep_for(std::chrono::nanoseconds(10000));
+					continue;
+				}
 			}
-			assert(
-					m_offset.load(std::memory_order_relaxed)
-							< m_block->m_offset.load(
-									std::memory_order_relaxed));
-			m_offset += ((DATABASE_INCREASE::recordHead*) (m_block->m_buf
-					+ m_offset.load(std::memory_order_relaxed)))->size;
-		} while (m_filter->doFilter(value()));
-		return true;
+			m_seekedId++;
+		} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
+		m_recordId = m_seekedId;
+		return  m_status = OK;
 	}
 	inline bool end()
 	{
-
-	}
-	inline void wait()
-	{
-
+		if (m_seekedId + 1 >= m_block->m_recordCount&& m_block->m_flag & BLOCK_FLAG_FINISHED)
+			return true;
+		return false;
 	}
 	inline bool valid()
 	{
-
+		return m_block != nullptr && m_recordId < m_block->m_recordCount;
 	}
 };
 }

@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 #include "schedule.h"
+#include "../util/threadLocal.h"
+#include "cond.h"
 namespace STORE {
 	class jobProcess {
 	public:
@@ -12,22 +14,34 @@ namespace STORE {
 		enum jobStatus {
 			WAIT_NEXT,
 			READY_FOR_PROCESS,
-			INTERRUPTTED
+			KILLED,
+			FINISH,
+			FAULT
 		};
+		job* next;
 		schedule * m_sc;
 		uint32_t m_vtime;
 		uint16_t m_nice;
-		uint16_t m_prevThreadID;
+		int m_threadId;
 		jobStatus m_status;
 		uint64_t checkpoint;
 		jobProcess * m_process;
-		job() :m_sc(nullptr), m_vtime(0), m_nice(0), m_prevThreadID(0), m_status(WAIT_NEXT)
+		job() :m_sc(nullptr), m_vtime(0), m_nice(0), m_threadId(0), m_status(WAIT_NEXT)
+		{
+
+		}
+		inline void sign()
+		{
+			currentJob = this;
+			m_threadId = threadid;
+		}
+		inline void kill()
 		{
 
 		}
 		inline void wakeUp()
 		{
-			m_sc->wakeUp(this);
+			m_sc->putJobToRunning(this);
 		}
 	};
 }

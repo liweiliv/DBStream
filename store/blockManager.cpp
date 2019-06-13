@@ -195,16 +195,74 @@ namespace STORE {
 		else
 			return nullptr;
 	}
-	block* blockManager::checkBlockCanUse(block* b)
+
+	block* blockManager::updateBasicBlockToSolidBlock(block *b)
 	{
-		while (b->m_loading.load(std::memory_order_relaxed) == BLOCK_LOADING)
-			std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
-		if ((b->m_loading.load(std::memory_order_relaxed) == BLOCK_LOAD_FAILED))
+		while (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
 		{
+			solidBlock* sb = new solidBlock(b);
+			sb->use();
+			if (unlikely(!m_blocks.updateCas(b->m_blockID, sb, b)))
+			{
+				delete sb;
+				continue;
+			}
+			m_blockLock.unlock_shared();
+			if (unlikely(0 != sb->load(b->m_blockID)))
+			{
+				LOG(ERROR) << "load block" << b->m_blockID << " failed";
+				m_blocks.update(b->m_blockID, b);
+				sb->unuse();
+				sb->unuse();
+				return nullptr;
+			}
 			b->unuse();
-			return nullptr;
+			return sb;
 		}
-		return b;
+	}
+	block* blockManager::getBasciBlock(uint32_t blockId)
+	{
+		if (m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
+			return nullptr;
+		m_blockLock.lock_shared();
+		block* b = static_cast<block*>(m_blocks.get(blockId));
+		if (likely(b != nullptr && b->use()))
+		{
+			m_blockLock.unlock_shared();
+			return b;
+		}
+		m_blockLock.unlock_shared();
+		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
+			return nullptr;
+		block* tmp;
+		b = new block(this, m_metaDataCollection);
+		if (0 != b->loadFromFile(blockId, this, m_metaDataCollection))
+		{
+			delete b;
+			LOG(ERROR) << "load block" << blockId << " failed";
+		}
+		b->use();
+		m_blockLock.lock_shared();
+		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
+			return nullptr;
+	RESET:
+		tmp = m_blocks.set(blockId, b);
+		if ((!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID)))&&tmp==b)
+		{
+			m_blockLock.unlock_shared();
+			return b;
+		}
+		else
+		{
+			if(!tmp->use())
+			{
+				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+				goto RESET;
+			}
+			m_blockLock.unlock_shared();
+			delete b;
+			return tmp;
+		}
 	}
 
 	block* blockManager::getBlock(uint32_t blockId)
@@ -215,8 +273,13 @@ namespace STORE {
 		block* b = static_cast<block*>(m_blocks.get(blockId));
 		if (likely(b != nullptr && b->use()))
 		{
+			if (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
+			{
+				b->unuse();
+				return updateBasicBlockToSolidBlock(b);
+			}
 			m_blockLock.unlock_shared();
-			return checkBlockCanUse(b);
+			return b;
 		}
 		m_blockLock.unlock_shared();
 		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
@@ -224,13 +287,18 @@ namespace STORE {
 		block* tmp;
 		solidBlock* s;
 		s = new solidBlock(this, m_metaDataCollection);
-		s->m_loading.store(BLOCK_LOADING, std::memory_order_acquire);
+		if (0 != s->loadFromFile(blockId, this, m_metaDataCollection))
+		{
+			delete s;
+			LOG(ERROR) << "load block" << blockId << " failed";
+		}
+		s->use();
 		m_blockLock.lock_shared();
 RESET:
-		tmp = static_cast<block*>(m_blocks.set(blockId, s));
-		if (tmp->m_flag & BLOCK_FLAG_APPENDING || static_cast<solidBlock*>(tmp) != s)//has been setted,use this block
+		tmp = m_blocks.set(blockId, s);
+		if (tmp->m_flag & BLOCK_FLAG_APPENDING || ((tmp->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
 		{
-			if (!tmp->use())//this block will been destroy
+			if (!tmp->use())//this block will been destroied
 			{
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 				goto RESET;
@@ -242,19 +310,21 @@ RESET:
 				checkBlockCanUse(tmp);
 			}
 		}
-		s->use();
+		else if (unlikely(!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))
+		{
+			return updateBasicBlockToSolidBlock(b);
+		}
+
 		m_blockLock.unlock_shared();
 		if (0 != s->load(blockId))
 		{
-			s->m_loading.store(BLOCK_LOAD_FAILED, std::memory_order_acquire);
 			m_blockLock.lock();
 			m_blocks.erase(blockId);
 			m_blockLock.unlock();
-			s->unuse();
-			s->unuse();
+			s->unuse();//this unuse to free use 
+			s->unuse();//this unuse will destroy the block
 			return nullptr;
 		}
-		s->m_loading.store(BLOCK_NORMAL, std::memory_order_acquire);
 		return s;
 	}
 	int blockManager::flush(appendingBlock* block)
@@ -265,7 +335,6 @@ RESET:
 			LOG(ERROR) << "trans block" << block->m_blockID << " to solid block failed";
 			return -1;
 		}
-		delete block;
 		if (0 != sb->writeToFile())
 		{
 			LOG(ERROR) << "flush block" << block->m_blockID << " to solid block file failed";
@@ -275,7 +344,10 @@ RESET:
 		if (block->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
 			block->finishRedo();
-			remove(getBlockFile(block->m_blockID).append(".redo").c_str());
+			char fileName[512];
+			genBlockFileName(block->m_blockID, fileName);
+			strcat(fileName, ".redo");
+			remove(fileName);
 		}
 		assert(m_blocks.update(block->m_blockID, sb));
 		block->unuse();
@@ -303,32 +375,59 @@ RESET:
 	int blockManager::purge()
 	{
 		block* b;
+		/*end is < m_lastBlockId.load(std::memory_order_relaxed) - 1,so we keep at least two block in disk*/
 		for (uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed); blockId < m_lastBlockId.load(std::memory_order_relaxed) - 1; blockId++)
 		{
-			std::string fileName = getBlockFile(blockId);
-			if (checkFileExist(fileName.c_str(),0) == 0)
+			char fileName[512];
+			genBlockFileName(blockId, fileName);
+			if (checkFileExist(fileName,0) == 0)
 			{
-				if(getFileTime(fileName.c_str())
+				if (getFileTime(fileName) < time(nullptr) - m_outdated)
+					return 0;
 				m_blockLock.lock();
-				if (nullptr == (b = static_cast<block*>(m_blocks.get(blockId))))
+				if (nullptr != (b = static_cast<block*>(m_blocks.get(blockId))))
 				{
-					m_lastBlockId++;
-					remove(getBlockFile(blockId).c_str());
+					m_blocks.erase(blockId);
+					b->unuse();
+				}
+				m_lastBlockId++;
+				m_blockLock.unlock();
+				if (0 != remove(fileName))
+				{
+					m_lastBlockId--;
+					LOG(ERROR) << "remove block file:" << fileName << " failed for errno:" << errno << "," << strerror(errno);
+					m_status = BM_FAILED;
+					return -1;
 				}
 			}
+			else
+				m_lastBlockId++;
+		}
+	}
+	int blockManager::gc()//todo
+	{
+		for (block * b = static_cast<block*>(m_blocks.begin());b!=nullptr;b = static_cast<block*>(m_blocks.get(b->m_blockID+1)))
+		{
 		}
 	}
 
-	static void purgeThread(blockManager* m)
+	void blockManager::purgeThread(blockManager* m)
 	{
-
+		m->purge();
 	}
 	int blockManager::recoveryFromRedo(uint32_t from,uint32_t to)
 	{
+		LOG(WARNING) << "try recovery block " << from << " to " << to << " from redo";
 		for (uint32_t blockId = from; blockId <= to; blockId++)
 		{	
-			if (checkFileExist(getBlockFile(blockId).append(".redo").c_str(), 0) < 0)
+			char fileName[512];
+			genBlockFileName(blockId, fileName);
+			strcat(fileName, ".redo");
+			if (checkFileExist(fileName, 0) < 0)
+			{
+				LOG(WARNING) << "redo file of block " << blockId << " is not exist ";
 				return 1;
+			}
 			appendingBlock* block = new appendingBlock(BLOCK_FLAG_APPENDING,
 				m_blockDefaultSize, m_redoFlushDataSize,
 				m_redoFlushPeriod, 0, this, m_metaDataCollection);
@@ -336,11 +435,13 @@ RESET:
 			int ret = block->recoveryFromRedo();
 			if (ret == -1)
 			{
+				LOG(ERROR) << "block :" << blockId << " recory from redo failed ";
 				delete block;
 				return 1;
 			}
 			else if (ret == 1)
 			{
+				LOG(ERROR) << "block :" << blockId << " recory from redo success ,but this redo has not finish";
 				m_blocks.set(block->m_blockID, block);
 				m_current = block;
 				m_lastBlockId.store(blockId, std::memory_order_relaxed);
@@ -359,9 +460,10 @@ RESET:
 				delete sb;
 				return 1;
 			}
-			remove(getBlockFile(blockId).append(".redo").c_str());
+			remove(fileName);
 			m_blocks.set(sb->m_blockID, sb);//todo ,avoid out of memory
 			m_lastBlockId.store(blockId, std::memory_order_relaxed);
+			LOG(ERROR) << "block :" << blockId << " recory from redo success ";
 		}
 		return 0;
 	}
@@ -427,6 +529,8 @@ RESET:
 		if (ids.size() > 0||redos.size()>0)
 		{
 			int64_t prev = -1;
+			char fileName[512];
+			
 			for (std::set<uint64_t>::iterator iter = ids.begin(); iter != ids.end(); iter++)
 			{
 				if (prev == -1)
@@ -436,14 +540,32 @@ RESET:
 				}
 				if (prev != -1 && *iter != prev + 1)
 				{
+					LOG(ERROR) << "block index is not increase strictly,block from:"<<prev+1<<" to "<<*iter - 1<<" are not exist";
 					int ret = recoveryFromRedo(prev + 1, *iter - 1);
 					if (ret == 1)
 					{
+						LOG(ERROR) << "stop load remind block,and move remind blocks to .bak file";
 						for (iter++; iter != ids.end(); iter++)
-							rename(getBlockFile(*iter).c_str(), getBlockFile(*iter).append(".bak").c_str());
+						{
+							genBlockFileName(*iter, fileName);
+							rename(fileName, std::string(fileName).append(".bak").c_str());
+						}
 						break;
 					}
 				}
+				block* b = new block(this,nullptr);
+				if (0 != b->loadFromFile(*iter, this))
+				{
+					LOG(ERROR) << "load block basic info from block:" << (*iter) << " failed,stop load remind block,and move remind block to .bak file";
+					for (; iter != ids.end(); iter++)
+					{
+						genBlockFileName(*iter, fileName);
+						rename(fileName, std::string(fileName).append(".bak").c_str());
+					}
+					delete b;
+					break;
+				}
+				m_blocks.set(*iter, b);
 				prev = *iter;
 				m_lastBlockId.store(*iter, std::memory_order_relaxed);
 			}
@@ -453,7 +575,10 @@ RESET:
 				for (std::set<uint64_t>::iterator iter = redos.begin(); iter != redos.end(); iter++)
 				{
 					if (m_current == nullptr || m_current->m_blockID != *iter)
-						rename(getBlockFile(*iter).append(".redo").c_str(), getBlockFile(*iter).append(".redo.bak").c_str());
+					{
+						genBlockFileName(*iter, fileName);
+						rename(std::string(fileName).append(".redo").c_str(), std::string(fileName).append(".redo.bak").c_str());
+					}
 				}
 			}
 			if (m_current == nullptr)

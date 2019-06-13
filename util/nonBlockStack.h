@@ -14,12 +14,17 @@ template <class T>
 struct nonBlockStack
 {
 	std::atomic<T*> m_head;
+#ifndef ST_WITHOUT_COUNT
 	std::atomic<int> m_count;
+#endif
 	nonBlockStack()
 	{
 		m_head.store(nullptr, std::memory_order_relaxed);
+#ifndef ST_WITHOUT_COUNT
 		m_count.store(0,std::memory_order_relaxed);
+#endif
 	}
+#ifndef ST_WITHOUT_COUNT
 	inline void changeCount(int c)
 	{
 		int _count = m_count.load(std::memory_order_relaxed),newCount;
@@ -28,20 +33,27 @@ struct nonBlockStack
 			newCount = _count + c;
 		} while (!m_count.compare_exchange_weak(_count, newCount, std::memory_order_acq_rel));
 	}
-	/*thread no safe*/
+#endif
+	/*thread not safe*/
 	inline void pushFast(T * data)
 	{
 		data->next = m_head.load(std::memory_order_relaxed);
 		m_head.store(data, std::memory_order_relaxed);
+#ifndef ST_WITHOUT_COUNT
 		m_count.fetch_add(1, std::memory_order_relaxed);
+#endif
 	}
 	inline void push(T * data)
 	{
 		T *end = data;
+#ifndef ST_WITHOUT_COUNT
 		int count = 1;
+#endif
 		while (end->next != nullptr)
 		{
+#ifndef ST_WITHOUT_COUNT
 			count++;
+#endif
 			end = end->next;
 		}
 		T *head = m_head.load(std::memory_order_relaxed);
@@ -49,16 +61,20 @@ struct nonBlockStack
 		{
 			end->next = head;
 		} while (!m_head.compare_exchange_weak(head, data, std::memory_order_acq_rel));
+#ifndef ST_WITHOUT_COUNT
 		changeCount(count);
+#endif
 	}
-	/*thread no safe*/
+	/*thread not safe*/
 	inline T *popFast()
 	{
 		T *head = m_head.load(std::memory_order_relaxed);
 		if (head == nullptr)
 			return nullptr;
 		m_head.store(head->next, std::memory_order_relaxed);
+#ifndef ST_WITHOUT_COUNT
 		m_count.fetch_sub(1, std::memory_order_relaxed);
+#endif
 		head->next = nullptr;
 		return head;
 	}
@@ -72,18 +88,22 @@ struct nonBlockStack
 		{
 			prev = head->next;
 		} while (!m_head.compare_exchange_weak(head, prev, std::memory_order_acq_rel));
+#ifndef ST_WITHOUT_COUNT
 		changeCount(-1);
+#endif
 		head->next = nullptr;
 		return head;
 	}
-	/*thread no safe*/
+	/*thread not safe*/
 	inline T * popAllFast()
 	{
 		T *head = m_head.load(std::memory_order_relaxed);
 		if (head == nullptr)
 			return nullptr;
 		m_head.store(nullptr, std::memory_order_relaxed);
+#ifndef ST_WITHOUT_COUNT
 		m_count.store(0, std::memory_order_relaxed);
+#endif
 		return head;
 	}
 	inline T * popAll()
@@ -91,12 +111,18 @@ struct nonBlockStack
 		T *head = m_head.load(std::memory_order_relaxed);
 		if (head == nullptr)
 			return nullptr;
+#ifndef ST_WITHOUT_COUNT
 		int count;
+#endif
 		do
 		{
+#ifndef ST_WITHOUT_COUNT
 			count = m_count.load(std::memory_order_relaxed);
+#endif
 		} while (!m_head.compare_exchange_weak(head, nullptr, std::memory_order_acq_rel));
+#ifndef ST_WITHOUT_COUNT
 		changeCount(-count);
+#endif
 		return head;
 	}
 };

@@ -50,8 +50,15 @@ namespace STORE{
 				return false;
 			return true;
 		}
-		inline bool filterByRecord(DATABASE_INCREASE::record * record)
+		inline bool filterByRecord(const char * record)
 		{
+			DATABASE_INCREASE::recordHead* h = (DATABASE_INCREASE::recordHead*)record;
+			if (!TEST_BITMAP(m_typeBitmap, h->type))
+				return false;
+			if ((m_filterType & FL_CHECKPOINT) && (m_startCheckpoint > h->logOffset || m_endCheckpoint < h->logOffset))
+				return false;
+			if (m_filterType & FL_TABLE_ID && !filterByTableID(DATABASE_INCREASE::DMLRecord::tableId(record)))
+				return false;
 			return true;
 		}
     };
