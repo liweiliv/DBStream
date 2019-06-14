@@ -66,7 +66,7 @@ namespace STORE
 	private:
 		BLOCK_MANAGER_STATUS m_status;
 		const char* m_confPrefix;
-		pageTable<block> m_blocks;
+		pageTable<block*> m_blocks;
 		std::atomic<int> m_lastFlushedFileID;
 		uint64_t m_maxBlockID;
 		config* m_config;

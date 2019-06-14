@@ -48,3 +48,17 @@ TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMetaDataCollection dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testThreadLocal  util/unittest/testThreadLocal.cpp)
+TARGET_LINK_LIBRARIES(testThreadLocal util)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testThreadLocal pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testpageTable  util/unittest/testpageTable.cpp)
+TARGET_LINK_LIBRARIES(testpageTable util)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testpageTable pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+

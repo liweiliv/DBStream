@@ -1,21 +1,21 @@
 #include "../pageTable.h"
 #include <thread>
 #include <chrono>
-pageTable p;
+pageTable<uint64_t> p;
 uint64_t *base;
 uint64_t** to;
 #define c 10000000
 void testThread(unsigned long id)
 {
 	std::this_thread::sleep_for(std::chrono::nanoseconds(rand()%100000));
-	for (int i = 1; i < c; i++)
+	for (unsigned int i = 1; i < c; i++)
 	{
 		uint64_t v = ((id << 32) | i);
-		void *rtv = p.set(i, (void*)v);
-		if ((unsigned long)rtv != v)
+		uint64_t rtv = p.set(i, v);
+		if (rtv != v)
 		{
-			to[id][i] = ((unsigned long)rtv) ;
-			assert((((unsigned long)rtv)& 0xffffffffu) == i);
+			to[id][i] = rtv ;
+			assert((rtv& 0xffffffffu) == i);
 		}
 		else
 		{
@@ -31,20 +31,20 @@ int main()
 	std::thread *t[10];
 	to = new uint64_t*[sizeof(t) / sizeof(std::thread*)];
 	base = new uint64_t[c];
-	for (int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
+	for (unsigned int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
 	{
 		to[i] = new uint64_t[c];
 		memset(to[i], 0, c);
 		t[i] = new std::thread(testThread, i);
 	}
-	for (int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
+	for (unsigned int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
 		t[i]->join();
-	for (int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
+	for (unsigned int i = 0; i < sizeof(t) / sizeof(std::thread*); i++)
 	{
 		for (int j = 1; j < c; j++)
 		{
-			void * v = p.get(j);
-			if (base[j] != to[i][j]||(uint64_t)v!=base[j])
+			uint64_t v = p.get(j);
+			if (base[j] != to[i][j]||v!=base[j])
 				abort();
 		}
 		delete t[i];

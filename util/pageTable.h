@@ -32,13 +32,11 @@ class pageTable
 private:
 	struct lowNode
 	{
-		std::atomic<T*> child[PT_LOW(0xffffffffu) + 1];
+		std::atomic<T> child[PT_LOW(0xffffffffu) + 1];
 		lowNode()
 		{
 			for (uint16_t idx = 0; idx < PT_LOW(0xffffffffu) + 1; idx++)
-				child[idx].store(nullptr, std::memory_order_relaxed);
-			//	barrier
-			;
+				child[idx].store((T)0l, std::memory_order_relaxed);
 		}
 
 	};
@@ -49,8 +47,6 @@ private:
 		{
 			for (uint16_t idx = 0; idx < PT_MID(0xffffffffu) + 1; idx++)
 				child[idx].store(nullptr, std::memory_order_relaxed);
-			//	barrier
-			;
 		}
 	};
 	struct highNode
@@ -60,16 +56,14 @@ private:
 		{
 			for (uint16_t idx = 0; idx < PT_HIGH(0xffffffffu) + 1; idx++)
 				child[idx].store(nullptr, std::memory_order_relaxed);
-			//barrier
-			;
 		}
 	};
 	highNode root;
 	std::atomic<uint32_t> min;
 	std::atomic<uint32_t> max;
-	int (*destoryValueFunc)(T* data);
+	int (*destoryValueFunc)(T data);
 public:
-	pageTable(int (*_destoryValueFunc)(T*) = nullptr) :
+	pageTable(int (*_destoryValueFunc)(T) = nullptr) :
 		destoryValueFunc(_destoryValueFunc)
 	{
 		min.store(0, std::memory_order_relaxed);
@@ -96,9 +90,9 @@ public:
 					{
 						for (uint16_t m = 0; m <= PT_LOW(0xffffffffu); m++)
 						{
-							T* data;
+							T data;
 							if ((data = low->child[m].load(
-								std::memory_order_relaxed)) != NULL)
+								std::memory_order_relaxed)) != decltype(data)(0l))
 							{
 								if (destoryValueFunc)
 									destoryValueFunc(data);
@@ -113,23 +107,23 @@ public:
 				root.child[i].store(nullptr, std::memory_order_relaxed);
 		}
 	}
-	inline T* get(uint32_t id)
+	inline T get(uint32_t id)
 	{
 		if (min.load(std::memory_order_relaxed) > id
 			|| max.load(std::memory_order_relaxed) < id)
-			return nullptr;
+			return (T)(0l);
 		uint8_t highId = PT_HIGH(id);
 		midNode* mid = root.child[highId].load(std::memory_order_relaxed);
 		if (mid == nullptr)
-			return nullptr;
+			return (T)(0l);
 		uint16_t midId = PT_MID(id);
 		lowNode* low = mid->child[midId].load(std::memory_order_relaxed);
 		if (low == nullptr)
-			return nullptr;
+			return (T)(0l);
 		uint32_t lowId = PT_LOW(id);
 		return low->child[lowId].load(std::memory_order_relaxed);
 	}
-	inline bool update(uint32_t id, T* data)
+	inline bool update(uint32_t id, T data)
 	{
 		if (min.load(std::memory_order_relaxed) > id
 			|| max.load(std::memory_order_relaxed) < id)
@@ -148,7 +142,7 @@ public:
 		low->child[lowId].store(data, std::memory_order_acquire);
 		return true;
 	}
-	inline bool updateCas(uint32_t id, T* data,T *& expect)
+	inline bool updateCas(uint32_t id, T data,T & expect)
 	{
 		if (min.load(std::memory_order_relaxed) > id
 			|| max.load(std::memory_order_relaxed) < id)
@@ -172,15 +166,15 @@ public:
 		}
 		return low->child[PT_LOW(id)].compare_exchange_strong(expect,data, std::memory_order_acquire);
 	}
-	inline T* operator[](uint32_t id)
+	inline T operator[](uint32_t id)
 	{
 		return get(id);
 	}
-	inline T* begin()
+	inline T begin()
 	{
 		do
 		{
-			T* data = nullptr;
+			T data = nullptr;
 			uint32_t id = min.load(std::memory_order_relaxed);
 			if (nullptr == (data = get(id)))
 			{
@@ -191,11 +185,11 @@ public:
 				return data;
 		} while (1);
 	}
-	inline T* end()
+	inline T end()
 	{
 		do
 		{
-			T* data = nullptr;
+			T data = nullptr;
 			uint32_t id = max.load(std::memory_order_relaxed);
 			if (nullptr == (data = get(id)))
 			{
@@ -206,7 +200,7 @@ public:
 				return data;
 		} while (1);
 	}
-	inline T* set(uint32_t id, T* data)
+	inline T set(uint32_t id, T data)
 	{
 		uint8_t highId = PT_HIGH(id);
 		midNode* mid = root.child[highId].load(std::memory_order_relaxed);
@@ -243,13 +237,13 @@ public:
 
 		}
 		uint16_t lowId = PT_LOW(id);
-		T* tmpData = nullptr;
+		T tmpData = (decltype(tmpData))(0l);
 		if ((tmpData = low->child[lowId].load(std::memory_order_relaxed))
-			!= nullptr)
+			!= (decltype(tmpData))(0L))
 			return tmpData;
 		while (!low->child[lowId].compare_exchange_weak(tmpData, data, std::memory_order_relaxed, std::memory_order_relaxed))
 		{
-			if (tmpData != nullptr)
+			if (tmpData != decltype(tmpData)(0l))
 				return tmpData;
 		}
 		uint32_t _min;
@@ -288,12 +282,12 @@ public:
 		if (low == nullptr)
 			return;
 		uint16_t lowId = PT_LOW(id);
-		T* data = low->child[lowId].load(std::memory_order_relaxed);
+		T data = low->child[lowId].load(std::memory_order_relaxed);
 		if (data == nullptr)
 			return;
 		do
 		{
-			T* nulldata = nullptr;
+			T nulldata = nullptr;
 			if (low->child[lowId].compare_exchange_weak(data, nulldata,
 				std::memory_order_acq_rel, std::memory_order_acq_rel))
 				break;
@@ -331,7 +325,7 @@ public:
 					{
 						for (uint16_t m = 0; m < PT_LOW(0xffffffffu); m++)
 						{
-							T* data;
+							T data;
 							if ((data = low->child[m].load(
 								std::memory_order_release)) != NULL)
 							{
@@ -359,7 +353,7 @@ public:
 				mid->child[j].store(nullptr, std::memory_order_release);
 				for (uint16_t m = 0; m < PT_LOW(0xffffffffu); m++)
 				{
-					T* data;
+					T data;
 					if ((data = low->child[m].load(std::memory_order_relaxed))
 						!= NULL)
 					{
@@ -376,7 +370,7 @@ public:
 		uint16_t lowId = PT_LOW(id);
 		for (uint16_t m = 0; m < lowId; m++)
 		{
-			T* data;
+			T data;
 			if ((data = low->child[m].load(std::memory_order_relaxed)) != NULL)
 			{
 				low->child[m].store(nullptr, std::memory_order_release);
