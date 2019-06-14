@@ -2,6 +2,7 @@
 #include <atomic>
 #include <mutex>
 #include "spinlock.h"
+#include "shared_mutex.h"
 #include <stddef.h>
 struct dualLinkListNode
 {
@@ -245,11 +246,11 @@ struct globalLockDualLinkListNode
 struct globalLockDualLinkList
 {
 	globalLockDualLinkListNode head;
-	std::mutex lock;
+	shared_mutex lock;
 	globalLockDualLinkList()
 	{
-		head.next = nullptr;
-		head.prev = nullptr;
+		head.next = &head;
+		head.prev = &head;
 	}
 	inline void insertAfter(globalLockDualLinkListNode* a, globalLockDualLinkListNode * n)
 	{
@@ -272,5 +273,33 @@ struct globalLockDualLinkList
 		n->prev->next = n->next;
 		lock.unlock();
 	}
+	struct iterator {
+		globalLockDualLinkListNode *m_node;
+		globalLockDualLinkList *m_list;
+		iterator(globalLockDualLinkList * list):m_list(list)
+		{
+			m_list->lock.lock_shared();
+			m_node = m_list->head.next;
+		}
+		~iterator()
+		{
+			m_list->lock.unlock_shared();
+		}
+		inline globalLockDualLinkListNode* value()
+		{
+			return m_node;
+		}
+		inline bool valid()
+		{
+			return m_list != nullptr && m_node != &m_list->head;
+		}
+		inline bool next()
+		{
+			if (m_node->next == &m_list->head)
+				return false;
+			m_node = m_node->next;
+			return true;
+		}
+	};
 
 };

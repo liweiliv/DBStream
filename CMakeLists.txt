@@ -28,10 +28,14 @@ aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
 TARGET_LINK_LIBRARIES(sqlParser util)
-
+#memory
+aux_source_directory(memory memoryDir)
+add_library(memory SHARED ${memoryDir})
+TARGET_LINK_LIBRARIES(memory util)
 #store
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
+TARGET_LINK_LIBRARIES(store  util memory meta)
 
 
 #unit test

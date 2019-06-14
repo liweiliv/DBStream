@@ -37,12 +37,44 @@ struct nonBlockStack
 	/*thread not safe*/
 	inline void pushFast(T * data)
 	{
-		data->next = m_head.load(std::memory_order_relaxed);
-		m_head.store(data, std::memory_order_relaxed);
+		T* end = data;
 #ifndef ST_WITHOUT_COUNT
-		m_count.fetch_add(1, std::memory_order_relaxed);
+		int count = 1;
+#endif
+		while (end->next != nullptr)
+		{
+#ifndef ST_WITHOUT_COUNT
+			count++;
+#endif
+			end = end->next;
+		}
+		T* head = m_head.load(std::memory_order_relaxed);
+		end->next = head;
+		m_head = data;
+#ifndef ST_WITHOUT_COUNT
+		m_count += count;
 #endif
 	}
+#ifndef ST_WITHOUT_COUNT
+	inline T * pushFastUtilCount(T* data,int max)
+	{
+		T* end = data;
+		T* next;
+		int count = 1;
+		while (end->next != nullptr
+			&&count+m_count<max)
+		{
+			count++;
+			end = end->next;
+		}
+		T* head = m_head.load(std::memory_order_relaxed);
+		next = end->next;
+		end->next = head;
+		m_head = data;
+		m_count += count;
+		return next;
+	}
+#endif
 	inline void push(T * data)
 	{
 		T *end = data;
@@ -128,3 +160,4 @@ struct nonBlockStack
 };
 
 #endif /* NONBLOCKLINKLIST_H_ */
+
