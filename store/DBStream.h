@@ -7,6 +7,9 @@
 namespace DATABASE_INCREASE {
 	struct  record;
 }
+namespace META{
+	struct tableMeta;
+}
 namespace STORE {
 constexpr auto S_CACHED = 0x01;
 constexpr auto S_SAVE = 0x03; //save must have cache,so its not 0x02 ,but 0x02|0x01
@@ -28,7 +31,7 @@ public:
 			m_destroy(this);
 	}
 	template<typename T>
-	iterator * find(uint64_t startRecordID,tableMeta * meta,uint16_t columnIndex,const T * v)//todo
+	iterator * find(uint64_t startRecordID,META::tableMeta * meta,uint16_t columnIndex,const T * v)//todo
 	{
 		if (!m_flag&S_CACHED)
 			return nullptr;

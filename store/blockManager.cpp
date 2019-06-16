@@ -297,7 +297,7 @@ namespace STORE {
 		m_blockLock.lock_shared();
 RESET:
 		tmp = m_blocks.set(blockId, s);
-		if (tmp->m_flag & BLOCK_FLAG_APPENDING || ((tmp->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
+		if ((tmp->m_flag & BLOCK_FLAG_APPENDING) || ((tmp->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
 		{
 			if (!tmp->use())//this block will been destroied
 			{

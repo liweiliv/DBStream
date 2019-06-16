@@ -61,4 +61,9 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testpageTable pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+ADD_EXECUTABLE(testbasciBufferPool  memory/unittest/testbasciBufferPool.cpp)
+TARGET_LINK_LIBRARIES(testbasciBufferPool memory)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testbasciBufferPool pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 

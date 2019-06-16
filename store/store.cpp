@@ -45,6 +45,6 @@ namespace STORE {
 		else if (strncmp(key, GENERATED_STREAM ".", sizeof(GENERATED_STREAM)) == 0)
 			return m_genratedStreamBlockManager->updateConfig(key, value);
 		else
-			return std::string("unknown config:") + key;
+			return std::string("unknown config :") + key;
 	}
 }

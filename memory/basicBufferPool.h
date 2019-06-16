@@ -42,7 +42,7 @@ private:
 		uint64_t basicBlockSize;
 		uint32_t basicBlockCount;
 		uint64_t blockSize;
-		block(uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
+		block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
 		~block();
 		inline basicBlock* getBasicBlock()
 		{
@@ -87,6 +87,7 @@ private:
 			if (basic->next != nullptr)
 				fillCache(basic->next);
 			m_usedOutBlocks.insertForHandleLock(&b->dlNode);
+			basic->next = nullptr;
 			return basic;
 		}
 		else
@@ -110,7 +111,7 @@ public:
 			{
 				if (isStarvation)
 					starvation--;
-				return basic;
+				return &basic->mem[0];
 			}
 			if (blockCount.load(std::memory_order_relaxed) >= (int32_t)maxBlocks)
 			{
@@ -123,15 +124,16 @@ public:
 			}
 			else
 			{
-				block * b = new block(basicBlockSize, basicBlockCount, blockSize);
+				block * b = new block(this,basicBlockSize, basicBlockCount, blockSize);
 				b->pool = this;
 				basic = b->getBasicBlock();
 				fillCache(basic->next);
+				basic->next = nullptr;
 				assert(basic != nullptr);
 				m_usedOutBlocks.insert(&b->dlNode);
 				if (isStarvation)
 					starvation--;
-				return basic;
+				return &basic->mem[0];
 			}
 		} while (1);
 	}

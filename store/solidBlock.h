@@ -36,7 +36,6 @@ namespace STORE
 		page** pages;
 		page* firstPage;
 		std::mutex m_fileLock;
-		META::metaDataCollection* m_metaDataCollection;
 		friend class appendingBlock;
 		friend class solidBlockIterator;
 	public:

@@ -33,7 +33,7 @@ namespace STORE {
 		uint8_t *m_types;
 		bool m_fixed;
 		uint16_t m_size;
-		unionKeyMeta() :m_keyCount(0), m_types(nullptr) {}
+		unionKeyMeta() :m_keyCount(0), m_types(nullptr),m_fixed(false),m_size(0) {}
 		unionKeyMeta(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta) :m_keyCount(0), m_types(nullptr), m_fixed(true), m_size(0) {
 			init(columnIndexs, columnCount, meta);
 		}

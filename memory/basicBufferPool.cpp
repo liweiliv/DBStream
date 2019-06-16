@@ -2,7 +2,7 @@
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
-basicBufferPool::block::block(uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
+basicBufferPool::block::block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :next(nullptr),pool(pool),basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
 	basicBlockCount(_basicBlockCount), blockSize(_blockSize)
 {
 	startPos = (char*)malloc(blockSize + 8);
@@ -10,19 +10,26 @@ basicBufferPool::block::block(uint64_t _basicBlockSize, uint32_t _basicBlockCoun
 	char* p = alignedStartPos;
 	while (p < alignedStartPos + blockSize)
 	{
+		basicBlock * b = (basicBlock*)malloc(basicBlockSize);
+		b->_block = this;
+		b->next = nullptr;
 		((basicBlock*)p)->_block = this;
-		basicBlocks.pushFast((basicBlock*)p);
+		((basicBlock*)p)->next = nullptr;
+		//basicBlocks.pushFast((basicBlock*)p);
+		basicBlocks.pushFast(b);
+		printf("new %lx in %lx \n",b,this);
+		p = (char*)ALIGN(((uint64_t)p)+basicBlockSize,8);
 	}
 }
 basicBufferPool::block::~block()
 {
-	free(startPos);
+	::free(startPos);
 }
 basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize), maxMem(_maxMem), blockCount(0), starvation(0)
 {
 	if (basicBlockSize <= 4096)
 	{
-		blockSize = 1024 * 1024;
+		blockSize = 1024;
 		basicBlockCount = blockSize / basicBlockSize;
 	}
 	else if (basicBlockSize <= 64 * 1024)
@@ -58,20 +65,24 @@ basicBufferPool::~basicBufferPool()
 }
 void basicBufferPool::fillCache(basicBlock* basic)
 {
-	if (basic != nullptr)
+	basicBlock * i = basic;
+	while(i!=nullptr)
 	{
-		getCacheWithDeclare(c, m_cache1);
-		basic = c->caches.pushFastUtilCount(basic, 32);
+		printf("fill cache :%lx\n",i);
+		i=i->next;
 	}
 	if (basic != nullptr)
 	{
-		getCacheWithDeclare(c, m_cache2);
-		basic = c->caches.pushFastUtilCount(basic, 32);
+		basic = m_cache1.get()->caches.pushFastUtilCount(basic, 32);
+	}
+	if (basic != nullptr)
+	{
+		basic = m_cache2.get()->caches.pushFastUtilCount(basic, 32);
 	}
 	if (basic != nullptr)
 	{
 		nonBlockStackWrap* wrap = new nonBlockStackWrap;
-		wrap->blocks.push(basic);
+		wrap->blocks.pushFast(basic);
 		m_globalCache.push(wrap);
 	}
 }
@@ -106,7 +117,8 @@ void basicBufferPool::cleanCache(cache * c)
 			{
 				while (!m_activeBlocks.tryEraseForHandleLock(&b->dlNode));
 				m_freeBlocks.insertForHandleLock(&b->dlNode);
-				while (m_freeBlocks.count.load(std::memory_order_relaxed) > 3) {
+				while (m_freeBlocks.count.load(std::memory_order_relaxed) > 3)
+				{
 					dualLinkListNode* n = m_freeBlocks.popLast();
 					if (n != nullptr)
 					{
