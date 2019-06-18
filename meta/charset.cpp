@@ -51,7 +51,7 @@ constexpr static charsetStringInfo sortedCharsetInfo[MAX_CHARSET] = {
 {"utf8",utf8},
 {"utf8mb4",utf8mb4}
 };
-const charsetInfo* getCharset(const char * name)
+DLL_EXPORT const charsetInfo* getCharset(const char * name)
 {
 	int16_t s = 0, e = MAX_CHARSET - 1,m;
 	while (s <= e && s < MAX_CHARSET)

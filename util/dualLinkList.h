@@ -11,9 +11,14 @@ struct dualLinkListNode
 	spinlock lock;
 };
 #ifndef container_of
+#ifdef OS_LINUX
 #define container_of(ptr, type, member) ({\
 	decltype( ((type *)0)->member ) *__mptr = (ptr);\
 	(type *)( (char *)__mptr - offsetof(type,member) );})
+#endif
+#ifdef OS_WIN
+#define container_of(ptr, type, member)  (type *)( ((char *)ptr) - offsetof(type,member) )
+#endif
 #endif
 struct dualLinkList
 {
@@ -34,7 +39,7 @@ struct dualLinkList
 		do
 		{
 			newCount = _count + c;
-		} while (!count.compare_exchange_weak(_count, newCount, std::memory_order_acq_rel));
+		} while (!count.compare_exchange_weak(_count, newCount, std::memory_order_acquire));
 	}
 	inline void insertAfter(dualLinkListNode* a, dualLinkListNode * n)
 	{
@@ -50,6 +55,7 @@ struct dualLinkList
 				n->next = next;
 				a->next = n;
 				next->prev = n;
+				assert(next->prev!=next);
 				next->lock.unlock();
 				a->lock.unlock();
 				n->lock.unlock();
@@ -73,6 +79,7 @@ struct dualLinkList
 				n->next = next;
 				a->next = n;
 				next->prev = n;
+				assert(next->prev!=next);
 				next->lock.unlock();
 				a->lock.unlock();
 				n->lock.unlock();
@@ -101,6 +108,7 @@ struct dualLinkList
 				n->next->lock.lock();
 				n->prev->next = n->next;
 				n->next->prev = n->prev;
+				assert(n->next->prev!=n->next);
 				n->next->lock.unlock();
 				n->prev->lock.unlock();
 				n->lock.unlock();
@@ -121,6 +129,7 @@ struct dualLinkList
 				n->next->lock.lock();
 				n->prev->next = n->next;
 				n->next->prev = n->prev;
+				assert(n->next->prev!=n->next);
 				n->next->lock.unlock();
 				n->prev->lock.unlock();
 				changeCount(-1);
@@ -137,6 +146,7 @@ struct dualLinkList
 			n->next->lock.lock();
 			n->prev->next = n->next;
 			n->next->prev = n->prev;
+			assert(n->next->prev!=n->next);
 			n->next->lock.unlock();
 			n->prev->lock.unlock();
 			changeCount(-1);
@@ -176,7 +186,6 @@ struct dualLinkList
 					n->next->prev = n->prev;
 					n->next->lock.unlock();
 					head.lock.unlock();
-					n->next = n->prev = nullptr;
 					n->lock.unlock();
 					changeCount(-1);
 					return n;
@@ -216,8 +225,9 @@ struct dualLinkList
 					if (likely(n->prev->lock.trylock()))
 					{
 						end.prev = n->prev;
-						n->next->prev = &end;
-						n->next->lock.unlock();
+						n->prev->next = &end;
+						n->prev->lock.unlock();
+						n->lock.unlock();
 						end.lock.unlock();
 						changeCount(-1);
 						return n;

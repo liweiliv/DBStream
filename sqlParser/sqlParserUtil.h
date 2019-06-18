@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "..//util/winDll.h"
 static inline bool isSpaceOrComment(const char *str)
 {
     if ((*str == ' ' || *str == '\t' || *str == '\n'))
@@ -38,7 +39,7 @@ static bool jumpOverComment(const char *& str)
     str = p + 2;
     return true;
 }
-const char * endOfWord(const char * str);
+DLL_EXPORT const char * endOfWord(const char * str);
 static const char * realEndOfWord(const char * str)
 {
     while (!isSpaceOrComment(str) && *str != '\0')
@@ -77,12 +78,12 @@ static bool getName(const char * str, const char *& start, uint16_t &size,
         realEnd = endOfWord(start);
         if (realEnd == start)
             return false;
-        size = realEnd - start;
+        size = (uint16_t)(realEnd - start);
         return true;
     }
 }
-void initKeyWords();
-void destroyKeyWords();
-bool isKeyWord(const char * str,uint32_t size);
-bool isKeyChar(uint8_t c);
+DLL_EXPORT void initKeyWords();
+DLL_EXPORT void destroyKeyWords();
+DLL_EXPORT bool isKeyWord(const char * str,uint32_t size);
+DLL_EXPORT bool isKeyChar(uint8_t c);
 #endif /* SQLSTRINGUTIL_H_ */

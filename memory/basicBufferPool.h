@@ -7,6 +7,7 @@
 #include "../util/dualLinkList.h"
 #include "../util/linkList.h"
 #include "../util/threadLocal.h"
+#include "../util/winDll.h"
 #define getCache(c,tc) if(unlikely(nullptr==(((c)=(tc).get())))){(tc).set((c)=new cache(this));}
 #define getCacheWithDeclare(c,tc) cache *c ;getCache(c,tc)
 class basicBufferPool
@@ -42,8 +43,8 @@ private:
 		uint64_t basicBlockSize;
 		uint32_t basicBlockCount;
 		uint64_t blockSize;
-		block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
-		~block();
+		DLL_EXPORT block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
+		DLL_EXPORT ~block();
 		inline basicBlock* getBasicBlock()
 		{
 			return basicBlocks.popAll();
@@ -70,30 +71,31 @@ private:
 	std::atomic<int32_t> blockCount;
 	std::atomic<int32_t> starvation;
 public:
-	basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem);
-	~basicBufferPool();
+	DLL_EXPORT basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem);
+	DLL_EXPORT ~basicBufferPool();
 private:
-	void fillCache(basicBlock* basic);
+	DLL_EXPORT void fillCache(basicBlock* basic);
+	DLL_EXPORT void * allocNewMem();
 	inline basicBlock *getMemFromExistBlock(dualLinkList& list)
 	{
-		dualLinkListNode * n = list.popLastAndHandleLock();
-		if (n == nullptr)
-			return nullptr;
-		block * b = container_of(n, block, dlNode);
-		if (b != nullptr)
+		do
 		{
+			dualLinkListNode* n = list.popLastAndHandleLock();
+			if (n == nullptr)
+				return nullptr;
+			block* b = container_of(n, block, dlNode);
 			basicBlock* basic = b->getBasicBlock();
-			assert(basic != nullptr);
-			if (basic->next != nullptr)
-				fillCache(basic->next);
 			m_usedOutBlocks.insertForHandleLock(&b->dlNode);
-			basic->next = nullptr;
-			return basic;
-		}
-		else
-			return nullptr;
+			if (basic != nullptr)
+			{
+				if (basic->next != nullptr)
+					fillCache(basic->next);
+				basic->next = nullptr;
+				return basic;
+			}
+		} while (1);
 	}
-	void cleanCache(cache* c);
+	DLL_EXPORT void cleanCache(cache* c);
 public:
 	inline void* alloc()
 	{
@@ -104,38 +106,7 @@ public:
 		getCache(c, m_cache2);
 		if (nullptr != (basic = c->caches.popFast()))
 			return &basic->mem[0];
-		bool isStarvation = false;
-		do
-		{
-			if ((basic = getMemFromExistBlock(m_activeBlocks)) != nullptr || (basic = getMemFromExistBlock(m_freeBlocks)) != nullptr)
-			{
-				if (isStarvation)
-					starvation--;
-				return &basic->mem[0];
-			}
-			if (blockCount.load(std::memory_order_relaxed) >= (int32_t)maxBlocks)
-			{
-				if (!isStarvation)
-				{
-					starvation++;
-					isStarvation = true;
-				}
-				std::this_thread::sleep_for(std::chrono::nanoseconds(100));
-			}
-			else
-			{
-				block * b = new block(this,basicBlockSize, basicBlockCount, blockSize);
-				b->pool = this;
-				basic = b->getBasicBlock();
-				fillCache(basic->next);
-				basic->next = nullptr;
-				assert(basic != nullptr);
-				m_usedOutBlocks.insert(&b->dlNode);
-				if (isStarvation)
-					starvation--;
-				return &basic->mem[0];
-			}
-		} while (1);
+		return allocNewMem();
 	}
 	inline uint64_t memUsed()
 	{

@@ -6,12 +6,12 @@
 class spinlock
 {
 private:
-	std::atomic_flag _lock;
+	std::atomic_flag _lock = ATOMIC_FLAG_INIT;
 #ifdef DEBUG
 	std::thread::id id;
 #endif
 public:
-	spinlock() :_lock(ATOMIC_FLAG_INIT)
+	spinlock() //:_lock(ATOMIC_FLAG_INIT)
 	{}
 	inline void lock()
 	{

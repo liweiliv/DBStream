@@ -36,7 +36,7 @@ private:
 		lowNode()
 		{
 			for (uint16_t idx = 0; idx < PT_LOW(0xffffffffu) + 1; idx++)
-				child[idx].store((T)0l, std::memory_order_relaxed);
+				child[idx].store((T)0L, std::memory_order_relaxed);
 		}
 
 	};
@@ -92,7 +92,7 @@ public:
 						{
 							T data;
 							if ((data = low->child[m].load(
-								std::memory_order_relaxed)) != decltype(data)(0l))
+								std::memory_order_relaxed)) != decltype(data)(0L))
 							{
 								if (destoryValueFunc)
 									destoryValueFunc(data);
@@ -111,15 +111,15 @@ public:
 	{
 		if (min.load(std::memory_order_relaxed) > id
 			|| max.load(std::memory_order_relaxed) < id)
-			return (T)(0l);
+			return (T)(0L);
 		uint8_t highId = PT_HIGH(id);
 		midNode* mid = root.child[highId].load(std::memory_order_relaxed);
 		if (mid == nullptr)
-			return (T)(0l);
+			return (T)(0L);
 		uint16_t midId = PT_MID(id);
 		lowNode* low = mid->child[midId].load(std::memory_order_relaxed);
 		if (low == nullptr)
-			return (T)(0l);
+			return (T)(0L);
 		uint32_t lowId = PT_LOW(id);
 		return low->child[lowId].load(std::memory_order_relaxed);
 	}
@@ -234,17 +234,19 @@ public:
 					break;
 				}
 			}
-
 		}
 		uint16_t lowId = PT_LOW(id);
-		T tmpData = (decltype(tmpData))(0l);
-		if ((tmpData = low->child[lowId].load(std::memory_order_relaxed))
-			!= (decltype(tmpData))(0L))
+		T tmpData = low->child[lowId].load(std::memory_order_relaxed);
+		if (tmpData != (decltype(tmpData))(0L))
+		{
 			return tmpData;
+		}
 		while (!low->child[lowId].compare_exchange_weak(tmpData, data, std::memory_order_relaxed, std::memory_order_relaxed))
 		{
-			if (tmpData != decltype(tmpData)(0l))
+			if (tmpData != decltype(tmpData)(0L))
+			{
 				return tmpData;
+			}
 		}
 		uint32_t _min;
 		do

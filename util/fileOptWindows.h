@@ -82,11 +82,12 @@ static int64_t readFile(fileHandle fd, char *buf, uint64_t size)
 {
 	DWORD readed = 0;
 	uint64_t remain = size;
-	while (!ReadFile(fd, buf+(size-remain), size, &readed, nullptr))
+	while (ReadFile(fd, buf+(size-remain), size, &readed, nullptr))
 	{
 		if (readed > 0)
 		{
-			remain -= readed;
+			if(0==(remain -= readed))
+				break;
 			readed = 0;
 		}
 		else

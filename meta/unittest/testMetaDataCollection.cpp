@@ -10,17 +10,20 @@
 #include "../../util/stackLog.h"
 #include "../metaDataCollection.h"
 #ifdef OS_WIN
-#define mysqlFuncLib "../lib/libmysqlParserFuncs.dll"
+#include <windows.h>
+#define mysqlFuncLib "mysqlParserFuncs.dll"
+#define mysqlParserTree "ParseTree"
 #endif
 #ifdef OS_LINUX
 #define mysqlFuncLib "../lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "../sqlParser/ParseTree"
 #endif
 int test()
 {
 	initStackLog();
 	initKeyWords();
 	META::metaDataCollection m("utf8");
-	m.initSqlParser("../sqlParser/ParseTree",mysqlFuncLib);
+	m.initSqlParser(mysqlParserTree,mysqlFuncLib);
 	m.processDDL("create  database test",1);
 	m.processDDL("create table test.t1 (a int primary key)",2);
 	printf("%s\n",m.get("test","t1",2)->toString().c_str());
@@ -30,6 +33,9 @@ int test()
 }
 int main()
 {
+#ifdef OS_WIN
+	SetDllDirectory("..\\lib");
+#endif
 	test();
 }
 

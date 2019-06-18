@@ -2,30 +2,27 @@
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
-basicBufferPool::block::block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :next(nullptr),pool(pool),basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
+DLL_EXPORT basicBufferPool::block::block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :next(nullptr),pool(pool),basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
 	basicBlockCount(_basicBlockCount), blockSize(_blockSize)
 {
 	startPos = (char*)malloc(blockSize + 8);
 	alignedStartPos = (char*)ALIGN((uint64_t)startPos, 8);
 	char* p = alignedStartPos;
-	while (p < alignedStartPos + blockSize)
+	while (p+basicBlockSize < startPos + blockSize)
 	{
-		basicBlock * b = (basicBlock*)malloc(basicBlockSize);
+		basicBlock * b = (basicBlock*)p;
 		b->_block = this;
 		b->next = nullptr;
-		((basicBlock*)p)->_block = this;
-		((basicBlock*)p)->next = nullptr;
-		//basicBlocks.pushFast((basicBlock*)p);
 		basicBlocks.pushFast(b);
-		printf("new %lx in %lx \n",b,this);
-		p = (char*)ALIGN(((uint64_t)p)+basicBlockSize,8);
+		p += basicBlockSize;
+		p = (char*)ALIGN((uint64_t)p,8);
 	}
 }
-basicBufferPool::block::~block()
+DLL_EXPORT basicBufferPool::block::~block()
 {
 	::free(startPos);
 }
-basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize), maxMem(_maxMem), blockCount(0), starvation(0)
+DLL_EXPORT basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize+sizeof(basicBlock)-1), maxMem(_maxMem), blockCount(0), starvation(0)
 {
 	if (basicBlockSize <= 4096)
 	{
@@ -44,9 +41,15 @@ basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :ba
 	}
 	maxBlocks = maxMem / blockSize;
 }
-basicBufferPool::~basicBufferPool()
+DLL_EXPORT basicBufferPool::~basicBufferPool()
 {
 	dualLinkListNode* n;
+	do {
+		nonBlockStackWrap* wrap = m_globalCache.pop();
+		if (wrap == nullptr)
+			break;
+		delete wrap;
+	} while (true);
 	while (nullptr != (n = m_freeBlocks.popLast()))
 	{
 		block* b = container_of(n, block, dlNode);
@@ -63,14 +66,8 @@ basicBufferPool::~basicBufferPool()
 		delete b;
 	}
 }
-void basicBufferPool::fillCache(basicBlock* basic)
+DLL_EXPORT void basicBufferPool::fillCache(basicBlock* basic)
 {
-	basicBlock * i = basic;
-	while(i!=nullptr)
-	{
-		printf("fill cache :%lx\n",i);
-		i=i->next;
-	}
 	if (basic != nullptr)
 	{
 		basic = m_cache1.get()->caches.pushFastUtilCount(basic, 32);
@@ -86,9 +83,11 @@ void basicBufferPool::fillCache(basicBlock* basic)
 		m_globalCache.push(wrap);
 	}
 }
-void basicBufferPool::cleanCache(cache * c)
+DLL_EXPORT void basicBufferPool::cleanCache(cache * c)
 {
 	basicBlock* basic = c->caches.popAll();
+	if(basic == nullptr)
+		return ;
 	nonBlockStackWrap* wrap = new nonBlockStackWrap;
 	wrap->blocks.push(basic);
 	m_globalCache.push(wrap);
@@ -97,12 +96,10 @@ void basicBufferPool::cleanCache(cache * c)
 		if (!m_lock.try_lock())
 			return;
 		wrap = m_globalCache.pop();
+		m_lock.unlock();
 		if (wrap == nullptr)
-		{
-			m_lock.unlock();
 			return;
-		}
-		while (nullptr != (basic = wrap->blocks.pop()))
+		while (nullptr != (basic = wrap->blocks.popFast()))
 		{
 			block* b = basic->_block;
 			b->dlNode.lock.lock();
@@ -134,6 +131,55 @@ void basicBufferPool::cleanCache(cache * c)
 				b->dlNode.lock.unlock();
 			}
 		}
+		delete wrap;
 	}
 }
-
+DLL_EXPORT void * basicBufferPool::allocNewMem()
+{
+	basicBlock * basic;
+	do {
+		nonBlockStackWrap* wrap = m_globalCache.pop();
+		if (wrap == nullptr)
+			break;
+		basic = wrap->blocks.popAllFast();
+		delete wrap;
+		if (basic != nullptr)
+		{
+			fillCache(basic->next);
+			basic->next = nullptr;
+			return &basic->mem[0];
+		}
+	} while (true);
+	bool isStarvation = false;
+	do
+	{
+		if ((basic = getMemFromExistBlock(m_activeBlocks)) != nullptr || (basic = getMemFromExistBlock(m_freeBlocks)) != nullptr)
+		{
+			if (isStarvation)
+				starvation--;
+			return &basic->mem[0];
+		}
+		if (blockCount.load(std::memory_order_relaxed) >= (int32_t)maxBlocks)
+		{
+			if (!isStarvation)
+			{
+				starvation++;
+				isStarvation = true;
+			}
+			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+		}
+		else
+		{
+			block * b = new block(this,basicBlockSize, basicBlockCount, blockSize);
+			b->pool = this;
+			basic = b->getBasicBlock();
+			fillCache(basic->next);
+			basic->next = nullptr;
+			assert(basic != nullptr);
+			m_usedOutBlocks.insert(&b->dlNode);
+			if (isStarvation)
+				starvation--;
+			return &basic->mem[0];
+		}
+	} while (1);
+}

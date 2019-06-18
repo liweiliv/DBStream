@@ -2,14 +2,26 @@
 #include "dualLinkList.h"
 #include <thread>
 #include <mutex>
-std::thread::id globalThreads[maxThreadCount] ;
+static std::thread::id globalThreads[maxThreadCount];
 static int allActiveThreadCount = 0;
-std::mutex globalThreadsLock;
+static std::mutex globalThreadsLock;
+
 thread_local int threadid = maxThreadCount + 1;
+thread_local threadLocalWrap _threadLocalWrap;
+#ifdef OS_WIN
+DLL_EXPORT int getThreadId()
+{
+	return threadid;
+}
+DLL_EXPORT threadLocalWrap& getThreadLocalWrap()
+{
+	return _threadLocalWrap;
+}
+#endif
 static bool initLocalThreadId()
 {
 	std::lock_guard<std::mutex> lock(globalThreadsLock);
-	if (allActiveThreadCount>= maxThreadCount)
+	if (allActiveThreadCount >= maxThreadCount)
 		return false;
 	std::thread::id zero;
 	for (int i = (allActiveThreadCount + 1) % maxThreadCount; i != allActiveThreadCount; i = (i + 1) % maxThreadCount)
@@ -47,7 +59,7 @@ void registerThreadLocalVar(void (*_unset)(void* v), void* v)
 }
 void destroyThreadLocalVar(void* v)
 {
-	globalLockDualLinkList::iterator *iter = new globalLockDualLinkList::iterator(&threadLocalList);
+	globalLockDualLinkList::iterator* iter = new globalLockDualLinkList::iterator(&threadLocalList);
 	if (!iter->valid())
 		return;
 	do {
@@ -64,15 +76,19 @@ void destroyThreadLocalVar(void* v)
 }
 
 threadLocalWrap::threadLocalWrap()
-	{
-		initLocalThreadId();
-	}
+{
+	initLocalThreadId();
+}
 threadLocalWrap::~threadLocalWrap()
+{
+	globalLockDualLinkList::iterator iter(&threadLocalList);
+	if (iter.valid())
 	{
-		globalLockDualLinkList::iterator iter(&threadLocalList);
 		do {
-			threadLocalInfo* t = container_of(iter.value(), threadLocalInfo, node);
+			globalLockDualLinkListNode* node = iter.value();
+			threadLocalInfo* t = container_of(node, threadLocalInfo, node);
 			t->_unset(t->v);
 		} while (iter.next());
 	}
-thread_local threadLocalWrap _threadLocalWrap;
+
+}

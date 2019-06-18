@@ -53,7 +53,7 @@ static void __cleanStackLog(stackLog * sl)
     }
     sl->stacksSize = 0;
 }
-int initStackLog()
+DLL_EXPORT int initStackLog()
 {
     if(stackLogMap!=NULL||stackLogMapLock!=NULL)
         return -1;
@@ -62,7 +62,7 @@ int initStackLog()
     return 0;
 }
 
-int destroyStackLog()
+DLL_EXPORT int destroyStackLog()
 {
     if(stackLogMap==NULL||stackLogMapLock==NULL)
         return -1;
@@ -117,7 +117,7 @@ static stackLog * getCurrentThreadStackLog(bool create = false)
 }
 /*清理当前线程的stacklog
  * */
-void cleanStackLog()
+DLL_EXPORT void cleanStackLog()
 {
     if(stackLogMap==NULL||stackLogMapLock==NULL)
         abort();
@@ -171,7 +171,7 @@ long expt_handler(LPEXCEPTION_POINTERS ep)
 /*
  * 写log，一般使用SET_STACE_LOG_AND_RETURN或者SET_STACE_LOG来调用
  */
-void setStackLog(int codeLine,const char * func,const char * file,int code,const char * fmt,...)
+DLL_EXPORT void setStackLog(int codeLine,const char * func,const char * file,int code,const char * fmt,...)
 {
    
 }
@@ -189,7 +189,7 @@ int getChildLog(std::string &errorLog)
 	errorLog = log;
 	return 0;
 }
-void  getFullStackLog(string &log)
+DLL_EXPORT void  getFullStackLog(string &log)
 {
   
     return ;

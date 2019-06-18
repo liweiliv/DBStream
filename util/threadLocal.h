@@ -2,18 +2,26 @@
 #include <string.h>
 #include"likely.h"
 #include "winDll.h"
-extern thread_local int threadid;
-static constexpr int maxThreadCount = 256;
-
-void registerThreadLocalVar(void (*_unset)(void* v), void* v);
-void destroyThreadLocalVar(void* v);
 class threadLocalWrap {
 public:
 	threadLocalWrap(); //we use this function to init threadid
 	~threadLocalWrap();
 	inline void idle() {}//do no thing ,thread_local varaiable will init when use it first
 };
+#ifdef OS_WIN
+DLL_EXPORT int getThreadId();
+DLL_EXPORT threadLocalWrap& getThreadLocalWrap();
+#else
+extern thread_local int threadid;
 extern thread_local threadLocalWrap _threadLocalWrap;
+#define  getThreadId() threadid
+#define getThreadLocalWrap() _threadLocalWrap
+#endif
+static constexpr int maxThreadCount = 256;
+
+DLL_EXPORT void registerThreadLocalVar(void (*_unset)(void* v), void* v);
+DLL_EXPORT void destroyThreadLocalVar(void* v);
+
 template<class T>
 class DLL_EXPORT threadLocal
 {
@@ -36,21 +44,21 @@ public:
 	}
 	inline T* get()
 	{
-		_threadLocalWrap.idle();
-		return m_var[threadid];
+		getThreadLocalWrap().idle();
+		return m_var[getThreadId()];
 	}
 	inline void set(T* v)
 	{
-		_threadLocalWrap.idle();
-		m_var[threadid] = v;
+		getThreadLocalWrap().idle();
+		m_var[getThreadId()] = v;
 	}
 	inline void unset()
 	{
-		_threadLocalWrap.idle();
-		if (likely(m_var[threadid] != nullptr))
+		getThreadLocalWrap().idle();
+		if (likely(m_var[getThreadId()] != nullptr))
 		{
-			delete m_var[threadid];
-			m_var[threadid] = nullptr;
+			delete m_var[getThreadId()];
+			m_var[getThreadId()] = nullptr;
 		}
 	}
 	static void _unset(void * v)

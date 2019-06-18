@@ -3,7 +3,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 project (DBStream)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_DEFINITIONS(-DOS_LINUX)
-	set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS "  -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -12,22 +12,18 @@ include (GenerateExportHeader)
 #util
 aux_source_directory(util utilDir)
 add_library(util SHARED ${utilDir})
-GENERATE_EXPORT_HEADER (util
-    BASE_NAME util
-    EXPORT_MACRO_NAME util_EXPORT
-    EXPORT_FILE_NAME util_Export.h
-    STATIC_DEFINE util_BUILT_AS_STATIC
-)
 #meta
 aux_source_directory(meta metaDir)
 add_library(meta SHARED ${metaDir})
-TARGET_LINK_LIBRARIES(meta util)
+TARGET_LINK_LIBRARIES(meta util sqlParser)
 
 #sql parser
 aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
-add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
 TARGET_LINK_LIBRARIES(sqlParser util)
+
+add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
+TARGET_LINK_LIBRARIES(mysqlParserFuncs meta)
 #memory
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
@@ -41,7 +37,10 @@ TARGET_LINK_LIBRARIES(store  util memory meta)
 #unit test
 SET(EXECUTABLE_OUTPUT_PATH test)
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)
-TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser meta dl)
+TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testMysqlSql dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testMetaDataCollection meta/unittest/testMetaDataCollection.cpp)
 TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta)
@@ -62,8 +61,17 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testbasciBufferPool  memory/unittest/testbasciBufferPool.cpp)
-TARGET_LINK_LIBRARIES(testbasciBufferPool memory)
+TARGET_LINK_LIBRARIES(testbasciBufferPool memory util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testbasciBufferPool pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+ADD_EXECUTABLE(testLinkList  util/unittest/testLinkList.cpp)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testLinkList pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testDualLinkList  util/unittest/testDualLinkList.cpp)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testDualLinkList pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

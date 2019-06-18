@@ -5,7 +5,7 @@ pageTable<uint64_t> p;
 uint64_t *base;
 uint64_t** to;
 #define c 10000000
-void testThread(unsigned long id)
+void testThread(uint64_t id)
 {
 	std::this_thread::sleep_for(std::chrono::nanoseconds(rand()%100000));
 	for (unsigned int i = 1; i < c; i++)
@@ -15,7 +15,10 @@ void testThread(unsigned long id)
 		if (rtv != v)
 		{
 			to[id][i] = rtv ;
-			assert((rtv& 0xffffffffu) == i);
+			if ((rtv & 0xffffffffu) != i)
+			{
+				abort();
+			}
 		}
 		else
 		{

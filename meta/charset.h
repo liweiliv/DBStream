@@ -101,4 +101,4 @@ constexpr charsetInfo charsets[] = {
 	{"eucjpms", 3,eucjpms},
 	{"gb18030", 4,gb18030}
 };
-const charsetInfo* DLL_EXPORT getCharset(const char * name);
+DLL_EXPORT const charsetInfo*  getCharset(const char * name);

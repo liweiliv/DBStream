@@ -10,7 +10,7 @@ using namespace std;
 static trieTree  * keyWords = NULL;
 static bool KeyChar[256] = {0};
 #define ADD_KW(k) keyWords->insertNCase((unsigned char*)(k),(void*)(unsigned long)1);
-void initKeyWords()
+DLL_EXPORT void initKeyWords()
 {
     keyWords = new trieTree;
     memset(KeyChar,0,sizeof(KeyChar));
@@ -81,7 +81,7 @@ void initKeyWords()
     ADD_KW("CASCADE");
     ADD_KW("TO");
 }
-void destroyKeyWords()
+DLL_EXPORT void destroyKeyWords()
 {
     if(keyWords)
     {
@@ -89,18 +89,18 @@ void destroyKeyWords()
         keyWords = NULL;
     }
 }
-bool isKeyWord(const char * str,uint32_t size)
+DLL_EXPORT bool isKeyWord(const char * str,uint32_t size)
 {
     if(keyWords->findNCase((const unsigned char*)str,size)!=NULL)
         return true;
     else
         return false;
 }
-bool isKeyChar(uint8_t c)
+DLL_EXPORT bool isKeyChar(uint8_t c)
 {
     return KeyChar[c];
 }
-const char * endOfWord(const char * str)
+DLL_EXPORT const char * endOfWord(const char * str)
 {
     while (!isSpaceOrComment(str) && *str != '\0'&&!isKeyChar(*str))
         str++;

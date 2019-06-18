@@ -14,12 +14,7 @@
 #include "../message/record.h"
 #include "metaChangeInfo.h"
 #include "../util/barrier.h"
-#ifndef likely
-# define likely(x)  __builtin_expect(!!(x), 1)
-#endif
-#ifndef unlikely
-# define unlikely(x)    __builtin_expect(!!(x), 0)
-#endif
+#include "..//util/likely.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {

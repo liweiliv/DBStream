@@ -10,10 +10,13 @@
 #include "stdio.h"
 #include "../../../util/stackLog.h"
 #ifdef OS_WIN
-#define mysqlFuncLib "../lib/libmysqlParserFuncs.dll"
+#pragma comment(lib,"lib\\sqlParser.lib")
+#define mysqlFuncLib "../lib/mysqlParserFuncs.dll"
+#define mysqlParserTree "ParseTree"
 #endif
 #ifdef OS_LINUX
 #define mysqlFuncLib "../lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "../sqlParser/ParseTree"
 #endif
 int testCreateTable(SQL_PARSER::sqlParser * parser)
 {
@@ -42,9 +45,10 @@ int main()
 		printf("load funcs from lib :%s failed\n",mysqlFuncLib);
 		return -1;
 	}
-	if(0!=parser.LoadParseTreeFromFile("../sqlParser/ParseTree"))
+	
+	if(0!=parser.LoadParseTreeFromFile(mysqlParserTree))
 	{
-		printf("load parse tree from file :%s failed\n","../sqlParser/ParseTree");
+		printf("load parse tree from file :%s failed\n", mysqlParserTree);
 		return -1;
 	}
 

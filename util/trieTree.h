@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "winDll.h"
-class DLL_EXPORT trieTree
+class  trieTree
 {
 private:
     struct node
@@ -65,25 +65,25 @@ public:
         uint16_t keyStackTop;
         uint8_t keyStack[256];
     public:
-        iterator();
-        iterator(const iterator & iter);
-       iterator &operator =(const iterator &iter);
-       ~iterator();
-       void clear();
-       bool valid();
-       void * value();
-       const unsigned char *key();
-       bool next();
+		DLL_EXPORT iterator();
+		DLL_EXPORT iterator(const iterator & iter);
+		DLL_EXPORT iterator &operator =(const iterator &iter);
+		DLL_EXPORT~iterator();
+		DLL_EXPORT void clear();
+		DLL_EXPORT bool valid();
+		DLL_EXPORT void * value();
+		DLL_EXPORT const unsigned char *key();
+		DLL_EXPORT bool next();
     };
 public:
-    iterator begin();
-    trieTree(int (*valueDestroyFunc)(void* value) = NULL);
-    ~trieTree();
-    void clear();
-     int insert(const unsigned char * str,void *value);
-     int insertNCase(const unsigned char * str,void *value);
-     void * find(const unsigned char * str,uint32_t size = 0xffffffffu);
-     void * findNCase(const unsigned char * str,uint32_t size = 0xffffffffu);
+	DLL_EXPORT iterator begin();
+	DLL_EXPORT trieTree(int (*valueDestroyFunc)(void* value) = NULL);
+	DLL_EXPORT ~trieTree();
+	DLL_EXPORT void clear();
+	DLL_EXPORT int insert(const unsigned char * str,void *value);
+	DLL_EXPORT int insertNCase(const unsigned char * str,void *value);
+	DLL_EXPORT void * find(const unsigned char * str,uint32_t size = 0xffffffffu);
+	DLL_EXPORT void * findNCase(const unsigned char * str,uint32_t size = 0xffffffffu);
 };
 
 

@@ -229,14 +229,14 @@ trieTree::node::iterator trieTree::node::begin()
     iter.clear();
     return iter;
 }
-trieTree::iterator::iterator()
+DLL_EXPORT trieTree::iterator::iterator()
 {
     m_stack.parent = NULL;
     m_top = NULL;
     memset(keyStack, 0, sizeof(keyStack));
     keyStackTop = 0;
 }
-trieTree::iterator::iterator(const iterator & iter)
+DLL_EXPORT trieTree::iterator::iterator(const iterator & iter)
 {
     m_stack.nodeIter = iter.m_stack.nodeIter;
     m_stack.parent = NULL;
@@ -265,7 +265,7 @@ trieTree::iterator::iterator(const iterator & iter)
     else
         newStack->parent = &m_stack;
 }
-trieTree::iterator &trieTree::iterator::operator =(
+DLL_EXPORT trieTree::iterator &trieTree::iterator::operator =(
         const trieTree::iterator &iter)
 {
     m_stack.nodeIter = iter.m_stack.nodeIter;
@@ -296,11 +296,11 @@ trieTree::iterator &trieTree::iterator::operator =(
         newStack->parent = &m_stack;
     return *this;
 }
-trieTree::iterator::~iterator()
+DLL_EXPORT trieTree::iterator::~iterator()
 {
     clear();
 }
-void trieTree::iterator::clear()
+DLL_EXPORT void trieTree::iterator::clear()
 {
     if (m_top != NULL)
     {
@@ -316,24 +316,24 @@ void trieTree::iterator::clear()
     memset(keyStack, 0, sizeof(keyStack));
     keyStackTop = 0;
 }
-bool trieTree::iterator::valid()
+DLL_EXPORT bool trieTree::iterator::valid()
 {
     return (m_top != NULL && m_top->nodeIter.valid()
             && ((uint64_t)m_top->nodeIter.value() & TT_VALUE_MASK));
 }
-void * trieTree::iterator::value()
+DLL_EXPORT void * trieTree::iterator::value()
 {
     if (!valid())
         return NULL;
     return (void*)((uint64_t)m_top->nodeIter.value() & (~TT_VALUE_MASK));
 }
-const unsigned char *trieTree::iterator::key() //todo
+DLL_EXPORT const unsigned char *trieTree::iterator::key() //todo
 {
     if (!valid())
         return NULL;
     return keyStack;
 }
-bool trieTree::iterator::next()
+DLL_EXPORT bool trieTree::iterator::next()
 {
     bool back = false;
     while (true)
@@ -418,16 +418,16 @@ trieTree::iterator trieTree::begin()
     }
     return iter;
 }
-trieTree::trieTree(int (*valueDestroyFunc)(void* value)) :
+DLL_EXPORT trieTree::trieTree(int (*valueDestroyFunc)(void* value)) :
         m_root(0), m_nodeCount(0), m_valueCount(0), m_valueDestroyFunc(
                 valueDestroyFunc)
 {
 }
-trieTree::~trieTree()
+DLL_EXPORT trieTree::~trieTree()
 {
     clear();
 }
-void trieTree::clear()
+DLL_EXPORT void trieTree::clear()
 {
     iterator iter = begin();
     if (iter.valid())
@@ -478,7 +478,7 @@ void trieTree::clear()
     m_nodeCount = 0;
     m_valueCount = 0;
 }
-int trieTree::insertNCase(const unsigned char * str,void *value)
+DLL_EXPORT int trieTree::insertNCase(const unsigned char * str,void *value)
 {
     node * n = &m_root;
     void * v;
@@ -551,7 +551,7 @@ SEARCH:
         return 0;
     }
 }
-int trieTree::insert(const unsigned char * str, void *value)
+DLL_EXPORT int trieTree::insert(const unsigned char * str, void *value)
 {
     node * n = &m_root;
     void * v;
@@ -621,7 +621,7 @@ int trieTree::insert(const unsigned char * str, void *value)
         return 0;
     }
 }
-void * trieTree::findNCase(const unsigned char * str,uint32_t size)
+DLL_EXPORT void * trieTree::findNCase(const unsigned char * str,uint32_t size)
 {
     node * n = &m_root;
     void * v;
@@ -658,7 +658,7 @@ SEARCH:
         }
     }
 }
-void * trieTree::find(const unsigned char * str,uint32_t size)
+DLL_EXPORT void * trieTree::find(const unsigned char * str,uint32_t size)
 {
     node * n = &m_root;
     void * v;

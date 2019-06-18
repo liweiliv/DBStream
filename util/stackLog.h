@@ -9,6 +9,7 @@
 #define _STACKLOG_H_
 #include <string>
 #include <string.h>
+#include "winDll.h"
 //#include <glog/logging.h>
 #ifdef OS_WIN
 static inline const char * basename(const char * path)
@@ -21,15 +22,15 @@ static inline const char * basename(const char * path)
 	return backSlant + 1;
 }
 #endif
-int initStackLog();
-int destroyStackLog();
-void cleanStackLog();
+DLL_EXPORT int initStackLog();
+DLL_EXPORT int destroyStackLog();
+DLL_EXPORT void cleanStackLog();
 #define SET_STACE_LOG(code,...) setStackLog(__LINE__,__func__,basename(__FILE__),code,__VA_ARGS__)
 #define SET_STACE_LOG_AND_RETURN(rtv,code,...) setStackLog(__LINE__,__func__,basename(__FILE__),code,__VA_ARGS__);return (rtv);
 #define SET_STACE_LOG_AND_RETURN_(rtv,code,...) printf(__VA_ARGS__);printf("\n"); setStackLog(__LINE__,__func__,basename(__FILE__),code,__VA_ARGS__);return (rtv);
 
-void setStackLog(int codeLine,const char * func,const char * file,int code,const char * fmt,...);
-int getChildLogDetail(int &code,const char *&log);
-int getChildLog(std::string &errorLog);
-void  getFullStackLog(std::string &log);
+DLL_EXPORT void setStackLog(int codeLine,const char * func,const char * file,int code,const char * fmt,...);
+DLL_EXPORT int getChildLogDetail(int &code,const char *&log);
+DLL_EXPORT int getChildLog(std::string &errorLog);
+DLL_EXPORT void  getFullStackLog(std::string &log);
 #endif /* _STACKLOG_H_ */
