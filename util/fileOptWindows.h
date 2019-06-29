@@ -127,3 +127,39 @@ long getFileTime(const char * file)
 	closeFile(fd);
 	return lastWriteTime.dwLowDateTime;
 }
+static int64_t getFileSize(const char* fileName)
+{
+	struct stat stbuf;
+	fileHandle fd = openFile(fileName, true, false, false);
+	if (fd == INVALID_HANDLE_VALUE)
+		return -1;
+	DWORD high = 0,size;
+	size = GetFileSize(fd, &high);
+	if (size == INVALID_FILE_SIZE)
+	{
+		closeFile(fd);
+		return -1;
+	}
+	closeFile(fd);
+	return (high<<32)+size;
+}
+static int getFileSizeAndTimestamp(const char* fileName, int64_t* size, int64_t* timestamp)
+{
+	*size = *timestamp = 0;
+	fileHandle fd = openFile(fileName, true, false, false);
+	if (fd == INVALID_HANDLE_VALUE)
+		return -1;
+	DWORD high = 0;
+	*size = GetFileSize(fd, &high);
+	if (*size == INVALID_FILE_SIZE)
+	{
+		closeFile(fd);
+		return -1;
+	}
+	*size = (high << 32) + *size;
+	FILETIME creationTime, lastAccessTime, lastWriteTime;
+	GetFileTime(fd, &creationTime, &lastAccessTime, &lastWriteTime);
+	*timestamp = lastWriteTime.dwLowDateTime;
+	closeFile(fd);
+	return 0;
+}

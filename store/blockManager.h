@@ -107,13 +107,13 @@ namespace STORE
 		block* getBasciBlock(uint32_t blockId);
 		int initConfig();
 		bool createNewBlock();
-		int insert(DATABASE_INCREASE::record* r);
 		int flush(appendingBlock* block);
 		void flushThread();
 		int purge();
 		int gc();
 		static void purgeThread(blockManager* m);
 	public:
+		int insert(DATABASE_INCREASE::record* r);
 		inline void genBlockFileName(uint64_t id,char *fileName)
 		{
 			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);

@@ -41,14 +41,14 @@ private:
 	struct tableData
 	{
 		uint64_t blockID;
-		META::tableMeta * meta;
+		const META::tableMeta * meta;
 		appendingIndex * primaryKey;
 		appendingIndex ** uniqueKeys;
 		arrayList<uint32_t> recordIds;
 		arrayList<page*> pages;
 		page * current;
 		uint32_t pageSize;
-		tableData(uint64_t blockID, META::tableMeta * meta,
+		tableData(uint64_t blockID, const META::tableMeta * meta,
 				leveldb::Arena *arena, uint32_t _pageSize = 512 * 1024) :
 				blockID(blockID), meta(meta), primaryKey(nullptr), uniqueKeys(
 						nullptr), recordIds(arena), pages(arena), current(
@@ -92,7 +92,7 @@ private:
 				uniqueKeys = nullptr;
 			}
 		}
-		void init(uint64_t blockID, META::tableMeta * meta,
+		void init(uint64_t blockID, const META::tableMeta * meta,
 				leveldb::Arena *arena, uint32_t _pageSize = 512 * 1024)
 		{
 			this->blockID = blockID;
@@ -469,7 +469,7 @@ public:
 	}
 	inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record * record)
 	{
-		tableData *t = getTableData(likely(record->head->type <= DATABASE_INCREASE::R_REPLACE) ? ((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
+		tableData *t = getTableData(likely(record->head->type <= DATABASE_INCREASE::R_REPLACE) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
 		page * current = t->current;
 		if (unlikely(current == nullptr||current->pageData + current->pageUsedSize != record->data))
 		{
@@ -507,7 +507,7 @@ public:
 		}
 		if (record->head->type <= DATABASE_INCREASE::R_REPLACE) //build index
 		{
-			META::tableMeta * meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
+			const META::tableMeta * meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
 			tableData * table = static_cast<tableData*>(meta->userData);
 			table->recordIds.append(m_recordCount);
 			if (table->primaryKey)
@@ -530,7 +530,7 @@ public:
 		m_cond.wakeUp();
 		return B_OK;
 	}
-	page* createSolidIndexPage(appendingIndex *index,uint16_t *columnIdxs,uint16_t columnCount,META::tableMeta * meta)
+	page* createSolidIndexPage(appendingIndex *index,uint16_t *columnIdxs,uint16_t columnCount,const META::tableMeta * meta)
 	{
 		page * p = m_blockManager->allocPage(index->toSolidIndexSize());
 		if(columnCount==1)

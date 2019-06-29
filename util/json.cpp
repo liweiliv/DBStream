@@ -180,31 +180,27 @@ jsonObject::~jsonObject()
 {
     clean();
 }
-jsonValue * jsonObject::get(string s)
+jsonValue * jsonObject::get(const string &s)
 {
-    for (list<ObjectKV*>::iterator i = m_values.begin(); i != m_values.end();i++)
-     {
-            if (*i != NULL)
-                {
-                if ((*i)->key != NULL&&(*i)->key->t== J_STRING&&static_cast<jsonString*>((*i)->key)->m_value==s)
-                	return (*i)->value;
-                }
-     }
-    return NULL;
+	std::map<std::string, jsonValue*>::iterator iter = m_values.find(s);
+	if (iter == m_values.end())
+		return nullptr;
+	return iter->second;
+}
+jsonValue* jsonObject::get(const char* s)
+{
+	std::map<std::string, jsonValue*>::iterator iter = m_values.find(s);
+	if (iter == m_values.end())
+		return nullptr;
+	return iter->second;
 }
 void jsonObject::clean()
 {
-    for (list<ObjectKV*>::iterator i = m_values.begin(); i != m_values.end();
+    for (std::map< std::string, jsonValue* >::iterator i = m_values.begin(); i != m_values.end();
             i++)
     {
-        if (*i != NULL)
-        {
-            if ((*i)->key != NULL)
-                delete (*i)->key;
-            if ((*i)->value != NULL)
-                delete (*i)->value;
-            delete (*i);
-        }
+		if (i->second != nullptr)
+			delete i->second;
     }
     m_values.clear();
 }
@@ -226,9 +222,9 @@ int jsonObject::parse(const char * data)
             ptr++;
         if (*ptr == '}')
             break;
-        int size = 0;
-        jsonValue * k = jsonValue::Parse(ptr, size);
-        if (k == NULL)
+		jsonString k;
+		int size = k.parse(ptr);
+        if (k.m_value.empty())
         {
             clean();
             return -1;
@@ -238,7 +234,6 @@ int jsonObject::parse(const char * data)
             ptr++;
         if (*ptr != ':')
         {
-            delete k;
             clean();
             return -1;
         }
@@ -246,15 +241,15 @@ int jsonObject::parse(const char * data)
         jsonValue * v = jsonValue::Parse(ptr, size);
         if (v == NULL)
         {
-            delete k;
             clean();
             return -1;
         }
         ptr += size;
-        ObjectKV * kv = new ObjectKV;
-        kv->key = k;
-        kv->value = v;
-        m_values.push_back(kv);
+		if (!m_values.insert(std::pair<std::string, jsonValue*>(k.m_value, v)).second)
+		{
+			clean();
+			return -1;
+		}
 
         while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
             ptr++;
@@ -273,16 +268,16 @@ string jsonObject::toString()
 {
     string s = "{";
     bool first = true;
-    for(list<ObjectKV*>::iterator i = m_values.begin(); i != m_values.end();i++)
+    for(std::map<std::string, jsonValue*>::iterator i = m_values.begin(); i != m_values.end();i++)
     {
-        ObjectKV * v = *i;
+		jsonValue* v = i->second;
         if(v!=NULL)
         {
             if(!first)
                 s.append(",");
             else
                 first = false;
-            s.append(v->key->toString()).append(":").append(v->value->toString());
+            s.append("\"").append(i->first).append("\":").append(v->toString());
         }
     }
     s.append("}");

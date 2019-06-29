@@ -47,7 +47,6 @@ protected:
     struct _memp_ring *m_memp;
     const std::map<std::string, std::string> & m_modConfig;
     formatEvent* m_descriptionEvent;
-    bool m_isTypeNeedParse[256];
 
 public:
     MySqlBinlogReader(struct _memp_ring * mp,

@@ -36,6 +36,11 @@ namespace STORE {
 		}
 		return 0;
 	}
+	int store::insert(DATABASE_INCREASE::record* r)
+	{
+		return m_mainStreamblockManager->insert(r);
+	}
+
 	std::string store::updateConfig(const char* key, const char* value)
 	{
 		if (strncmp(key, C_SCHEDULE ".", sizeof(C_SCHEDULE)) == 0)

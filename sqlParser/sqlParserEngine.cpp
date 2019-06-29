@@ -37,13 +37,14 @@ namespace SQL_PARSER
 		uint32_t m_refs;
 		string m_comment;
 		uint32_t m_id;
+		SQL_TYPE m_sqlType;
 		enum SQLWordType
 		{
 			SQL_ARRAY, SQL_SIGNLE_WORD
 		};
 		SQLWordType m_type;
 		parseValue(*m_parser)(handle* h, const string& sql);
-		virtual parseValue match(handle* h, const char*& sql) = 0;
+		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false) = 0;
 		void include()
 		{
 			m_refs++;
@@ -53,7 +54,7 @@ namespace SQL_PARSER
 			return --m_refs == 0;
 		}
 		SQLWord(SQLWordType t, bool optional = false) :
-			m_optional(optional), m_refs(0), m_id(0), m_type(t), m_parser(
+			m_optional(optional), m_refs(0), m_id(0), m_sqlType(UNSUPPORT),m_type(t), m_parser(
 				NULL)
 		{
 		}
@@ -88,7 +89,7 @@ namespace SQL_PARSER
 #define N_MATCH    return NOT_MATCH;
 #endif
 
-		virtual parseValue match(handle* h, const char*& sql)
+		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false)
 		{
 			const char* p = nextWord(sql);
 			parseValue rtv = OK;
@@ -268,16 +269,21 @@ namespace SQL_PARSER
 				return NOT_SUPPORT;
 			}
 
-			if (rtv == OK && m_parser != NULL)
+			if (rtv == OK)
 			{
-				statusInfo* s = new statusInfo;
-				s->sql = matchedWord;
-				s->parserFunc = m_parser;
-				if (h->head == NULL)
-					h->head = s;
-				else
-					h->end->next = s;
-				h->end = s;
+				if (m_sqlType != UNSUPPORT)
+					h->type = m_sqlType;
+				if (m_parser != nullptr&&!onlyGetType)
+				{
+					statusInfo* s = new statusInfo;
+					s->sql = matchedWord;
+					s->parserFunc = m_parser;
+					if (h->head == NULL)
+						h->head = s;
+					else
+						h->end->next = s;
+					h->end = s;
+				}
 			}
 #ifdef DEBUG
 			if (rtv == OK)
@@ -320,7 +326,7 @@ namespace SQL_PARSER
 		{
 			m_words.push_back(s);
 		}
-		virtual parseValue match(handle* h, const char*& sql)
+		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false)
 		{
 			parseValue rtv = OK;
 			bool matched = false;
@@ -337,11 +343,11 @@ namespace SQL_PARSER
 						continue;
 					if (s->m_type == SQL_ARRAY)
 					{
-						rtv = static_cast<SQLWordArray*>(s)->match(h, str);
+						rtv = static_cast<SQLWordArray*>(s)->match(h, str, onlyGetType);
 					}
 					else if (s->m_type == SQL_SIGNLE_WORD)
 					{
-						rtv = static_cast<SQLSingleWord*>(s)->match(h, str);
+						rtv = static_cast<SQLSingleWord*>(s)->match(h, str, onlyGetType);
 					}
 					if (rtv != OK)
 					{
@@ -386,9 +392,11 @@ namespace SQL_PARSER
 				else
 					h->head = NULL;
 			}
-			if (rtv != OK)
+			if (rtv == OK)
 			{
-				if (m_parser != NULL)
+				if (m_sqlType != UNSUPPORT)
+					h->type = m_sqlType;
+				if (m_parser != NULL&&!onlyGetType)
 				{
 					statusInfo* s = new statusInfo;
 					s->parserFunc = m_parser;
@@ -424,6 +432,16 @@ namespace SQL_PARSER
 				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect bool type");
 			}
 			optional = static_cast<jsonBool*>(value)->m_value;
+		}
+		if ((value = static_cast<jsonObject*>(obj)->get("TYPE")) != NULL || (value = static_cast<jsonObject*>(obj)->get("type")) != NULL)
+		{
+			if (value->t != jsonObject::J_STRING)
+			{
+				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect string type");
+			}
+			SQL_TYPE_TREE::const_iterator iter = m_sqlTypes.find(static_cast<jsonString*>(value)->m_value.c_str());
+			if (iter != m_sqlTypes.end())
+				s->m_sqlType = iter->second;
 		}
 		bool OR = false;
 		value = obj->get("OR");
@@ -568,6 +586,34 @@ namespace SQL_PARSER
 		m_funcsHandle(nullptr), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
 			nullptr)
 	{
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("BEGIN", BEGIN));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("COMMIT", COMMIT));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ROLLBACK", ROLLBACK));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("INSERT_INTO", INSERT_INTO));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DELETE_FROM", DELETE_FROM));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("UPDATE_SET", UPDATE_SET));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("REPLACE", REPLACE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("SELECT", SELECT));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("USE_DATABASE", USE_DATABASE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_DATABASE", CREATE_DATABASE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_DATABASE", DROP_DATABASE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_DATABASE", ALTER_DATABASE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_TABLE", CREATE_TABLE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_TABLE_LIKE", CREATE_TABLE_LIKE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("RENAME_TABLE", RENAME_TABLE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_TABLE", DROP_TABLE));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_INDEX", CREATE_INDEX));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_INDEX", DROP_INDEX));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_FOREIGN_KEY", ALTER_TABLE_DROP_FOREIGN_KEY));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_PRIMARY_KEY", ALTER_TABLE_DROP_PRIMARY_KEY));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_INDEX", ALTER_TABLE_DROP_INDEX));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_COLUMN", ALTER_TABLE_DROP_COLUMN));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_KEY", ALTER_TABLE_ADD_KEY));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_CONSTRAINT", ALTER_TABLE_ADD_CONSTRAINT));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_COLUMN", ALTER_TABLE_ADD_COLUMN));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_COLUMNS", ALTER_TABLE_ADD_COLUMNS));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_CHANGE_COLUMN", ALTER_TABLE_CHANGE_COLUMN));
+		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_MODIFY_COLUMN", ALTER_TABLE_MODIFY_COLUMN));
 	}
 	DLL_EXPORT sqlParser::~sqlParser()
 	{
@@ -682,61 +728,66 @@ namespace SQL_PARSER
 	DLL_EXPORT int sqlParser::LoadParseTree(const char* config)
 	{
 		int32_t size = 0;
-		jsonValue* v = NULL;
+		jsonValue* segment = NULL;
 		const char* p = nextWord(config);
 		while (true)
 		{
-			if (NULL == (v = jsonValue::Parse(p, size)))
+			if (NULL == (segment = jsonValue::Parse(p, size)))
 			{
 				printf("load parse tree from %s failed\n", p);
 				return -1;
 			}
 
-			if (v->t != jsonValue::J_OBJECT)
+			if (segment->t != jsonValue::J_OBJECT)
 			{
-				delete v;
+				delete segment;
 				return -1;
 			}
-			int id = 0;
-			jsonValue* jv;
-			if ((jv = static_cast<jsonObject*>(v)->get("ID")) != NULL)
+			for (std::map<std::string, jsonValue*>::const_iterator iter = static_cast<jsonObject*>(segment)->m_values.begin(); iter != static_cast<jsonObject*>(segment)->m_values.end(); iter++)
 			{
-				if (jv->t != jsonObject::J_NUM)
+				int id = 0;
+				jsonValue* sentence = iter->second;
+				jsonValue* value;
+				if ((value = static_cast<jsonObject*>(sentence)->get("ID")) != NULL)
 				{
-					delete v;
-					SET_STACE_LOG_AND_RETURN_(-1, -1, "expect num");
+					if (value->t != jsonObject::J_NUM)
+					{
+						delete segment;
+						SET_STACE_LOG_AND_RETURN_(-1, -1, "expect num");
+					}
+					id = static_cast<jsonNum*>(value)->m_value;
 				}
-				id = static_cast<jsonNum*>(jv)->m_value;
-			}
-			bool head = false;
-			if ((jv = static_cast<jsonObject*>(v)->get("HEAD")) != NULL)
-			{
-				if (jv->t != jsonObject::J_BOOL)
+				bool head = false;
+				if ((value = static_cast<jsonObject*>(sentence)->get("HEAD")) != NULL)
 				{
-					delete v;
-					SET_STACE_LOG_AND_RETURN_(-1, -1, "expect bool");
+					if (value->t != jsonObject::J_BOOL)
+					{
+						delete segment;
+						SET_STACE_LOG_AND_RETURN_(-1, -1, "expect bool");
+					}
+					head = static_cast<jsonBool*>(value)->m_value;
 				}
-				head = static_cast<jsonBool*>(jv)->m_value;
+
+				SQLWord* s = loadSQlWordFromJson(sentence);
+				if (s == NULL)
+				{
+					delete segment;
+					SET_STACE_LOG_AND_RETURN_(-1, -1, "load  parse tree failed");
+				}
+				s->include();
+				pair<map<uint32_t, SQLWord*>::iterator, bool> i = m_parseTree.insert(
+					pair<uint32_t, SQLWord*>(id, s));
+				if (!i.second)
+				{
+					printf("%s has the same id [%d] with %s\n", sentence->toString().c_str(),
+						id, i.first->second->m_comment.c_str());
+					delete segment;
+					return -1;
+				}
+				if (head)
+					m_parseTreeHead.insert(pair<uint32_t, SQLWord*>(id, s));
+				delete segment;
 			}
-			SQLWord* s = loadSQlWordFromJson(v);
-			if (s == NULL)
-			{
-				delete v;
-				SET_STACE_LOG_AND_RETURN_(-1, -1, "load  parse tree failed");
-			}
-			s->include();
-			pair<map<uint32_t, SQLWord*>::iterator, bool> i = m_parseTree.insert(
-				pair<uint32_t, SQLWord*>(id, s));
-			if (!i.second)
-			{
-				printf("%s has the same id [%d] with %s\n", v->toString().c_str(),
-					id, i.first->second->m_comment.c_str());
-				delete v;
-				return -1;
-			}
-			if (head)
-				m_parseTreeHead.insert(pair<uint32_t, SQLWord*>(id, s));
-			delete v;
 			p = nextWord(p + size);
 			if (p[0] == '\0')
 				break;
@@ -808,6 +859,37 @@ namespace SQL_PARSER
 		*(dest - 1) = '\0';
 		return newSql;
 	}
+	DLL_EXPORT parseValue sqlParser::parseSqlType(handle*& h, const char* sql)
+	{
+		h = new handle;
+		handle* currentHandle = h;
+		while (true)
+		{
+			for (map<uint32_t, SQLWord*>::iterator iter = m_parseTreeHead.begin();
+				iter != m_parseTreeHead.end(); iter++)
+			{
+				const char* tmp = sql;
+				SQLWord* s = static_cast<SQLWord*>(iter->second);
+				if (s->match(currentHandle, tmp,false) != OK)
+					continue;
+				sql = nextWord(tmp);
+				goto PARSE_SUCCESS;
+			}
+			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
+			delete h;
+			h = nullptr;
+			return NOT_MATCH;
+PARSE_SUCCESS:
+			while (sql[0] == ';')
+				sql = nextWord(sql + 1);
+			if (sql[0] == '\0') //sql has finished ,return
+				return OK;
+			/*sql do not finish,go on prase */
+			handle* _h = new handle;
+			currentHandle->next = _h;
+			currentHandle = _h;
+		}
+	}
 	DLL_EXPORT parseValue sqlParser::parse(handle*& h, const char* sql)
 	{
 		h = new handle;
@@ -819,7 +901,7 @@ namespace SQL_PARSER
 			{
 				const char* tmp = sql;
 				SQLWord* s = static_cast<SQLWord*>(iter->second);
-				if (s->match(currentHandle, tmp) != OK)
+				if (s->match(currentHandle, tmp,true) != OK)
 				{
 					//   printf("%d,%s \033[1m\033[40;31m not match \033[0m:%.*s\n",iter->first,s->m_comment.c_str(),100,sql);
 					continue;

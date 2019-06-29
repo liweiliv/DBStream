@@ -34,10 +34,10 @@ namespace STORE {
 		bool m_fixed;
 		uint16_t m_size;
 		unionKeyMeta() :m_keyCount(0), m_types(nullptr),m_fixed(false),m_size(0) {}
-		unionKeyMeta(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta) :m_keyCount(0), m_types(nullptr), m_fixed(true), m_size(0) {
+		unionKeyMeta(const uint16_t *columnIndexs, uint16_t columnCount, const META::tableMeta* meta) :m_keyCount(0), m_types(nullptr), m_fixed(true), m_size(0) {
 			init(columnIndexs, columnCount, meta);
 		}
-		bool init(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta);
+		bool init(const uint16_t *columnIndexs, uint16_t columnCount, const META::tableMeta* meta);
 		~unionKeyMeta() {
 			if (m_types != nullptr)
 				delete m_types;

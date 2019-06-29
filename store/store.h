@@ -8,10 +8,13 @@
 #ifndef STORE_H_
 #define STORE_H_
 #include "../util/config.h"
-#include <glog/logging.h>
+#include "../glog/logging.h"
 class bufferPool;
 namespace META{
 class metaDataCollection;
+}
+namespace DATABASE_INCREASE {
+	struct record;
 }
 namespace STORE{
 #define MAIN_STREAM "mainStream"
@@ -29,6 +32,7 @@ private:
 public:
 	store(config* conf);
 	int start();
+	int insert(DATABASE_INCREASE::record* r);
 	std::string updateConfig(const char* key, const char* value);
 };
 

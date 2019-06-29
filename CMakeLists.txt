@@ -6,9 +6,11 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_FLAGS "  -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
+		include_directories(C:\\Program Files\\MySQL\\MySQL Server 8.0\\include)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 SET(LIBRARY_OUTPUT_PATH lib)
 include (GenerateExportHeader)
+
 #util
 aux_source_directory(util utilDir)
 add_library(util SHARED ${utilDir})
@@ -32,7 +34,10 @@ TARGET_LINK_LIBRARIES(memory util)
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
 TARGET_LINK_LIBRARIES(store  util memory meta)
-
+#mysqlDataSource
+aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
+add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
+TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser)
 
 #unit test
 SET(EXECUTABLE_OUTPUT_PATH test)

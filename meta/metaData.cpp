@@ -48,7 +48,7 @@ namespace META {
 		{
 			m_primaryKey.init("primary key", msg->metaHead.primaryKeyColumnCount, msg->primaryKeys);
 			for (uint16_t i = 0; i < m_primaryKey.count; i++)
-				getColumn(m_primaryKey.keyIndexs[i])->m_isPrimary = true;
+				((columnMeta*)getColumn(m_primaryKey.keyIndexs[i]))->m_isPrimary = true;
 		}
 		if (msg->metaHead.uniqueKeyCount > 0)
 		{
@@ -57,7 +57,7 @@ namespace META {
 			{
 				m_uniqueKeys[i].init(msg->data + msg->uniqueKeyNameOffset[i], msg->uniqueKeyColumnCounts[i], msg->uniqueKeys[i]);
 				for (uint16_t j = 0; j < m_uniqueKeys[i].count; j++)
-					getColumn(m_uniqueKeys[i].keyIndexs[j])->m_isUnique = true;
+					((columnMeta*)getColumn(m_uniqueKeys[i].keyIndexs[j]))->m_isUnique = true;
 			}
 			m_uniqueKeysCount = msg->metaHead.uniqueKeyCount;
 		}
@@ -230,7 +230,7 @@ namespace META {
 	}
 	int tableMeta::dropColumn(const char *column)
 	{
-		columnMeta * d = getColumn(column);
+		const columnMeta * d = getColumn(column);
 		if (d == NULL)
 			return -1;
 		return dropColumn(d->m_columnIndex);
@@ -241,7 +241,7 @@ namespace META {
 			return -1;
 		if (addAfter)
 		{
-			columnMeta * before = getColumn(addAfter);
+			const columnMeta * before = getColumn(addAfter);
 			if (before == NULL)
 				return -2;
 			columnMeta * columns = new columnMeta[m_columnsCount + 1];
@@ -291,7 +291,7 @@ namespace META {
 	int tableMeta::dropPrimaryKey()
 	{
 		for (uint16_t i = 0; i < m_primaryKey.count; i++)
-			getColumn(m_primaryKey.keyIndexs[i])->m_isPrimary = false;
+			((columnMeta*)getColumn(m_primaryKey.keyIndexs[i]))->m_isPrimary = false;
 		m_primaryKey.clean();
 		return 0;
 	}
@@ -305,7 +305,7 @@ namespace META {
 		m_primaryKey.keyIndexs = new uint16_t[columns.size()];
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
-			columnMeta * c = getColumn((*iter).c_str());
+			columnMeta * c = (columnMeta*)getColumn((*iter).c_str());
 			if (c == NULL)
 				goto ROLL_BACK;
 			if (columnInfos[c->m_columnType].fixed)
@@ -321,7 +321,7 @@ namespace META {
 	ROLL_BACK:
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
-			columnMeta * c = getColumn((*iter).c_str());
+			columnMeta * c = (columnMeta*)getColumn((*iter).c_str());
 			if (c == NULL)
 				break;
 			c->m_isPrimary = false;
@@ -356,7 +356,7 @@ namespace META {
 						goto COLUMN_IS_STILL_UK;
 				}
 			}
-			getColumn(m_uniqueKeys[idx].keyIndexs[i])->m_isUnique = false;
+			((columnMeta*)getColumn(m_uniqueKeys[idx].keyIndexs[i]))->m_isUnique = false;
 		COLUMN_IS_STILL_UK:
 			continue;
 		}
@@ -373,7 +373,7 @@ namespace META {
 		uint32_t keySize = 0;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
-			columnMeta * column = getColumn((*iter).c_str());
+			const columnMeta * column = getColumn((*iter).c_str());
 			if (column == nullptr)
 				return -1;
 			if (columnInfos[column->m_columnType].fixed)
@@ -389,7 +389,7 @@ namespace META {
 		newUks[m_uniqueKeysCount].name = ukName;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
-			columnMeta * column = getColumn((*iter).c_str());
+			columnMeta * column = (columnMeta*)getColumn((*iter).c_str());
 			newUks[m_uniqueKeysCount].keyIndexs[newUks[m_uniqueKeysCount].count++] = column->m_columnIndex;
 			if (!column->m_isUnique)
 				column->m_isUnique = true;

@@ -380,13 +380,13 @@ namespace META {
 		void clean();
 		~tableMeta();
 		tableMeta &operator =(const tableMeta &t);
-		inline columnMeta *getColumn(uint16_t idx)
+		inline const columnMeta *getColumn(uint16_t idx) const
 		{
 			if (idx > m_columnsCount)
 				return nullptr;
 			return &m_columns[idx];
 		}
-		inline columnMeta * getColumn(const char * columnName)
+		inline const columnMeta * getColumn(const char * columnName) const
 		{
 			for (uint32_t i = 0; i < m_columnsCount; i++)
 			{

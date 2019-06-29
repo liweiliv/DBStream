@@ -10,19 +10,22 @@
 #include <string>
 #include <map>
 #include "sqlParserHandle.h"
+#include "../util/unorderMapUtil.h"
 #ifdef  OS_WIN
 #include <wtypes.h>
-#endif //  OS_WIN
+#endif
 #include "..//util/winDll.h"
 class jsonValue;
 namespace SQL_PARSER
 {
+	typedef std::unordered_map<const char*, SQL_TYPE, StrHash, StrCompare> SQL_TYPE_TREE;
 	class SQLWord;
 	class sqlParser
 	{
 	private:
 		std::map<uint32_t, SQLWord*> m_parseTree;
 		std::map<uint32_t, SQLWord*> m_parseTreeHead;
+		SQL_TYPE_TREE m_sqlTypes;
 #ifdef OS_WIN
 		HINSTANCE m_funcsHandle;
 #else
@@ -39,6 +42,7 @@ namespace SQL_PARSER
 		DLL_EXPORT int LoadParseTreeFromFile(const char* file);
 	public:
 		DLL_EXPORT parseValue parse(handle*& h, const char* sql);
+		DLL_EXPORT parseValue parseSqlType(handle*& h, const char* sql);
 	};
 };
 #endif /* SQLPARSER_H_ */

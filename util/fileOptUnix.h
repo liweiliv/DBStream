@@ -111,3 +111,34 @@ static long getFileTime(const char * file)
 	closeFile(fd);
 	return st.st_mtime;
 }
+static int64_t getFileSize(const char* fileName)
+{
+	struct stat stbuf;
+	fileHandle fd = openFile(fileName, true,false,false);
+	if (fd == INVALID_HANDLE_VALUE)
+		return -1;
+	if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode))) 
+	{
+		closeFile(fd);
+		return -1;
+	}
+	closeFile(fd);
+	return stbuf.st_size;
+}
+static int getFileSizeAndTimestamp(const char* fileName,int64_t *size,int64_t* timestamp)
+{
+	*size = *timestamp = 0;
+	fileHandle fd = openFile(fileName, true, false, false);
+	if (fd == INVALID_HANDLE_VALUE)
+		return -1;
+	struct stat stbuf;
+	if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode)))
+	{
+		closeFile(fd);
+		return -1;
+	}
+	*size = stbuf.st_size;
+	*timestamp = stbuf.st_mtime;
+	closeFile(fd);
+	return 0;
+}

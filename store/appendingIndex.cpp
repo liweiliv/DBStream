@@ -256,7 +256,7 @@ namespace STORE{
 			appendIndex(index, r, &c, id, true);
         }
     }
-    appendingIndex::appendingIndex(uint16_t *columnIdxs,uint16_t columnCount,META::tableMeta * meta,leveldb::Arena *arena ):
+    appendingIndex::appendingIndex(uint16_t *columnIdxs,uint16_t columnCount,const META::tableMeta * meta,leveldb::Arena *arena ):
 		m_columnIdxs(columnIdxs),m_columnCount(columnCount),m_meta(meta),m_arena(arena),m_localArena(arena!=nullptr), m_allCount(0), m_keyCount(0),m_varSize(0)
     {
         if(m_arena == nullptr)

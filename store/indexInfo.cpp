@@ -44,7 +44,7 @@ namespace STORE {
 	unionKey::unionKey(const unionKey & dest) : key(dest.key), meta(dest.meta)
 	{
 	}
-	bool unionKeyMeta::init(const uint16_t *columnIndexs, uint16_t columnCount, META::tableMeta* meta)
+	bool unionKeyMeta::init(const uint16_t *columnIndexs, uint16_t columnCount, const META::tableMeta* meta)
 	{
 		if (m_types)
 			delete[]m_types;

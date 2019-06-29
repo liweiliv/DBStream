@@ -440,7 +440,7 @@ namespace META {
 				key->keyIndexs = new uint16_t[k->columns.size()];
 			for (auto name : k->columns)
 			{
-				columnMeta * _c = meta->getColumn(
+				columnMeta * _c = (columnMeta*)meta->getColumn(
 					name.c_str());
 				if (_c == NULL)
 				{
@@ -554,7 +554,7 @@ namespace META {
 					column.m_charset = meta->m_charset;
 				column.m_size *= column.m_charset->byteSizePerChar;
 			}
-			columnMeta * modifiedColumn = meta->getColumn(c->name.c_str());
+			columnMeta * modifiedColumn = (columnMeta*)meta->getColumn(c->name.c_str());
 			if (c->after)
 			{
 				/*不能alter table modify column_a after column_a，先执行drop是安全的*/

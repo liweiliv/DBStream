@@ -6,6 +6,7 @@
  */
 #ifndef JSON_H_
 #define JSON_H_
+#include <map>
 #include <list>
 #include <string>
 #include <stdint.h>
@@ -54,14 +55,10 @@ public:
 class DLL_EXPORT jsonObject :public jsonValue
 {
 public:
-    struct ObjectKV
-    {
-        jsonValue * key;
-        jsonValue * value;
-    };
-    std::list<ObjectKV*> m_values;
+    std::map<std::string, jsonValue *> m_values;
     jsonObject(const char * data=NULL);
-    jsonValue * get(string s);
+    jsonValue * get(const string &s);
+	jsonValue* get(const char* s);
     ~jsonObject();
     void clean();
     int parse(const char * data);

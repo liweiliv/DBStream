@@ -10,18 +10,9 @@
 #include <string>
 #include <string.h>
 #include "winDll.h"
+#include "file.h"
 //#include <glog/logging.h>
-#ifdef OS_WIN
-static inline const char * basename(const char * path)
-{
-	const char * backSlant = strchr(path,'\\');
-	if (backSlant == nullptr)
-		return path;
-	for (const char * nextBackSlant = strchr(backSlant + 1, '\\'); nextBackSlant != nullptr; nextBackSlant = strchr(backSlant + 1, '\\'))
-		backSlant = nextBackSlant;
-	return backSlant + 1;
-}
-#endif
+
 DLL_EXPORT int initStackLog();
 DLL_EXPORT int destroyStackLog();
 DLL_EXPORT void cleanStackLog();

@@ -75,7 +75,7 @@ namespace STORE {
 		void * m_index;
 		uint16_t *m_columnIdxs;
 		uint16_t m_columnCount;
-		META::tableMeta* m_meta;
+		const META::tableMeta* m_meta;
 		unionKeyMeta  m_ukMeta;
 		leveldb::Arena *m_arena;
 		bool m_localArena;
@@ -127,7 +127,7 @@ namespace STORE {
 	public:
 		static appendIndexFunc m_appendIndexFuncs[];
 	public:
-		appendingIndex(uint16_t *columnIdxs, uint16_t columnCount, META::tableMeta * meta, leveldb::Arena *arena = nullptr);
+		appendingIndex(uint16_t *columnIdxs, uint16_t columnCount, const META::tableMeta * meta, leveldb::Arena *arena = nullptr);
 		~appendingIndex();
 		void append(const DATABASE_INCREASE::DMLRecord  * r, uint32_t id);
 		template <typename T>
@@ -296,6 +296,17 @@ namespace STORE {
 	void appendingIndex::createVarSolidIndex<unionKey>(char * data, appendingIndex::iterator<unionKey> &iter);
 	template<>
 	void appendingIndex::createVarSolidIndex<binaryType>(char * data, appendingIndex::iterator<binaryType> &iter);
+	template<class T>
+	class appendingIndexIterator :public iterator {
+	private:
+		appendingIndex* m_index;
+		leveldb::SkipList<T, keyComparator<T> > m_iter;
+	public:
+		bool valid()
+		{
+			return m_iter.
+		}
+	};
 }
 #endif /* APPENDINGINDEX_H_ */
 

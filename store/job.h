@@ -35,7 +35,7 @@ namespace STORE {
 		inline void sign()
 		{
 			currentJob = this;
-			m_threadId = threadid;
+			m_threadId = getThreadId();
 		}
 		inline void kill()
 		{
