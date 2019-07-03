@@ -89,7 +89,7 @@ public:
         if(end<start)
             return std::string();
         else
-            return std::string(start,end-start);
+            return std::string(start,end-start+1);
     }
     int load()
     {
@@ -122,7 +122,7 @@ public:
             int16_t size = strlen(buf);
             std::string line = trim(buf,size);
 
-            if(NULL==(equal = strstr(buf,"=")))//section
+            if(NULL==(equal = strstr(line.c_str(),"=")))//section
             {
                 section = line;
                 continue;
