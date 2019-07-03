@@ -81,7 +81,7 @@ namespace DATA_SOURCE {
 		m_descriptionEvent = new formatEvent(4, m_serverVersion.c_str());
 		if (!m_descriptionEvent)
 		{
-			LOG(ERROR)<<"Failed creating Format_description_log_event; out of memory?";
+			LOG(ERROR) << "Failed creating Format_description_log_event; out of memory?";
 			return -1;
 		}
 		return 0;
@@ -96,22 +96,22 @@ namespace DATA_SOURCE {
 			(srvVersion % 10000) / 100, srvVersion % 100);
 		if (majorVersion < 5)
 		{
-			LOG(ERROR)<<"mysql version "<< serverVersion <<" is lower than 5,not support";
+			LOG(ERROR) << "mysql version " << serverVersion << " is lower than 5,not support";
 			return -1;
 		}
 		m_serverVersion = serverVersion;
 		return 0;
 	}
-	int mysqlBinlogReader::connectAndDumpBinlog(const char * fileName, uint64_t offset)
+	int mysqlBinlogReader::connectAndDumpBinlog(const char* fileName, uint64_t offset)
 	{
 		if (m_conn)
 		{
 			mysql_close(m_conn);
 			m_conn = NULL;
 		}
-		if (nullptr== (m_conn= m_mysqlConnector->getConnect()))
+		if (nullptr == (m_conn = m_mysqlConnector->getConnect()))
 		{
-			LOG(ERROR)<<"connect to remote mysql server failed ,dump binlog failed";
+			LOG(ERROR) << "connect to remote mysql server failed ,dump binlog failed";
 			return -1;
 		}
 		if (0 != checkMasterVesion())
@@ -121,16 +121,16 @@ namespace DATA_SOURCE {
 		}
 		if (0 != initFmtDescEvent())
 		{
-			LOG(ERROR)<<"create format desc log event failed";
+			LOG(ERROR) << "create format desc log event failed";
 			return -1;
 		}
 		LOG(INFO) << "start dump binlog from " << offset << "@" << fileName;
 
-		if (0 != mysqlConnector::startDumpBinlog(m_conn, fileName, offset,m_serverId))
+		if (0 != mysqlConnector::startDumpBinlog(m_conn, fileName, offset, m_serverId))
 		{
 			mysql_close(m_conn);
 			m_conn = NULL;
-			LOG(ERROR)<<"dump binlog failed";
+			LOG(ERROR) << "dump binlog failed";
 		}
 		m_readLocalBinlog = false;
 		m_currentPos = offset;
@@ -139,7 +139,7 @@ namespace DATA_SOURCE {
 		LOG(ERROR) << "dump binlog success";
 		return 0;
 	}
-	int mysqlBinlogReader::dumpLocalBinlog(const char * fileName,uint64_t offset)
+	int mysqlBinlogReader::dumpLocalBinlog(const char* fileName, uint64_t offset)
 	{
 		if (0 != initFmtDescEvent())
 		{
@@ -156,7 +156,7 @@ namespace DATA_SOURCE {
 			}
 		}
 		std::map<uint64_t, fileInfo>::const_iterator iter = m_localBinlogList->get().find(getFileId(fileName));
-		if (iter== m_localBinlogList->get().end())
+		if (iter == m_localBinlogList->get().end())
 		{
 			LOG(ERROR) << "start read binlog " << fileName << " failed for file not exist";
 			return READ_CODE::READ_FAILED;
@@ -181,7 +181,7 @@ namespace DATA_SOURCE {
 		m_currFileID = getFileId(fileName);
 		return 0;
 	}
-	int mysqlBinlogReader::readLocalBinlog(const char*& logEvent,size_t &size)
+	int mysqlBinlogReader::readLocalBinlog(const char*& logEvent, size_t& size)
 	{
 		int ret = m_localFile->readBinlogEvent(logEvent, size);
 		if (likely(ret == 0))
@@ -189,10 +189,10 @@ namespace DATA_SOURCE {
 
 		if (m_localFile->getErr() == BINLOG_READ_STATUS::BINLOG_READ_END)
 		{
-			std::map<uint64_t, fileInfo>::const_iterator iter = m_localBinlogList->get().find(m_currFileID+1);
+			std::map<uint64_t, fileInfo>::const_iterator iter = m_localBinlogList->get().find(m_currFileID + 1);
 			if (iter == m_localBinlogList->get().end())//end of local binlog ,read from remote
 			{
-				LOG(ERROR)<<"read the end of loacl binlog file "<<m_currFile;
+				LOG(ERROR) << "read the end of loacl binlog file " << m_currFile;
 				return READ_END_OF_LOCAL_FILE;
 			}
 			else
@@ -207,15 +207,15 @@ namespace DATA_SOURCE {
 				}
 				if (strcmp(iter->second.fileName.c_str(), nextBinlog) != 0)
 				{
-					LOG(ERROR)<<"read the end of binlog "<< m_localFile->getFile() <<" ,but the next filename in index ["<< iter->second.fileName <<"] is not ["<< nextBinlog <<"]";
+					LOG(ERROR) << "read the end of binlog " << m_localFile->getFile() << " ,but the next filename in index [" << iter->second.fileName << "] is not [" << nextBinlog << "]";
 					return READ_CODE::READ_FAILED;
 				}
 				if (0 != m_localFile->setFile(nextBinlog, nextBinlogStartPos))
 				{
 					LOG(ERROR) << "start read log event from next binlog " << nextBinlog << " in position " << nextBinlogStartPos << " failed ";
-						return READ_CODE::READ_FAILED;
+					return READ_CODE::READ_FAILED;
 				}
-				return readLocalBinlog(logEvent,size);
+				return readLocalBinlog(logEvent, size);
 			}
 		}
 		else
@@ -240,7 +240,7 @@ namespace DATA_SOURCE {
 		NET* net = &m_conn->net;
 		if (readLength < 8 && net->read_pos[0] == 254)
 		{
-			LOG(ERROR) << "read to end of binlog "<<m_currFile;
+			LOG(ERROR) << "read to end of binlog " << m_currFile;
 			return READ_FAILED_NEED_RETRY;
 		}
 		logEvent = (const char*)net->read_pos + 1;
@@ -252,12 +252,12 @@ namespace DATA_SOURCE {
 		int ret = 0;
 		if (!m_readLocalBinlog)
 		{
-READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
-			{
+		READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
+		{
 			int retryTimes = 32;
 			if (READ_FAILED_NEED_RETRY == ret && --retryTimes > 0)
 			{
-				while (--retryTimes > 0 && (ret = connectAndDumpBinlog(m_currFile.c_str(),m_currentPos) != 0))
+				while (--retryTimes > 0 && (ret = connectAndDumpBinlog(m_currFile.c_str(), m_currentPos) != 0))
 					std::this_thread::sleep_for(std::chrono::seconds(1));
 				if (ret != 0)
 				{
@@ -286,7 +286,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 						nextBinlogStartPos) != 0 || nextBinlog == NULL)
 					{
 						LOG(ERROR) << "read the end of binlog " << m_localFile->getFile() << " ,but can not get the next filename";
-						return READ_CODE::READ_FAILED ;
+						return READ_CODE::READ_FAILED;
 					}
 					if (connectAndDumpBinlog(nextBinlog, nextBinlogStartPos) != 0)
 					{
@@ -301,14 +301,14 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			}
 		}
 	}
-	int mysqlBinlogReader::readBinlog(const char*&data)
+	int mysqlBinlogReader::readBinlog(const char*& data)
 	{
 		const char* binlogEvent;
 		size_t size;
 		int ret = readRemoteBinlog(binlogEvent, size);
 		if (READ_OK != ret)
 			return ret;
-		
+
 		const commonMysqlBinlogEventHeader_v4* header =
 			(const commonMysqlBinlogEventHeader_v4*)binlogEvent;
 		if (header->type == Log_event_type::FORMAT_DESCRIPTION_EVENT)
@@ -346,13 +346,13 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			m_currentPos = header->eventOffset;
 		if (!m_isTypeNeedParse[header->type])
 			size = sizeof(commonMysqlBinlogEventHeader_v4) < size ? sizeof(commonMysqlBinlogEventHeader_v4) : size;
-		char* wrapper = (char*)m_pool->alloc(size+sizeof(size));
+		char* wrapper = (char*)m_pool->alloc(size + sizeof(size));
 		*(uint64_t*)wrapper = size;
 		memcpy(wrapper + sizeof(size), binlogEvent, size);
 		return READ_OK;
 	}
 	static int showBinaryLogs(MYSQL* conn,
-		std::map<uint64_t,fileInfo>& binaryLogs)
+		std::map<uint64_t, fileInfo>& binaryLogs)
 	{
 		MYSQL_RES* res = NULL;
 		MYSQL_ROW row;
@@ -360,18 +360,18 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 		if (mysql_query(conn, "show binary logs")
 			|| !(res = mysql_store_result(conn)))
 		{
-			LOG(ERROR)<<"error show binary logs: "<< mysql_errno(conn) <<","<<mysql_error(conn);
+			LOG(ERROR) << "error show binary logs: " << mysql_errno(conn) << "," << mysql_error(conn);
 			return -1;
 		}
 		while (NULL != (row = mysql_fetch_row(res)))
 		{
-			if (2 == (fields = mysql_num_fields(res)) && row[0]!=nullptr&&atol(row[1]) != 0)//ignore empty binlog file
+			if (2 == (fields = mysql_num_fields(res)) && row[0] != nullptr && atol(row[1]) != 0)//ignore empty binlog file
 			{
 				fileInfo file;
 				file.fileName = row[0];
 				file.size = atol(row[1]);
 				file.timestamp = 0;
-				binaryLogs.insert(std::pair<uint64_t, fileInfo>(getFileId(file.fileName.c_str()),file));
+				binaryLogs.insert(std::pair<uint64_t, fileInfo>(getFileId(file.fileName.c_str()), file));
 			}
 		}
 		mysql_free_result(res);
@@ -380,20 +380,20 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 
 	int mysqlBinlogReader::seekBinlogInRemote(uint32_t fileID, uint64_t position)
 	{
-		std::map<uint64_t,fileInfo> binaryLogs;
+		std::map<uint64_t, fileInfo> binaryLogs;
 		if (m_conn != nullptr)
 		{
 			mysql_close(m_conn);
 			m_conn = nullptr;
 		}
-		if (nullptr ==(m_conn=m_mysqlConnector->getConnect()))
+		if (nullptr == (m_conn = m_mysqlConnector->getConnect()))
 		{
-			LOG(ERROR)<<"seek Binlog in remote mysql server failed for connect db failed";
+			LOG(ERROR) << "seek Binlog in remote mysql server failed for connect db failed";
 			return -1;
 		}
 		if (showBinaryLogs(m_conn, binaryLogs) != 0)
 		{
-			LOG(ERROR)<<"seek Binlog in remote mysql server failed for showBinaryLogs fail";
+			LOG(ERROR) << "seek Binlog in remote mysql server failed for showBinaryLogs fail";
 			return -1;
 		}
 		if (binaryLogs.size() == 0)
@@ -428,7 +428,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 		std::map<uint64_t, fileInfo>::const_iterator iter = m_localBinlogList->get().find(fileID);
 		if (iter == m_localBinlogList->get().end())
 		{
-			LOG(ERROR)<<"file "<< fileID <<" is not exists in local binlog files";
+			LOG(ERROR) << "file " << fileID << " is not exists in local binlog files";
 			return -1;
 		}
 		if (iter->second.size < position)
@@ -487,19 +487,19 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 	{
 		if (0 != dumpBinlog(file, 4, localORRemote))
 		{
-			LOG(ERROR)<<"dumpBinlog "<< file <<" failed";
+			LOG(ERROR) << "dumpBinlog " << file << " failed";
 			return READ_CODE::READ_FAILED;
 		}
 		uint32_t fmtEventTimestamp = 0;
 		while (true)
 		{
-			const char * logEvent;
+			const char* logEvent;
 			size_t size;
 			if (localORRemote ?
-				0 != readLocalBinlog(logEvent,size) :
-				0 != readRemoteBinlog(logEvent,size))
+				0 != readLocalBinlog(logEvent, size) :
+				0 != readRemoteBinlog(logEvent, size))
 			{
-				LOG(ERROR)<<"getFirstLogeventTimestamp of file "<< file <<" failed";
+				LOG(ERROR) << "getFirstLogeventTimestamp of file " << file << " failed";
 				return READ_CODE::READ_FAILED;
 			}
 			commonMysqlBinlogEventHeader_v4* header =
@@ -508,7 +508,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			{
 				fmtEventTimestamp = header->timestamp;
 				const char* error_msg;
-				formatEvent* tmp = new formatEvent(logEvent,size);
+				formatEvent* tmp = new formatEvent(logEvent, size);
 				if (tmp == NULL)
 				{
 					LOG(ERROR) << "seek Binlog in remote mysql server failed for Format_description_log_event of " << m_currFile << " parse failed";
@@ -557,7 +557,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			}
 		}
 	}
-	int mysqlBinlogReader::getBinlogFileList(std::map<uint64_t,fileInfo>& files, bool localORRemote)
+	int mysqlBinlogReader::getBinlogFileList(std::map<uint64_t, fileInfo>& files, bool localORRemote)
 	{
 		if (localORRemote)
 		{
@@ -594,9 +594,9 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 		}
 		return READ_CODE::READ_OK;
 	}
-	int mysqlBinlogReader::seekBinlogFile(const std::map<uint64_t, fileInfo> &binaryLogs, uint64_t timestamp, bool strick,bool localORRemmote)
+	int mysqlBinlogReader::seekBinlogFile(const std::map<uint64_t, fileInfo>& binaryLogs, uint64_t timestamp, bool strick, bool localORRemmote)
 	{
-		int64_t s = binaryLogs.begin()->first,e = binaryLogs.rbegin()->first,idx=0;
+		int64_t s = binaryLogs.begin()->first, e = binaryLogs.rbegin()->first, idx = 0;
 		uint64_t timestampOfFile = 0;
 		std::map<uint64_t, fileInfo>::const_iterator iter;
 		while (e >= s)
@@ -605,13 +605,13 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			iter = binaryLogs.find(idx);
 			if (binaryLogs.end() == iter)
 			{
-				LOG(ERROR) << "seek Binlog in " << (localORRemmote ? "local binlog list " : "remote mysql server ") << "by timestamp:"<< timestamp <<" failed for binlog is not increase strictly,log :"<<idx<<"not exist";
+				LOG(ERROR) << "seek Binlog in " << (localORRemmote ? "local binlog list " : "remote mysql server ") << "by timestamp:" << timestamp << " failed for binlog is not increase strictly,log :" << idx << "not exist";
 				return READ_CODE::READ_FILE_NOT_EXIST;
 			}
 			if (0
-				!= getFirstLogeventTimestamp(iter->second.fileName.c_str(),timestampOfFile, localORRemmote))
+				!= getFirstLogeventTimestamp(iter->second.fileName.c_str(), timestampOfFile, localORRemmote))
 			{
-				LOG(ERROR) << "seek Binlog in "<<( localORRemmote ?"local binlog list":"remote mysql server")<<"  failed";
+				LOG(ERROR) << "seek Binlog in " << (localORRemmote ? "local binlog list" : "remote mysql server") << "  failed";
 				return READ_CODE::READ_FAILED;
 			}
 			LOG(INFO) << "first log event timestamp of " << iter->second.fileName << " is " << timestampOfFile;
@@ -627,12 +627,12 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 				if (strick)
 				{
 					LOG(ERROR) << "seek Binlog in remote mysql server failed ,"
-						"begin timestamp " << timestampOfFile << " of the first binlog file " << binaryLogs[idx].file << " is newer than " << timestamp;
+						"begin timestamp " << timestampOfFile << " of the first binlog file " << iter->second.fileName << " is newer than " << timestamp;
 					return READ_CODE::READ_FILE_NOT_EXIST;
 				}
 				else
 				{
-					LOG(INFO) << "seek to the begin of binlog ,but can not find timestamp " << timestamp << ",in loose mode,use first file " << binaryLogs[idx].file << " as the begin pos";
+					LOG(INFO) << "seek to the begin of binlog ,but can not find timestamp " << timestamp << ",in loose mode,use first file " << iter->second.fileName << " as the begin pos";
 
 				}
 			}
@@ -648,12 +648,12 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 		m_readLocalBinlog = false;
 		std::map<uint64_t, fileInfo> binaryLogs;
 		int ret = READ_OK;
-		if (showBinaryLogs(m_conn,binaryLogs)!=0||binaryLogs.size() == 0)
+		if (showBinaryLogs(m_conn, binaryLogs) != 0 || binaryLogs.size() == 0)
 		{
 			LOG(ERROR) << "seek Binlog in remote mysql server failed for binlog list is empty";
 			return READ_CODE::READ_FAILED;
 		}
-		if((ret=seekBinlogFile(binaryLogs, timestamp, strick,false))== READ_CODE::READ_OK)
+		if ((ret = seekBinlogFile(binaryLogs, timestamp, strick, false)) == READ_CODE::READ_OK)
 			return READ_CODE::READ_OK;
 		if (!m_localBinlogPath.empty())
 		{
@@ -679,17 +679,17 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 	{
 		if (0 != dumpBinlog(fileName, 4, localORRemmote))
 		{
-			LOG(ERROR)<<"dumpBinlog "<< fileName <<" failed";
+			LOG(ERROR) << "dumpBinlog " << fileName << " failed";
 		}
 		uint64_t beginOffset = 4;
 		uint64_t currentOffset = 4;
 		while (true)
 		{
-			const char * logEvent;
+			const char* logEvent;
 			size_t size;
 			if (localORRemmote ?
-				0 != readLocalBinlog(logEvent,size) :
-				0 != readRemoteBinlog(logEvent,size))
+				0 != readLocalBinlog(logEvent, size) :
+				0 != readRemoteBinlog(logEvent, size))
 			{
 				LOG(ERROR) << "seek Binlog in remote mysql server failed for read file " << m_currFile << " failed";
 				return READ_CODE::READ_FAILED;
@@ -707,7 +707,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			else if ((header->type == Log_event_type::ROTATE_EVENT
 				&& header->timestamp > 0)) //end of file
 			{
-				RotateEvent* event = new RotateEvent(logEvent,size, m_descriptionEvent);
+				RotateEvent* event = new RotateEvent(logEvent, size, m_descriptionEvent);
 				m_currFile = event->fileName;
 				m_currentPos = 4;
 				delete event;
@@ -738,7 +738,7 @@ READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 				const char* query = NULL;
 				uint32_t querySize = 0;
 				if (0
-					!= QueryEvent::getQuery(logEvent, size,m_descriptionEvent, query, querySize))
+					!= QueryEvent::getQuery(logEvent, size, m_descriptionEvent, query, querySize))
 				{
 					LOG(ERROR) << "ILLEGAL query log event in " << header->eventOffset << "@" << m_currFile;
 					return READ_CODE::READ_FAILED;

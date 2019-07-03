@@ -40,10 +40,10 @@ public:
     };
     string name;
     uint8_t type;
+	uint8_t rawType;
     bool after;
     int index;
     string afterColumnName;
-    bool isString;
     const charsetInfo * charset;
     uint32_t size;
     uint32_t precision;
@@ -53,7 +53,7 @@ public:
     bool isPrimary;
     bool isUnique;
     bool generated;
-    newColumnInfo():type(0),after(false),index(-1),isString(false),charset(nullptr),size(0),precision(0),
+    newColumnInfo():type(0), rawType(0),after(false),index(-1),charset(nullptr),size(0),precision(0),
             decimals(0),isSigned(true),isPrimary(false),isUnique(false),generated(false)
     {
 
@@ -62,7 +62,7 @@ public:
     {
         printf("new column \nname [%s]:\n",name.c_str());
         printf("type %u\n",type);
-        if(isString)
+        if(columnInfos[type].stringType)
             printf("charset:%s\n",charset?charset->name:"NO CHARSET");
         if(size>0)
             printf("size:%u\n",size);

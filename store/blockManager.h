@@ -93,9 +93,11 @@ namespace STORE
 		std::atomic<uint32_t> m_firstBlockId;
 		std::atomic<uint32_t> m_lastBlockId;
 		std::atomic_int m_currentFlushThreadCount;
+		uint64_t m_recordId;
+		uint64_t m_tnxId;
 	public:
 		blockManager(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataCollection* metaDataCollection) :m_status(BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
-			, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str()))
+			, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str())), m_recordId(0),m_tnxId(0)
 		{
 			initConfig();
 		}
@@ -114,6 +116,12 @@ namespace STORE
 		static void purgeThread(blockManager* m);
 	public:
 		int insert(DATABASE_INCREASE::record* r);
+		inline void begin()
+		{
+			if (0 == (++m_tnxId))
+				m_tnxId++;
+		}
+		void commit();;
 		inline void genBlockFileName(uint64_t id,char *fileName)
 		{
 			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);
@@ -154,6 +162,8 @@ namespace STORE
 			m_pool->free(p);
 		}
 		void* allocMemForRecord(META::tableMeta* table, size_t size);
+		bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
+
 	};
 	class blockManagerIterator : public iterator
 	{

@@ -53,12 +53,15 @@ namespace META {
 
 		tableMeta * getTableMetaFromRemote(uint64_t tableID);
 		tableMeta * getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint);
-
-		int put(const char * database, uint64_t offset, dbInfo *db);
+		const charsetInfo* getDataBaseCharset(const char* database, uint64_t originCheckPoint);
 		int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);
+		int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
 		int purge(uint64_t originCheckPoint);
 		int processDDL(const char * ddl, uint64_t originCheckPoint);
+		int setDefaultCharset(const charsetInfo* defaultCharset);
+		const charsetInfo* getDefaultCharset();
 	private:
+		int put(const char* database, uint64_t offset, dbInfo* db);
 		dbInfo * getDatabaseMetaFromRemote(uint64_t databaseID);
 		dbInfo * getDatabaseMetaFromRemote(const char * databaseName, uint64_t offset);
 		int createTable(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);

@@ -42,7 +42,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue bitType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_BIT;
+		c->rawType = MYSQL_TYPE_BIT;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->size = 1;
 		return OK;
 	}
@@ -55,14 +56,16 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue tinyIntType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TINY;
+		c->rawType = MYSQL_TYPE_TINY;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->isSigned = true;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue BoolType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TINY;
+		c->rawType = MYSQL_TYPE_TINY;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue numertypeIsUnsigned(handle* h, const string& sql)
@@ -74,33 +77,38 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue smallIntType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_SHORT;
+		c->rawType = MYSQL_TYPE_SHORT;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 
 	extern "C" DLL_EXPORT   parseValue mediumIntType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_INT24;
+		c->rawType = MYSQL_TYPE_INT24;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 
 	extern "C" DLL_EXPORT  parseValue intType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_LONG;
+		c->rawType = MYSQL_TYPE_LONG;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue bigIntType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_LONGLONG;
+		c->rawType = MYSQL_TYPE_LONGLONG;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue decimalType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_NEWDECIMAL;
+		c->rawType = MYSQL_TYPE_NEWDECIMAL;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->size = 10;
 		c->decimals = 0;
 		return OK;
@@ -120,7 +128,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue floatType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_FLOAT;
+		c->rawType = MYSQL_TYPE_FLOAT;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->size = 12;
 		c->decimals = NOT_FIXED_DEC;
 		return OK;
@@ -128,7 +137,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue doubleType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_FLOAT;
+		c->rawType = MYSQL_TYPE_DOUBLE;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->size = 22;
 		c->decimals = NOT_FIXED_DEC;
 		return OK;
@@ -136,52 +146,60 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue datetimeType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_DATETIME;
+		c->rawType = MYSQL_TYPE_DATETIME;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue datetimeTypePrec(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_DATETIME2;
+		c->rawType = MYSQL_TYPE_DATETIME2;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->precision = atoi(sql.c_str());
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timestampType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TIMESTAMP;
+		c->rawType = MYSQL_TYPE_TIMESTAMP;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue dateType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_DATE;
+		c->rawType = MYSQL_TYPE_DATE;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timestampTypePrec(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TIMESTAMP2;
+		c->rawType = MYSQL_TYPE_TIMESTAMP2;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->precision = atoi(sql.c_str());
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timeType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TIME;
+		c->rawType = MYSQL_TYPE_TIME;//todo
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timeTypePrec(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TIME2;
+		c->rawType = MYSQL_TYPE_TIME2;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->precision = atoi(sql.c_str());
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue yearType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_YEAR;
+		c->rawType = MYSQL_TYPE_YEAR;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue yearTypePrec(handle* h, const string& sql)
@@ -193,21 +211,20 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue charType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_STRING;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_STRING;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue varcharType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_VARCHAR;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_VARCHAR;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue stringTypeCharSet(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		assert(c->isString);
 		c->charset = getCharset(sql.c_str());
 		return OK;
 	}
@@ -220,79 +237,85 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue binaryType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_STRING;
+		c->rawType = MYSQL_TYPE_STRING;
+		c->type = T_BINARY;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue varbinaryType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_VAR_STRING;
+		c->rawType = MYSQL_TYPE_VAR_STRING;
+		c->type = T_BINARY;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue tinyBlobType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TINY_BLOB;
+		c->rawType = MYSQL_TYPE_TINY_BLOB;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue blobType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_BLOB;
+		c->rawType = MYSQL_TYPE_BLOB;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue mediumBlobType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_MEDIUM_BLOB;
+		c->rawType = MYSQL_TYPE_MEDIUM_BLOB;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue longBlobtype(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_LONG_BLOB;
+		c->rawType = MYSQL_TYPE_LONG_BLOB;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue tinyTextType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_TINY_BLOB;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_TINY_BLOB;
+		c->type = T_TEXT;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue textType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_BLOB;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_BLOB;
+		c->type = T_TEXT;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue mediumTextType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_MEDIUM_BLOB;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_MEDIUM_BLOB;
+		c->type = T_TEXT;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue longTexttype(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_LONG_BLOB;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_LONG_BLOB;
+		c->type = T_TEXT;	
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue enumType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_ENUM;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_ENUM;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue setType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_SET;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_SET;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  enumOrSetValueList(handle* h, const string& sql)
@@ -304,14 +327,15 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue geometryType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_GEOMETRY;
+		c->rawType = MYSQL_TYPE_GEOMETRY;
+		c->type = mysqlTypeMaps[c->rawType];
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue jsonType(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->type = MYSQL_TYPE_JSON;
-		c->isString = true;
+		c->rawType = MYSQL_TYPE_JSON;
+		c->type = mysqlTypeMaps[c->rawType];
 		c->charset = &charsets[utf8mb4];
 		return OK;
 	}

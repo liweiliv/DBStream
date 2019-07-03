@@ -12,16 +12,18 @@
 #include <assert.h>
 #include "../meta/metaData.h"
 #include "../meta/metaDataCollection.h"
+#include "../util/likely.h"
 namespace DATABASE_INCREASE
 {
 #pragma pack(1)
 	struct recordHead
 	{
-		uint64_t size;
-		uint16_t headSize;
-		uint16_t flag;
+		uint32_t size;
+		uint8_t externSize;//only used in dml type,support row data size greater than 4G
+		uint8_t headSize;
 		uint8_t type;
 		uint8_t version;
+		uint16_t flag;
 		uint64_t recordId;
 		uint64_t logOffset;
 		uint64_t timestamp;
@@ -64,12 +66,20 @@ namespace DATABASE_INCREASE
 	{
 		const char* data;
 		recordHead* head;
+		inline void init(const char* data)
+		{
+			this->data = data;
+			head = (recordHead*)data;
+		}
 		record() {}
 		record(const char* data) {
 			this->data = data;
 			head = (recordHead*)data;
 		}
 	};
+	static constexpr auto recordSize = sizeof(record) + sizeof(recordHead);
+	static constexpr auto recordRealSize = sizeof(recordHead);
+	static constexpr auto recordHeadSize = sizeof(recordHead);
 #define TEST_BITMAP(m,i) (((m)[(i)>>3]>>(i&0x7))&0x1)
 #define SET_BITMAP(m,i)  (m)[(i)>>3]|= (0x01<<(i&0x7))
 	/*
@@ -214,11 +224,20 @@ namespace DATABASE_INCREASE
 		const uint8_t* updatedBitmap;
 		const uint8_t* updatedNullBitmap;
 		DMLRecord() {}
-		DMLRecord(char* data, const META::tableMeta* meta, uint8_t type) :record(data), meta(meta), oldColumnsSizeOfUpdateType(nullptr), oldColumnsOfUpdateType(nullptr), updatedBitmap(nullptr)//for write
+		DMLRecord(char* data, const META::tableMeta* meta, uint8_t type) //for write
 		{
+			initRecord(data, meta, type);
+		}
+		inline void initRecord(char* data, const META::tableMeta* meta, uint8_t type)
+		{
+			init(data);
+			this->meta = meta;
+			oldColumnsSizeOfUpdateType = nullptr;
+			oldColumnsOfUpdateType = nullptr;
+			updatedBitmap = nullptr;
 			head->type = type;
 			char* ptr = data + head->headSize;
-			tableMetaID  = meta->m_id;
+			tableMetaID = meta->m_id;
 			*((uint64_t*)(ptr)) = tableMetaID;
 			ptr += sizeof(tableMetaID);
 			nullBitmap = (const uint8_t*)ptr;
@@ -229,10 +248,7 @@ namespace DATABASE_INCREASE
 			varLengthColumns = (const uint32_t*)ptr;
 			((uint32_t*)varLengthColumns)[meta->m_columnsCount] = ptr + sizeof(uint32_t) * (meta->m_columnsCount + 1) - columns;
 		}
-		inline void setColumnNull(uint16_t id)
-		{
 
-		}
 		template<class T>
 		inline void setFixedColumn(uint16_t id, T value)
 		{
@@ -265,7 +281,7 @@ namespace DATABASE_INCREASE
 			oldColumnsSizeOfUpdateType = (uint64_t*)(updatedNullBitmap + bitmapSize);
 			oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) +sizeof(oldColumnsSizeOfUpdateType);
 		}
-		inline void setFixedUpdatedColumnNull(uint16_t id)
+		inline void setUpdatedColumnNull(uint16_t id)
 		{
 			SET_BITMAP((uint8_t*)updatedBitmap, id);
 			SET_BITMAP((uint8_t*)updatedNullBitmap, id);
@@ -292,6 +308,13 @@ namespace DATABASE_INCREASE
 			memcpy((char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType, value, size);
 			(*oldColumnsSizeOfUpdateType) += size;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
+		}
+		inline void finishedSet()
+		{
+			if(oldColumnsOfUpdateType==nullptr)
+				head->size = (columns + varLengthColumns[meta->m_varColumnCount]) - data;
+			else
+				head->size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
 		}
 		/*----------------------------------------------*/
 		DMLRecord(const char* data, META::metaDataCollection* mc) ://for read
@@ -409,19 +432,23 @@ namespace DATABASE_INCREASE
 		 * [8 bit database size][database string + 1byte '\0']
 		 * [8 bit ddl size][ddl string + 1byte '\0']
 		 * */
-		uint32_t sqlMode;
-		const char* charset;
+		uint64_t sqlMode;
+		uint16_t charsetId;
 		const char* database;
 		const char* ddl;
 		/*----------------------------------------------*/
-		DDLRecord(const char* data) :
-			record(data)
+		DDLRecord(const char* data)
 		{
+			initRecord(data);
+		}
+		inline void initRecord(const char* data)
+		{
+			init(data);
 			const char* ptr = data;
-			sqlMode = *(uint32_t*)(ptr + head->headSize);
-			database = ptr + head->headSize + sizeof(sqlMode) + 1;
+			sqlMode = *(uint64_t*)(ptr + head->headSize);
+			charsetId = *(uint16_t*)(ptr + head->headSize + sizeof(uint64_t));
+			database = ptr + head->headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
 			ddl = database + *(uint8_t*)(database - 1);
-			charset = ddl + *(uint8_t*)(ddl - 1);
 			/*if version increased in future,add those code:
 			  if(head->version >0)
 			  {do some thing}
@@ -429,6 +456,29 @@ namespace DATABASE_INCREASE
 			  {do some thing}
 				 ...
 			   */
+		}
+		inline void setCharset(const char * charset)
+		{
+			const charsetInfo* ci = getCharset(charset);
+			if (unlikely(ci == nullptr))
+				charsetId = ascii;
+			else
+				charsetId = ci->id;
+			*(uint16_t*)(data + head->headSize + sizeof(uint64_t)) = charsetId;
+		}
+		inline void setSqlMode(uint64_t sqlMode)
+		{
+			this->sqlMode = sqlMode;
+			*(uint64_t*)(data + head->headSize) = sqlMode;
+		}
+		inline void setDataBase(const char* database)
+		{
+			*(uint8_t*)(database - 1) = strlen(database)+1;
+			memcpy((char*)this->database, database, *(uint8_t*)(database - 1));
+		}
+		static inline uint32_t allocSize(uint32_t dataBaseSize,uint32_t ddlSize)
+		{
+			return sizeof(recordHead) + sizeof(sqlMode) + sizeof(charsetId) + 1 + dataBaseSize + ddlSize;
 		}
 	};
 	static record* createRecord(const char* data, META::metaDataCollection* mc)

@@ -32,7 +32,11 @@ private:
 public:
 	store(config* conf);
 	int start();
+	int stop();
+	void begin();
 	int insert(DATABASE_INCREASE::record* r);
+	void commit();
+	bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
 	std::string updateConfig(const char* key, const char* value);
 };
 

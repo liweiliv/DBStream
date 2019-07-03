@@ -28,7 +28,7 @@ public:
 public:
 	iterator(uint32_t flag , filter * filter)/*STORE::DBStream * stream = nullptr,uint32_t flag = 0):m_stream(stream),*/:m_status(INVALID), m_flag(flag),m_filter(filter)
 	{}
-	virtual ~iterator();
+	virtual ~iterator(){};
 	virtual bool valid() = 0;
 	virtual status next() = 0;
 	virtual const void* value() const = 0;

@@ -53,20 +53,20 @@ namespace STORE {
 		for (uint16_t i = 0; i < columnCount; i++)
 		{
 			m_types[i] = meta->getColumn(columnIndexs[i])->m_columnType;
-			if (!columnInfos[m_types[i]].asIndex)
+			if (!META::columnInfos[m_types[i]].asIndex)
 			{
 				delete[]m_types;
 				m_types = nullptr;
 				return false;
 			}
-			if (!columnInfos[m_types[i]].fixed)
+			if (!META::columnInfos[m_types[i]].fixed)
 			{
 				if (m_fixed)
 					m_fixed = false;
 				m_size += sizeof(uint16_t);
 			}
 			else
-				m_size += columnInfos[m_types[i]].columnTypeSize;
+				m_size += META::columnInfos[m_types[i]].columnTypeSize;
 		}
 		m_keyCount = columnCount;
 		return true;
@@ -153,8 +153,8 @@ namespace STORE {
 			default:
 				abort();
 			}
-			srcKey += columnInfos[meta->m_types[i]].columnTypeSize;
-			destKey += columnInfos[meta->m_types[i]].columnTypeSize;
+			srcKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
+			destKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
 		}
 		return 0;
 	}
@@ -172,7 +172,7 @@ namespace STORE {
 		{
 			for (uint16_t idx = 0; idx < keyMeta->m_keyCount; idx++)
 			{
-				if (!columnInfos[keyMeta->m_types[idx]].fixed)
+				if (!META::columnInfos[keyMeta->m_types[idx]].fixed)
 				{
 					if (keyUpdated)
 						externSize += r->oldVarColumnSizeOfUpdateType(columnIdxs[idx], r->oldColumnOfUpdateType(columnIdxs[idx])) + sizeof(uint16_t);
@@ -193,10 +193,10 @@ namespace STORE {
 		{
 			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
 			{
-				if (columnInfos[keyMeta->m_types[i]].fixed)
+				if (META::columnInfos[keyMeta->m_types[i]].fixed)
 				{
-					memcpy(ptr, r->column(columnIdxs[i]), columnInfos[keyMeta->m_types[i]].columnTypeSize);
-					ptr += columnInfos[keyMeta->m_types[i]].columnTypeSize;
+					memcpy(ptr, r->column(columnIdxs[i]), META::columnInfos[keyMeta->m_types[i]].columnTypeSize);
+					ptr += META::columnInfos[keyMeta->m_types[i]].columnTypeSize;
 				}
 				else
 				{
@@ -212,10 +212,10 @@ namespace STORE {
 		{
 			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
 			{
-				if (columnInfos[keyMeta->m_types[i]].fixed)
+				if (META::columnInfos[keyMeta->m_types[i]].fixed)
 				{
-					memcpy(ptr, r->column(columnIdxs[i]), columnInfos[keyMeta->m_types[i]].columnTypeSize);
-					ptr += columnInfos[keyMeta->m_types[i]].columnTypeSize;
+					memcpy(ptr, r->column(columnIdxs[i]), META::columnInfos[keyMeta->m_types[i]].columnTypeSize);
+					ptr += META::columnInfos[keyMeta->m_types[i]].columnTypeSize;
 				}
 				else
 				{

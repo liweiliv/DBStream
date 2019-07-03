@@ -2,13 +2,17 @@
 #include <stdint.h>
 #include <string>
 #include "mysqlConnector.h"
-#include "..//..//glog/logging.h"
+#include "../../glog/logging.h"
+#include "../../util/file.h"
+#include "BinaryLogEvent.h"
 class ringBuffer;
 class fileList;
+class ReadBinlogFile;
 namespace DATA_SOURCE
 {
 	class formatEvent;
 	class BinlogFile;
+	class ReadBinlogFile;
 	class mysqlBinlogReader {
 	public:
 		enum READ_CODE

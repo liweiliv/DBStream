@@ -7,7 +7,7 @@
 
 #ifndef BINLOGEVENTPARSER_H_
 #define BINLOGEVENTPARSER_H_
-
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <map>
@@ -15,7 +15,6 @@
 #include "../../memory/ringBuffer.h"
 #include "columnParser.h"
 #include "BinaryLogEvent.h"
-#define COMPARE_UPDATE
 namespace SQL_PARSER {
 	class sqlParser;
 }
@@ -34,10 +33,14 @@ namespace DATA_SOURCE
 		uint32_t m_threadID;
 		SQL_PARSER::sqlParser* m_sqlParser;
 		tableMap m_tableMap;
+		ringBuffer* m_memPool;
+		DATABASE_INCREASE::record** m_parsedRecords;
+		int16_t m_parsedRecordCount;
 	public:
 		enum ParseStatus {
 			OK,
-			TRANS_COMMIT,
+			BEGIN,
+			COMMIT,
 			FILTER,
 			NO_META,
 			META_NOT_MATCH,
@@ -47,43 +50,36 @@ namespace DATA_SOURCE
 		struct MySQL_COLUMN_TYPE_INFO {
 			uint8_t type;
 			int (*parseFunc)(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record, const char*& data,bool newOrOld);
-#ifdef COMPARE_UPDATE
-			uint32_t(*lengthFunc)(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record, const char* data);
-#endif
 			uint8_t metaLength;
 		};
-#ifdef COMPARE_UPDATE
-		const char* m_oldImageOfUpdateRow[1025];
-		bool m_ifTypeNeedCompare[256];
-		uint32_t m_fixedTypeSize[256];
-#endif
 		MySQL_COLUMN_TYPE_INFO m_columnInfo[256];
 		void initColumnTypeInfo();
 	public:
-		BinlogEventParser(META::metaDataCollection * metaDataManager);
+		BinlogEventParser(META::metaDataCollection * metaDataManager, ringBuffer* memPool);
 		~BinlogEventParser();
 		void setInstance(const char* instance);
 	private:
-		inline void createNewRecord(uint32_t index);
-		inline void createNewRecord();
-		inline const char* getQuery(const char* logEvent, size_t size);
 		ParseStatus createDescEvent(const char* logEvent, size_t size);
 		ParseStatus updateFile(const char* logEvent, size_t size);
-		ParseStatus handleDDL(const char* logEvent, size_t size);
 		ParseStatus parseDDL(const char* logEvent, size_t size);
 		ParseStatus parseQuery(const char* logEvent, size_t size);
 		ParseStatus parseTableMap(const char* logEvent, size_t size);
-		ParseStatus commitCachedRecord(const char* logEvent);
 		ParseStatus rollback(const char* logEvent, size_t size);
 		ParseStatus ddl(const char* logEvent, size_t size);
 		ParseStatus begin(const char* logEvent, size_t size);
 		ParseStatus commit(const char* logEvent, size_t size);
-		inline void jumpOverRowLogEventHeader(const char*& logevent, uint64_t size);
-		ParseStatus parseRowData(DATABASE_INCREASE::DMLRecord* record, const char*& data, size_t size, bool newORold);
+		void parseRowLogEventHeader(const char*& logevent, uint64_t size, uint64_t& tableId, const uint8_t*& columnBitMap, const uint8_t*& updatedColumnBitMap);
+		ParseStatus parseRowData(DATABASE_INCREASE::DMLRecord* record, const char*& data, size_t size, bool newORold,const uint8_t* columnBitmap);
 		inline uint64_t getTableID(const char* data, Log_event_type event_type);
-		ParseStatus parseRowLogevent(const char* logEvent, DATABASE_INCREASE::RecordType type);
-		ParseStatus parseTraceID(void* rawData, size_t rawDataSize);
+		ParseStatus parseRowLogevent(const char* logEvent, size_t size,DATABASE_INCREASE::RecordType type);
+		ParseStatus parseTraceID(const char* rawData, size_t size);
 	public:
+		inline DATABASE_INCREASE::record* getRecord()
+		{
+			if (m_parsedRecordCount > 0)
+				return m_parsedRecords[m_parsedRecordCount--];
+			return nullptr;
+		}
 		ParseStatus parser(const char * logEvent);
 	};
 }

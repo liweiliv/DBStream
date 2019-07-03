@@ -4,8 +4,10 @@
  *  Created on: 2018年6月28日
  *      Author: liwei
  */
+#include <stddef.h>
 #include <assert.h>
 #include <stdint.h>
+#include <float.h>
 #include "columnParser.h"
 #include "mysql/decimal.h"
 #include "../../util/itoaSse.h"

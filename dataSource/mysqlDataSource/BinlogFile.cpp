@@ -5,16 +5,17 @@
  *      Author: liwei
  */
 #include "BinlogFile.h"
+#include <assert.h>
 #include <errno.h>
-#include <error.h>
 #include <stdint.h>
 #include <fcntl.h>
-#include "file.h"
-#include "stackLog.h"
 #include "BinaryLogEvent.h"
 #include "mysql/my_byteorder.h"
+#include "../../glog/logging.h"
 #include <stdint.h>
+#ifdef OS_LINUX
 #include <zlib.h> //for checksum calculations
+#endif
 namespace DATA_SOURCE {
 	/**
 	 *   Calculate a long checksum for a memoryblock.
@@ -28,9 +29,13 @@ namespace DATA_SOURCE {
 	static inline uint32_t checksum_crc32(uint32_t crc, const unsigned char* pos,
 		size_t length)
 	{
-		assert(length <= UINT_MAX);
+#ifdef OS_LINUX
+		assert(length <= 0xffffffffu);
 		return static_cast<uint32_t>(crc32(static_cast<unsigned int>(crc), pos,
 			static_cast<unsigned int>(length)));
+#else
+		return 0;//todo
+#endif
 	}
 	ReadBinlogFile::ReadBinlogFile(const char* filePath, bool crc)
 	{
@@ -49,7 +54,7 @@ namespace DATA_SOURCE {
 	ReadBinlogFile::~ReadBinlogFile()
 	{
 		if (m_fileFD > 0)
-			close(m_fileFD);
+			closeFile(m_fileFD);
 		if (m_readBuf != m_defaultDataBuf)
 			free(m_readBuf);
 		free(m_defaultDataBuf);
@@ -84,21 +89,21 @@ namespace DATA_SOURCE {
 			offset = 4;
 		if (offset == m_logEventOffset)
 			return 0;
-		m_fileSize = lseek64(m_fileFD, 0, SEEK_END);
+		m_fileSize = seekFile(m_fileFD, 0, SEEK_END);
 		if (m_fileSize == (size_t)-1)
 		{
-			lseek64(m_fileFD, m_logEventOffset, SEEK_SET);
+			seekFile(m_fileFD, m_logEventOffset, SEEK_SET);
 			m_err = -errno;
 			return -1;
 		}
 		if (offset > m_fileSize)
 		{
-			lseek64(m_fileFD, m_logEventOffset, SEEK_SET);
+			seekFile(m_fileFD, m_logEventOffset, SEEK_SET);
 			return -2;
 		}
-		if (-1 == lseek64(m_fileFD, offset, SEEK_SET))
+		if (-1 == seekFile(m_fileFD, offset, SEEK_SET))
 		{
-			lseek64(m_fileFD, m_logEventOffset, SEEK_SET);
+			seekFile(m_fileFD, m_logEventOffset, SEEK_SET);
 			m_err = -errno;
 			return -1;
 		}
@@ -112,11 +117,11 @@ namespace DATA_SOURCE {
 	{
 		if (m_fileFD > 0)
 		{
-			close(m_fileFD);
+			closeFile(m_fileFD);
 			m_fileFD = 0;
 		}
 		m_filePath = filePath;
-		m_fileFD = open(filePath, O_RDONLY);
+		m_fileFD = openFile(filePath, true,false,false);
 		if (m_fileFD <= 0)
 		{
 			m_err = -errno;
@@ -161,12 +166,12 @@ namespace DATA_SOURCE {
 		if (m_crc != BINLOG_CHECKSUM_ALG_OFF)
 			event_len += BINLOG_CHECKSUM_LEN;
 
-		uchar* header = (uint8_t*)m_readBuf;
-		uchar* rotate_header = header + LOG_EVENT_HEADER_LEN;
+		uint8_t* header = (uint8_t*)m_readBuf;
+		uint8_t* rotate_header = header + LOG_EVENT_HEADER_LEN;
 		int4store(header, 0);
 		header[EVENT_TYPE_OFFSET] = ROTATE_EVENT;
 		int4store(header + SERVER_ID_OFFSET, m_serverId);
-		int4store(header + EVENT_LEN_OFFSET, static_cast<uint32>(event_len));
+		int4store(header + EVENT_LEN_OFFSET, static_cast<uint32_t>(event_len));
 		int4store(header + LOG_POS_OFFSET, 0);
 		int2store(header + FLAGS_OFFSET, LOG_EVENT_ARTIFICIAL_F);
 		int8store(rotate_header, m_logEventOffset);
@@ -175,7 +180,7 @@ namespace DATA_SOURCE {
 
 		if (m_crc != BINLOG_CHECKSUM_ALG_OFF)
 		{
-			uint32 crc = checksum_crc32(0L, NULL, 0);
+			uint32_t crc = checksum_crc32(0L, NULL, 0);
 			crc = checksum_crc32(crc, header, event_len - BINLOG_CHECKSUM_LEN);
 			int4store(header + event_len - BINLOG_CHECKSUM_LEN, crc);
 		}
@@ -189,7 +194,7 @@ namespace DATA_SOURCE {
 		if (m_err != 0) /*一旦发生过错误，则不允许继续读*/
 			return -1;
 
-		int readSize = file_read(m_fileFD, (uint8_t*)m_readBuf, LOG_EVENT_MINIMAL_HEADER_LEN);
+		int readSize = readFile(m_fileFD, m_readBuf, LOG_EVENT_MINIMAL_HEADER_LEN);
 		if (readSize < 0)
 		{
 			m_err = -errno;
@@ -248,7 +253,7 @@ namespace DATA_SOURCE {
 				}
 			}
 		}
-		readSize = file_read(m_fileFD, (uint8_t*)m_readBuf + LOG_EVENT_MINIMAL_HEADER_LEN,
+		readSize = readFile(m_fileFD, m_readBuf + LOG_EVENT_MINIMAL_HEADER_LEN,
 			binlogSize - LOG_EVENT_MINIMAL_HEADER_LEN);
 		if (readSize < 0)
 		{
@@ -328,7 +333,7 @@ namespace DATA_SOURCE {
 		/*通常stop event在文件末尾，没有rotate指示下一个binlog文件，此时根据文件名预测下一个binlog文件*/
 		else if (binlog[EVENT_TYPE_OFFSET] == STOP_EVENT)
 		{
-			if (m_logEventOffset == (uint64_t)lseek64(m_fileFD, 0, SEEK_END))
+			if (m_logEventOffset == (uint64_t)seekFile(m_fileFD, 0, SEEK_END))
 			{
 				char binlogFile[256] =
 				{ 0 };
@@ -361,7 +366,7 @@ namespace DATA_SOURCE {
 			else
 			{
 				if (m_logEventOffset
-					!= (uint64_t)lseek64(m_fileFD, m_logEventOffset, SEEK_SET))
+					!= (uint64_t)seekFile(m_fileFD, m_logEventOffset, SEEK_SET))
 				{
 					m_err = -errno;
 					m_status = BINLOG_READ_END;
@@ -388,7 +393,7 @@ namespace DATA_SOURCE {
 	WriteBinlogFile::WriteBinlogFile(size_t batch_size, bool sync, uint32_t flushCycle)
 	{
 		m_err = 0;
-		m_fileFD = -1;
+		m_fileFD = INVALID_HANDLE_VALUE;
 		m_batch = batch_size;
 		m_sync = sync;
 		if (m_batch)
@@ -411,66 +416,73 @@ namespace DATA_SOURCE {
 	{
 		if (flushBuf() < 0)
 		{
-			SET_STACE_LOG_AND_RETURN(-1, -1, "flush buf to file failed", "");
+			LOG(ERROR) << "flush buf to file failed";
+			return -1;
 		}
 		if (!m_sync)
 		{
 			if (0 != fsync(m_fileFD))
 			{
 				m_err = -errno;
-				SET_STACE_LOG_AND_RETURN(-2, -2, "fsync failed,errno %d", errno);
+				LOG(ERROR)<<"fsync failed,errno: "<< errno;
+				return -2;
 			}
 		}
 
-		if (0 != close(m_fileFD))
+		if (0 != closeFile(m_fileFD))
 		{
-			while (errno == EINTR && 0 != close(m_fileFD))
+			while (errno == EINTR && 0 != closeFile(m_fileFD))
 				errno = 0;
 			if (errno != EINTR)
 			{
 				m_err = -errno;
-				SET_STACE_LOG_AND_RETURN(-4, -4, "close file failed,errno", errno);
+				LOG(ERROR) << "close file failed,errno" << errno;
+				return -4;
 			}
 		}
 		return 0;
 	}
-	int WriteBinlogFile::setFileInfo(int fd, uint64_t offset)
+	int WriteBinlogFile::setFileInfo(fileHandle fd, uint64_t offset)
 	{
 		m_err = 0;
 		m_fileFD = fd;
 		m_logOffset = offset;
 		if (m_logOffset == sizeof(headMagicNumber))
 		{
-			if (lseek64(fd, 0, SEEK_END) > 0 && errno != ESPIPE)
+			if (seekFile(fd, 0, SEEK_END) > 0 && errno != ESPIPE)
 			{
 				m_err = BINLOG_ERR_INCOMPLETE;
-				SET_STACE_LOG_AND_RETURN(-1, -1, "lseek64 0@SEEK_END failed,errno", errno);
+				LOG(ERROR)<<"lseek64 0@SEEK_END failed,errno:"<<errno;
+				return -1;
 			}
 		}
 		else
 		{
-			if (lseek64(fd, 0, SEEK_END) < (int64_t)m_logOffset && errno != ESPIPE)
+			if (seekFile(fd, 0, SEEK_END) < (int64_t)m_logOffset && errno != ESPIPE)
 			{
 				m_err = BINLOG_ERR_INCOMPLETE;
-				SET_STACE_LOG_AND_RETURN(-1, -1, "lseek64 0@SEEK_END failed,errno", errno);
+				LOG(ERROR) << "lseek64 0@SEEK_END failed,errno:" << errno;
+				return -1;
 			}
 		}
 
-		if (0 != lseek64(fd, 0, SEEK_SET) && errno != ESPIPE)
+		if (0 != seekFile(fd, 0, SEEK_SET) && errno != ESPIPE)
 		{
 			m_err = -errno;
-			SET_STACE_LOG_AND_RETURN(-2, -2, "lseek64 0@SEEK_SET failed,errno", errno);
+			LOG(ERROR) << "lseek64 0@SEEK_END failed,errno:" << errno;
 			return -2;
 		}
-		if (sizeof(headMagicNumber) != file_write(fd, (unsigned char*)& headMagicNumber, sizeof(headMagicNumber)))
+		if (sizeof(headMagicNumber) != writeFile(fd, (char*)& headMagicNumber, sizeof(headMagicNumber)))
 		{
 			m_err = -errno;
-			SET_STACE_LOG_AND_RETURN(-3, -3, "write headMagicNumber to binlog file failed,errno:%d ", errno);
+			LOG(ERROR) << "write headMagicNumber to binlog file failed,errno"<<errno;
+			return -3;
 		}
-		if (m_logOffset != (uint64_t)lseek64(fd, m_logOffset, SEEK_SET) && errno != ESPIPE)
+		if (m_logOffset != (uint64_t)seekFile(fd, m_logOffset, SEEK_SET) && errno != ESPIPE)
 		{
 			m_err = -errno;
-			SET_STACE_LOG_AND_RETURN(-4, -4, "lseek64 %lu@SEEK_SET failed,errno", m_logOffset, errno);
+			LOG(ERROR) << "lseek64 "<< m_logOffset <<"@SEEK_SET failed,errno" << errno;
+			return -4;
 		}
 		return 0;
 	}
@@ -487,11 +499,12 @@ namespace DATA_SOURCE {
 			if (m_writerBufPos - m_writeBuf == 0)
 				return 0;
 			if (m_writerBufPos - m_writeBuf
-				!= file_write(m_fileFD, (uint8_t*)m_writeBuf,
+				!= writeFile(m_fileFD, m_writeBuf,
 					m_writerBufPos - m_writeBuf))
 			{
 				m_err = -errno;
-				SET_STACE_LOG_AND_RETURN(-1, -1, "write data in buf to file failed,errno %d", errno);
+				LOG(ERROR) << "write data in buf to file failed,errno"<<errno;
+				return -1;
 			}
 			m_writerBufPos = m_writeBuf;
 			if (m_sync)
@@ -499,7 +512,8 @@ namespace DATA_SOURCE {
 				if (0 != fsync(m_fileFD))
 				{
 					m_err = -errno;
-					SET_STACE_LOG_AND_RETURN(-2, -2, "call fsync failed after write data in buf to file,errno %d", errno);
+					LOG(ERROR) << "call fsync failed after write data in buf to file,errno "<<errno;
+					return -2;
 				}
 			}
 		}
@@ -510,7 +524,8 @@ namespace DATA_SOURCE {
 				if (0 != fsync(m_fileFD))
 				{
 					m_err = -errno;
-					SET_STACE_LOG_AND_RETURN(-2, -2, "fsync failed,errno %d", errno);
+					LOG(ERROR) << "fsync failed,errno "<<errno;
+					return -2;
 				}
 			}
 		}
@@ -538,7 +553,8 @@ namespace DATA_SOURCE {
 		if (binlogSize > size)
 		{
 			m_err = BINLOG_ERR_BAD_LENGTH;
-			SET_STACE_LOG_AND_RETURN(-1, -1, "binlog size is diffrent between size by given [%lu] and size in log event [%u] ", size, binlogSize);
+			LOG(ERROR) << "binlog size is diffrent between size by given [" << size << "] and size in log event [" << binlogSize << "] ";
+			return -1;
 		}
 		if (binlogEvent[EVENT_TYPE_OFFSET] == FORMAT_DESCRIPTION_EVENT && m_logOffset > 4)//ignore dup FORMAT_DESCRIPTION_EVENT
 			return 0;
@@ -554,8 +570,9 @@ namespace DATA_SOURCE {
 				uint4korr(binlogEvent + LOG_POS_OFFSET) == 0))
 			{
 				m_err = BINLOG_ERR_BAD_LENGTH;
-				SET_STACE_LOG_AND_RETURN(-1, -1, "binlog event size check failed,current binlog offset %u add size of new binlog event %u must equal offset of new binlog event ,but its offset is %u,type is %u"
-					, m_logOffset, binlogSize, binlogOffset, binlogEvent[EVENT_TYPE_OFFSET]);
+				LOG(ERROR) << "binlog event size check failed,current binlog offset " << m_logOffset << " add size of new binlog event " << binlogSize <<
+					" must equal offset of new binlog event ,but its offset is " << binlogOffset << ",type is " << binlogEvent[EVENT_TYPE_OFFSET];
+				return -1;
 			}
 		}
 		if (m_batch)
@@ -564,17 +581,20 @@ namespace DATA_SOURCE {
 			{
 				if (0 > flushBuf())
 				{
-					SET_STACE_LOG_AND_RETURN(-1, -1, "flush buf to file failed", "");
+					LOG(ERROR) << "flush buf to file failed";
+					return -1;
 				}
 				if (binlogSize
-					!= file_write(m_fileFD, (uint8_t*)binlogEvent, binlogSize))
+					!= writeFile(m_fileFD, binlogEvent, binlogSize))
 				{
 					m_err = -errno;
-					SET_STACE_LOG_AND_RETURN(-1, -1, "write log event to file failed,errno %d", errno);
+					LOG(ERROR) << "write log event to file failed,errno "<<errno;
+					return -1;
 				}
 				if (m_sync && fsync(m_fileFD) != 0)
 				{
-					SET_STACE_LOG_AND_RETURN(-2, -2, "call fsync failed,errno %d", errno);
+					LOG(ERROR) << "call fsync failed,errno "<<errno;
+					return -2;
 				}
 				m_lastFlushTime = time(NULL);
 				flushed = true;
@@ -585,7 +605,8 @@ namespace DATA_SOURCE {
 				{
 					if (0 > flushBuf())
 					{
-						SET_STACE_LOG_AND_RETURN(-1, -1, "flush buf to file failed", "");
+						LOG(ERROR) << "flush buf to file failed";
+						return -1;
 					}
 					flushed = true;
 				}
@@ -595,7 +616,8 @@ namespace DATA_SOURCE {
 				{
 					if (0 > flushBuf())
 					{
-						SET_STACE_LOG_AND_RETURN(-1, -1, "flush buf to file failed", "");
+						LOG(ERROR) << "flush buf to file failed";
+						return -1;
 					}
 					flushed = true;
 				}
@@ -604,15 +626,16 @@ namespace DATA_SOURCE {
 		else
 		{
 			if (binlogSize
-				!= file_write(m_fileFD, (uint8_t*)binlogEvent, binlogSize))
+				!= writeFile(m_fileFD, binlogEvent, binlogSize))
 			{
 				m_err = -errno;
-				SET_STACE_LOG_AND_RETURN(-1, -1, "write log event to file failed,errno %d", errno);
+				LOG(ERROR) << "write log event to file failed,errno "<<errno;
+				return -1;
 			}
 			if (m_sync && fsync(m_fileFD) != 0)
 			{
 				m_err = -errno;
-				SET_STACE_LOG_AND_RETURN(-2, -2, "call fsync failed,errno %d", errno);
+				LOG(ERROR) << "call fsync failed,errno "<<errno;
 			}
 			flushed = true;
 		}

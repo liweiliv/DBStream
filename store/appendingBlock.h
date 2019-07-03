@@ -22,7 +22,7 @@
 #include "appendingIndex.h"
 #include "../util/arrayList.h"
 #include "../util/barrier.h"
-#include "../lz4/lz4.h"
+#include "../lz4/lib/lz4.h"
 #include "solidBlock.h"
 #include "cond.h"
 namespace STORE
@@ -661,6 +661,20 @@ public:
 		}
 		unuse();
 		return block;
+	}
+	inline void commit()
+	{
+		if (likely(m_recordCount > 0))
+		{
+			m_maxTxnId = ((const DATABASE_INCREASE::recordHead*)(getRecord(m_minRecordId + m_recordCount - 1)))->txnId;
+			if (unlikely(m_minTxnId == 0))
+				m_minTxnId = m_maxTxnId;
+			m_committedRecordID.store(m_recordCount, std::memory_order_relaxed);
+		}
+	}
+	inline void rollback()//todo
+	{
+
 	}
 };
 

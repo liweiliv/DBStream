@@ -249,8 +249,8 @@ namespace STORE {
 			bool fixed = false;
 			if (m_columnCount == 1)
 			{
-				keySize = columnInfos[m_columnIdxs[0]].columnTypeSize;
-				fixed = columnInfos[m_columnIdxs[0]].fixed;
+				keySize = META::columnInfos[m_columnIdxs[0]].columnTypeSize;
+				fixed = META::columnInfos[m_columnIdxs[0]].fixed;
 			}
 			else
 			{
@@ -270,8 +270,8 @@ namespace STORE {
 			bool fixed = false;
 			if (m_columnCount == 1)
 			{
-				keySize = columnInfos[m_columnIdxs[0]].columnTypeSize;
-				fixed = columnInfos[m_columnIdxs[0]].fixed;
+				keySize = META::columnInfos[m_columnIdxs[0]].columnTypeSize;
+				fixed = META::columnInfos[m_columnIdxs[0]].fixed;
 			}
 			else
 			{
@@ -304,7 +304,7 @@ namespace STORE {
 	public:
 		bool valid()
 		{
-			return m_iter.
+			return m_iter.valid();
 		}
 	};
 }

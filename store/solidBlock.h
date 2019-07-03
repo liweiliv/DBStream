@@ -12,7 +12,7 @@
 #include "../util/file.h"
 #include "../util/crcBySSE.h"
 #include "../glog/logging.h"
-#include "../lz4/lz4.h"
+#include "../lz4/lib/lz4.h"
 #include "../meta/metaData.h"
 #include "../meta/metaDataCollection.h"
 #include "../util/barrier.h"

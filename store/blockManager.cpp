@@ -113,10 +113,17 @@ namespace STORE {
 		m_config->set("store", key, value);
 		return std::string("update config:") + key + " success";
 	}
+	void blockManager::commit()
+	{
+		if (likely(m_status == BM_RUNNING))
+			m_current->commit();
+	}
 	int blockManager::insert(DATABASE_INCREASE::record* r)
 	{
 		if (unlikely(m_status != BM_RUNNING))
 			return -1;
+		r->head->txnId = m_tnxId;
+		r->head->recordId = m_recordId++;
 		appendingBlock::appendingBlockStaus status = m_current->append(r);
 		switch (status)
 		{
@@ -153,7 +160,7 @@ namespace STORE {
 	{
 		appendingBlock* newBlock = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
 			m_blockDefaultSize, m_redoFlushDataSize,
-			m_redoFlushPeriod, m_current->lastRecordId() + 1, this, m_metaDataCollection);
+			m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 
 		newBlock->m_blockID = m_current->m_blockID+1;
 		m_current->m_flag |= BLOCK_FLAG_FINISHED;
@@ -194,6 +201,25 @@ namespace STORE {
 		}
 		else
 			return nullptr;
+	}
+	bool blockManager::checkpoint(uint64_t& timestamp, uint64_t logOffset)
+	{
+		block* last = nullptr;
+		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
+		while ((last = getBasciBlock(blockId)) != nullptr)
+		{
+			if (last->m_recordCount == 0)
+			{
+				last->unuse();
+				blockId--;
+				continue;
+			}
+			timestamp = last->m_maxTime;
+			logOffset = last->m_maxLogOffset;
+			last->unuse();
+			return true;
+		}
+		return false;
 	}
 
 	block* blockManager::updateBasicBlockToSolidBlock(block *b)
@@ -583,6 +609,12 @@ RESET:
 					}
 				}
 			}
+			block* last = m_blocks.end();
+			if (likely(last != nullptr))
+			{
+				m_tnxId = last->m_maxTxnId + 1;
+				m_recordId = last->m_minRecordId + last->m_recordCount;
+			}
 			if (m_current == nullptr)
 				goto CREATE_CURRENT;
 			return 0;
@@ -593,19 +625,8 @@ RESET:
 			m_lastBlockId.store(0, std::memory_order_relaxed);
 		}
 	CREATE_CURRENT:
-		uint64_t prevLastRecordId = 0;
-		if (m_lastBlockId.load(std::memory_order_relaxed) > 0)
-		{
-			block* sb = getBlock(m_lastBlockId.load(std::memory_order_relaxed));
-			if (sb == nullptr)
-			{
-				LOG(ERROR) << "load blocks failed for load " << m_lastBlockId.load(std::memory_order_relaxed) << " to failed";
-				return -1;
-			}
-			prevLastRecordId = sb->m_minRecordId + sb->m_recordCount;
-		}
 		m_current = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
-			m_redoFlushDataSize, m_redoFlushPeriod, prevLastRecordId+1, this, m_metaDataCollection);
+			m_redoFlushDataSize, m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 		m_current->m_blockID = m_lastBlockId.load(std::memory_order_relaxed) + 1;
 		m_blocks.set(m_lastBlockId.load(std::memory_order_relaxed) + 1, m_current);
 		m_lastBlockId.fetch_add(1, std::memory_order_relaxed);

@@ -184,6 +184,19 @@ namespace META {
 			return NULL;
 		return metas->get(originCheckPoint);
 	}
+	const charsetInfo* metaDataCollection::getDataBaseCharset(const char* database, uint64_t originCheckPoint)
+	{
+		MetaTimeline<dbInfo>* db =
+			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
+			(const unsigned char*)database));
+		if (db == NULL)
+			return NULL;
+		dbInfo* currentDB = db->get(originCheckPoint);
+		if (currentDB == NULL)
+			return NULL;
+		return currentDB->charset;
+	}
+
 	tableMeta *metaDataCollection::getTableMetaFromRemote(uint64_t tableID) {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableID)); i++)
@@ -300,6 +313,19 @@ namespace META {
 				return 0;
 		}
 	}
+	int metaDataCollection::put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint)
+	{
+		dbInfo* db = new dbInfo();
+		db->charset = charset;
+		db->name = database;
+		if (0 != put(database, originCheckPoint, db))
+		{
+			delete db;
+			return -1;
+		}
+		return 0;
+	}
+
 	int metaDataCollection::put(const char * database, const char * table,
 		tableMeta * meta, uint64_t originCheckPoint)
 	{
@@ -406,7 +432,7 @@ namespace META {
 			newColumnInfo * c = *iter;
 			columnMeta & column = meta->m_columns[meta->m_columnsCount];
 			copyColumn(column, c);
-			if (c->isString)
+			if (columnInfos[c->type].stringType)
 			{
 				if (c->charset == nullptr)
 					column.m_charset = meta->m_charset;
@@ -548,7 +574,7 @@ namespace META {
 			columnMeta column;
 			copyColumn(column, c);
 			/*update default charset and string size*/
-			if (c->isString)
+			if (columnInfos[c->type].stringType)
 			{
 				if (c->charset == nullptr)
 					column.m_charset = meta->m_charset;
@@ -838,4 +864,13 @@ namespace META {
 		}
 		return 0;
 	}
+	int metaDataCollection::setDefaultCharset(const charsetInfo* defaultCharset)
+	{
+		m_defaultCharset = defaultCharset;
+	}
+	const charsetInfo* metaDataCollection::getDefaultCharset()
+	{
+		return m_defaultCharset;
+	}
+
 }

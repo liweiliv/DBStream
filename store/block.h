@@ -92,6 +92,8 @@ namespace STORE {
 		uint64_t m_maxLogOffset;
 		uint64_t m_minRecordId;
 		uint32_t m_recordCount;
+		uint32_t m_minTxnId;
+		uint32_t m_maxTxnId;
 		uint32_t m_tableCount;
 		uint16_t m_pageCount;
 		uint32_t m_solidBlockHeadPageRawSize;

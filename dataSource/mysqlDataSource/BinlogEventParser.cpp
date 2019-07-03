@@ -9,6 +9,7 @@
 #include <assert.h>
 #include "columnParser.h"
 #include "BinlogEventParser.h"
+#include "mysqlRecordOffset.h"
 #include "../../glog/logging.h"
 #include "../../util/file.h"
 #include "../../util/winString.h"
@@ -20,43 +21,6 @@
 #define ROWS_V_TAG_LEN       1
 #define ROWS_V_EXTRAINFO_TAG 0
 namespace DATA_SOURCE {
-
-	arena::arena(uint32_t size)
-	{
-		next = NULL;
-		buf = new char[bufSize = size];
-		bufUsedSize = 0;
-		end = this;
-	}
-	void arena::clear()
-	{
-		if (next)
-		{
-			delete next;
-			next = NULL;
-		}
-		bufSize = 0;
-		bufUsedSize = 0;
-		end = this;
-	}
-	arena::~arena()
-	{
-		if (next)
-			delete next;
-		delete[] buf;
-	}
-	void* arena::alloc(uint32_t size)
-	{
-		if (end->bufSize - end->bufUsedSize < size)
-		{
-			arena* a = new arena(size > bufSize ? size : bufSize);
-			end->next = a;
-		}
-		char* buf = end->buf + end->bufUsedSize;
-		end->bufUsedSize += size;
-		return buf;
-	}
-#pragma pack()
 #define INDEX_OF_BYTE_STORE_DATA_LEN 9
 #define INDEX_OF_BYTE_STORE_NUM_OF_COLUMNS_5_1_48 27
 #define INDEX_OF_FIRST_COLUMN_BYTE INDEX_OF_BYTE_STORE_NUM_OF_COLUMNS_5_1_48 + 1
@@ -139,6 +103,7 @@ namespace DATA_SOURCE {
 		m_fixedTypeSize[MYSQL_TYPE_YEAR] = 1;
 		m_fixedTypeSize[MYSQL_TYPE_NEWDATE] = 3;
 
+		/*
 		m_columnInfo[MYSQL_TYPE_NEWDECIMAL].lengthFunc = lengthOf_MYSQL_TYPE_NEWDECIMAL;
 		m_columnInfo[MYSQL_TYPE_TIMESTAMP2].lengthFunc = lengthOf_MYSQL_TYPE_TIMESTAMP2;
 		m_columnInfo[MYSQL_TYPE_DATETIME2].lengthFunc = lengthOf_MYSQL_TYPE_DATETIME2;
@@ -147,22 +112,22 @@ namespace DATA_SOURCE {
 		m_columnInfo[MYSQL_TYPE_JSON].lengthFunc = lengthOf_MYSQL_TYPE_JSON;
 		m_columnInfo[MYSQL_TYPE_SET].lengthFunc = lengthOf_MYSQL_TYPE_SET;
 		m_columnInfo[MYSQL_TYPE_ENUM].lengthFunc = lengthOf_MYSQL_TYPE_ENUM;
+		*/
 #endif
 
 	}
-	BinlogEventParser::BinlogEventParser(META::metaDataCollection * metaDataManager) :
-		m_metaDataManager(metaDataManager),  m_currentFileID(0), m_currentOffset(0), m_threadID(0)
+	BinlogEventParser::BinlogEventParser(META::metaDataCollection * metaDataManager, ringBuffer* memPool) :
+		m_metaDataManager(metaDataManager),  m_currentFileID(0), m_currentOffset(0), m_threadID(0), m_memPool(memPool),m_parsedRecordCount(0)
 	{
 		m_descEvent = new formatEvent(4, "5.6.16");
 		initColumnTypeInfo();
-#ifdef COMPARE_UPDATE
-		memset(m_oldImageOfUpdateRow, 0, sizeof(m_oldImageOfUpdateRow));
-#endif
+		m_parsedRecords = new DATABASE_INCREASE::record*[2048];
 	}
 	BinlogEventParser::~BinlogEventParser()
 	{
 		if (m_descEvent != NULL)
 			delete m_descEvent;
+		delete[]m_parsedRecords;
 	}
 	void BinlogEventParser::setInstance(const char* instance)
 	{
@@ -271,147 +236,95 @@ namespace DATA_SOURCE {
 		m_tableMap.init(m_descEvent, logEvent, size);
 		return ParseStatus::OK;
 	}
+	static inline void setRecordBasicInfo(const commonMysqlBinlogEventHeader_v4* header, DATABASE_INCREASE::record* r)
+	{
+		r->head->headSize = DATABASE_INCREASE::recordHeadSize;
+		r->head->timestamp = META::timestamp::create(header->timestamp, 0);
+		r->head->txnId = 0;
+	}
 	BinlogEventParser::ParseStatus BinlogEventParser::rollback(const char* logEvent, size_t size)
 	{
 		commonMysqlBinlogEventHeader_v4* header =(commonMysqlBinlogEventHeader_v4*)logEvent;
-		createNewRecord();
-		m_currentRecord->setTimestamp(header->timestamp);
-		m_currentRecord->setCheckpoint(m_currentFileID, m_currentOffset);
-		m_currentRecord->setRecordType(EROLLBACK);
-		return commitCachedRecord(wrapper);
+		DATABASE_INCREASE::record * r = (DATABASE_INCREASE::record*)m_memPool->alloc(DATABASE_INCREASE::recordSize);
+		r->init(((char*)r) + sizeof(DATABASE_INCREASE::record));
+		setRecordBasicInfo(header, r);
+		r->head->size = DATABASE_INCREASE::recordRealSize;
+		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
+		r->head->type = DATABASE_INCREASE::R_ROLLBACK;
+		m_parsedRecords[m_parsedRecordCount++] = r;
+		return ParseStatus::OK;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::ddl(const char* logEvent, size_t size)
 	{
-		bool isSingleDDL = (m_firstTransaction == NULL);
-		if (isSingleDDL)
-		{
-			initTransaction(MAX_BATCH);
-		}
-		createNewRecord();
-		m_parseMem.init(m_currentRecord);
-		char* envStr;
-		uint32_t envStrAllocedSize = sizeof(DDL_SQL_MODE_HEAD_STR) + 22; // 64 bit int sqlmode max is 18446744073709551615
-		envStrAllocedSize += sizeof(DDL_SQL_TIMESTAMP_HEAD_STR) + 22 + 11; // SET TIMESTAMP=%lu.%u  unsigned long max length is 22 ,unsigned int max length is 11
-		envStrAllocedSize += sizeof(DDL_SQL_NAME_HEAD_STR) + 32; //max 32 byte chaset string
-		envStr = m_parseMem.alloc(envStrAllocedSize);
-		uint32_t envStrSize = 0;
-		if (ddlEvent->tv_usec)
-		{
-			envStrSize += snprintf(envStr + envStrSize, envStrAllocedSize,
-				"SET TIMESTAMP=%ld.%06d;",
-				(long)ddlEvent->head.timestamp,
-				(int)ddlEvent->tv_usec);
-		}
-		else
-		{
-			envStrSize += snprintf(envStr + envStrSize, envStrAllocedSize,
-				"SET TIMESTAMP=%ld;",
-				(long)ddlEvent->head.timestamp);
-		}
-
-		if (likely(ddlEvent->sql_mode_inited))
-		{
-			envStrSize += snprintf(envStr + envStrSize, envStrAllocedSize,
-				"SET @@session.sql_mode=%lu;", (ulong)ddlEvent->sql_mode);
-		}
-		if (likely(ddlEvent->charset_inited))
-		{
-			char* charset_p = ddlEvent->charset; // Avoid type-punning warning.
-			CHARSET_INFO* cs_info = get_charset(uint2korr(charset_p), MYF(MY_WME));
-			if (cs_info && cs_info->csname)
-			{
-				m_currentRecord->setRecordEncoding(cs_info->csname);
-				envStrSize += snprintf(envStr + envStrSize, envStrAllocedSize,
-					"SET names %s;", cs_info->csname);
-			}
-		}
-		m_currentRecord->setNewColumn(
-			(binlogBuf*)m_parseMem.alloc(sizeof(binlogBuf) * 2), 2);
-		m_currentRecord->putNew(ddlEvent->query.c_str(), ddlEvent->query.size());
-		m_currentRecord->putNew(envStr, strlen(envStr));
-		m_currentRecord->setRecordType(EDDL);
-		m_currentRecord->setTimestamp(ddlEvent->head.timestamp);
-		m_currentRecord->setRecordUsec(ddlEvent->tv_usec);
-		m_currentRecord->setCheckpoint(m_currentFileID, m_currentOffset);
-		m_currentRecord->setThreadId(ddlEvent->thread_id);
-		if (!ddlEvent->db.empty())
-			m_currentRecord->setDbname(ddlEvent->db.c_str());
-		handleDDL(m_currentRecord);
-		ParseStatus rtv = ParseStatus::OK;
-		if (isSingleDDL)
-		{
-			commitCachedRecord(wrapper);
-			rtv = ParseStatus::TRANS_COMMIT;
-		}
-		m_parseMem.reset();
-		return rtv;
+		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)logEvent;
+		QueryEvent query(logEvent, size, m_descEvent);
+		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord)+DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(),query.query.size()));
+		r->initRecord(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord));
+		setRecordBasicInfo(header, r);
+		r->head->size = DATABASE_INCREASE::recordRealSize;
+		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
+		r->head->type = DATABASE_INCREASE::R_DDL;
+		r->setCharset(query.charset);
+		r->setDataBase(query.db.c_str());
+		r->setSqlMode(query.sql_mode);
+		memcpy((char*)r->ddl, query.query.c_str(), query.query.size());
+		m_parsedRecords[m_parsedRecordCount++] = r;
+		m_metaDataManager->processDDL(query.query.c_str(), r->head->logOffset);
+		return ParseStatus::OK;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::begin(const char * logEvent,size_t size)
 	{
-		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)(logEvent);
-		m_threadID = le32toh(*(uint32_t*)(logEvent + sizeof(commonMysqlBinlogEventHeader_v4)));
-		createNewRecord();
-		m_currentRecord->setTimestamp(header->timestamp);
-		m_currentRecord->setCheckpoint(m_currentFileID, m_currentOffset);
-		m_currentRecord->setThreadId(m_threadID);
-		return ParseStatus::OK;
+		m_threadID = le32toh(*(uint32_t*)(logEvent + sizeof(commonMysqlBinlogEventHeader_v4)));//update thread id
+		return ParseStatus::BEGIN;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::commit(const char* logEvent, size_t size)
 	{
-		if (m_currentTransaction)
-		{
-			commonMysqlBinlogEventHeader_v4* header =
-				static_cast<commonMysqlBinlogEventHeader_v4*>(wrapper->rawData);
-			createNewRecord();
-			m_currentRecord->setTimestamp(header->timestamp);
-			m_currentRecord->setCheckpoint(m_currentFileID, m_currentOffset);
-			m_currentRecord->setRecordType(ECOMMIT);
-			m_currentRecord->setThreadId(m_threadID);
-			commitCachedRecord(wrapper);
-		}
 		m_threadID = 0;
-		return ParseStatus::TRANS_COMMIT;
+		return ParseStatus::COMMIT;
 	}
-	void BinlogEventParser::jumpOverRowLogEventHeader(const char*& logevent,
-		uint64_t size)
+	void BinlogEventParser::parseRowLogEventHeader(const char*& logevent,uint64_t size,uint64_t &tableId, const uint8_t*& columnBitMap,const uint8_t *&updatedColumnBitMap)
 	{
 		const char* rowBegin = logevent;
-		uint8_t const common_header_len = m_descEvent->common_header_len;
-		Log_event_type event_type = (Log_event_type)logevent[EVENT_TYPE_OFFSET];
-		uint8_t const post_header_len = m_descEvent->post_header_len[event_type - 1];
+		uint8_t const commonHeaderLen = m_descEvent->common_header_len;
+		Log_event_type eventType = (Log_event_type)logevent[EVENT_TYPE_OFFSET];
+		uint8_t const postHeaderLen = m_descEvent->post_header_len[eventType - 1];
 
-		const char* post_start = logevent + common_header_len;
-		post_start += ROWS_MAPID_OFFSET;
-		if (post_header_len == 6)
+		const char* postStart = logevent + commonHeaderLen;
+		postStart += ROWS_MAPID_OFFSET;
+		if (postHeaderLen == 6)
 		{
-			post_start += 4;
+			tableId = uint4korr(postStart);
+			postStart += 4;
 		}
 		else
 		{
-			post_start += ROWS_FLAGS_OFFSET;
+			tableId = uint6korr(postStart);
+			postStart += ROWS_FLAGS_OFFSET;
 		}
-		uint16_t m_flags = uint2korr(post_start);
-		post_start += 2;
+		uint16_t m_flags = uint2korr(postStart);
+		postStart += 2;
 
-		uint16_t var_header_len = 0;
-		if (post_header_len == ROWS_HEADER_LEN_V2)
+		uint16_t varHeaderLen = 0;
+		if (postHeaderLen == ROWS_HEADER_LEN_V2)
 		{
-			var_header_len = uint2korr(post_start);
-			assert(var_header_len >= 2);
-			var_header_len -= 2;
+			varHeaderLen = uint2korr(postStart);
+			assert(varHeaderLen >= 2);
+			varHeaderLen -= 2;
 		}
-		uint8_t const* const var_start = (const uint8_t*)logevent + common_header_len
-			+ post_header_len + var_header_len;
-		uint8_t const* const ptr_width = var_start;
-		uint8_t* ptr_after_width = (uint8_t*)ptr_width;
-		size_t m_width = net_field_length(&ptr_after_width);
-		ptr_after_width += (m_width + 7) / 8;
-		if ((event_type == UPDATE_ROWS_EVENT)
-			|| (event_type == UPDATE_ROWS_EVENT_V1))
+		uint8_t const* const varStart = (const uint8_t*)logevent + commonHeaderLen
+			+ postHeaderLen + varHeaderLen;
+		uint8_t const* const ptrWidth = varStart;
+		uint8_t* ptrAfterWidth = (uint8_t*)ptrWidth;
+		size_t m_width = net_field_length(&ptrAfterWidth);
+		columnBitMap = ptrAfterWidth;
+		ptrAfterWidth += (m_width + 7) / 8;
+		if ((eventType == UPDATE_ROWS_EVENT)
+			|| (eventType == UPDATE_ROWS_EVENT_V1))
 		{
-			ptr_after_width += (m_width + 7) / 8;
+			updatedColumnBitMap = ptrAfterWidth;
+			ptrAfterWidth += (m_width + 7) / 8;
 		}
-		logevent = (const char*)ptr_after_width;
+		logevent = (const char*)ptrAfterWidth;
 	}
 	static inline uint8_t getRealType(uint8_t tableDefType, uint8_t metaType, const unsigned char* meta)
 	{
@@ -437,68 +350,20 @@ namespace DATA_SOURCE {
 			return tableDefType;
 		}
 	}
-	/*
-	 * check if old image and new image is the same
-	 * if is the same,not need to parse this column,use ptr of old image
-	 * but like blob,varchar,geo... ,those type we do not parse ,only save its point and size,memcpy is a waste of time
-	 * use m_ifTypeNeedCompare to filter those type
-	 * */
-#define checkUpdate(rtv,data,tableMeta,meta,idx,nullBitMap,metaIndex,ctype)\
-do \
-{\
-    if(NULL_BIT(nullBitMap, idx) != 0) \
-    {\
-        m_currentRecord->putNew(NULL, 0);\
-        metaIndex += m_columnInfo[ctype].metaLength;\
-        rtv = true;\
-    }\
-    else\
-    {\
-    	  uint32_t colSize = m_fixedTypeSize[ctype]>0?m_fixedTypeSize[ctype]:m_oldImageOfUpdateRow[idx+1]-m_oldImageOfUpdateRow[idx];\
-        if((m_fixedTypeSize[ctype]>0|| \
-        		(m_columnInfo[ctype].lengthFunc!=NULL&& \
-                m_columnInfo[ctype].lengthFunc(columnMeta,tableMeta->metaInfo + metaIndex,data)==colSize))&& \
-                memcmp(m_oldImageOfUpdateRow[idx],data,colSize)==0 \
-                ) \
-        {\
-            uint32_t s;\
-            binlogBuf* olds = m_currentRecord->oldCols(s);\
-            m_currentRecord->putNew(olds[idx].buf, olds[idx].buf_used_size);\
-            metaIndex += m_columnInfo[ctype].metaLength;\
-            data+=colSize;\
-            rtv = true;\
-        }\
-        else \
-		    rtv = false; \
-    } \
-}while(0);
-
 	BinlogEventParser::ParseStatus BinlogEventParser::parseRowData(DATABASE_INCREASE::DMLRecord *record,
-		const char*& data, size_t size, bool newORold)
+		const char*& data, size_t size, bool newORold,const uint8_t* columnBitmap)
 	{
 		uint32_t metaIndex = 0;
 		const uint8_t* nullBitMap = (const uint8_t*)data;
 		data += BYTES_FOR_BITS(m_tableMap.columnCount);
 		for (uint32_t idx = 0; idx < m_tableMap.columnCount; idx++)
 		{
+			if (!TEST_BITMAP(columnBitmap, idx))
+				continue;
 			char* parsedValue = NULL;
 			uint32_t parsedValueSize = 0;
 			const META::columnMeta* columnMeta = record->meta->getColumn(idx);
 			int ctype = getRealType(m_tableMap.types[idx],columnMeta->m_srcColumnType,m_tableMap.metaInfo + metaIndex);
-#ifdef COMPARE_UPDATE
-			if (record->head->type == DATABASE_INCREASE::R_UPDATE)
-			{
-				if (newORold)
-				{
-					bool rtv = false;
-					checkUpdate(rtv, data, tableMeta, meta, idx, nullBitMap, metaIndex, ctype);
-					if (rtv)
-						continue;
-				}
-				else
-					m_oldImageOfUpdateRow[idx] = data;
-			}
-#endif
 			if (NULL_BIT(nullBitMap, idx) == 0)
 			{
 				if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
@@ -508,26 +373,17 @@ do \
 				}
 				if (unlikely(0!= m_columnInfo[ctype].parseFunc(columnMeta,record,data,newORold)))
 				{
-					LOG(ERROR) << "parse column type %d in %lu@%lu failed,table :%s.%s",
-						ctype, m_currentRecord->getCheckpoint2(),
-						m_currentRecord->getCheckpoint1(),
-						m_currentRecord->dbname(), m_currentRecord->tbname());
+					LOG(ERROR) << "parse column type " << ctype << " in " << m_currentOffset << "@" << m_currentFileID << " failed,table :" << record->meta->m_dbName << "." << record->meta->m_tableName;
 					return ParseStatus::ILLEGAL;
 				}
 			}
 			else
 			{
-				if (newORold)
-				{
-					record->setFixedColumn
-				}
+				if (!newORold)
+					record->setUpdatedColumnNull(idx);
 			}
 			metaIndex += m_columnInfo[ctype].metaLength;
 		}
-#ifdef COMPARE_UPDATE
-		if (type == EUPDATE && !newORold)
-			m_oldImageOfUpdateRow[tableMeta->columnCount] = data;
-#endif
 		return ParseStatus::OK;
 	}
 	uint64_t BinlogEventParser::getTableID(const char* data,
@@ -546,160 +402,118 @@ do \
 		}
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::parseRowLogevent(
-		const char * logEvent,  DATABASE_INCREASE::RecordType type)
+		const char * logEvent, size_t size, DATABASE_INCREASE::RecordType type)
 	{
-		const commonMysqlBinlogEventHeader_v4* header =
-			static_cast<const commonMysqlBinlogEventHeader_v4*>(logEvent);
-
-		enum_binlog_checksum_alg alg = m_descEvent->alg;
-		if (alg != BINLOG_CHECKSUM_ALG_OFF
-			&& alg != BINLOG_CHECKSUM_ALG_UNDEF)
-			rawDataSize = rawDataSize - BINLOG_CHECKSUM_LEN;
-		jumpOverRowLogEventHeader(data, rawDataSize);
-
-		const char* parsePos = data, * end = static_cast<const char*>(wrapper->rawData) + rawDataSize;
-		uint64_t tableID = getTableID(static_cast<const char*>(wrapper->rawData),
-			(Log_event_type)header->type);
-
-		const tableMap* tableMeta = m_tableMapCache.get(tableID);
-		assert(tableMeta != NULL);
-		ITableMeta* meta = m_metaDataManager->getMeta(tableMeta->dbName,
-			tableMeta->tableName);
-		if (meta == NULL)
+		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
+		if (m_descEvent->alg != BINLOG_CHECKSUM_ALG_OFF&& m_descEvent->alg != BINLOG_CHECKSUM_ALG_UNDEF)
+			size = size - BINLOG_CHECKSUM_LEN;
+		uint64_t tableID = 0;
+		const uint8_t *columnBitmap = nullptr,*updatedColumnBitMap = nullptr;
+		parseRowLogEventHeader(logEvent, size, tableID, columnBitmap,updatedColumnBitMap);
+		assert(m_tableMap.tableID == tableID);
+		const char* parsePos = logEvent, * end = logEvent + size;
+		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID,m_currentOffset));
+		if (meta == nullptr)
 		{
-			Log_r::Error("can not get meta of table %s.%s from metaDataManager in %lu@%lu",
-				tableMeta->dbName, tableMeta->tableName, m_currentOffset, m_currentFileID);
+			LOG(ERROR) << "can not get meta of table " << m_tableMap.dbName << "." << m_tableMap.tableName << "from metaDataManager in " << m_currentOffset << "@" << m_currentFileID;
 			return ParseStatus::NO_META;
 		}
-		if (meta->getColCount() != tableMeta->columnCount)
+		if (meta->m_columnsCount != m_tableMap.columnCount)
 		{
-			Log_r::Error(
-				"column count from table_map [%u] of table %s.%s is diffrent from which is from metaDataManager [%d]",
-				tableMeta->columnCount, tableMeta->dbName, tableMeta->tableName,
-				meta->getColCount());
+			LOG(ERROR) << "column count from table_map [" << m_tableMap.columnCount << "] of table " << m_tableMap.dbName << "." << m_tableMap.tableName << " is diffrent from which is from metaDataManager [" << meta->m_columnsCount << "]";
 			return ParseStatus::META_NOT_MATCH;
 		}
-		if (m_currentTransaction == NULL)
-			initTransaction(MAX_BATCH);
 		ParseStatus rtv = ParseStatus::OK;
 		while (parsePos < end)
 		{
-			if (m_currentTransaction->recordCount >= MAX_BATCH)
-				initTransaction(MAX_BATCH);
+			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DMLRecord) + DATABASE_INCREASE::recordHeadSize + header->eventSize * 4);
+			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord),meta,type);
+			setRecordBasicInfo(header, record);
+			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 
-			createNewRecord();
-			m_parseMem.init(m_currentRecord);
-			m_currentRecord->setRecordType(type);
-			m_currentRecord->setTimestamp(header->timestamp);
-			m_currentRecord->setCheckpoint(m_currentFileID, m_currentOffset);
-			m_currentRecord->setDbname(tableMeta->dbName);
-			m_currentRecord->setTbname(tableMeta->tableName);
-			m_currentRecord->setTableMeta(meta);
-			m_currentRecord->setThreadId(m_threadID);
-			if (type == EUPDATE || type == EDELETE)
+			if (type == DATABASE_INCREASE::R_UPDATE || type == DATABASE_INCREASE::R_INSERT)
 			{
-				m_currentRecord->setOldColumn(
-					(binlogBuf*)m_parseMem.alloc(
-						sizeof(binlogBuf) * tableMeta->columnCount),
-					tableMeta->columnCount);
-				if (0
-					!= (rtv = parseRowData(parsePos,
-						data + rawDataSize - parsePos, tableMeta, meta,
-						false, type)))
+				if (unlikely(ParseStatus::OK
+					!= (rtv = parseRowData(record, parsePos, end - parsePos, true, columnBitmap))))
 				{
-					Log_r::Error("parse record failed");
+					LOG(ERROR) << "parse record failed";
 					return rtv;
 				}
 			}
-			if (type == EUPDATE || type == EINSERT)
+			if (type == DATABASE_INCREASE::R_UPDATE || type == DATABASE_INCREASE::R_DELETE)
 			{
-				m_currentRecord->setNewColumn(
-					(binlogBuf*)m_parseMem.alloc(
-						sizeof(binlogBuf) * tableMeta->columnCount),
-					tableMeta->columnCount);
-				if (ParseStatus::OK
-					!= (rtv = parseRowData(parsePos,
-						data + rawDataSize - parsePos, tableMeta, meta,
-						true, type)))
+				if (unlikely(ParseStatus::OK
+					!= (rtv = parseRowData(record, parsePos, end - parsePos, false, type == DATABASE_INCREASE::R_UPDATE? updatedColumnBitMap: columnBitmap))))
 				{
-					Log_r::Error("parse record failed");
+					LOG(ERROR)<<"parse record failed";
 					return rtv;
 				}
 			}
-			if (parsePos > end)
+			record->finishedSet();
+			m_parsedRecords[m_parsedRecordCount++] = record;
+			if (unlikely(parsePos > end))
 			{
-				Log_r::Error("parse record failed for read over the end of log event,table :%s.%s ,checkpoint:%lu@%lu", tableMeta->dbName, tableMeta->tableName, m_currentOffset, m_currentFileID);
+				LOG(ERROR) << "parse record failed for read over the end of log event,table :" << m_tableMap.dbName << "." << m_tableMap.tableName << " ,checkpoint:" << m_currentOffset << "@" << m_currentFileID;
 				return ParseStatus::ILLEGAL;
 			}
-			m_parseMem.reset();
 		}
-		if (m_currentTransaction->recordCount >= MAX_BATCH)
-		{
-			commitCachedRecord(wrapper);
-			return ParseStatus::TRANS_COMMIT;
-		}
-		else
-			return ParseStatus::OK;
+		return ParseStatus::OK;
 	}
-	BinlogEventParser::ParseStatus BinlogEventParser::parseTraceID(void* rawData,
-		size_t rawDataSize)
+	BinlogEventParser::ParseStatus BinlogEventParser::parseTraceID(const char * logEvent,
+		size_t size)
 	{
 		return ParseStatus::OK;
 	}
-	BinlogEventParser::ParseStatus BinlogEventParser::parser(const char * logEvent)
+	BinlogEventParser::ParseStatus BinlogEventParser::parser(const char* rawData)
 	{
-		commonMysqlBinlogEventHeader_v4* header =
-			static_cast<commonMysqlBinlogEventHeader_v4*>(logEvent);
+		size_t size = *(uint64_t*)rawData;
+		const char* logEvent = rawData + sizeof(uint64_t);
+		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		m_currentOffset = header->eventOffset;
 		ParseStatus rtv = ParseStatus::OK;
+		m_parsedRecordCount = 0;
 		switch (header->type)
 		{
 		case WRITE_ROWS_EVENT:
 		case WRITE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(wrapper, DATABASE_INCREASE::R_INSERT);
+			rtv = parseRowLogevent(logEvent,size, DATABASE_INCREASE::R_INSERT);
 			break;
 		case UPDATE_ROWS_EVENT:
 		case UPDATE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(wrapper, DATABASE_INCREASE::R_UPDATE);
+			rtv = parseRowLogevent(logEvent,size, DATABASE_INCREASE::R_UPDATE);
 			break;
 		case DELETE_ROWS_EVENT:
 		case DELETE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(wrapper, DATABASE_INCREASE::R_DELETE);
-			break;
-		case ROTATE_EVENT:
-			rtv = updateFile(wrapper);
+			rtv = parseRowLogevent(logEvent, size, DATABASE_INCREASE::R_DELETE);
 			break;
 		case QUERY_EVENT:
-			rtv = parseQuery(wrapper);
+			rtv = parseQuery(logEvent, size);
 			break;
 		case TABLE_MAP_EVENT:
-			rtv = parseTableMap(wrapper);
-			break;
-		case ROWS_QUERY_LOG_EVENT:
-			rtv = parseTraceID(wrapper->rawData, wrapper->rawDataSize);
-			break;
-		case FORMAT_DESCRIPTION_EVENT:
-			rtv = createDescEvent(wrapper);
+			rtv = parseTableMap(logEvent, size);
 			break;
 		case XID_EVENT:
-			rtv = commit(wrapper);
+			rtv = commit(logEvent, size);
+			break;
+		case ROTATE_EVENT:
+			rtv = updateFile(logEvent, size);
+			break;
+		case ROWS_QUERY_LOG_EVENT:
+			rtv = parseTraceID(logEvent, size);
+			break;
+		case FORMAT_DESCRIPTION_EVENT:
+			rtv = createDescEvent(logEvent, size);
 			break;
 		default:
 			break;
 		}
-		if (rtv == ParseStatus::OK || rtv == ParseStatus::FILTER)
-		{
-			wrapper->rawData = NULL;
-			wrapper->rawDataSize = 0;
-			return rtv;
-		}
-		else if (rtv == ParseStatus::TRANS_COMMIT)
+		if (rtv <= FILTER)
 		{
 			return rtv;
 		}
 		else
 		{
-			Log_r::Error("parse failed");
+			LOG(ERROR)<<("parse failed");
 			return rtv;
 		}
 	}

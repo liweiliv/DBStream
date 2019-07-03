@@ -8,37 +8,81 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
 		include_directories(C:\\Program Files\\MySQL\\MySQL Server 8.0\\include)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-SET(LIBRARY_OUTPUT_PATH lib)
 include (GenerateExportHeader)
 
+#lz4
+find_library(LZ4 lz4 lz4/lib)
+if(NOT LZ4)
+        message(FATAL_ERROR "lz4 library not found")
+endif()
+#glog
+find_library(GLOG glog /usr/local/lib)
+if(NOT GLOG)
+        message(FATAL_ERROR "glog library not found")
+endif()
+#mysqlclient
+find_library(MYSQL_CLIENT libmysqlclient.a /usr/lib64/mysql/)
+if(NOT MYSQL_CLIENT)
+        message(FATAL_ERROR "libmysqlclient.a  not found")
+endif()
+
+
+
+
 #util
+SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(util utilDir)
 add_library(util SHARED ${utilDir})
+TARGET_LINK_LIBRARIES(util ${GLOG})
 #meta
+SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(meta metaDir)
 add_library(meta SHARED ${metaDir})
-TARGET_LINK_LIBRARIES(meta util sqlParser)
+TARGET_LINK_LIBRARIES(meta util sqlParser ${GLOG})
 
 #sql parser
+SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
-TARGET_LINK_LIBRARIES(sqlParser util)
+TARGET_LINK_LIBRARIES(sqlParser util ${GLOG})
 
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
-TARGET_LINK_LIBRARIES(mysqlParserFuncs meta)
+TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG})
 #memory
+SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
-TARGET_LINK_LIBRARIES(memory util)
+TARGET_LINK_LIBRARIES(memory util ${GLOG})
 #store
+SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util memory meta)
+TARGET_LINK_LIBRARIES(store  util memory meta ${LZ4} ${GLOG})
+
+#datasource
+SET(LIBRARY_OUTPUT_PATH lib)
+aux_source_directory(dataSource dataSourceDir)
+add_library(dataSource SHARED ${dataSourceDir})
+TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(dataSource dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #mysqlDataSource
+SET(LIBRARY_OUTPUT_PATH lib)
+include_directories(/usr/include/mysql)
 aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
 add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
-TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser)
-
+TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(dataSource pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+#main
+SET(EXECUTABLE_OUTPUT_PATH bin)
+ADD_EXECUTABLE(DBStream  DBStream.cpp)
+TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta memory)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(DBStream dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #unit test
 SET(EXECUTABLE_OUTPUT_PATH test)
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)

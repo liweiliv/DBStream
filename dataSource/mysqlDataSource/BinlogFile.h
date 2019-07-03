@@ -1,13 +1,7 @@
-nlogFile.h
- *
- *  Created on: 2017年2月14日
- *      Author: liwei
- */
-
-#ifndef SRC_CONGO_DRC_LIB_MYSQL_BINLOG_READER_BINLOGFILE_H_
-#define SRC_CONGO_DRC_LIB_MYSQL_BINLOG_READER_BINLOGFILE_H_
+#pragma once
 #include <stdint.h>
 #include <string>
+#include "../../util/file.h"
 namespace DATA_SOURCE {
 	/*
 	 * 文件错误err设置为errno，其他错误为以下错误号
@@ -40,7 +34,7 @@ namespace DATA_SOURCE {
 	{
 	private:
 		std::string m_filePath;
-		int m_fileFD;
+		fileHandle m_fileFD;
 		size_t m_fileSize;
 		char* m_readBuf;
 		char* m_defaultDataBuf;
@@ -77,7 +71,7 @@ namespace DATA_SOURCE {
 	class WriteBinlogFile
 	{
 	private:
-		int m_fileFD;
+		fileHandle m_fileFD;
 		char* m_writeBuf;
 		char* m_writerBufPos;
 		size_t m_logOffset;
@@ -89,7 +83,7 @@ namespace DATA_SOURCE {
 	public:
 		WriteBinlogFile(size_t batch_size = 0, bool sync = false, uint32_t flushCycle = 1);
 		int finish();
-		int setFileInfo(int fd, uint64_t offset);
+		int setFileInfo(fileHandle fd, uint64_t offset);
 		int getErr();
 		inline uint64_t getLogOffset() { return m_logOffset; }
 		int flushBuf();
@@ -97,5 +91,4 @@ namespace DATA_SOURCE {
 		int writeBinlogEvent(const char* binlogEvent, size_t size, bool& flushed);
 	};
 }
-#endif /* SRC_CONGO_DRC_LIB_MYSQL_BINLOG_READER_BINLOGFILE_H_ */
 

@@ -36,6 +36,25 @@ namespace STORE {
 		}
 		return 0;
 	}
+	int store::stop()
+	{
+		m_genratedStreamBlockManager->stop();
+		m_mainStreamblockManager->stop();
+		m_schedule->stop();
+	}
+	void store::begin()
+	{
+		return m_mainStreamblockManager->begin();
+	}
+	void store::commit()
+	{
+		return m_mainStreamblockManager->commit();
+	}
+	bool store::checkpoint(uint64_t& timestamp, uint64_t logOffset)
+	{
+		return m_mainStreamblockManager->checkpoint(timestamp, logOffset);
+	}
+
 	int store::insert(DATABASE_INCREASE::record* r)
 	{
 		return m_mainStreamblockManager->insert(r);

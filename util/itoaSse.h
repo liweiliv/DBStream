@@ -1,4 +1,4 @@
-i// SSE2 implementation according to http://0x80.pl/articles/sse-itoa.html
+// SSE2 implementation according to http://0x80.pl/articles/sse-itoa.html
 // Modifications: (1) fix incorrect digits (2) accept all ranges (3) write to user provided buffer.
 #pragma once
 #if defined(i386) || defined(__amd64) || defined(_M_IX86) || defined(_M_X64)

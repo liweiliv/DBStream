@@ -45,7 +45,7 @@ int fileList::load()
 				continue;
 			const char* fileName = file->d_name;
 #endif
-			if (strncmp(fileName, prefix.c_str, prefix.size()) != 0)
+			if (strncmp(fileName, prefix.c_str(), prefix.size()) != 0)
 				continue;
 			if (fileName[prefix.size()] != '.')
 				continue;

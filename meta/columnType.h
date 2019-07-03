@@ -1,5 +1,6 @@
 #pragma once
 #include "../util/itoaSse.h"
+#include <string.h>
 namespace META {
 	static constexpr uint16_t numToStrMap[] = { 0x3030,0x3031,0x3032,0x3033,0x3034,0x3035,0x3036,0x3037,0x3038,0x3039,
 												0x3130,0x3131,0x3132,0x3133,0x3134,0x3135,0x3136,0x3137,0x3138,0x3139,
@@ -33,6 +34,8 @@ namespace META {
 #define T_SET 23
 #define T_ENUM 24
 #define T_BYTE 25
+#define T_BINARY 26
+#define T_TEXT 27
 #define T_MAX_TYPE 255
 	struct columnTypeInfo
 	{
@@ -40,34 +43,37 @@ namespace META {
 		uint8_t columnTypeSize;
 		bool asIndex;
 		bool fixed;
+		bool stringType;
 	};
 	constexpr static columnTypeInfo columnInfos[] = {
-	{T_UNION,4,true,false,},
-	{T_UINT8, 1,true,true},
-	{T_INT8,1 ,true,true},
-	{T_UINT16,2,true,true},
-	{T_INT16, 2,true,true},
-	{T_UINT32,4,true,true},
-	{T_INT32,4 ,true,true},
-	{T_UINT64,8,true,true},
-	{T_INT64,8,true,true},
-	{T_BIG_NUMBER,4 ,false,false},
-	{T_FLOAT,4,true,true},
-	{T_DOUBLE,8,true,true},
-	{T_DECIMAL,4,true,true},
-	{T_TIMESTAMP,8 ,true,true},
-	{T_DATETIME,8,false,true},
-	{T_DATE,4,false,true},
-	{T_YEAR,2,false,true},
-	{T_TIME,8,false,true},
-	{T_BLOB,4,false,true},
-	{T_STRING,4,false,true},
-	{T_JSON,4,false,true},
-	{T_XML,4,false,true},
-	{T_GEOMETRY,4,false,true},
-	{T_SET,8,false,true},
-	{T_ENUM,2,false,true},
-	{T_BYTE,8,false,true}
+	{T_UNION,4,true,false,false},
+	{T_UINT8, 1,true,true,false},
+	{T_INT8,1 ,true,true,false},
+	{T_UINT16,2,true,true,false},
+	{T_INT16, 2,true,true,false},
+	{T_UINT32,4,true,true,false},
+	{T_INT32,4 ,true,true,false},
+	{T_UINT64,8,true,true,false},
+	{T_INT64,8,true,true,false},
+	{T_BIG_NUMBER,4 ,false,false,false},
+	{T_FLOAT,4,true,true,false},
+	{T_DOUBLE,8,true,true,false},
+	{T_DECIMAL,4,true,true,false},
+	{T_TIMESTAMP,8 ,true,true,false},
+	{T_DATETIME,8,false,true,false},
+	{T_DATE,4,false,true,false},
+	{T_YEAR,2,false,true,false},
+	{T_TIME,8,false,true,false},
+	{T_BLOB,4,false,true,false},
+	{T_STRING,4,false,true,true},
+	{T_JSON,4,false,true,true},
+	{T_XML,4,false,true,true},
+	{T_GEOMETRY,4,false,true,false},
+	{T_SET,8,false,true,true},
+	{T_ENUM,2,false,true,true},
+	{T_BYTE,8,false,true,false},
+	{T_BINARY,4,false,false,false},
+	{T_TEXT,4,false,false,true}
 	};
 #pragma pack(1)
 	struct timestamp
@@ -80,6 +86,10 @@ namespace META {
 			};
 			uint64_t time;
 		};
+		static inline uint64_t create(uint32_t seconds, uint32_t nanoSeconds)
+		{
+			return (static_cast<uint64_t>(seconds) << 32) + nanoSeconds;
+		}
 		inline uint8_t toString(char* str)
 		{
 			uint8_t len = u32toa_sse2(seconds, str);
@@ -155,7 +165,7 @@ namespace META {
 			{
 				str[yearLength +14] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(yearLength + 15) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str+yearLength + 15) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + yearLength + 15 + 6 - secLen + 1, usecBuffer, secLen);
 				return yearLength + 15+6+1;
@@ -193,7 +203,7 @@ namespace META {
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(hourLength + 6) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str+hourLength + 6) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;
@@ -251,7 +261,7 @@ namespace META {
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(hourLength + 6) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str+hourLength + 6) = 3458817497345568816ul;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;

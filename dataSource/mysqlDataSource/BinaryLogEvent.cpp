@@ -1,4 +1,4 @@
-i/*
+/*
  *  * BinaryLogEvent.cpp
  *   *
  *    *  Created on: 2018年7月2日
@@ -8,7 +8,7 @@ i/*
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "C:\\Program Files\\MySQL\\MySQL Server 8.0\\include\mysql.h" //todo 
+#include "mysql.h" 
 #include "BinaryLogEvent.h"
 namespace DATA_SOURCE
 {
@@ -481,8 +481,7 @@ namespace DATA_SOURCE
 			 * 		 		 		 be even bigger, but this will suffice to catch most corruption
 			 * 		 		 		 		 errors that can lead to a crash.
 			 * 		 		 		 		 		 */
-			if (status_vars_len > std::min<unsigned long>(data_len,
-				MAX_SIZE_LOG_EVENT_STATUS))
+			if (status_vars_len > (data_len< MAX_SIZE_LOG_EVENT_STATUS? data_len : MAX_SIZE_LOG_EVENT_STATUS))
 			{
 				query.clear();
 				return;
@@ -643,8 +642,7 @@ namespace DATA_SOURCE
 					i++)
 				{
 					strncpy(mts_accessed_db_names[i], (char*)pos,
-						std::min<unsigned long>(NAME_LEN,
-							start + status_vars_len - pos));
+						(NAME_LEN<start + status_vars_len - pos? NAME_LEN: start + status_vars_len - pos));
 					mts_accessed_db_names[i][NAME_LEN - 1] = 0;
 					pos += 1 + strlen((const char*)pos);
 				}
@@ -709,9 +707,8 @@ namespace DATA_SOURCE
 			 * 		 		 		 		 errors that can lead to a crash.
 			 * 		 		 		 		 		 */
 			if (status_vars_len
-				> std::min<unsigned long>(
-					size - (fmt->common_header_len + post_header_len),
-					MAX_SIZE_LOG_EVENT_STATUS))
+				> (
+					size - (fmt->common_header_len + post_header_len)<MAX_SIZE_LOG_EVENT_STATUS? size - (fmt->common_header_len + post_header_len): MAX_SIZE_LOG_EVENT_STATUS))
 			{
 				return -1;
 			}

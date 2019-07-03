@@ -1,25 +1,28 @@
-#include "C:\\Program Files\\MySQL\\MySQL Server 8.0\\include\mysql.h" //todo 
+#pragma once
+#include "mysql.h" 
 #include <sys/stat.h>
+#include "../../util/config.h"
+#include "../dataSourceConf.h"
 #ifdef OS_LINUX
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <ifaddrs.h>
-#include "sql_common.h"
+#include "mysql/sql_common.h"
 #endif
 #ifdef OS_WIN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "mysql/sql_common.h"
 #endif
-#include "C:\\Program Files\\MySQL\\MySQL Server 8.0\\include\\\mysqlx_error.h"
-#include "..//..//glog/logging.h"
+#include "mysqlx_error.h"
+#include "../../glog/logging.h"
+#include "mysql/my_byteorder.h"
 namespace DATA_SOURCE {
 	class mysqlConnector {
 	private:
-		static constexpr auto HOST = "host";
-		static constexpr auto PORT = "port";
-		static constexpr auto USER = "user";
-		static constexpr auto PASSWD = "password";
+		static constexpr auto SSL_KEY = "sslKey";
+		static constexpr auto SSL_CA = "sslCa";
+		static constexpr auto SSL_CERT = "sslCert";
 		std::string m_host;
 		std::string m_user;
 		std::string m_password;
@@ -27,7 +30,62 @@ namespace DATA_SOURCE {
 		std::string m_sslCert;
 		std::string m_sslCa;
 		uint16_t m_port;
+		config* m_conf;
 	public:
+		mysqlConnector(config *conf):m_port(0),m_conf(conf)
+		{
+		}
+		std::string initByConf()
+		{
+			m_host = m_conf->get(SECTION, std::string(CONN_SECTION).append(HOST).c_str());
+			if (m_host.empty())
+				return "host can not be null in config";
+			m_user = m_conf->get(SECTION, std::string(CONN_SECTION).append(USER).c_str());
+			if (m_user.empty())
+				return "user can not be null in config";
+			m_password = m_conf->get(SECTION, std::string(CONN_SECTION).append(PASSWORD).c_str());
+			if (m_password.empty())
+				return "password can not be null in config";
+			if((m_port = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(PORT).c_str(),0,0,65536))==0)
+				return "port can not be null in config";
+			m_sslKey = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_KEY).c_str());
+			m_sslCert = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CERT).c_str());
+			m_sslCa = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CA).c_str());
+			return "";
+		}
+		std::string updateConfig(const char * key,const char * value)
+		{
+			if (strcmp(key, HOST) == 0)
+				m_host = value;
+			else if (strcmp(key, USER) == 0)
+				m_user = value;
+			if (strcmp(key, PASSWORD) == 0)
+				m_password = value;
+			else if (strcmp(key, SSL_KEY) == 0)
+				m_sslKey = value;
+			else if (strcmp(key, SSL_CERT) == 0)
+				m_sslCert = value;
+			if (strcmp(key, SSL_CA) == 0)
+				m_sslCa = value;
+			else if (strcmp(key, PORT) == 0)
+			{
+				const char* ptr = value;
+				int port = 0;
+				while (*ptr != '\0')
+				{
+					if (*(ptr) <= '9' && *(ptr) >= '0')
+						port = port * 10 + (*ptr) - '0';
+					else
+						return std::string("config ") + PORT + " must be number";
+				}
+				if (port > 0xffffu)
+					return std::string("config ") + PORT + " must less than 65536";
+				m_port = port;
+			}
+			else
+				return std::string("unknown config:") + key + ":" + value;
+			return "";
+		}
 		MYSQL* getConnect()
 		{
 			MYSQL* conn = mysql_init(NULL);
@@ -60,7 +118,7 @@ namespace DATA_SOURCE {
 			}
 			return conn;
 		}
-		bool getVariables(MYSQL* conn, const char* variableName, std::string& v)
+		static bool getVariables(MYSQL* conn, const char* variableName, std::string& v)
 		{
 			MYSQL_RES* res;
 			MYSQL_ROW row;

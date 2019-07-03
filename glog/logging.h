@@ -43,15 +43,11 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#ifdef OS_INUX
+#if 1
 # include <unistd.h>
 #endif
-#ifdef OS_WIN
-#define __builtin_expect(a,b) (a)
-#define __attribute__
-#endif
 #include <vector>
-#define GLOG_NO_ABBREVIATED_SEVERITIES 
+
 #if defined(_MSC_VER)
 #define GLOG_MSVC_PUSH_DISABLE_WARNING(n) __pragma(warning(push)) \
                                      __pragma(warning(disable:n))
@@ -513,8 +509,8 @@ DECLARE_bool(stop_logging_if_full_disk);
 namespace google {
 
 // They need the definitions of integer types.
-#include "log_severity.h"
-#include "vlog_is_on.h"
+#include "glog/log_severity.h"
+#include "glog/vlog_is_on.h"
 
 // Initialize google's logging library. You will see the program name
 // specified by argv0 in log outputs.

@@ -19,6 +19,17 @@ private:
     std::string m_filePath;
     shared_mutex m_lock;
 public:
+	config(const char * path):m_filePath(path)
+	{
+	}
+	~config()
+	{
+		for (std::map<std::string, std::map<std::string, std::string>* >::iterator iter = m_sections.begin(); iter != m_sections.end(); iter++)
+		{
+			delete iter->second;
+		}
+		m_sections.clear();
+	}
 	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
 	{
 		assert(defaultValue <= max && defaultValue >= min && min <= max);

@@ -1,4 +1,4 @@
-i/* Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -72,6 +72,11 @@ i/* Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
 		 this constant is sufficient to avoid malloc() on all inputs I have tried.
 	*/
 #define DTOA_BUFF_SIZE (460 * sizeof(void *))
+#define NOT_FIXED_DEC 31
+#define SIZEOF_CHARP sizeof(char*)
+#define MY_ALIGN(x,a) (((x)+(a)-1)&~(a - 1))
+#define MAX_DECPT_FOR_F_FORMAT DBL_DIG
+
 
 	/* Magic value returned by dtoa() to indicate overflow */
 #define DTOA_OVERFLOW 9999
@@ -305,7 +310,7 @@ size_t my_gcvt(double x, my_gcvt_arg_type type, int width, char* to,
 	/* We want to remove '-' from equations early */
 	if (x < 0.) width--;
 
-	res = dtoa(x, 4, type == MY_GCVT_ARG_DOUBLE ? width : MY_MIN(width, FLT_DIG),
+	res = dtoa(x, 4, type == MY_GCVT_ARG_DOUBLE ? width : (width<FLT_DIG?width:FLT_DIG),
 		&decpt, &sign, &end, buf, sizeof(buf));
 	if (decpt == DTOA_OVERFLOW) {
 		dtoa_free(res, buf, sizeof(buf));

@@ -1,4 +1,5 @@
-i#include "../util/barrier.h"
+#pragma once
+#include "../util/barrier.h"
 #include "../util/likely.h"
 #include <atomic>
 #ifndef ALIGN
@@ -16,7 +17,7 @@ private:
 		uint64_t size;
 		ringBufferNode(uint64_t size = DEFAULT_NODE_SIZE-2*sizeof(uint64_t))
 		{
-			next.store(std::memory_order_relaxed, nullptr);
+			next.store(nullptr,std::memory_order_relaxed);
 			this->size = (size+ 2*sizeof(uint64_t)) > DEFAULT_NODE_SIZE ? (size + 2*sizeof(uint64_t)) : DEFAULT_NODE_SIZE;
 			startPos = malloc(size);
 			begin.store(ALIGN((uint64_t)startPos, 8) - (uint64_t)startPos, std::memory_order_relaxed);
@@ -68,7 +69,7 @@ public:
 			{
 				if (likely(head->end.compare_exchange_weak(end, ALIGN(end, 8) + size + sizeof(uint64_t), std::memory_order_relaxed, std::memory_order_relaxed)))
 				{
-					mem = head->startPos + ALIGN(end, 8);
+					mem = ((char*)head->startPos) + ALIGN(end, 8);
 					*(uint64_t*)mem = size;
 					barrier;
 					return ((int8_t*)mem) + sizeof(uint64_t);
@@ -117,7 +118,7 @@ public:
 	{
 		mem = (void*)(((int8_t*)mem) - sizeof(uint64_t));
 		*(uint64_t*)mem = (*(uint64_t*)mem) | NODE_MASK;
-		ringBufferNode* node = m_tail->load(std::memory_order_relaxed);
+		ringBufferNode* node = m_tail.load(std::memory_order_relaxed);
 		if (unlikely(*(uint64_t*)node) & NODE_MASK)
 			return;
 		mem = (void*)(((int8_t*)node->startPos) + node->begin.load(std::memory_order_relaxed));//aba risk
@@ -127,16 +128,16 @@ public:
 				return;
 			while (true)
 			{
-				if (mem != node->startPos + node->begin.load(std::memory_order_relaxed))
+				if (mem != ((char*)node->startPos) + node->begin.load(std::memory_order_relaxed))
 				{
 					m_tail.store(node, std::memory_order_relaxed);
 					return;
 				}
-				mem += ((*(uint64_t*)mem) & (~NODE_MASK)) + sizeof(uint64_t);
-				node->begin.store(mem - node->startPos, std::memory_order_relaxed);
+				mem = ((char*)mem)+((*(uint64_t*)mem) & (~NODE_MASK)) + sizeof(uint64_t);
+				node->begin.store(((char*)mem) - (char*)node->startPos, std::memory_order_relaxed);
 				if ((*(uint64_t*)mem) & NODE_MASK)
 					continue;
-				if ((node->end.load(std::memory_order_relaxed) & NODE_MASK) && mem - node->startPos == node->end.load(std::memory_order_relaxed))
+				if ((node->end.load(std::memory_order_relaxed) & NODE_MASK) && ((char*)mem) - (char*)node->startPos == node->end.load(std::memory_order_relaxed))
 				{
 					ringBufferNode* next = node->next.load(std::memory_order_relaxed);
 					m_tail.store(next, std::memory_order_relaxed);
