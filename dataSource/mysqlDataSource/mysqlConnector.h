@@ -30,6 +30,8 @@ namespace DATA_SOURCE {
 		std::string m_sslCert;
 		std::string m_sslCa;
 		uint16_t m_port;
+		uint32_t m_readTimeOut;
+		uint32_t m_connectTimeOut;
 		config* m_conf;
 	public:
 		mysqlConnector(config *conf):m_port(0),m_conf(conf)
@@ -51,6 +53,8 @@ namespace DATA_SOURCE {
 			m_sslKey = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_KEY).c_str());
 			m_sslCert = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CERT).c_str());
 			m_sslCa = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CA).c_str());
+			m_readTimeOut = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(READ_TIMEOUT).c_str(), 10, 0, 65536);
+			m_connectTimeOut = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(CONNNECT_TIMEOUT).c_str(), 10, 0, 65536);
 			return "";
 		}
 		std::string updateConfig(const char * key,const char * value)
@@ -89,9 +93,8 @@ namespace DATA_SOURCE {
 		MYSQL* getConnect()
 		{
 			MYSQL* conn = mysql_init(NULL);
-			uint32_t timeout = 10;
-			mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-			mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+			mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &m_connectTimeOut);
+			mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &m_readTimeOut);
 			if (m_sslKey.empty() && m_sslCert.empty() && m_sslCa.empty())
 			{
 				int ssl_mode = SSL_MODE_DISABLED;

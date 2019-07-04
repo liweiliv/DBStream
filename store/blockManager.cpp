@@ -206,6 +206,8 @@ namespace STORE {
 	{
 		block* last = nullptr;
 		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
+		if(blockId<1)
+			return false;
 		while ((last = getBasciBlock(blockId)) != nullptr)
 		{
 			if (last->m_recordCount == 0)
@@ -249,7 +251,7 @@ namespace STORE {
 	}
 	block* blockManager::getBasciBlock(uint32_t blockId)
 	{
-		if (m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
+		if (m_lastBlockId.load(std::memory_order_relaxed)<1||m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
 			return nullptr;
 		m_blockLock.lock_shared();
 		block* b = static_cast<block*>(m_blocks.get(blockId));

@@ -26,7 +26,7 @@ namespace DATA_SOURCE {
 		binlogFileInfo(const binlogFileInfo& info) :file(info.file), size(info.size) {}
 	};
 
-	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool) :m_pool(pool)
+	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool,mysqlConnector * connector) :m_pool(pool),m_mysqlConnector(connector)
 	{
 		m_conn = NULL;
 		m_serverId = mysqlConnector::genSrvierId(time(nullptr));
@@ -648,6 +648,16 @@ namespace DATA_SOURCE {
 		m_readLocalBinlog = false;
 		std::map<uint64_t, fileInfo> binaryLogs;
 		int ret = READ_OK;
+		if (m_conn != nullptr)
+		{
+			mysql_close(m_conn);
+			m_conn = nullptr;
+		}
+		if (nullptr == (m_conn = m_mysqlConnector->getConnect()))
+		{
+			LOG(ERROR) << "seek Binlog in remote mysql server failed for connect db failed";
+			return -1;
+		}
 		if (showBinaryLogs(m_conn, binaryLogs) != 0 || binaryLogs.size() == 0)
 		{
 			LOG(ERROR) << "seek Binlog in remote mysql server failed for binlog list is empty";

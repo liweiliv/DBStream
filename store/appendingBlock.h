@@ -30,6 +30,7 @@ namespace STORE
 class appendingBlockIterator;
 class appendingBlockLineIterator;
 static constexpr int maxRecordInBlock = 1024 * 128;
+#pragma pack(1)
 class appendingBlock: public block
 {
 public:
@@ -845,5 +846,6 @@ find record by timestamp
 		return m_block != nullptr && m_recordId < m_block->m_recordCount;
 	}
 };
+#pragma pack()
 }
 

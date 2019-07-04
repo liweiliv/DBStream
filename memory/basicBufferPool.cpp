@@ -39,6 +39,16 @@ DLL_EXPORT basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _
 		basicBlockCount = 48;
 		blockSize = basicBlockCount * basicBlockSize;
 	}
+	else if(basicBlockSize <= 1024 * 1024 * 4)
+	{
+		basicBlockCount = 16;
+		blockSize = basicBlockCount * basicBlockSize;
+	}
+	else
+	{
+		basicBlockCount = 1;
+		blockSize = basicBlockCount * basicBlockSize;
+	}
 	maxBlocks = maxMem / blockSize;
 }
 DLL_EXPORT basicBufferPool::~basicBufferPool()

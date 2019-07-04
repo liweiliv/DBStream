@@ -2,7 +2,7 @@
 #include <atomic>
 struct ref {
 	std::atomic<int> m_ref;
-	ref() {
+	ref():m_ref(0) {
 	}
 	inline bool use()
 	{

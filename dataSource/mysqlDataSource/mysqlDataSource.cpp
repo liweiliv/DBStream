@@ -36,7 +36,7 @@ namespace DATA_SOURCE {
 		m_connector = new mysqlConnector(conf);
 		m_metaDataCollection = metaDataCollection;
 		m_store = store;
-		m_reader = new mysqlBinlogReader(m_readerBufferPool);
+		m_reader = new mysqlBinlogReader(m_readerBufferPool,m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 	}
 	mysqlDataSource::~mysqlDataSource()
@@ -165,8 +165,8 @@ namespace DATA_SOURCE {
 		uint64_t timestamp = 0, logOffset = 0;
 		if (!m_store->checkpoint(timestamp, logOffset))
 		{
-			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0xfffffffffffffffful)<<24;
-			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0xfffffffffffffffful);
+			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0ffffffffffffffful)<<24;
+			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0x0ffffffffffffffful);
 		}
 		if (logOffset > 0)
 		{
@@ -218,6 +218,10 @@ namespace DATA_SOURCE {
 	bool mysqlDataSource::running()const
 	{
 		return m_running;
+	}
+	extern "C" DLL_EXPORT dataSource* instance(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
+	{
+		return new mysqlDataSource(conf,metaDataCollection,store);
 	}
 
 }

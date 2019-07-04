@@ -377,6 +377,7 @@ public:
 			return 0;
 		}
 	};
+#pragma pack()
 	class solidBlockIterator :public iterator {
 		uint32_t m_recordId;
 		solidBlock* m_block;

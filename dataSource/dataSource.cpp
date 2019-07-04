@@ -75,10 +75,10 @@ namespace DATA_SOURCE {
 		}
 		std::string dataSourceLibDirPath = conf->get(SECTION, DATASOURCE_LIBDIR_PATH, DATASOURCE_LIBDIR_DEFAULT_PATH);
 #ifdef OS_LINUX
-		std::string path = dataSourceLibDirPath.append("lib").append(dataSourceType).append("Reader.so");
+		std::string path = dataSourceLibDirPath.append("lib").append(dataSourceType).append("DataSource.so");
 #endif
 #ifdef OS_WIN
-		std::string path = dataSourceLibDirPath.append(dataSourceType).append("Reader.dll");
+		std::string path = dataSourceLibDirPath.append(dataSourceType).append("DataSource.dll");
 #endif
 		dataSource* ds = loadFromDll(path.c_str(), conf, metaDataCollection, store);
 		if (ds == nullptr)

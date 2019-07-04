@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <mutex>
+#include <assert.h>
 #include "spinlock.h"
 #include "shared_mutex.h"
 #include <stddef.h>

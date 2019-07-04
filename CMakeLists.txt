@@ -74,15 +74,26 @@ aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
 add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
 TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(dataSource pthread)
+	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
 SET(EXECUTABLE_OUTPUT_PATH bin)
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
 TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta memory)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(DBStream dl)
+	TARGET_LINK_LIBRARIES(DBStream dl pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+#-------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------
 #unit test
 SET(EXECUTABLE_OUTPUT_PATH test)
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)
@@ -124,3 +135,13 @@ ADD_EXECUTABLE(testDualLinkList  util/unittest/testDualLinkList.cpp)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testDualLinkList pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testConfig  util/unittest/testConfig.cpp)
+TARGET_LINK_LIBRARIES(testConfig util)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testConfig pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testTrieTree  util/unittest/testTrieTree.cpp)
+TARGET_LINK_LIBRARIES(testTrieTree util)
+

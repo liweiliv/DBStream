@@ -2,7 +2,7 @@
  * config.h
  *
  *  Created on: 2019年1月18日
- *      Author: liwei
+ *	  Author: liwei
  */
 
 #ifndef CONFIG_H_
@@ -12,23 +12,31 @@
 #include "shared_mutex.h"
 #include <stdio.h>
 #include <errno.h>
+#include <assert.h>
 #include "../glog/logging.h"
+#include "trieTree.h"
 class config{
 private:
-    std::map<std::string, std::map<std::string,std::string>* > m_sections;
-    std::string m_filePath;
-    shared_mutex m_lock;
+	trieTree m_sections;
+	std::string m_filePath;
+	shared_mutex m_lock;
 public:
-	config(const char * path):m_filePath(path)
+	static int freeValue(void* v)
+	{
+		printf("delete :%s\n",static_cast<char*>(v));
+		delete []static_cast<char*>(v);
+		return 0;
+	}
+	static int freeSection(void* v)
+	{
+		delete static_cast<trieTree*>(v);
+		return 0;
+	}
+	config(const char * path):m_sections(freeSection),m_filePath(path==nullptr?"":path)
 	{
 	}
 	~config()
 	{
-		for (std::map<std::string, std::map<std::string, std::string>* >::iterator iter = m_sections.begin(); iter != m_sections.end(); iter++)
-		{
-			delete iter->second;
-		}
-		m_sections.clear();
 	}
 	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
 	{
@@ -43,100 +51,107 @@ public:
 			return max;
 		return v;
 	}
-    std::string get(const char* section,const char* key,const char * defaultValue = NULL)
-    {
+	std::string get(const char* section,const char* key,const char * defaultValue = NULL)
+	{
 		m_lock.lock_shared();
-        std::map<std::string, std::map<std::string,std::string>* >::const_iterator secIter = m_sections.find(section);
-        if(secIter == m_sections.end())
-        {
+		trieTree* sectionTree = static_cast<trieTree*>(m_sections.find((const uint8_t*)section));
+		if(sectionTree == nullptr)
+		{
 			m_lock.unlock_shared();
-            return defaultValue?defaultValue:std::string();
-        }
-        std::map<std::string,std::string>::const_iterator kvIter = secIter->second->find(key);
-        if(kvIter == secIter->second->end())
-        {
+			return defaultValue?defaultValue:std::string();
+		}
+		const char* value = static_cast<const char *>(sectionTree->find((const uint8_t*)key));
+		if(value == nullptr)
+		{
 			m_lock.unlock_shared();
-            return defaultValue?defaultValue:std::string();
-        }
-        else
-        {
-            std::string value = kvIter->second;
+			return defaultValue?defaultValue:std::string();
+		}
+		else
+		{
+			std::string _value = value;
 			m_lock.unlock_shared();
-            return value;
-        }
-    }
-    void set(const char* section,const char* key,const char *value)
-    {
+			return _value;
+		}
+	}
+	void set(const char* section,const char* key,const char *value)
+	{
+		char* _value = new char[strlen(value) + 1];
+		strcpy(_value, value);
 		m_lock.lock();
-        std::map<std::string, std::map<std::string,std::string>* >::iterator secIter = m_sections.find(section);
-        if(secIter == m_sections.end())
-            secIter = m_sections.insert(
-                    std::pair<std::string, std::map<std::string,std::string>* >(section,new std::map<std::string,std::string>())).first;
-        std::map<std::string,std::string>::iterator kvIter = secIter->second->find(key);
-        if(kvIter == secIter->second->end())
-            secIter->second->insert(std::pair<std::string,std::string>(key,value));
-        else
-            kvIter->second = value;
+		trieTree* sectionTree = static_cast<trieTree*>(m_sections.find((const uint8_t*)section));
+		if (sectionTree == nullptr)
+		{
+			sectionTree = new trieTree(freeValue);
+			sectionTree->insert((const uint8_t*)key, _value);
+			m_sections.insert((uint8_t*)section, sectionTree);
+		}
+		else
+		{
+			sectionTree->insert((const uint8_t*)key, _value);
+		}
 		m_lock.unlock();
-    }
-    static std::string trim(const char * str,size_t size)
-    {
-        const char *start = str,*end = str+size-1;
-        while(start-str<(uint32_t)size&&(*start=='\t'||*start==' '||*start=='\n'))
-            start++;
-        while(end>=start&&(*end=='\t'||*end==' '||*end=='\n'))
-            end--;
-        if(end<start)
-            return std::string();
-        else
-            return std::string(start,end-start+1);
-    }
-    int load()
-    {
-        if(m_filePath.empty())
-        {
-            LOG(ERROR)<<"parameter filePath is empty ,load config failed";
-            return -1;
-        }
-        FILE * fp = fopen(m_filePath.c_str(),"r");
-        if(fp == NULL)
-        {
-            LOG(ERROR)<<"open filePath  "<<m_filePath<<" failed for: "<<errno<<" , "<<strerror(errno);
-            return -1;
-        }
-        char buf[1024] = {0};
-        char * equal,*hashtag;
-        std::string section;
-        while(!feof(fp))
-        {
-            if(NULL == fgets(buf,1023,fp))
-                break;
-            /*trim and filter data after [#]*/
-            while((hashtag = strchr(buf,'#'))!=NULL)
-            {
-                if(hashtag!=&buf[0]&&*(hashtag-1)=='\\'&&(hashtag<&buf[2]||*(hashtag-2)!='\\'))//[\#] is Escape
-                    continue;
-                *hashtag = '\0';
-                break;
-            }
-            int16_t size = strlen(buf);
-            std::string line = trim(buf,size);
+	}
+	static std::string trim(const char * str,size_t size)
+	{
+		const char *start = str,*end = str+size-1;
+		while(start-str<(uint32_t)size&&(*start=='\t'||*start==' '||*start=='\n'))
+			start++;
+		while(end>=start&&(*end=='\t'||*end==' '||*end=='\n'))
+			end--;
+		if(end<start)
+			return std::string();
+		else
+			return std::string(start,end-start+1);
+	}
+	int load()
+	{
+		if(m_filePath.empty())
+		{
+			LOG(ERROR)<<"parameter filePath is empty ,load config failed";
+			return -1;
+		}
+		FILE * fp = fopen(m_filePath.c_str(),"r");
+		if(fp == NULL)
+		{
+			LOG(ERROR)<<"open filePath  "<<m_filePath<<" failed for: "<<errno<<" , "<<strerror(errno);
+			return -1;
+		}
+		char buf[1024] = {0};
+		char * hashtag;
+		std::string section;
+		while(!feof(fp))
+		{
+			if(NULL == fgets(buf,1023,fp))
+				break;
+			/*trim and filter data after [#]*/
+			while((hashtag = strchr(buf,'#'))!=NULL)
+			{
+				if(hashtag!=&buf[0]&&*(hashtag-1)=='\\'&&(hashtag<&buf[2]||*(hashtag-2)!='\\'))//[\#] is Escape
+					continue;
+				*hashtag = '\0';
+				break;
+			}
+			int16_t size = strlen(buf);
+			std::string line = trim(buf,size);
+			if(line.empty())
+				continue;
+			size_t equalPos = line.find('=');
+			if(equalPos==std::string::npos)//section
+			{
+				section = line;
+				continue;
+			}
+			else //key and value
+			{
+				std::string key = trim(line.c_str(),equalPos);
+				std::string value = trim(line.c_str()+equalPos+1,line.size()-equalPos);
+				set(section.c_str(),key.c_str(),value.c_str());
+			}
 
-            if(NULL==(equal = strstr(line.c_str(),"=")))//section
-            {
-                section = line;
-                continue;
-            }
-            else //key and value
-            {
-                std::string key = trim(line.c_str(),equal-line.c_str()-1);
-                std::string value = trim(equal+1,line.size()-(equal-line.c_str()+1));
-                set(section.c_str(),key.c_str(),value.c_str());
-            }
-        }
-        fclose(fp);
-        return 0;
-    }
+		}
+		fclose(fp);
+		return 0;
+	}
 	int save(const char* file)
 	{
 		remove(file);
@@ -146,18 +161,19 @@ public:
 			LOG(ERROR) << "save conf to file"<<file<<" failed for open file failed,errno"<<errno<<","<<strerror(errno);
 			return -1;
 		}
-		for (std::map<std::string, std::map<std::string, std::string>* >::iterator secIter = m_sections.begin(); secIter != m_sections.end(); secIter++)
+		for (trieTree::iterator secIter = m_sections.begin(); secIter.valid(); secIter.next())
 		{
-			if (secIter->first.size() != fwrite(secIter->first.c_str(),1, secIter->first.size(), fp)|| 1!=fwrite("\n", 1,1, fp))
+			
+			if (strlen((const char*)secIter.key()) != fwrite((const char*)secIter.key(),1, strlen((const char*)secIter.key()), fp)|| 1!=fwrite("\n", 1,1, fp))
 			{
 				LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);
 				return -1;
 			}
-			for (std::map<std::string, std::string>::iterator confIter = secIter->second->begin(); confIter != secIter->second->end(); confIter++)
+			for (trieTree::iterator confIter = static_cast<trieTree*>(secIter.value())->begin(); confIter.valid(); confIter.next())
 			{
-				if (confIter->first.size() != fwrite(confIter->first.c_str(),1, confIter->first.size(), fp) || 
+				if (strlen((const char*)confIter.key()) != fwrite((const char*)confIter.key(),1, strlen((const char*)confIter.key()), fp) ||
 					3!= fwrite(" = ",1, 3, fp)||
-					confIter->second.size() != fwrite(confIter->second.c_str(),1, confIter->second.size(), fp) 
+					strlen((const char*)confIter.value()) != fwrite((const char*)confIter.value(), 1, strlen((const char*)confIter.value()), fp)
 					||1 != fwrite("\n", 1,1, fp))
 				{
 					LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);
@@ -169,8 +185,5 @@ public:
 		return 0;
 	}
 };
-
-
-
-
 #endif /* CONFIG_H_ */
+

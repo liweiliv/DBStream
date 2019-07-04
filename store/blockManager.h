@@ -97,7 +97,7 @@ namespace STORE
 		uint64_t m_tnxId;
 	public:
 		blockManager(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataCollection* metaDataCollection) :m_status(BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
-			, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str())), m_recordId(0),m_tnxId(0)
+			, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str())),m_firstBlockId(0),m_lastBlockId(0),m_currentFlushThreadCount(0), m_recordId(0),m_tnxId(0)
 		{
 			initConfig();
 		}

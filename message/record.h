@@ -509,6 +509,7 @@ namespace DATABASE_INCREASE
 			return new record(data);
 		}
 	}
+#pragma pack()
 }
 
 

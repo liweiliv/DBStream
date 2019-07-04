@@ -127,6 +127,7 @@ namespace STORE {
 		int loadBlockInfo(fileHandle h,uint32_t id);
 		static block* loadFromFile(uint32_t id, blockManager* blockManager, META::metaDataCollection* metaDataCollection=nullptr);
 	};
+#pragma pack()
 }
 
 

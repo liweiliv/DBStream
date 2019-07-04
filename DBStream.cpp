@@ -7,6 +7,7 @@
 #include <stdio.h>
 int main(int argc, char* argv[])
 {
+	google::InitGoogleLogging(argv[0]);
 	const char* confPath = nullptr;
 	if (argc <= 1)
 		confPath = "./d.cnf";
@@ -16,6 +17,7 @@ int main(int argc, char* argv[])
 	if (conf.load() != 0)
 	{
 		LOG(ERROR) << "load config failed";
+		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	STORE::store store(&conf);
@@ -24,17 +26,20 @@ int main(int argc, char* argv[])
 	if (ds == nullptr)
 	{
 		LOG(ERROR) << "load dataSource failed";
+		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	if (0 != store.start())
 	{
 		LOG(ERROR) << "start store failed";
+		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	if (0 != ds->start())
 	{
 		LOG(ERROR) << "start data source failed";
 		store.stop();
+		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	while (likely(ds->running()))
@@ -51,4 +56,5 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+	google::ShutdownGoogleLogging();
 }

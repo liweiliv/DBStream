@@ -341,6 +341,7 @@ DLL_EXPORT bool trieTree::iterator::next()
         bool firstOfNode = m_top->nodeIter.key()=='\0';
         if (m_top->nodeIter.next())
         {
+            back = false;
             void * v = m_top->nodeIter.value();
             if ((uint64_t)v & TT_VALUE_MASK)
             {
@@ -352,25 +353,27 @@ DLL_EXPORT bool trieTree::iterator::next()
             }
             else
             {
-                if(back)
-                {
-                    keyStack[--keyStackTop] = '\0';
-                    back=false;
-                }
-                stacks * tmp = new stacks;
-                tmp->nodeIter = static_cast<node*>(v)->begin();
-                if (!tmp->nodeIter.valid()) //empty node
-                {
-                    //abort();
-                    delete tmp;
-                    continue;
-                }
-                tmp->parent = m_top;
-                if(m_top->nodeIter.key()!='\0')
+                if(!firstOfNode)
+                    keyStack[keyStackTop-1] = m_top->nodeIter.key();
+                else
                     keyStack[keyStackTop++] = m_top->nodeIter.key();
-                m_top = tmp;
-                if ((uint64_t)m_top->nodeIter.value() & TT_VALUE_MASK)
-                    return true;
+		do
+		{
+             		stacks * tmp = new stacks;
+              		tmp->nodeIter = static_cast<node*>(m_top->nodeIter.value())->begin();
+                	if (!tmp->nodeIter.valid()) //empty node
+                	{
+                    		//abort();
+                    		delete tmp;
+                    		continue;
+                	}
+                	tmp->parent = m_top;
+                	m_top = tmp;
+                	if(m_top->nodeIter.key()!='\0')
+                		keyStack[keyStackTop++] = m_top->nodeIter.key();
+		}while(!((uint64_t)m_top->nodeIter.value() & TT_VALUE_MASK));
+               return true;
+		
             }
         }
         else
@@ -397,6 +400,7 @@ trieTree::iterator trieTree::begin()
     }
     iter.m_stack.parent = NULL;
     iter.m_top = &iter.m_stack;
+    iter.keyStack[iter.keyStackTop++] = iter.m_top->nodeIter.key();
     while (!((uint64_t)iter.m_top->nodeIter.value() & TT_VALUE_MASK))
     {
         iterator::stacks * tmp = new iterator::stacks;
@@ -410,11 +414,10 @@ trieTree::iterator trieTree::begin()
                 iter.clear();
             return iter;
         }
-        iter.keyStack[iter.keyStackTop++] = iter.m_top->nodeIter.key();
         tmp->parent = iter.m_top;
         iter.m_top = tmp;
-        if ((uint64_t)iter.m_top->nodeIter.value() & TT_VALUE_MASK)
-            return iter;
+	if(iter.m_top->nodeIter.key()!='\0')
+      	    iter.keyStack[iter.keyStackTop++] = iter.m_top->nodeIter.key();
     }
     return iter;
 }
