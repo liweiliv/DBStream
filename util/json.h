@@ -55,6 +55,17 @@ public:
 class DLL_EXPORT jsonObject :public jsonValue
 {
 public:
+    struct objectKeyValuePair {
+        std::string key;
+        jsonValue* value;
+        objectKeyValuePair(const char* k, jsonValue* v) :key(k), value(v) {}
+        objectKeyValuePair(const objectKeyValuePair& kv)
+        {
+            key = kv.key;
+            value = kv.value;
+        }
+    };
+    std::list<objectKeyValuePair> m_valueList;
     std::map<std::string, jsonValue *> m_values;
     jsonObject(const char * data=NULL);
     jsonValue * get(const string &s);

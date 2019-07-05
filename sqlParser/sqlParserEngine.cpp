@@ -27,6 +27,7 @@
 #include "../util/winString.h"
 #endif
 using namespace std;
+#define DEBUG
 namespace SQL_PARSER
 {
 
@@ -739,17 +740,16 @@ namespace SQL_PARSER
 				printf("load parse tree from %s failed\n", p);
 				return -1;
 			}
-			printf("%s\n",segment->toString().c_str());
 
 			if (segment->t != jsonValue::J_OBJECT)
 			{
 				delete segment;
 				return -1;
 			}
-			for (std::map<std::string, jsonValue*>::const_iterator iter = static_cast<jsonObject*>(segment)->m_values.begin(); iter != static_cast<jsonObject*>(segment)->m_values.end(); iter++)
+			for (std::list<jsonObject::objectKeyValuePair>::const_iterator iter = static_cast<jsonObject*>(segment)->m_valueList.begin(); iter != static_cast<jsonObject*>(segment)->m_valueList.end(); iter++)
 			{
 				int id = 0;
-				jsonValue* sentence = iter->second;
+				jsonValue* sentence = (*iter).value;
 				jsonValue* value;
 				if ((value = static_cast<jsonObject*>(sentence)->get("ID")) != NULL)
 				{

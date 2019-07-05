@@ -245,11 +245,13 @@ int jsonObject::parse(const char * data)
             return -1;
         }
         ptr += size;
-		if (!m_values.insert(std::pair<std::string, jsonValue*>(k.m_value, v)).second)
-		{
-			clean();
-			return -1;
-		}
+        if (!m_values.insert(std::pair<std::string, jsonValue*>(k.m_value, v)).second)
+        {
+            clean();
+            return -1;
+        }
+        objectKeyValuePair kv(k.m_value.c_str(), v);
+        m_valueList.push_back(kv);
 
         while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
             ptr++;
