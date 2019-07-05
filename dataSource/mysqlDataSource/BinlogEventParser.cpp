@@ -14,7 +14,6 @@
 #include "../../util/file.h"
 #include "../../util/winString.h"
 #include "../../sqlParser/sqlParser.h"
-#define MAX_BATCH 1024
 #define ROWS_MAPID_OFFSET    0
 #define ROWS_FLAGS_OFFSET    6
 #define ROWS_VHLEN_OFFSET    8
@@ -136,7 +135,6 @@ namespace DATA_SOURCE {
 	BinlogEventParser::ParseStatus BinlogEventParser::createDescEvent(
 		const char * logEvent,size_t size)
 	{
-		const char* error_msg;
 		if (m_descEvent != NULL)
 			delete m_descEvent;
 		m_descEvent = new formatEvent(logEvent,size);
@@ -153,7 +151,6 @@ namespace DATA_SOURCE {
 	BinlogEventParser::ParseStatus BinlogEventParser::updateFile(
 		const char* logEvent, size_t size)
 	{
-		const char* error_msg;
 		RotateEvent* tmp = new RotateEvent(logEvent, size, m_descEvent);
 		if (tmp != NULL)
 		{
@@ -180,7 +177,6 @@ namespace DATA_SOURCE {
 	BinlogEventParser::ParseStatus BinlogEventParser::parseDDL(const char* logEvent, size_t size)
 	{
 		ParseStatus rtv = ParseStatus::OK;
-		const char* error_msg;
 		const char* sql;
 		uint32_t sqlSize = 0;
 		QueryEvent::getQuery(logEvent, size, m_descEvent, sql, sqlSize);
@@ -221,7 +217,6 @@ namespace DATA_SOURCE {
 			return ParseStatus::ILLEGAL;
 		if (query == NULL)
 			return ParseStatus::OK;
-		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)logEvent;
 		if (querySize==5&&memcmp(query, "BEGIN", 5) == 0)
 			return begin(logEvent, size);
 		else if (querySize==6&&memcmp(query, "COMMIT", 6) == 0)
@@ -284,7 +279,6 @@ namespace DATA_SOURCE {
 	}
 	void BinlogEventParser::parseRowLogEventHeader(const char*& logevent,uint64_t size,uint64_t &tableId, const uint8_t*& columnBitMap,const uint8_t *&updatedColumnBitMap)
 	{
-		const char* rowBegin = logevent;
 		uint8_t const commonHeaderLen = m_descEvent->common_header_len;
 		Log_event_type eventType = (Log_event_type)logevent[EVENT_TYPE_OFFSET];
 		uint8_t const postHeaderLen = m_descEvent->post_header_len[eventType - 1];
@@ -301,7 +295,10 @@ namespace DATA_SOURCE {
 			tableId = uint6korr(postStart);
 			postStart += ROWS_FLAGS_OFFSET;
 		}
+		/*
+		*not use not
 		uint16_t m_flags = uint2korr(postStart);
+		*/
 		postStart += 2;
 
 		uint16_t varHeaderLen = 0;
@@ -340,6 +337,7 @@ namespace DATA_SOURCE {
 				if ((meta[0] & 0x30) != 0x30)
 				{
 					type = meta[0] | 0x30;
+					return type;
 				}
 			}
 			return metaType;
@@ -360,8 +358,6 @@ namespace DATA_SOURCE {
 		{
 			if (!TEST_BITMAP(columnBitmap, idx))
 				continue;
-			char* parsedValue = NULL;
-			uint32_t parsedValueSize = 0;
 			const META::columnMeta* columnMeta = record->meta->getColumn(idx);
 			int ctype = getRealType(m_tableMap.types[idx],columnMeta->m_srcColumnType,m_tableMap.metaInfo + metaIndex);
 			if (NULL_BIT(nullBitMap, idx) == 0)
@@ -409,9 +405,9 @@ namespace DATA_SOURCE {
 			size = size - BINLOG_CHECKSUM_LEN;
 		uint64_t tableID = 0;
 		const uint8_t *columnBitmap = nullptr,*updatedColumnBitMap = nullptr;
-		parseRowLogEventHeader(logEvent, size, tableID, columnBitmap,updatedColumnBitMap);
-		assert(m_tableMap.tableID == tableID);
 		const char* parsePos = logEvent, * end = logEvent + size;
+		parseRowLogEventHeader(parsePos, size, tableID, columnBitmap,updatedColumnBitMap);
+		assert(m_tableMap.tableID == tableID);
 		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID,m_currentOffset));
 		if (meta == nullptr)
 		{

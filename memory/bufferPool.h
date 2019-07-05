@@ -18,7 +18,7 @@ public:
 			else if (pageSizeList[i] < 4096*16)
 				m_pools[i] = new basicBufferPool(pageSizeList[i], pageSizeList[i] * 1024 * 16);
 			else
-				m_pools[i] = new basicBufferPool(pageSizeList[i], 1024*1024*4);
+				m_pools[i] = new basicBufferPool(pageSizeList[i], 1024*1024*1024*4ul);
 		}
 	}
 	~bufferPool()

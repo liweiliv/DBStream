@@ -207,7 +207,7 @@ namespace META {
 				break;
 			case MYSQL_TYPE_STRING:
 				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
-				if (m_charset != nullptr)
+				if (m_charset == nullptr)
 				{
 					sql.append("BINARY").append("(").append(numBuf).append(")");
 				}

@@ -126,8 +126,7 @@ namespace DATA_SOURCE {
 			frac1 = frac0 + (frac0x > 0);
 		dec1* buf = to->buf, mask = (*from & 0x80) ? 0 : -1;
 		const uint8_t* stop;
-		uint8_t* d_copy;
-		int bin_size = decimal_bin_size_inline(precision, scale);
+		//int bin_size = decimal_bin_size_inline(precision, scale);
 
 		((uint8_t*)from)[0] ^= 0x80;
 		FIX_INTG_FRAC_ERROR(to->len, intg1, frac1, error);

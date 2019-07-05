@@ -433,6 +433,7 @@ namespace SQL_PARSER
 			}
 			optional = static_cast<jsonBool*>(value)->m_value;
 		}
+		SQL_TYPE sqlType = UNSUPPORT;
 		if ((value = static_cast<jsonObject*>(obj)->get("TYPE")) != NULL || (value = static_cast<jsonObject*>(obj)->get("type")) != NULL)
 		{
 			if (value->t != jsonObject::J_STRING)
@@ -441,7 +442,7 @@ namespace SQL_PARSER
 			}
 			SQL_TYPE_TREE::const_iterator iter = m_sqlTypes.find(static_cast<jsonString*>(value)->m_value.c_str());
 			if (iter != m_sqlTypes.end())
-				s->m_sqlType = iter->second;
+				sqlType = iter->second;
 		}
 		bool OR = false;
 		value = obj->get("OR");
@@ -578,6 +579,7 @@ namespace SQL_PARSER
 			static int id = 0;
 			s->m_id = id++;
 			s->m_comment = json->toString();
+			s->m_sqlType = sqlType;
 			//printf("%d,%s\n", s->m_id, s->m_comment.c_str());
 		}
 		return s;
@@ -737,6 +739,7 @@ namespace SQL_PARSER
 				printf("load parse tree from %s failed\n", p);
 				return -1;
 			}
+			printf("%s\n",segment->toString().c_str());
 
 			if (segment->t != jsonValue::J_OBJECT)
 			{
@@ -786,8 +789,8 @@ namespace SQL_PARSER
 				}
 				if (head)
 					m_parseTreeHead.insert(pair<uint32_t, SQLWord*>(id, s));
-				delete segment;
 			}
+			delete segment;
 			p = nextWord(p + size);
 			if (p[0] == '\0')
 				break;

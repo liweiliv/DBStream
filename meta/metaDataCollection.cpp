@@ -140,7 +140,7 @@ namespace META {
 		const charsetInfo* charset;
 	};
 	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_dbs(),m_sqlParser(nullptr),m_client(client),
-		 m_maxTableId(0),m_maxDatabaseId(0)
+		 m_maxTableId(1),m_maxDatabaseId(0)
 	{
 		m_defaultCharset = getCharset(defaultCharset);
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
@@ -867,10 +867,26 @@ namespace META {
 	int metaDataCollection::setDefaultCharset(const charsetInfo* defaultCharset)
 	{
 		m_defaultCharset = defaultCharset;
+		return 0;
 	}
 	const charsetInfo* metaDataCollection::getDefaultCharset()
 	{
 		return m_defaultCharset;
+	}
+	void metaDataCollection::print()
+	{
+		trieTree::iterator dbiter = m_dbs.begin();
+		for (; dbiter.valid(); dbiter.next())
+		{
+			MetaTimeline<dbInfo>* db = static_cast<MetaTimeline<dbInfo> *>(dbiter.value());
+			dbInfo* currentDB = db->get(0xffffffffffffffffUL);
+			for (trieTree::iterator tbiter = currentDB->tables.begin(); tbiter.valid(); tbiter.next())
+			{
+				MetaTimeline<tableMeta>* metas = static_cast<MetaTimeline<tableMeta>*>(tbiter.value());
+				tableMeta* currentTable = metas->get(0xffffffffffffffffUL);
+				printf("%s\n", currentTable->toString().c_str());
+			}
+		}
 	}
 
 }

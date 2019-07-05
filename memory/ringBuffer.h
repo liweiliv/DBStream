@@ -103,7 +103,7 @@ public:
 						if (m_head.compare_exchange_strong(head, (ringBufferNode*)(((uint64_t)head) | NODE_MASK)))
 						{
 							node->next.store(tmp->next.load(std::memory_order_relaxed), std::memory_order_relaxed);
-							m_head.store((ringBufferNode*)(((uint64_t)head) & ~NODE_MASK)), std::memory_order_relaxed;
+							m_head.store((ringBufferNode*)(((uint64_t)head) & ~NODE_MASK), std::memory_order_relaxed);
 							delete tmp;
 						}
 						else
@@ -137,7 +137,8 @@ public:
 				node->begin.store(((char*)mem) - (char*)node->startPos, std::memory_order_relaxed);
 				if ((*(uint64_t*)mem) & NODE_MASK)
 					continue;
-				if ((node->end.load(std::memory_order_relaxed) & NODE_MASK) && ((char*)mem) - (char*)node->startPos == node->end.load(std::memory_order_relaxed))
+				assert((char*)mem >=  (char*)node->startPos);
+				if ((node->end.load(std::memory_order_relaxed) & NODE_MASK) && ((uint32_t)((char*)mem - (char*)node->startPos) == node->end.load(std::memory_order_relaxed)))
 				{
 					ringBufferNode* next = node->next.load(std::memory_order_relaxed);
 					m_tail.store(next, std::memory_order_relaxed);

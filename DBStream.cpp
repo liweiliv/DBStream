@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
-	if (0 != ds->start())
+	if (!ds->start())
 	{
 		LOG(ERROR) << "start data source failed";
 		store.stop();

@@ -26,7 +26,7 @@ namespace DATA_SOURCE {
 		binlogFileInfo(const binlogFileInfo& info) :file(info.file), size(info.size) {}
 	};
 
-	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool,mysqlConnector * connector) :m_pool(pool),m_mysqlConnector(connector)
+	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool,mysqlConnector * connector) :m_mysqlConnector(connector),m_pool(pool)
 	{
 		m_conn = NULL;
 		m_serverId = mysqlConnector::genSrvierId(time(nullptr));
@@ -34,6 +34,7 @@ namespace DATA_SOURCE {
 		m_readLocalBinlog = false;
 		m_localBinlogList = NULL;
 		m_currFileID = 0;
+		m_descriptionEvent = nullptr;
 
 		memset(m_isTypeNeedParse, 0, sizeof(m_isTypeNeedParse));
 		m_isTypeNeedParse[WRITE_ROWS_EVENT_V1] = true;
@@ -136,7 +137,7 @@ namespace DATA_SOURCE {
 		m_currentPos = offset;
 		m_currFile = fileName;
 		m_currFileID = getFileId(fileName);
-		LOG(ERROR) << "dump binlog success";
+		LOG(INFO) << "dump binlog success";
 		return 0;
 	}
 	int mysqlBinlogReader::dumpLocalBinlog(const char* fileName, uint64_t offset)
@@ -252,7 +253,7 @@ namespace DATA_SOURCE {
 		int ret = 0;
 		if (!m_readLocalBinlog)
 		{
-		READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
+	READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 		{
 			int retryTimes = 32;
 			if (READ_FAILED_NEED_RETRY == ret && --retryTimes > 0)
@@ -300,6 +301,7 @@ namespace DATA_SOURCE {
 					return ret;
 			}
 		}
+		return ret;
 	}
 	int mysqlBinlogReader::readBinlog(const char*& data)
 	{
@@ -326,7 +328,6 @@ namespace DATA_SOURCE {
 		else if ((header->type == Log_event_type::ROTATE_EVENT
 			&& header->timestamp == 0)) //end of file
 		{
-			const char* error_msg;
 			RotateEvent* tmp = new RotateEvent(binlogEvent, size,
 				m_descriptionEvent);
 			if (m_currFile.compare(tmp->fileName) != 0)
@@ -346,9 +347,10 @@ namespace DATA_SOURCE {
 			m_currentPos = header->eventOffset;
 		if (!m_isTypeNeedParse[header->type])
 			size = sizeof(commonMysqlBinlogEventHeader_v4) < size ? sizeof(commonMysqlBinlogEventHeader_v4) : size;
-		char* wrapper = (char*)m_pool->alloc(size + sizeof(size));
-		*(uint64_t*)wrapper = size;
-		memcpy(wrapper + sizeof(size), binlogEvent, size);
+		char * wrap = (char*)m_pool->alloc(size + sizeof(size));
+		*(uint64_t*)wrap = size;
+		memcpy(wrap + sizeof(size), binlogEvent, size);
+		data = wrap;
 		return READ_OK;
 	}
 	static int showBinaryLogs(MYSQL* conn,
@@ -356,7 +358,6 @@ namespace DATA_SOURCE {
 	{
 		MYSQL_RES* res = NULL;
 		MYSQL_ROW row;
-		uint32_t fields;
 		if (mysql_query(conn, "show binary logs")
 			|| !(res = mysql_store_result(conn)))
 		{
@@ -365,7 +366,7 @@ namespace DATA_SOURCE {
 		}
 		while (NULL != (row = mysql_fetch_row(res)))
 		{
-			if (2 == (fields = mysql_num_fields(res)) && row[0] != nullptr && atol(row[1]) != 0)//ignore empty binlog file
+			if (row[0] != nullptr && atol(row[1]) != 0)//ignore empty binlog file
 			{
 				fileInfo file;
 				file.fileName = row[0];
@@ -407,7 +408,7 @@ namespace DATA_SOURCE {
 			LOG(ERROR) << "file " << fileID << " is not exists in local binlog files";
 			return -1;
 		}
-		if (iter->second.size < position)
+		if ((uint64_t)iter->second.size < position)
 		{
 			LOG(ERROR) << "seek Binlog[" << position << "@" << fileID << "] in local binlog file list failed for binlog size:" << iter->second.size << " is less than position";
 			return -1;
@@ -431,7 +432,7 @@ namespace DATA_SOURCE {
 			LOG(ERROR) << "file " << fileID << " is not exists in local binlog files";
 			return -1;
 		}
-		if (iter->second.size < position)
+		if ((uint64_t)iter->second.size < position)
 		{
 			LOG(ERROR) << "seek Binlog[" << position << "@" << fileID << "] in local binlog file list failed for binlog size:" << iter->second.size << " is less than position";
 			return -1;
@@ -507,7 +508,6 @@ namespace DATA_SOURCE {
 			if (header->type == FORMAT_DESCRIPTION_EVENT)
 			{
 				fmtEventTimestamp = header->timestamp;
-				const char* error_msg;
 				formatEvent* tmp = new formatEvent(logEvent, size);
 				if (tmp == NULL)
 				{
@@ -636,6 +636,8 @@ namespace DATA_SOURCE {
 
 				}
 			}
+			else
+				iter = binaryLogs.find(iter->first-1);
 		}
 		m_currFile = iter->second.fileName;
 		m_currFileID = iter->first;
@@ -774,9 +776,11 @@ namespace DATA_SOURCE {
 		int ret = READ_OK;
 		if ((ret = seekBinlogFile(timestamp, strick)) != READ_OK)
 			return ret;
-		if ((ret = seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick)) == READ_OK)
-			return READ_OK;
-		return ret;
+		if ((ret = seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick)) != READ_OK)
+			return ret;
+		if((ret= dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog))!=READ_OK)
+			return ret;
+		return READ_OK;
 	}
 	int mysqlBinlogReader::startDump()
 	{

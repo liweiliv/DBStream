@@ -65,7 +65,7 @@ namespace META {
 	{T_YEAR,2,false,true,false},
 	{T_TIME,8,false,true,false},
 	{T_BLOB,4,false,true,false},
-	{T_STRING,4,false,true,true},
+	{T_STRING,4,false,false,true},
 	{T_JSON,4,false,true,true},
 	{T_XML,4,false,true,true},
 	{T_GEOMETRY,4,false,true,false},
@@ -313,4 +313,5 @@ namespace META {
 		}
 
 	};
+	#pragma pack()
 }

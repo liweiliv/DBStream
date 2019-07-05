@@ -187,19 +187,16 @@ namespace DATA_SOURCE
 
 		/*
 		 * 	 In some previous versions, the events were given other event type
-		 * 	 	 id numbers than in the present version. When replicating from such
-		 * 	 	 	 a version, we therefore set up an array that maps those id numbers
-		 * 	 	 	 	 to the id numbers of the present server.
-		 * 	 	 	 	 	 If post_header_len is null, it means malloc failed, and in the mysql-server
-		 * 	 	 	 	 	 	 code the variable *is_valid* will be set to false, so there is no need to do
-		 * 	 	 	 	 	 	 	 anything.
-		 *
-		 * 	 	 	 	 	 	 	 	 The trees in which events have wrong id's are:
-		 *
-		 * 	 	 	 	 	 	 	 	 	 mysql-5.1-wl1012.old mysql-5.1-wl2325-5.0-drop6p13-alpha
-		 * 	 	 	 	 	 	 	 	 	 	 mysql-5.1-wl2325-5.0-drop6 mysql-5.1-wl2325-5.0
-		 * 	 	 	 	 	 	 	 	 	 	 	 mysql-5.1-wl2325-no-dd
-		 *
+		 * 	 id numbers than in the present version. When replicating from such
+		 * 	 a version, we therefore set up an array that maps those id numbers
+		 * 	 to the id numbers of the present server.
+		 * 	 If post_header_len is null, it means malloc failed, and in the mysql-server
+		 * 	 code the variable *is_valid* will be set to false, so there is no need to do
+		 * 	 anything.
+		 *  	 The trees in which events have wrong id's are:
+		 * 	 mysql-5.1-wl1012.old mysql-5.1-wl2325-5.0-drop6p13-alpha
+		 * 	 mysql-5.1-wl2325-5.0-drop6 mysql-5.1-wl2325-5.0
+		 * 	 mysql-5.1-wl2325-no-dd
 		 * 	 	 	 	 	 	 	 	 	 	 	 	 (this was found by grepping for two lines in sequence where the
 		 * 	 	 	 	 	 	 	 	 	 	 	 	 	 first matches "FORMAT_DESCRIPTION_EVENT," and the second matches
 		 * 	 	 	 	 	 	 	 	 	 	 	 	 	 	 "TABLE_MAP_EVENT," in log_event.h in all trees)
@@ -237,7 +234,7 @@ namespace DATA_SOURCE
 		 *
 		 * 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 This is what we test for in the 'if' below.
 		 * 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 */
-		if (!number_of_event_types > 0 && server_version[0] == '5'
+		if ((!(number_of_event_types > 0)) && server_version[0] == '5'
 			&& server_version[1] == '.' && server_version[3] == '.'
 			&& strncmp(server_version + 5, "-a_drop", 7) == 0
 			&& ((server_version[2] == '1' && server_version[4] >= '1'

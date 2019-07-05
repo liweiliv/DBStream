@@ -71,6 +71,7 @@ namespace META {
 		int processOldTable(SQL_PARSER::handle * h, const Table *table, uint64_t originCheckPoint);
 		int processDatabase(const databaseInfo * database, uint64_t originCheckPoint);
 	public:
+		void print();
 	};
 }
 #endif /* METADATACOLLECTION_H_ */

@@ -38,6 +38,8 @@ namespace DATA_SOURCE {
 		m_store = store;
 		m_reader = new mysqlBinlogReader(m_readerBufferPool,m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
+		m_prevRecord = nullptr;
+		m_async = false;
 	}
 	mysqlDataSource::~mysqlDataSource()
 	{
@@ -109,7 +111,7 @@ namespace DATA_SOURCE {
 	}
 	DATABASE_INCREASE::record* mysqlDataSource::syncRead()
 	{
-		DATABASE_INCREASE::record* record;
+		DATABASE_INCREASE::record* record = nullptr;
 		if (nullptr != (record = m_parser->getRecord()))
 			return record;
 		const char* logEvent = nullptr;
@@ -165,7 +167,7 @@ namespace DATA_SOURCE {
 		uint64_t timestamp = 0, logOffset = 0;
 		if (!m_store->checkpoint(timestamp, logOffset))
 		{
-			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0ffffffffffffffful)<<24;
+			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0ffffffffffffffful);
 			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0x0ffffffffffffffful);
 		}
 		if (logOffset > 0)
@@ -196,11 +198,12 @@ namespace DATA_SOURCE {
 			LOG(ERROR) << "get database list from mysql server failed";
 			return false;
 		}
-		if (0 != imd.loadMeta(m_metaDataCollection, databases));
+		if (0 != imd.loadMeta(m_metaDataCollection, databases))
 		{
 			LOG(ERROR) << "load meta from mysql server failed";
 			return false;
 		}
+		m_metaDataCollection->print();
 		m_running = true;
 		if (m_conf->get(SECTION, ASYNC, "false").compare("true") == 0)
 		{
@@ -214,6 +217,7 @@ namespace DATA_SOURCE {
 		m_running = false;
 		if (m_async)
 			m_thread.join();
+		return true;
 	}
 	bool mysqlDataSource::running()const
 	{

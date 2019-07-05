@@ -70,6 +70,7 @@ namespace DATABASE_INCREASE
 		{
 			this->data = data;
 			head = (recordHead*)data;
+			head->headSize = sizeof(recordHead);
 		}
 		record() {}
 		record(const char* data) {

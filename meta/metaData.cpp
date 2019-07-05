@@ -157,7 +157,7 @@ namespace META {
 		m_realIndexInRowFormat = new uint16_t[m_columnsCount];
 		if (m_fixedColumnOffsetsInRecord)
 			delete[]m_fixedColumnOffsetsInRecord;
-		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount];
+		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount+1];
 		m_fixedColumnCount = m_varColumnCount = 0;
 		uint32_t fixedOffset = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
@@ -173,6 +173,7 @@ namespace META {
 				m_realIndexInRowFormat[i] = m_varColumnCount++;
 			}
 		}
+		m_fixedColumnOffsetsInRecord[m_fixedColumnCount] = fixedOffset;
 	}
 	int tableMeta::dropColumn(uint32_t columnIndex)//todo ,update key
 	{

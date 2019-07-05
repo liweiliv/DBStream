@@ -523,6 +523,8 @@ RESET:
 			DIR* dir = opendir(m_logDir);
 			if (dir == nullptr)
 			{
+				mkdir(m_logDir,S_IRUSR|S_IREAD);
+				goto CREATE_CURRENT;
 				LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
 				return -1;
 			}

@@ -82,7 +82,7 @@ namespace DATA_SOURCE {
 					else
 						return std::string("config ") + PORT + " must be number";
 				}
-				if (port > 0xffffu)
+				if (port > 0xffff)
 					return std::string("config ") + PORT + " must less than 65536";
 				m_port = port;
 			}

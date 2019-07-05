@@ -71,6 +71,7 @@ int fileList::load()
 	}
 	closedir(dir);
 #endif
+	return 0;
 }
 int fileList::update()
 {

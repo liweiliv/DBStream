@@ -20,7 +20,7 @@ struct ref {
 		int ref = m_ref.load(std::memory_order_relaxed);
 		do {
 			if (m_ref.compare_exchange_weak(ref, ref - 1, std::memory_order_release, std::memory_order_relaxed))
-				return ref - 1>0;
+				return ref>0;
 		} while (1);
 	}
 };

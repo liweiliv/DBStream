@@ -9,6 +9,7 @@
 #define BINARYLOGEVENT_H_
 #include <stdint.h>
 #include <string>
+#include <mysql.h>
 #include "mysql/my_byteorder.h"
 namespace DATA_SOURCE {
 #if !defined(le32toh)
@@ -477,7 +478,7 @@ namespace DATA_SOURCE {
 			columnCount = get_field_length((uint8_t * *)& pos);
 			types = (const uint8_t*)pos;
 			pos += columnCount;
-			if (pos - metaData_ < size)
+			if (pos - metaData_ < (uint32_t)size)
 			{
 				metaInfoSize = get_field_length((uint8_t * *)& pos);
 				assert(metaInfoSize <= columnCount * sizeof(uint16_t));
@@ -495,9 +496,8 @@ namespace DATA_SOURCE {
 			init(description_event, metaData_, size);
 		}
 	};
-#define NULL_LENGTH ((unsigned long)~0) /**< For ::net_store_length() */
 	/* Get the length of next field. Change parameter to point at fieldstart */
-	static inline uint32_t  net_field_length(uint8_t** packet) {
+	static inline uint64_t  net_field_length(uint8_t** packet) {
 		const uint8_t* pos = *packet;
 		if (*pos < 251) {
 			(*packet)++;

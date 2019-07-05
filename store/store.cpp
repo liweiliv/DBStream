@@ -21,13 +21,13 @@ namespace STORE {
 			LOG(ERROR) << "schedule module start failed";
 			return -1;
 		}
-		if (0 != m_mainStreamblockManager->start())
+		if (0!=m_mainStreamblockManager->load() || 0 != m_mainStreamblockManager->start())
 		{
 			LOG(ERROR) << "blockManager module start failed";
 			m_schedule->stop();
 			return -1;
 		}
-		if (0 != m_genratedStreamBlockManager->start())
+		if (0!=m_genratedStreamBlockManager->load() || 0 != m_genratedStreamBlockManager->start())
 		{
 			LOG(ERROR) << "m_genratedStreamBlockManager module start failed";
 			m_mainStreamblockManager->stop();
@@ -41,6 +41,7 @@ namespace STORE {
 		m_genratedStreamBlockManager->stop();
 		m_mainStreamblockManager->stop();
 		m_schedule->stop();
+		return 0;
 	}
 	void store::begin()
 	{

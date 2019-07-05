@@ -30,9 +30,9 @@ public:
 class StrCompare
 {
 public:
-    inline uint32_t operator()(const char * s, const char * d) const
+    inline bool operator()(const char * s, const char * d) const
     {
-        return strcmp(s, d);
+        return strcmp(s, d)==0;
     }
 };
 

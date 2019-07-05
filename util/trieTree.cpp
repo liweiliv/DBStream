@@ -335,13 +335,11 @@ DLL_EXPORT const unsigned char *trieTree::iterator::key() //todo
 }
 DLL_EXPORT bool trieTree::iterator::next()
 {
-    bool back = false;
     while (true)
     {
         bool firstOfNode = m_top->nodeIter.key()=='\0';
         if (m_top->nodeIter.next())
         {
-            back = false;
             void * v = m_top->nodeIter.value();
             if ((uint64_t)v & TT_VALUE_MASK)
             {
@@ -384,7 +382,6 @@ DLL_EXPORT bool trieTree::iterator::next()
             delete m_top;
             m_top = parent;
             keyStack[--keyStackTop] = '\0';
-            back = true;
         }
     }
 }

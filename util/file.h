@@ -53,6 +53,7 @@ static inline uint64_t getFileId(const char* file)
 			id = id * 10 + *ptr - '0';
 		else
 			break;
+		ptr++;
 	}
 	return id;
 }
