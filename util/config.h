@@ -32,6 +32,18 @@ public:
 		delete static_cast<trieTree*>(v);
 		return 0;
 	}
+	static bool char2num(const char* str, long& num)
+	{
+		num = 0;
+		while (*(str) <= '9' && *(str) >= 0)
+		{
+			num = num * 10 + (*str) - '0';
+			str++;
+		}
+		if (*str != '\0')
+			return false;
+		return true;
+	}
 	config(const char * path):m_sections(freeSection),m_filePath(path==nullptr?"":path)
 	{
 	}
