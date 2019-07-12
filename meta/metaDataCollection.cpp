@@ -10,7 +10,7 @@
 #include "metaData.h"
 #include "../sqlParser/sqlParser.h"
 #include "../store/client/client.h"
-#include "../charset.h"
+#include "charset.h"
 #include "metaTimeline.h"
 #include "../message/record.h"
 #include "metaChangeInfo.h"

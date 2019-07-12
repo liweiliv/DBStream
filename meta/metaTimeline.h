@@ -1,4 +1,5 @@
 #pragma once
+#include "../util/likely.h"
 namespace META {
 	template<typename T>
 	class MetaTimeline
