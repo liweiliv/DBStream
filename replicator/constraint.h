@@ -150,15 +150,20 @@ namespace REPLICATOR {
 		return hash;
 	}
 #define FIXED_INSERT(type,v,blockNode,bucket,prev) do{\
+	(blockNode)->head = true;\
+	(blockNode)->value = (v);\
 	std::pair<spp::sparse_hash_map<type, blockListNode*>::iterator, bool> rtv = static_cast<spp::sparse_hash_map<type, blockListNode*>*>(bucket)->insert(std::pair<type, blockListNode*>((v)==nullptr?0:*(const type*)(v),(blockNode)));\\
-	if(!rtv.second)\
-		prev = rtv.first->second;\
-		prev->prev = blockNode;\
-		rtv.first->second = blockNode;\
-	else\
+	if(!rtv.second){\
+		(prev) = rtv.first->second;\
+		(prev)->prev = (blockNode);\
+		rtv.first->second = (blockNode);\
+		(prev)->type = NORMAL;}\
+	else{\
 		(prev) = (blockNode); \
+		(blockNode)->type = HEAD;\
+	}\
 	}while (0);
-
+	
 	static blockListNode* insertToBucket(void* bucket, DATABASE_INCREASE::record* record, blockListNode * blockNode, const META::keyInfo* key, bool newOrOld)
 	{
 		blockListNode* prev = nullptr;
@@ -228,6 +233,66 @@ namespace REPLICATOR {
 		}
 		return prev;
 	}
+#define FIXED_ERASE(type,blockNode,bucket,empty) static_cast<spp::sparse_hash_map<type, blockListNode*>*>(bucket)->erase((type)blockNode->value);\
+				(empty) = static_cast<spp::sparse_hash_map<type, blockListNode*>*>(bucket)->empty();
+
+	static inline bool eraseKey(void* bucket,blockListNode* blockNode, const META::keyInfo* key)
+	{
+		bool empty;
+		if (key->count == 1)
+		{
+			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
+			{
+			case T_INT32:
+				FIXED_ERASE(int32_t, blockNode, bucket);
+				break;
+			case T_UINT32:
+				FIXED_ERASE(uint32_t, blockNode, bucket);
+				break;
+			case T_INT64:
+				FIXED_ERASE(int64_t, blockNode, bucket);
+				break;
+			case T_UINT64:
+				FIXED_ERASE(uint64_t, blockNode, bucket);
+				break;
+			case T_STRING:
+				FIXED_ERASE(uint32_t, blockNode, bucket);
+				break;
+			case T_INT16:
+				FIXED_ERASE(int16_t, blockNode, bucket);
+				break;
+			case T_UINT16:
+				FIXED_ERASE(uint16_t, blockNode, bucket);
+				break;
+			case T_INT8:
+				FIXED_ERASE(int8_t, blockNode, bucket);
+				break;
+			case T_UINT8:
+				FIXED_ERASE(uint8_t, blockNode, bucket);
+				break;
+			case T_DATETIME:
+			case T_TIMESTAMP:
+			case T_TIME:
+				FIXED_ERASE(uint64_t, blockNode, bucket);
+				break;
+			case T_YEAR:
+			case T_ENUM:
+				FIXED_ERASE(uint16_t, blockNode, bucket);
+				break;
+			case T_SET:
+				FIXED_ERASE(uint64_t, blockNode, bucket);
+				break;
+			default:
+				FIXED_ERASE(uint32_t, blockNode, bucket);
+				break;
+			}
+		}
+		else
+		{
+			FIXED_ERASE(uint32_t, blockNode, bucket);
+		}
+		return empty;
+	}
 	static inline uint32_t getHash(DATABASE_INCREASE::DMLRecord* record, const META::keyInfo* key, bool newOrOld)
 	{
 		if (key->count == 1)
@@ -283,4 +348,3 @@ namespace REPLICATOR {
 		}
 
 	}
-}
