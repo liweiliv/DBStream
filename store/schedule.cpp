@@ -2,7 +2,7 @@
 #include "stream.h"
 #include "iterator.h"
 namespace STORE {
-	inline bool schedule::streamCmp::operator()(job* a, job* b) const
+	bool schedule::streamCmp::operator()(job* a, job* b) const
 	{
 		return a->m_vtime < b->m_vtime;
 	}

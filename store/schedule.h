@@ -36,7 +36,7 @@ class schedule
 public:
 	struct streamCmp
 	{
-		inline bool operator()(job* a, job* b) const;
+		bool operator()(job* a, job* b) const;
 	};
 private:
 	std::priority_queue<stream*,std::vector<job*>, streamCmp> m_task;

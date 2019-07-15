@@ -3,7 +3,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 project (DBStream)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_DEFINITIONS(-DOS_LINUX)
-	set(CMAKE_CXX_FLAGS "-g  -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS "-g -O3 -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
 		include_directories(C:\\Program Files\\MySQL\\MySQL Server 8.0\\include)
@@ -144,4 +144,6 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testTrieTree  util/unittest/testTrieTree.cpp)
 TARGET_LINK_LIBRARIES(testTrieTree util)
+
+ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 
