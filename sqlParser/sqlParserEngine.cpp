@@ -22,6 +22,7 @@
 #include "../util/stackLog.h"
 #include "sqlParserUtil.h"
 #include "sqlParser.h"
+#include "../glog/logging.h"
 #include "../util/json.h"
 #ifdef OS_WIN
 #include "../util/winString.h"
@@ -393,11 +394,9 @@ namespace SQL_PARSER
 				else
 					h->head = NULL;
 			}
-			if (rtv == OK)
+			if (rtv != OK)
 			{
-				if (m_sqlType != UNSUPPORT)
-					h->type = m_sqlType;
-				if (m_parser != NULL&&!onlyGetType)
+				if (m_parser != NULL)
 				{
 					statusInfo* s = new statusInfo;
 					s->parserFunc = m_parser;
@@ -409,14 +408,18 @@ namespace SQL_PARSER
 				}
 				sql = tmp;
 			}
-#ifdef DEBUG
 			if (rtv == OK)
+			{
+				if (m_sqlType != UNSUPPORT)
+					h->type = m_sqlType;
+#ifdef DEBUG
 				printf("%d,%s \033[1m\033[40;32mmatch \033[0m:%s \n", m_id, m_comment.c_str(), tmp);
+			}
 			else
 			{
 				printf("%d,%s \033[1m\033[40;31mnot match \033[0m:%s\n", m_id, m_comment.c_str(), tmp);
-			}
 #endif
+			}
 			return rtv;
 		}
 	};
@@ -759,6 +762,12 @@ namespace SQL_PARSER
 						SET_STACE_LOG_AND_RETURN_(-1, -1, "expect num");
 					}
 					id = static_cast<jsonNum*>(value)->m_value;
+				}
+				else
+				{
+					delete segment;
+					LOG(ERROR)<<static_cast<jsonObject*>(sentence)->toString()<<" do not have ID";
+					return -1;
 				}
 				bool head = false;
 				if ((value = static_cast<jsonObject*>(sentence)->get("HEAD")) != NULL)

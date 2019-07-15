@@ -438,7 +438,7 @@ public:
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if(t->current == nullptr)
 			{
-				if (m_pageNum + 1 + t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount >= m_maxPageNum || m_size + psize >= m_maxSize)
+				if ((m_pageNum + 1 + (t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount) >= m_maxPageNum || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();

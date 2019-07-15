@@ -183,7 +183,7 @@ namespace DATA_SOURCE {
 		char end = sql[sqlSize];
 		((char*)sql)[sqlSize] = '\0';
 		SQL_PARSER::handle *handle = nullptr;
-		SQL_PARSER::parseValue pret = m_sqlParser->parseSqlType(handle,sql);
+		SQL_PARSER::parseValue pret = m_sqlParser->parse(handle,sql);
 		if (pret != SQL_PARSER::OK||handle == nullptr)
 		{
 			LOG(ERROR) << "parse ddl :[" << sql << "] failed";

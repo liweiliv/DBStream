@@ -126,8 +126,7 @@ public:
 		{
 			if (!m_tail.compare_exchange_strong(node, (ringBufferNode*)(((uint64_t)node) | NODE_MASK)))
 				return;
-			while (true)
-			{
+			do{
 				if (mem != ((char*)node->startPos) + node->begin.load(std::memory_order_relaxed))
 				{
 					m_tail.store(node, std::memory_order_relaxed);
@@ -146,7 +145,7 @@ public:
 					mem = (void*)(((int8_t*)node->startPos) + node->begin.load(std::memory_order_relaxed));
 					break;
 				}
-			}
+			}while ((*(uint64_t*)mem) & NODE_MASK);
 		}
 	}
 };

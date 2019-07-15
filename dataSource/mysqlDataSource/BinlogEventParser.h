@@ -77,7 +77,7 @@ namespace DATA_SOURCE
 		inline DATABASE_INCREASE::record* getRecord()
 		{
 			if (m_parsedRecordCount > 0)
-				return m_parsedRecords[m_parsedRecordCount--];
+				return m_parsedRecords[--m_parsedRecordCount];
 			return nullptr;
 		}
 		ParseStatus parser(const char * logEvent);
