@@ -2,6 +2,7 @@
 #include "../util/config.h"
 #include "../util/winDll.h"
 #include "replicatorConf.h"
+#include <set>
 namespace DATABASE_INCREASE {
 	struct record;
 }
@@ -30,6 +31,12 @@ namespace REPLICATOR {
 		SQL_PARSER::sqlParser* m_sqlParser;
 		bool m_running;
 		bool m_localMeta;
+		std::set<int> m_retryErrno;
+		std::set<int> m_reconnectErrno;
+		std::set<int> m_ignoreErrno;
+
+		uint64_t m_safeLogOffset;
+		uint64_t m_safeTimestamp;
 	private:
 		void initByConf()
 		{
