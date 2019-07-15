@@ -1,4 +1,8 @@
 #pragma once
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
+
 #include "../util/barrier.h"
 #include "../util/likely.h"
 #include <atomic>
@@ -19,7 +23,7 @@ private:
 		{
 			next.store(nullptr,std::memory_order_relaxed);
 			this->size = (size+ 2*sizeof(uint64_t)) > DEFAULT_NODE_SIZE ? (size + 2*sizeof(uint64_t)) : DEFAULT_NODE_SIZE;
-			startPos = malloc(size);
+			startPos = malloc(this->size);
 			begin.store(ALIGN((uint64_t)startPos, 8) - (uint64_t)startPos, std::memory_order_relaxed);
 			end.store(begin.load(std::memory_order_relaxed), std::memory_order_relaxed);
 		}
@@ -72,6 +76,7 @@ public:
 					mem = ((char*)head->startPos) + ALIGN(end, 8);
 					*(uint64_t*)mem = size;
 					barrier;
+					printf("alloc %lx\n",((int8_t*)mem) + sizeof(uint64_t));
 					return ((int8_t*)mem) + sizeof(uint64_t);
 				}
 			}
@@ -116,6 +121,7 @@ public:
 	//thread not safe
 	void freeMem(void* mem)
 	{
+		printf("free %lx\n",mem);
 		mem = (void*)(((int8_t*)mem) - sizeof(uint64_t));
 		*(uint64_t*)mem = (*(uint64_t*)mem) | NODE_MASK;
 		ringBufferNode* node = m_tail.load(std::memory_order_relaxed);
@@ -146,6 +152,7 @@ public:
 					break;
 				}
 			}while ((*(uint64_t*)mem) & NODE_MASK);
+			m_tail.store(node, std::memory_order_relaxed);
 		}
 	}
 };

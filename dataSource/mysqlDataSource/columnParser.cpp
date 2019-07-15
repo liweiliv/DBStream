@@ -876,7 +876,7 @@ namespace DATA_SOURCE {
 			}
 
 			bool done = true;
-			char esc;
+			char esc = 0;
 			switch (cptr[i])
 			{
 			case '"':
