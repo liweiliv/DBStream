@@ -3,14 +3,27 @@
 namespace REPLICATOR {
 	struct transaction;
 	struct replicatorRecord;
+	enum blockListNodeType {
+		NORMAL,
+		HEAD,
+		UNUSED
+	};
 	struct blockListNode {
 		replicatorRecord* record;
-		blockListNode* prev;
+		union {
+			blockListNode* prev;
+			uint64_t value;
+		};
+		blockListNodeType type;
 	};
 	struct replicatorRecord {
+
 		DATABASE_INCREASE::record* record;
 		replicatorRecord* nextInTrans;
+		replicatorRecord* nextWaitForDDL;
+		void* tableInfo;
 		transaction* trans;
+
 		uint16_t prevRecordCount;
 		blockListNode blocks[1];
 	};
@@ -20,9 +33,12 @@ namespace REPLICATOR {
 
 		uint32_t recordCount;
 		uint32_t blockCount;
-		bool finished;
 		transaction* next;
 		transaction* prev;
+
+		bool committed;
+		transaction* preCommitNext;
+		transaction* preCommitPrev;
+
 	};
 }
-
