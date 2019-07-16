@@ -313,5 +313,5 @@ namespace META {
 		}
 
 	};
-	#pragma pack()
+#pragma pack()
 }

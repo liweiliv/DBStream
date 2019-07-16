@@ -46,7 +46,7 @@ namespace SQL_PARSER
 		};
 		SQLWordType m_type;
 		parseValue(*m_parser)(handle* h, const string& sql);
-		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false) = 0;
+		virtual parseValue match(handle* h, const char*& sql) = 0;
 		void include()
 		{
 			m_refs++;
@@ -91,7 +91,7 @@ namespace SQL_PARSER
 #define N_MATCH    return NOT_MATCH;
 #endif
 
-		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false)
+		virtual parseValue match(handle* h, const char*& sql)
 		{
 			const char* p = nextWord(sql);
 			parseValue rtv = OK;
@@ -169,8 +169,8 @@ namespace SQL_PARSER
 			case S_STRING:
 			{
 				if (strncasecmp(m_word.c_str(), p, m_word.size()) != 0
-					|| (!isSpaceOrComment(p + m_word.size())
-						&& !isKeyChar(p[m_word.size()])))
+					||(!isSpaceOrComment(p + m_word.size()) && p[m_word.size()] != '\0' && !isKeyChar(p[m_word.size()])))
+
 					N_MATCH
 					if (m_parser != NULL)
 						matchedWord = m_word;
@@ -271,11 +271,11 @@ namespace SQL_PARSER
 				return NOT_SUPPORT;
 			}
 
-			if (rtv == OK)
+			if (rtv == OK&&h!=nullptr)
 			{
 				if (m_sqlType != UNSUPPORT)
 					h->type = m_sqlType;
-				if (m_parser != nullptr&&!onlyGetType)
+				if (m_parser != nullptr)
 				{
 					statusInfo* s = new statusInfo;
 					s->sql = matchedWord;
@@ -295,6 +295,29 @@ namespace SQL_PARSER
 #endif
 			return rtv;
 		}
+		static SQLSingleWord* create(bool optional,const std::string &str)
+		{
+			SQLSingleWord* s = nullptr;
+			if (str == "_A_")
+				s = new SQLSingleWord(optional, SQLSingleWord::S_ARRAY, "");
+			else if (str == "_AS_")
+				s = new SQLSingleWord(optional, SQLSingleWord::S_ANY_STRING, "");
+			else if (str == "_N_")
+				s = new SQLSingleWord(optional, SQLSingleWord::S_NAME, "");
+			else if (str == "_B_")
+				s = new SQLSingleWord(optional, SQLSingleWord::S_BRACKETS, "");
+			else if (str == "_NUM_")
+				s = new SQLSingleWord(optional, SQLSingleWord::S_NUMBER, "");
+			else if (strncmp(str.c_str(),"_S_:", 4) == 0)
+				s = new SQLSingleWord(optional, SQLSingleWord::S_STRING, str.c_str() + 4);
+			else if (strncmp(str.c_str(),"_C_:", 4) == 0)
+				s = new SQLSingleWord(optional, SQLSingleWord::S_CHAR, str.c_str() + 4);
+			else
+			{
+				SET_STACE_LOG_AND_RETURN_(nullptr, -1, "expect STRING type :%s",str.c_str());
+			}
+			return s;
+		}
 	};
 	class SQLWordArray : public SQLWord
 	{
@@ -302,8 +325,9 @@ namespace SQL_PARSER
 		list<SQLWord*> m_words;
 		bool m_or;
 		bool m_loop;
-		SQLWordArray(bool optional, bool _or, bool loop) :
-			SQLWord(SQL_ARRAY, optional), m_or(_or), m_loop(loop)
+		SQLSingleWord* m_loopCondition;
+		SQLWordArray(bool optional, bool _or, bool loop,SQLSingleWord * loopCondition) :
+			SQLWord(SQL_ARRAY, optional), m_or(_or),m_loop(loop), m_loopCondition(loopCondition)
 		{
 		}
 		~SQLWordArray()
@@ -320,7 +344,7 @@ namespace SQL_PARSER
 			}
 		}
 		SQLWordArray(const SQLWordArray& s) :
-			SQLWord(SQL_ARRAY, s.m_optional), m_or(s.m_or), m_loop(s.m_loop)
+			SQLWord(SQL_ARRAY, s.m_optional), m_or(s.m_or), m_loop(s.m_loop), m_loopCondition(s.m_loopCondition)
 		{
 
 		}
@@ -328,7 +352,7 @@ namespace SQL_PARSER
 		{
 			m_words.push_back(s);
 		}
-		virtual parseValue match(handle* h, const char*& sql,bool onlyGetType = false)
+		virtual parseValue match(handle* h, const char*& sql)
 		{
 			parseValue rtv = OK;
 			bool matched = false;
@@ -345,11 +369,11 @@ namespace SQL_PARSER
 						continue;
 					if (s->m_type == SQL_ARRAY)
 					{
-						rtv = static_cast<SQLWordArray*>(s)->match(h, str, onlyGetType);
+						rtv = static_cast<SQLWordArray*>(s)->match(h, str);
 					}
 					else if (s->m_type == SQL_SIGNLE_WORD)
 					{
-						rtv = static_cast<SQLSingleWord*>(s)->match(h, str, onlyGetType);
+						rtv = static_cast<SQLSingleWord*>(s)->match(h, str);
 					}
 					if (rtv != OK)
 					{
@@ -372,13 +396,27 @@ namespace SQL_PARSER
 				}
 				if (rtv != OK)
 				{
-					if (m_loop && matched)
+					if (m_loopCondition!=nullptr && matched)
 						rtv = OK;
 					break;
 				}
 				else
 					matched = true;
-			} while (m_loop);
+				if (m_loop)
+				{
+					if (m_loopCondition != nullptr)
+					{
+						const char* str = nextWord(sql);
+						if (m_loopCondition->match(nullptr, str) == OK)
+						{
+							sql = str;
+							continue;
+						}
+					}
+				}
+				else
+					break;
+			} while (1);
 
 			if (rtv != OK) //rollback
 			{
@@ -458,15 +496,15 @@ namespace SQL_PARSER
 			}
 			OR = static_cast<jsonBool*>(value)->m_value;
 		}
-		bool loop = false;
+		std::string loop;
 		value = obj->get("LOOP");
 		if (value != NULL)
 		{
-			if (value->t != jsonObject::J_BOOL)
+			if (value->t != jsonObject::J_STRING)
 			{
-				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect bool type");
+				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect string type");
 			}
-			loop = static_cast<jsonBool*>(value)->m_value;
+			loop = static_cast<jsonString*>(value)->m_value;
 		}
 		string comment;
 		if (NULL != (value = obj->get("COMMENT")))
@@ -497,32 +535,10 @@ namespace SQL_PARSER
 
 		if ((value = obj->get("K")) != NULL)
 		{
-			if (value->t != jsonObject::J_STRING)
+			s = SQLSingleWord::create(optional, static_cast<jsonString*>(value)->m_value);
+			if (s == nullptr)
 			{
-				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect STRING type");
-			}
-			if (static_cast<jsonString*>(value)->m_value == "_A_")
-				s = new SQLSingleWord(optional, SQLSingleWord::S_ARRAY, "");
-			else if (static_cast<jsonString*>(value)->m_value == "_AS_")
-				s = new SQLSingleWord(optional, SQLSingleWord::S_ANY_STRING, "");
-			else if (static_cast<jsonString*>(value)->m_value == "_N_")
-				s = new SQLSingleWord(optional, SQLSingleWord::S_NAME, "");
-			else if (static_cast<jsonString*>(value)->m_value == "_B_")
-				s = new SQLSingleWord(optional, SQLSingleWord::S_BRACKETS, "");
-			else if (static_cast<jsonString*>(value)->m_value == "_NUM_")
-				s = new SQLSingleWord(optional, SQLSingleWord::S_NUMBER, "");
-			else if (strncmp(static_cast<jsonString*>(value)->m_value.c_str(),
-				"_S_:", 4) == 0)
-				s = new SQLSingleWord(optional, SQLSingleWord::S_STRING,
-					static_cast<jsonString*>(value)->m_value.c_str() + 4);
-			else if (strncmp(static_cast<jsonString*>(value)->m_value.c_str(),
-				"_C_:", 4) == 0)
-				s = new SQLSingleWord(optional, SQLSingleWord::S_CHAR,
-					static_cast<jsonString*>(value)->m_value.c_str() + 4);
-			else
-			{
-				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect STRING type :%s",
-					static_cast<jsonString*>(value)->m_value.c_str());
+				return nullptr;
 			}
 			if ((value = obj->get("F")) != NULL)
 			{
@@ -558,7 +574,24 @@ namespace SQL_PARSER
 			{
 				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect ARRAY type");
 			}
-			s = new SQLWordArray(optional, OR, loop);
+			if (!loop.empty())
+			{
+				if(loop=="always")
+					s = new SQLWordArray(optional, OR, true, nullptr);
+				else
+				{
+					SQLSingleWord* loopCondition = SQLSingleWord::create(false, loop);
+					if (loopCondition == nullptr)
+					{
+						SET_STACE_LOG_AND_RETURN_(NULL, -1, "invalid loop condition:%s", loop.c_str());
+					}
+					s = new SQLWordArray(optional, OR, true, loopCondition);
+				}
+			}
+			else
+			{
+				s = new SQLWordArray(optional, OR, false,nullptr);
+			}
 			for (list<jsonValue*>::iterator iter =
 				static_cast<jsonArray*>(value)->m_values.begin();
 				iter != static_cast<jsonArray*>(value)->m_values.end(); iter++)
@@ -882,7 +915,7 @@ namespace SQL_PARSER
 			{
 				const char* tmp = sql;
 				SQLWord* s = static_cast<SQLWord*>(iter->second);
-				if (s->match(currentHandle, tmp,false) != OK)
+				if (s->match(currentHandle, tmp) != OK)
 					continue;
 				sql = nextWord(tmp);
 				goto PARSE_SUCCESS;
@@ -913,7 +946,7 @@ PARSE_SUCCESS:
 			{
 				const char* tmp = sql;
 				SQLWord* s = static_cast<SQLWord*>(iter->second);
-				if (s->match(currentHandle, tmp,true) != OK)
+				if (s->match(currentHandle, tmp) != OK)
 				{
 					//   printf("%d,%s \033[1m\033[40;31m not match \033[0m:%.*s\n",iter->first,s->m_comment.c_str(),100,sql);
 					continue;
@@ -1008,3 +1041,4 @@ int main(int argc, char* argv[])
 
 }
 #endif
+

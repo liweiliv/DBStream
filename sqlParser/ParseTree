@@ -592,7 +592,7 @@
           },
           { "K": "_C_:(" },
           {
-            "LOOP": true,
+            "LOOP": "_S_:,",
             "C": [
               {
                 "K": "_A_",
@@ -633,7 +633,7 @@
           },
           { "K": "_C_:(" },
           {
-            "LOOP": true,
+            "LOOP": "_S_:,",
             "C": [
               {
                 "K": "_A_",
@@ -711,7 +711,7 @@
           { "K": "_A_" },
           {
             "OR": true,
-            "LOOP": true,
+            "LOOP": "always",
             "C": [
               {
                 "C": [
@@ -759,7 +759,6 @@
   "COLUMN_INFO": {
     "ID": 0,
     "NAME": "COLUMN_INFO",
-    "LOOP": true,
     "COMMENT": "COLUMN INFO",
     "C": [
       {
@@ -909,7 +908,7 @@
     "name": "index_option",
     "OPT": true,
     "OR": true,
-    "LOOP": true,
+    "LOOP": "always",
     "C": [
       {
         "OPT": true,
@@ -956,7 +955,7 @@
   "CONSTRAINT": {
     "ID": 2001,
     "COMMENT": "CONSTRAINT",
-    "LOOP": true,
+    "LOOP": "_S_:,",
     "C": [
       {
         "OPT": true,
@@ -987,7 +986,7 @@
               },
               { "K": "_C_:(" },
               {
-                "LOOP": true,
+                "LOOP": "_S_:,",
                 "C": [
                   {
                     "K": "_N_",
@@ -1046,7 +1045,7 @@
               },
               { "K": "_C_:(" },
               {
-                "LOOP": true,
+                "LOOP": "_S_:,",
                 "C": [
                   {
                     "K": "_N_",
@@ -1085,7 +1084,7 @@
   "create_definition": {
     "ID": 6000,
     "NAME": "create_definition",
-    "LOOP": true,
+    "LOOP": "_S_:,",
     "OPT": true,
     "C": [
       {
@@ -1154,7 +1153,7 @@
   },
   "table_options": {
     "ID": 7000,
-    "LOOP": true,
+    "LOOP": "always",
     "NAME": "table_options",
     "OPT": true,
     "OR": true,
@@ -1792,7 +1791,7 @@
         ]
       },
       {
-        "LOOP": true,
+        "LOOP": "_S_:,",
         "C": [
           {
             "OPT": true,
@@ -1950,7 +1949,7 @@
         ]
       },
       {
-        "LOOP": true,
+        "LOOP": "_S_:,",
         "C": [
           {
             "OR": true,
@@ -2054,7 +2053,7 @@
       },
       { "K": "_C_:(" },
       {
-        "LOOP": true,
+        "LOOP": "_S_:,",
         "C": [
           {
             "K": "_N_",
@@ -2229,7 +2228,7 @@
         "K": "_S_:IF EXISTS"
       },
       {
-        "LOOP": true,
+        "LOOP": "_S_:,",
         "C": [
           {
             "OR": true,
@@ -2280,7 +2279,7 @@
       { "K": "_S_:RENAME" },
       { "K": "_S_:TABLE" },
       {
-        "LOOP": true,
+        "LOOP": "_S_:,",
         "C": [
           {
             "OR": true,

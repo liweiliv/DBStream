@@ -15,13 +15,12 @@
 #define mysqlParserTree "ParseTree"
 #endif
 #ifdef OS_LINUX
-#define mysqlFuncLib "../lib/libmysqlParserFuncs.so"
-#define mysqlParserTree "../sqlParser/ParseTree"
+#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "sqlParser/ParseTree"
 #endif
-int testCreateTable(SQL_PARSER::sqlParser * parser)
+int testSql(SQL_PARSER::sqlParser * parser,const char * sql)
 {
 	SQL_PARSER::handle * h = nullptr;
-	const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
 	SQL_PARSER::parseValue v = parser->parse(h,sql);
 	if(v!=SQL_PARSER::OK)
 	{
@@ -51,8 +50,10 @@ int main()
 		printf("load parse tree from file :%s failed\n", mysqlParserTree);
 		return -1;
 	}
-
-	testCreateTable(&parser);
+	const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
+	testSql(&parser,"alter table test.t1 add column a int unsignedd");
+	testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
+	testSql(&parser,"alter table t2 add column(c1 int,c2 char(20),c3 varcahr(20))");
 	destroyStackLog();
 }
 

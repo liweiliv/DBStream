@@ -15,8 +15,8 @@
 #define mysqlParserTree "ParseTree"
 #endif
 #ifdef OS_LINUX
-#define mysqlFuncLib "../lib/libmysqlParserFuncs.so"
-#define mysqlParserTree "../sqlParser/ParseTree"
+#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "sqlParser/ParseTree"
 #endif
 int test()
 {
@@ -28,7 +28,8 @@ int test()
 	m.processDDL("create table test.t1 (a int primary key)",2);
 	printf("%s\n",m.get("test","t1",2)->toString().c_str());
 	m.processDDL("alter table test.t1 add column b varchar(20)",3);
-	printf("%s\n",m.get("test","t1",4)->toString().c_str());
+	m.processDDL("alter table test.t1 add column c int unsigned",4);
+	printf("%s\n",m.get("test","t1",5)->toString().c_str());
 	return 0;
 }
 int main()

@@ -71,6 +71,22 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue numertypeIsUnsigned(handle* h, const string& sql)
 	{
 		newColumnInfo* c = getLastColumn(h);
+		switch (c->rawType)
+		{
+		case MYSQL_TYPE_TINY:
+			c->type = T_UINT8;
+			break;
+		case MYSQL_TYPE_SHORT:
+			c->type = T_UINT16;
+			break;
+		case MYSQL_TYPE_INT24:
+		case MYSQL_TYPE_LONG:
+			c->type = T_UINT32;
+			break;
+		case MYSQL_TYPE_LONGLONG:
+			c->type = T_UINT64;
+			break;
+		}
 		c->isSigned = false;
 		return OK;
 	}

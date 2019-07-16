@@ -8,14 +8,15 @@
 #include <string.h>
 #include "metaDataCollection.h"
 #include "metaData.h"
-#include "../sqlParser/sqlParser.h"
-#include "../store/client/client.h"
+#include "sqlParser/sqlParser.h"
+#include "store/client/client.h"
 #include "charset.h"
 #include "metaTimeline.h"
-#include "../message/record.h"
+#include "message/record.h"
 #include "metaChangeInfo.h"
-#include "../util/barrier.h"
-#include "../util/likely.h"
+#include "util/barrier.h"
+#include "util/likely.h"
+#include "glog/logging.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
@@ -38,6 +39,7 @@ namespace META {
 		m_sqlParser = new sqlParser();
 		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
 		{
+			LOG(ERROR)<<"sql parser load funcs from:"<<sqlParserFunclibFile<<" failed";
 			delete m_sqlParser;
 			return -1;
 		}
@@ -252,8 +254,8 @@ namespace META {
 	}
 	static void copyColumn(columnMeta & column, const newColumnInfo* src)
 	{
-		column.m_srcColumnType = src->type;//todo
-		column.m_columnType = mysqlTypeMaps[src->type];
+		column.m_srcColumnType = src->rawType;
+		column.m_columnType = src->type;
 		column.m_columnIndex = src->index;
 		column.m_columnName = src->name;
 		column.m_decimals = src->decimals;
