@@ -28,7 +28,7 @@
 #include "util/winString.h"
 #endif
 using namespace std;
-#define DEBUG
+//#define DEBUG
 namespace SQL_PARSER
 {
 
@@ -412,6 +412,8 @@ namespace SQL_PARSER
 							sql = str;
 							continue;
 						}
+						else
+							break;
 					}
 				}
 				else
@@ -959,6 +961,7 @@ PARSE_SUCCESS:
 				}
 			}
 			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
+			printf("%200s\n",sql);
 			delete h;
 			h = NULL;
 			return NOT_MATCH;
