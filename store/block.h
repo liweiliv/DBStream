@@ -8,11 +8,11 @@
 #ifndef BLOCK_H_
 #define BLOCK_H_
 #include <stdint.h>
-#include "../util/ref.h"
+#include "util/ref.h"
 #include "page.h"
-#include "../util/file.h"
-#include "../glog/logging.h"
-#include "../util/crcBySSE.h"
+#include "util/file.h"
+#include "glog/logging.h"
+#include "util/crcBySSE.h"
 namespace META {
 	class metaDataCollection;
 	class tableMeta;

@@ -1,5 +1,4 @@
 #pragma once
-#include "mysql.h" 
 #include <sys/stat.h>
 #include "../../util/config.h"
 #include "../dataSourceConf.h"
@@ -14,9 +13,11 @@
 #include <ws2tcpip.h>
 #include "mysql/sql_common.h"
 #endif
-#include "mysqlx_error.h"
-#include "../../glog/logging.h"
+#include "glog/logging.h"
 #include "mysql/my_byteorder.h"
+#include "mysql.h" 
+#include "mysqlx_error.h"
+
 namespace DATA_SOURCE {
 	class mysqlConnector {
 	private:

@@ -2,9 +2,9 @@
 #include "mysqlConnector.h"
 #include "mysqlBinlogReader.h"
 #include "BinlogEventParser.h"
-#include "../../glog/logging.h"
-#include "../../memory/ringBuffer.h"
-#include "../../store/store.h"
+#include "glog/logging.h"
+#include "memory/ringBuffer.h"
+#include "store/store.h"
 #include "mysqlRecordOffset.h"
 #include "initMetaData.h"
 #include <thread>

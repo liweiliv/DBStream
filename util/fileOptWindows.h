@@ -117,7 +117,7 @@ static inline  int checkFileExist(const char* filename,int mode)
 {
 	return _access(filename, mode);
 }
-long getFileTime(const char * file)
+static long getFileTime(const char * file)
 {
 	FILETIME creationTime, lastAccessTime, lastWriteTime;
 	fileHandle fd = openFile(file, true, false, false);
@@ -129,7 +129,6 @@ long getFileTime(const char * file)
 }
 static int64_t getFileSize(const char* fileName)
 {
-	struct stat stbuf;
 	fileHandle fd = openFile(fileName, true, false, false);
 	if (fd == INVALID_HANDLE_VALUE)
 		return -1;

@@ -3,11 +3,11 @@
 #include <string.h>
 #include <thread>
 #include"initMetaData.h"
-#include "../../glog/logging.h"
-#include "../../meta/metaData.h"
-#include "../../util/winString.h"
-#include "../../util/unorderMapUtil.h"
-#include "../../meta/mysqlTypes.h"
+#include "glog/logging.h"
+#include "meta/metaData.h"
+#include "util/winString.h"
+#include "util/unorderMapUtil.h"
+#include "meta/mysqlTypes.h"
 namespace DATA_SOURCE {
 	static constexpr auto SELECT_ALL_COLUMNS  = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA in (%s)";
 	static constexpr auto SELECT_ALL_CONSTRAINT = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA in (%s)";

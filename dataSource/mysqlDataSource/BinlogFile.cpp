@@ -4,15 +4,16 @@
  *  Created on: 2017年2月16日
  *      Author: liwei
  */
-#include "BinlogFile.h"
+#include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
 #include <fcntl.h>
 #include "BinaryLogEvent.h"
 #include "mysql/my_byteorder.h"
-#include "../../glog/logging.h"
-#include <stdint.h>
+#include "glog/logging.h"
+#include "BinlogFile.h"
+
 #ifdef OS_LINUX
 #include <zlib.h> //for checksum calculations
 #endif
@@ -194,7 +195,7 @@ namespace DATA_SOURCE {
 		if (m_err != 0) /*一旦发生过错误，则不允许继续读*/
 			return -1;
 
-		int readSize = readFile(m_fileFD, m_readBuf, LOG_EVENT_MINIMAL_HEADER_LEN);
+		int readSize = (int)readFile(m_fileFD, m_readBuf, LOG_EVENT_MINIMAL_HEADER_LEN);
 		if (readSize < 0)
 		{
 			m_err = -errno;
@@ -271,7 +272,7 @@ namespace DATA_SOURCE {
 		if (uint4korr(m_readBuf + LOG_POS_OFFSET)
 			!= ((m_logEventOffset + binlogSize) & 0xffffffff))
 		{
-			m_err = BINLOG_ERR_BAD_LENGTH;
+			m_err = DATA_SOURCE::BINLOG_ERROR::BINLOG_ERR_BAD_LENGTH;
 			return -1;
 		}
 		m_logEventOffset += binlogSize;
@@ -314,24 +315,16 @@ namespace DATA_SOURCE {
 			m_err = BINLOG_ERR_EOF;
 			m_status = BINLOG_READ_END;
 			if (m_crc)
-				m_nextFile = std::string(
-					binlog + LOG_EVENT_HEADER_LEN
-					+ ROTATE_HEADER_LEN,
-					size
-					- (LOG_EVENT_HEADER_LEN
-						+ ROTATE_HEADER_LEN
-						+ BINLOG_CHECKSUM_LEN));
+			{
+				m_nextFile = std::string(binlog + LOG_EVENT_HEADER_LEN + ROTATE_HEADER_LEN, size - (LOG_EVENT_HEADER_LEN + ROTATE_HEADER_LEN + BINLOG_CHECKSUM_LEN));
+			}
 			else
-				m_nextFile = std::string(
-					binlog + LOG_EVENT_HEADER_LEN
-					+ ROTATE_HEADER_LEN,
-					size
-					- (LOG_EVENT_HEADER_LEN
-						+ ROTATE_HEADER_LEN));
+			{
+				m_nextFile = std::string(binlog + LOG_EVENT_HEADER_LEN + ROTATE_HEADER_LEN, size - (LOG_EVENT_HEADER_LEN + ROTATE_HEADER_LEN));
+			}
 			m_nextBeginPos = uint8korr(binlog + LOG_EVENT_HEADER_LEN);
 		}
-		/*通常stop event在文件末尾，没有rotate指示下一个binlog文件，此时根据文件名预测下一个binlog文件*/
-		else if (binlog[EVENT_TYPE_OFFSET] == STOP_EVENT)
+		else if (binlog[EVENT_TYPE_OFFSET] == STOP_EVENT)		/*通常stop event在文件末尾，没有rotate指示下一个binlog文件，此时根据文件名预测下一个binlog文件*/
 		{
 			if (m_logEventOffset == (uint64_t)seekFile(m_fileFD, 0, SEEK_END))
 			{

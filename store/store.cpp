@@ -6,7 +6,7 @@
 #include "block.h"
 #include "schedule.h"
 namespace STORE {
-	store::store(config* conf) : m_conf(conf)
+	DLL_EXPORT store::store(config* conf) : m_conf(conf)
 	{
 		m_bufferPool = new bufferPool();
 		m_schedule = new schedule(conf);
@@ -14,7 +14,7 @@ namespace STORE {
 		m_genratedStreamBlockManager = new blockManager(GENERATED_STREAM, conf,m_bufferPool,m_metaDataCollection);
 		m_mainStreamblockManager = new blockManager(MAIN_STREAM, conf,m_bufferPool,m_metaDataCollection);
 	}
-	int store::start()
+	DLL_EXPORT int store::start()
 	{
 		if (0 != m_schedule->start())
 		{
@@ -36,32 +36,32 @@ namespace STORE {
 		}
 		return 0;
 	}
-	int store::stop()
+	DLL_EXPORT int store::stop()
 	{
 		m_genratedStreamBlockManager->stop();
 		m_mainStreamblockManager->stop();
 		m_schedule->stop();
 		return 0;
 	}
-	void store::begin()
+	DLL_EXPORT void store::begin()
 	{
 		return m_mainStreamblockManager->begin();
 	}
-	void store::commit()
+	DLL_EXPORT void store::commit()
 	{
 		return m_mainStreamblockManager->commit();
 	}
-	bool store::checkpoint(uint64_t& timestamp, uint64_t logOffset)
+	DLL_EXPORT bool store::checkpoint(uint64_t& timestamp, uint64_t logOffset)
 	{
 		return m_mainStreamblockManager->checkpoint(timestamp, logOffset);
 	}
 
-	int store::insert(DATABASE_INCREASE::record* r)
+	DLL_EXPORT int store::insert(DATABASE_INCREASE::record* r)
 	{
 		return m_mainStreamblockManager->insert(r);
 	}
 
-	std::string store::updateConfig(const char* key, const char* value)
+	DLL_EXPORT std::string store::updateConfig(const char* key, const char* value)
 	{
 		if (strncmp(key, C_SCHEDULE ".", sizeof(C_SCHEDULE)) == 0)
 			return m_schedule->updateConfig(key, value);

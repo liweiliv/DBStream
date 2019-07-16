@@ -1,20 +1,18 @@
 #pragma once
 #include <stdint.h>
 #include <string>
-#include "../../util/file.h"
+#include "util/file.h"
 namespace DATA_SOURCE {
-	/*
-	 * 文件错误err设置为errno，其他错误为以下错误号
-	 */
-#define BINLOG_ERR_EOF 1  //读到文件尾
-#define BINLOG_ERR_BAD_LENGTH 2 //binlog长度校验错误
-#define BINLOG_ERR_WRONG_CRC 3 //crc校验失败
-#define BINLOG_ERR_INCOMPLETE 4 //binlog残缺，无法读取到完整的binlog
-
-#define BINLOG_WRITE_ERR_FILE_EXIST 5 //文件已存在
-#define BINLOG_ERR_BAD_FILENAME 6
-#define DEFAULT_BINLOG_BUF_SIZE (1024*1024*4)
-	 //批量写入binlog，积累超过1M后写入文件
+	enum BINLOG_ERROR 
+	{
+		BINLOG_ERR_EOF = 1, 
+		BINLOG_ERR_BAD_LENGTH, 
+		BINLOG_ERR_WRONG_CRC, 
+		BINLOG_ERR_INCOMPLETE,
+		BINLOG_WRITE_ERR_FILE_EXIST,
+		BINLOG_ERR_BAD_FILENAME,
+	};
+	static constexpr auto DEFAULT_BINLOG_BUF_SIZE = (1024 * 1024 * 4);
 	 /*
 	  * 用于读取已经写完的binlog文件，不支持读取正在写入的binlog
 	  * 包括store备份的binlog文件和mysql的binlog文件

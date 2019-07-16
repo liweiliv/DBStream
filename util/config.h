@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
-#include "../glog/logging.h"
+#include "glog/logging.h"
 #include "trieTree.h"
 class config{
 private:

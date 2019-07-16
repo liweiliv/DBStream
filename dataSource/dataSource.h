@@ -22,11 +22,7 @@ namespace DATA_SOURCE
 		META::metaDataCollection* m_metaDataCollection;
 		STORE::store* m_store;
 		std::string m_lastError;
-#ifdef OS_WIN
-		HINSTANCE m_dllHandle;
-#else
 		void* m_dllHandle;
-#endif
 		static dataSource* loadFromDll(const char* fileName, config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
 	public:
 		DLL_EXPORT dataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :m_conf(conf), m_metaDataCollection(metaDataCollection), m_store(store)

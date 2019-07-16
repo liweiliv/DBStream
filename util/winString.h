@@ -41,24 +41,22 @@ static const char charmap[] = {
 	'\360', '\361', '\362', '\363', '\364', '\365', '\366', '\367',
 	'\370', '\371', '\372', '\373', '\374', '\375', '\376', '\377',
 };
-int
-strcasecmp(const char *s1, const char *s2)
+static int strcasecmp(const char* s1, const char* s2)
 {
-	const char*cm = charmap;
-	const char*us1 = (const char*)s1;
-	const char*us2 = (const char*)s2;
+	const char* cm = charmap;
+	const char* us1 = (const char*)s1;
+	const char* us2 = (const char*)s2;
 	while (cm[*us1] == cm[*us2++])
 		if (*us1++ == '\0')
 			return (0);
 	return (cm[*us1] - cm[*--us2]);
 }
-int
-strncasecmp(const char *s1, const char *s2, size_t n)
+static int strncasecmp(const char* s1, const char* s2, size_t n)
 {
 	if (n != 0) {
-		const char*cm = charmap;
-		const char*us1 = (const char*)s1;
-		const char*us2 = (const char*)s2;
+		const char* cm = charmap;
+		const char* us1 = (const char*)s1;
+		const char* us2 = (const char*)s2;
 		do {
 			if (cm[*us1] != cm[*us2++])
 				return (cm[*us1] - cm[*--us2]);

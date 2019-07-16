@@ -1,7 +1,7 @@
 #pragma once
-#if __cplusplus>=201700L
+#ifdef OS_WIN
 #include <shared_mutex>
-typedef shared_mutex std::shared_mutex
+typedef std::shared_mutex shared_mutex;
 #else
 #ifdef OS_LINUX
 #include <pthread.h>

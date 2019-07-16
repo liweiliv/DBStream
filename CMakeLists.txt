@@ -6,27 +6,54 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_FLAGS "-g  -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
-		include_directories(C:\\Program Files\\MySQL\\MySQL Server 8.0\\include)
+		ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 include (GenerateExportHeader)
+include_directories("./")
 
 #lz4
-find_library(LZ4 lz4 lz4/lib)
-if(NOT LZ4)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	find_library(LZ4 lz4 lz4/lib)
+	if(NOT LZ4)
         message(FATAL_ERROR "lz4 library not found")
-endif()
+	endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	find_library(LZ4 liblz4 ./lz4/dll)
+	if(NOT LZ4)
+        message(FATAL_ERROR "lz4 library not found")
+	endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
 #glog
-find_library(GLOG glog /usr/local/lib)
-if(NOT GLOG)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	find_library(GLOG glog /usr/local/lib)
+	if(NOT GLOG)
         message(FATAL_ERROR "glog library not found")
-endif()
+	endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	ADD_DEFINITIONS(-DGLOG_NO_ABBREVIATED_SEVERITIES)
+	include_directories("C:\\Program Files (x86)\\glog\\include" "C:\\Program Files (x86)\\gflags\\include")
+	find_library(GLOG glog "C:\\Program Files (x86)\\glog\\bin")
+	if(NOT GLOG)
+        message(FATAL_ERROR "glog library not found")
+	endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
 #mysqlclient
-find_library(MYSQL_CLIENT libmysqlclient.a /usr/lib64/mysql/)
-if(NOT MYSQL_CLIENT)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	find_library(MYSQL_CLIENT libmysqlclient.a /usr/lib64/mysql/)
+	if(NOT MYSQL_CLIENT)
         message(FATAL_ERROR "libmysqlclient.a  not found")
-endif()
-
-
+	endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	include_directories("C:\\Program Files\\MySQL\\MySQL Server 8.0\\include")
+	find_library(MYSQL_CLIENT mysqlclient "C:\\Program Files\\MySQL\\MySQL Server 8.0\\lib")
+	if(NOT MYSQL_CLIENT)
+        message(FATAL_ERROR "mysqlclient library not found")
+	endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 
 #util

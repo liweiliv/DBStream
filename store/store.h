@@ -7,8 +7,9 @@
 
 #ifndef STORE_H_
 #define STORE_H_
-#include "../util/config.h"
-#include "../glog/logging.h"
+#include "util/config.h"
+#include "glog/logging.h"
+#include "util/winDll.h"
 class bufferPool;
 namespace META{
 class metaDataCollection;
@@ -21,7 +22,7 @@ namespace STORE{
 #define GENERATED_STREAM "generatedStream"
 class blockManager;
 class schedule;
-class store{
+DLL_EXPORT class store{
 private:
 	schedule *m_schedule;
 	blockManager *m_mainStreamblockManager;
@@ -30,14 +31,14 @@ private:
 	config * m_conf;
 	bufferPool* m_bufferPool;
 public:
-	store(config* conf);
-	int start();
-	int stop();
-	void begin();
-	int insert(DATABASE_INCREASE::record* r);
-	void commit();
-	bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
-	std::string updateConfig(const char* key, const char* value);
+	DLL_EXPORT store(config* conf);
+	DLL_EXPORT int start();
+	DLL_EXPORT int stop();
+	DLL_EXPORT void begin();
+	DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
+	DLL_EXPORT void commit();
+	DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
+	DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 };
 
 

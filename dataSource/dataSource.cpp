@@ -1,8 +1,8 @@
 #include "dataSource.h"
 #include "dataSourceConf.h"
-#include "../glog/logging.h"
-#include "../util/config.h"
-#include "../util/file.h"
+#include "glog/logging.h"
+#include "util/config.h"
+#include "util/file.h"
 #ifdef OS_LINUX
 #include <dlfcn.h>
 #endif
@@ -55,7 +55,7 @@ namespace DATA_SOURCE {
 			return nullptr;
 		}
 		dataSource* ds = _instance(conf, metaDataCollection, store);
-		if (dataSource == nullptr)
+		if (ds == nullptr)
 		{
 			LOG(ERROR) << "call func " << "[instance]" << " from :" << fileName << " failed ";
 			FreeLibrary(dllHandle);

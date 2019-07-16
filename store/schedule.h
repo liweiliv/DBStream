@@ -10,14 +10,14 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../util/unblockedQueue.h"
+#include "util/unblockedQueue.h"
 #include <atomic>
 #include <mutex>
 #include <queue>
 #include <time.h>
-#include "../util/threadPool.h"
-#include "../util/config.h"
-#include "../glog/logging.h"
+#include "util/threadPool.h"
+#include "util/config.h"
+#include "glog/logging.h"
 
 namespace STORE{
 #define COND_LEVEL 5
@@ -39,7 +39,7 @@ public:
 		bool operator()(job* a, job* b) const;
 	};
 private:
-	std::priority_queue<stream*,std::vector<job*>, streamCmp> m_task;
+	std::priority_queue<job*,std::vector<job*>, streamCmp> m_task;
 	std::mutex m_taskLock;
 	std::atomic<uint8_t> m_activeTask;
 	bool m_running;

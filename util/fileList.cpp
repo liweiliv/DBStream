@@ -1,5 +1,5 @@
 #include "fileList.h"
-#include "../glog/logging.h"
+#include "glog/logging.h"
 #ifdef OS_WIN
 #include <io.h>
 #endif
@@ -9,11 +9,11 @@
 #include <sys/types.h>  
 #include <sys/stat.h>  
 #endif
-void fileList::clean()
+DLL_EXPORT void fileList::clean()
 {
 	files.clear();
 }
-int fileList::load()
+DLL_EXPORT int fileList::load()
 {
 #ifdef OS_WIN
 	WIN32_FIND_DATA findFileData;
@@ -73,7 +73,7 @@ int fileList::load()
 #endif
 	return 0;
 }
-int fileList::update()
+DLL_EXPORT int fileList::update()
 {
 	clean();
 	return load();

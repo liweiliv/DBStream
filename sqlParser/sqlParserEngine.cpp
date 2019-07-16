@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include "../util/file.h"
+#include "util/file.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -19,13 +19,13 @@
 #include <map>
 #include <set>
 #include <list>
-#include "../util/stackLog.h"
+#include "util/stackLog.h"
 #include "sqlParserUtil.h"
 #include "sqlParser.h"
-#include "../glog/logging.h"
-#include "../util/json.h"
+#include "glog/logging.h"
+#include "util/json.h"
 #ifdef OS_WIN
-#include "../util/winString.h"
+#include "util/winString.h"
 #endif
 using namespace std;
 #define DEBUG

@@ -4,7 +4,8 @@
 #include <string.h>
 #include <stdint.h>
 #include "file.h"
-class fileList
+#include "winDll.h"
+DLL_EXPORT class fileList
 {
 public:
 private:
@@ -12,17 +13,17 @@ private:
 	std::string prefix;
 	std::map< uint64_t, fileInfo> files;
 public:
-	fileList(const char* dirPath, const char* prefix) :dirPath(dirPath), prefix(prefix)
+	DLL_EXPORT fileList(const char* dirPath, const char* prefix) :dirPath(dirPath), prefix(prefix)
 	{
 	}
-	~fileList()
+	DLL_EXPORT ~fileList()
 	{
 		clean();
 	}
-	void clean();
-	int load();
-	int update();
-	const std::map< uint64_t, fileInfo>& get()
+	DLL_EXPORT void clean();
+	DLL_EXPORT int load();
+	DLL_EXPORT int update();
+	DLL_EXPORT const std::map< uint64_t, fileInfo>& get()
 	{
 		return files;
 	}

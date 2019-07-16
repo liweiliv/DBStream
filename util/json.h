@@ -12,8 +12,6 @@
 #include <stdint.h>
 #include "winDll.h"
 using namespace std;
-
-
 class DLL_EXPORT jsonValue
 {
 public:

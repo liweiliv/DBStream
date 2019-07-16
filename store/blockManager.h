@@ -15,14 +15,14 @@
 #include "page.h"
 #include "block.h"
 #include "iterator.h"
-#include "../util/pageTable.h"
-#include "../util/config.h"
-#include "../glog/logging.h"
-#include "../message/record.h"
+#include "util/pageTable.h"
+#include "util/config.h"
+#include "glog/logging.h"
+#include "message/record.h"
 #include "filter.h"
-#include "../util/shared_mutex.h"
-#include "../util/ringFixedQueue.h"
-#include "../util/threadPool.h"
+#include "util/shared_mutex.h"
+#include "util/ringFixedQueue.h"
+#include "util/threadPool.h"
 namespace META {
 	class metaDataCollection;
 }
@@ -121,12 +121,12 @@ namespace STORE
 			if (0 == (++m_tnxId))
 				m_tnxId++;
 		}
-		void commit();;
+		DLL_EXPORT void commit();;
 		inline void genBlockFileName(uint64_t id,char *fileName)
 		{
 			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);
 		}
-		int start()//todo
+		DLL_EXPORT int start()//todo
 		{
 			m_status = BM_RUNNING;
 
@@ -138,7 +138,7 @@ namespace STORE
 			return 0;
 		}
 		int load();
-		inline page* allocPage(uint64_t size)
+		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
 			page* p = (page*)m_pool->allocByLevel(0);
 			if (size > m_pool->maxSize())
@@ -149,11 +149,11 @@ namespace STORE
 			p->pageUsedSize = 0;
 			return p;
 		}
-		inline void* allocMem(size_t size)
+		DLL_EXPORT inline void* allocMem(size_t size)
 		{
 			return m_pool->alloc(size);
 		}
-		inline void freePage(page* p)
+		DLL_EXPORT inline void freePage(page* p)
 		{
 			if (p->pageSize > m_pool->maxSize())
 				free(p->pageData);

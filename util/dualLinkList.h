@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "shared_mutex.h"
 #include <stddef.h>
+#include "shared_mutex.h"
 struct dualLinkListNode
 {
 	dualLinkListNode *prev;

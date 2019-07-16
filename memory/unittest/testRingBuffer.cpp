@@ -6,10 +6,10 @@ void test()
 	char * mem[256] = {0};
 	for(int i = 0;i<1000000;i++)
 	{
-		mem[i%256] = (char*)buffer.alloc(256);
+		mem[i % 256] = (char*)buffer.alloc(256);
 		for(int j=0;j<256/4;j++)
 		{
-			*(int*)(mem[i%256]+j*4) = i;
+			*(int*)(mem[i%256]+j*4) = i % 256;
 		}
 		int prev =  (i+256-100)%256;
 		if(mem[prev]!=nullptr)

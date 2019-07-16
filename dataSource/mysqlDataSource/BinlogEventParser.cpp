@@ -10,10 +10,10 @@
 #include "columnParser.h"
 #include "BinlogEventParser.h"
 #include "mysqlRecordOffset.h"
-#include "../../glog/logging.h"
-#include "../../util/file.h"
-#include "../../util/winString.h"
-#include "../../sqlParser/sqlParser.h"
+#include "glog/logging.h"
+#include "util/file.h"
+#include "util/winString.h"
+#include "sqlParser/sqlParser.h"
 #define ROWS_MAPID_OFFSET    0
 #define ROWS_FLAGS_OFFSET    6
 #define ROWS_VHLEN_OFFSET    8

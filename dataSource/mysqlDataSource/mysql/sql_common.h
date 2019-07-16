@@ -165,8 +165,8 @@ extern "C" {
 
 	extern CHARSET_INFO* default_client_charset_info;
 	MYSQL_FIELD* unpack_fields(MYSQL* mysql, MYSQL_ROWS* data, MEM_ROOT* alloc,
-		uint fields, bool default_value,
-		uint server_capabilities);
+		uint32_t fields, bool default_value,
+		uint32_t server_capabilities);
 	MYSQL_FIELD* cli_read_metadata_ex(MYSQL* mysql, MEM_ROOT* alloc,
 		unsigned long field_count,
 		unsigned int fields);

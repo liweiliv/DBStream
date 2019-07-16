@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <string>
 #include "mysqlConnector.h"
-#include "../../glog/logging.h"
-#include "../../util/file.h"
+#include "glog/logging.h"
+#include "util/file.h"
 #include "BinaryLogEvent.h"
 class ringBuffer;
 class fileList;
