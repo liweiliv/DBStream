@@ -15,7 +15,13 @@ namespace SQL_PARSER {
 #define createMeta(h) (h)->userData = new metaChangeInfo();
 	static inline metaChangeInfo* getMeta(handle* h)
 	{
-		return static_cast<metaChangeInfo*>((h)->userData);
+		metaChangeInfo* meta =  static_cast<metaChangeInfo*>((h)->userData);
+		if(meta == nullptr)
+		{
+			meta = new metaChangeInfo();
+			h->userData = meta;
+		}
+		return meta;
 	}
 	static inline newTableInfo* getLastTable(handle* h)
 	{

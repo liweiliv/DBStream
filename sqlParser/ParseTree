@@ -597,10 +597,6 @@
               {
                 "K": "_A_",
                 "F": "enumOrSetValueList"
-              },
-              {
-                "OPT": true,
-                "K": "_C_:,"
               }
             ]
           },
@@ -638,10 +634,6 @@
               {
                 "K": "_A_",
                 "F": "enumOrSetValueList"
-              },
-              {
-                "OPT": true,
-                "K": "_C_:,"
               }
             ]
           },
@@ -694,6 +686,7 @@
     "C": [
       { "K": "_S_:DEFAULT" },
       {
+        "OPT":true,
         "OR": true,
         "C": [
           {
@@ -955,7 +948,6 @@
   "CONSTRAINT": {
     "ID": 2001,
     "COMMENT": "CONSTRAINT",
-    "LOOP": "_C_:,",
     "C": [
       {
         "OPT": true,
@@ -1007,10 +999,6 @@
                       { "K": "_S_:ASC" },
                       { "K": "_S_:DESC" }
                     ]
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_C_:,"
                   }
                 ]
               },
@@ -1140,10 +1128,6 @@
             ]
           }
         ]
-      },
-      {
-        "OPT": true,
-        "K": "_C_:,"
       }
     ]
   },
@@ -1782,6 +1766,13 @@
     "type": "ALTER_TABLE_ADD_KEY",
     "C": [
       { "K": "_S_:ADD" },
+      {"OPT":true,
+      	"OR":true,
+      	"C":[
+      	{"K":"_S_:FULLTEXT"},
+      	{"K":"_S_:SPATIAL"}
+      	]
+      },
       {
         "OR": true,
         "C": [
@@ -2064,10 +2055,6 @@
               { "K": "_S_:ASC" },
               { "K": "_S_:DESC" }
             ]
-          },
-          {
-            "OPT": true,
-            "K": "_C_:,"
           }
         ]
       },

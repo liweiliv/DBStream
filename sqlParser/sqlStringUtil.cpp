@@ -80,6 +80,7 @@ DLL_EXPORT void initKeyWords()
     ADD_KW("RESTRICT");
     ADD_KW("CASCADE");
     ADD_KW("TO");
+    ADD_KW("COMMENT");
 }
 DLL_EXPORT void destroyKeyWords()
 {

@@ -355,8 +355,9 @@ namespace SQL_PARSER
 		virtual parseValue match(handle* h, const char*& sql)
 		{
 			parseValue rtv = OK;
+
 			bool matched = false;
-			const char* tmp = sql;
+			const char* tmp = sql,*beforeLoop = nullptr;
 			statusInfo* top = h->end;
 			do
 			{
@@ -396,8 +397,12 @@ namespace SQL_PARSER
 				}
 				if (rtv != OK)
 				{
-					if (m_loopCondition!=nullptr && matched)
+					if (m_loop && matched)
+					{
+						if(beforeLoop!=nullptr)
+							sql = beforeLoop;
 						rtv = OK;
+					}
 					break;
 				}
 				else
@@ -406,6 +411,7 @@ namespace SQL_PARSER
 				{
 					if (m_loopCondition != nullptr)
 					{
+						beforeLoop = sql;
 						const char* str = nextWord(sql);
 						if (m_loopCondition->match(nullptr, str) == OK)
 						{
@@ -937,6 +943,18 @@ PARSE_SUCCESS:
 			currentHandle = _h;
 		}
 	}
+	void printfS(const char *s)
+	{
+		char buf[200];
+		for(int i=0;i<sizeof(buf)-1;i++)
+		{
+			buf[i] = s[i];
+			if(buf[i]=='\0')
+				break;
+		}
+		buf[199] = '\0';
+		printf("error when parse:%s,abort\n",buf);
+	}
 	DLL_EXPORT parseValue sqlParser::parse(handle*& h, const char* sql)
 	{
 		h = new handle;
@@ -961,7 +979,7 @@ PARSE_SUCCESS:
 				}
 			}
 			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
-			printf("%200s\n",sql);
+			printfS(sql);
 			delete h;
 			h = NULL;
 			return NOT_MATCH;
