@@ -368,7 +368,7 @@ namespace META {
 		}
 		static inline uint64_t tableID(uint64_t tableIDInfo)
 		{
-			return tableIDInfo & 0xffffffffffff0000ul;
+			return (tableIDInfo & 0xffffffffffff0000ul)>>16;
 		}
 		static inline uint64_t genTableId(uint64_t tableid,uint16_t version)
 		{

@@ -5,6 +5,14 @@
 #include "util/config.h"
 #include "glog/logging.h"
 #include <stdio.h>
+#ifdef OS_WIN
+#define mysqlFuncLib "mysqlParserFuncs.dll"
+#define mysqlParserTree "ParseTree"
+#endif
+#ifdef OS_LINUX
+#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "sqlParser/ParseTree"
+#endif
 int main(int argc, char* argv[])
 {
 	google::InitGoogleLogging(argv[0]);
@@ -22,6 +30,12 @@ int main(int argc, char* argv[])
 	}
 	STORE::store store(&conf);
 	META::metaDataCollection collection("utf8",nullptr);
+        if(0!=collection.initSqlParser(mysqlParserTree,mysqlFuncLib))
+	{
+		LOG(ERROR)<<"init sqlparser failed";
+		return -1;
+	}
+
 	DATA_SOURCE::dataSource* ds = DATA_SOURCE::dataSource::loadDataSource(&conf, &collection, &store);
 	if (ds == nullptr)
 	{

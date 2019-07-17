@@ -180,3 +180,11 @@ TARGET_LINK_LIBRARIES(testTrieTree util)
 
 ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 
+
+ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
+TARGET_LINK_LIBRARIES(testRingFixedQueue util)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testRingFixedQueue pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+

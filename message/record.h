@@ -262,16 +262,14 @@ namespace DATABASE_INCREASE
 		}
 		inline void filledVarColumns(uint16_t id, size_t size)
 		{
+			((uint32_t*)varLengthColumns)[meta->m_realIndexInRowFormat[id]] =((uint32_t*)varLengthColumns)[meta->m_columnsCount];
 			((uint32_t*)varLengthColumns)[meta->m_columnsCount] += size;
-			((uint32_t*)varLengthColumns)[id] = size;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
 		inline void setVarColumn(uint16_t id, const char* value, size_t size)
 		{
 			memcpy(((char*)columns) + varLengthColumns[meta->m_columnsCount], value, size);
-			((uint32_t*)varLengthColumns)[meta->m_columnsCount] += size;
-			((uint32_t*)varLengthColumns)[id] = size;
-			SET_BITMAP((uint8_t*)nullBitmap, id);
+			filledVarColumns(id,size);
 		}
 		inline void startSetUpdateOldValue()
 		{

@@ -8,21 +8,35 @@
 #include <string.h>
 #include "metaDataCollection.h"
 #include "metaData.h"
-#include "sqlParser/sqlParser.h"
-#include "store/client/client.h"
+#include "../sqlParser/sqlParser.h"
+#include "../store/client/client.h"
 #include "charset.h"
 #include "metaTimeline.h"
-#include "message/record.h"
+#include "../message/record.h"
 #include "metaChangeInfo.h"
-#include "util/barrier.h"
-#include "util/likely.h"
-#include "glog/logging.h"
+#include "../util/barrier.h"
+#include "../util/likely.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
+	typedef spp::sparse_hash_map<const char*, MetaTimeline<tableMeta>*, StrHash, StrCompare> tbTree;
+#define getDbInfo(database,di) do{		\
+	dbTree::iterator DBIter = m_dbs.find(database);\
+	if (unlikely(DBIter == m_dbs.end()))\
+		(di) = nullptr;\
+	else\
+		(di) = DBIter->second; \
+	}while(0);
+#define getTableInfo(tableName,meta,db) do{		\
+	tbTree::iterator TBIter = (db)->tables.find(tableName);\
+	if (unlikely(TBIter == (db)->tables.end()))\
+		(meta) = nullptr;\
+	else\
+		(meta) = TBIter->second; \
+	}while(0);
 	struct dbInfo
 	{
-		trieTree tables;
+		tbTree tables;
 		uint64_t m_id;
 		std::string name;
 		const charsetInfo* charset;
@@ -39,7 +53,6 @@ namespace META {
 		m_sqlParser = new sqlParser();
 		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
 		{
-			LOG(ERROR)<<"sql parser load funcs from:"<<sqlParserFunclibFile<<" failed";
 			delete m_sqlParser;
 			return -1;
 		}
@@ -58,26 +71,24 @@ namespace META {
 	tableMeta * metaDataCollection::get(const char * database, const char * table,
 		uint64_t originCheckPoint)
 	{
-		MetaTimeline<dbInfo> * db =
-			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)database));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
 		if (db == NULL)
 			return NULL;
 		dbInfo * currentDB = db->get(originCheckPoint);
 		if (currentDB == NULL)
 			return NULL;
-		MetaTimeline<tableMeta> * metas =
-			static_cast<MetaTimeline<tableMeta>*>(currentDB->tables.findNCase(
-			(const unsigned char*)table));
+		MetaTimeline<tableMeta>* metas;
+		getTableInfo(table, metas, currentDB);
 		if (metas == NULL)
 			return NULL;
 		return metas->get(originCheckPoint);
 	}
 	const charsetInfo* metaDataCollection::getDataBaseCharset(const char* database, uint64_t originCheckPoint)
 	{
-		MetaTimeline<dbInfo>* db =
-			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)database));
+
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
 		if (db == NULL)
 			return NULL;
 		dbInfo* currentDB = db->get(originCheckPoint);
@@ -176,17 +187,14 @@ namespace META {
 	}
 	int metaDataCollection::put(const char * database, uint64_t offset, dbInfo *dbmeta)
 	{
-		MetaTimeline<dbInfo> * db =
-			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)database));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
 		if (db == NULL)
 		{
 			db = new MetaTimeline<dbInfo>(offset);
 			db->put(dbmeta,offset);
 			barrier;
-			if (0
-				!= m_dbs.insert(
-				(const uint8_t *)dbmeta->name.c_str(), db))
+			if (!m_dbs.insert(std::pair<const char*, MetaTimeline<dbInfo>*>(dbmeta->name.c_str(), db)).second)
 			{
 				delete db;
 				return -1;
@@ -219,9 +227,8 @@ namespace META {
 		tableMeta * meta, uint64_t originCheckPoint)
 	{
 		dbInfo * currentDB = nullptr;
-		MetaTimeline<dbInfo> * db =
-			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)database));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
 		bool newMeta = false;
 		if (db == NULL)
 		{
@@ -234,9 +241,8 @@ namespace META {
 		}
 		else
 			currentDB = db->get(originCheckPoint);
-		MetaTimeline<tableMeta> * metas =
-			static_cast<MetaTimeline<tableMeta>*>(currentDB->tables.findNCase(
-			(const unsigned char*)table));
+		MetaTimeline<tableMeta>* metas;
+		getTableInfo(table, metas, currentDB);
 		if (metas == NULL)
 		{
 			newMeta = true;
@@ -247,14 +253,14 @@ namespace META {
 		if (newMeta)
 		{
 			barrier;
-			currentDB->tables.insert((const unsigned char*)table, metas);
+			currentDB->tables.insert(std::pair<const char*, MetaTimeline<tableMeta>* >(meta->m_tableName.c_str(), metas));
 		}
 		m_allTables.put(meta);
 		return 0;
 	}
 	static void copyColumn(columnMeta & column, const newColumnInfo* src)
 	{
-		column.m_srcColumnType = src->rawType;
+		column.m_srcColumnType = src->rawType;//todo
 		column.m_columnType = src->type;
 		column.m_columnIndex = src->index;
 		column.m_columnName = src->name;
@@ -292,8 +298,8 @@ namespace META {
 			printf("no database\n");
 			return -1;
 		}
-		MetaTimeline<dbInfo> * db = static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)newTable.database.c_str()));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(newTable.database.c_str(), db);
 		if (db == NULL)
 		{
 			printf("unknown database :%s\n", newTable.database.c_str());
@@ -394,8 +400,8 @@ namespace META {
 			printf("no database\n");
 			return -1;
 		}
-		databaseInfo * db = static_cast<databaseInfo*>(m_dbs.findNCase(
-			(const unsigned char*)newTable.database.c_str()));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(newTable.database.c_str(), db);
 		if (db == NULL)
 		{
 			printf("unknown database :%s\n", newTable.database.c_str());
@@ -609,20 +615,21 @@ namespace META {
 		{
 			if (h->dbName.empty())
 				return -1;
-			db = static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-				(const unsigned char*)h->dbName.c_str()));
+			getDbInfo(h->dbName.c_str(), db);
 		}
 		else
-			db = static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)table->database.c_str()));
+		{
+			getDbInfo(table->database.c_str(), db);
+		}
 		if (db == NULL)
 			return -1;
 		dbInfo * currentDB = db->get(originCheckPoint);
 		if (currentDB == NULL)
 			return -1;
-		MetaTimeline<tableMeta> * metas =
-			static_cast<MetaTimeline<tableMeta>*>(currentDB->tables.findNCase(
-			(const unsigned char*)table));
+
+		MetaTimeline<tableMeta>* metas;
+		getTableInfo(table->table.c_str(), metas, currentDB);
+
 		if (metas == NULL)
 			return -1;
 		return metas->disableCurrent(originCheckPoint);
@@ -631,9 +638,8 @@ namespace META {
 	int metaDataCollection::processDatabase(const databaseInfo * database,
 		uint64_t originCheckPoint)
 	{
-		MetaTimeline<dbInfo> * db =
-			static_cast<MetaTimeline<dbInfo>*>(m_dbs.findNCase(
-			(const unsigned char*)database->name.c_str()));
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database->name.c_str(), db);
 		dbInfo * current = NULL;
 		if (db == NULL)
 		{
@@ -647,9 +653,7 @@ namespace META {
 				db = new MetaTimeline<dbInfo>(m_maxDatabaseId++);
 				db->put(current,originCheckPoint);
 				barrier;
-				if (0
-					!= m_dbs.insert(
-					(const uint8_t *)database->name.c_str(), db))
+				if (!m_dbs.insert(std::pair<const char *, MetaTimeline<dbInfo>*>(database->name.c_str(), db)).second)
 				{
 					delete db;
 					return -1;
@@ -734,18 +738,18 @@ namespace META {
 	}
 	int metaDataCollection::purge(uint64_t originCheckPoint)
 	{
-		for (trieTree::iterator iter = m_dbs.begin(); iter.valid(); iter.next())
+		for (dbTree::iterator iter = m_dbs.begin(); iter!=m_dbs.end(); iter++)
 		{
-			MetaTimeline<dbInfo> * db = static_cast<MetaTimeline<dbInfo>*>(iter.value());
+			MetaTimeline<dbInfo>* db = iter->second;
 			if (db == NULL)
 				continue;
 			db->purge(originCheckPoint);
 			dbInfo * dbMeta = db->get(0xffffffffffffffffUL);
 			if (dbMeta == NULL)
 				continue;
-			for (trieTree::iterator titer = dbMeta->tables.begin(); titer.valid(); titer.next())
+			for (tbTree::iterator titer = dbMeta->tables.begin(); titer!=dbMeta->tables.begin(); titer++)
 			{
-				MetaTimeline<tableMeta> * table = static_cast<MetaTimeline<tableMeta>*>(titer.value());
+				MetaTimeline<tableMeta>* table = titer->second;
 				if (table == NULL)
 					continue;
 				table->purge(originCheckPoint);
@@ -764,14 +768,13 @@ namespace META {
 	}
 	void metaDataCollection::print()
 	{
-		trieTree::iterator dbiter = m_dbs.begin();
-		for (; dbiter.valid(); dbiter.next())
+		for (dbTree::iterator iter = m_dbs.begin(); iter != m_dbs.end(); iter++)
 		{
-			MetaTimeline<dbInfo>* db = static_cast<MetaTimeline<dbInfo> *>(dbiter.value());
+			MetaTimeline<dbInfo>* db = iter->second;
 			dbInfo* currentDB = db->get(0xffffffffffffffffUL);
-			for (trieTree::iterator tbiter = currentDB->tables.begin(); tbiter.valid(); tbiter.next())
+			for (tbTree::iterator titer = currentDB->tables.begin(); titer != currentDB->tables.begin(); titer++)
 			{
-				MetaTimeline<tableMeta>* metas = static_cast<MetaTimeline<tableMeta>*>(tbiter.value());
+				MetaTimeline<tableMeta>* metas = titer->second;
 				tableMeta* currentTable = metas->get(0xffffffffffffffffUL);
 				printf("%s\n", currentTable->toString().c_str());
 			}
@@ -779,3 +782,4 @@ namespace META {
 	}
 
 }
+

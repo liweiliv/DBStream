@@ -9,10 +9,12 @@
 #define METADATACOLLECTION_H_
 
 #include <string>
-#include "../util/trieTree.h"
-#include "../util/unorderMapUtil.h"
+#include "util/trieTree.h"
+#include "util/unorderMapUtil.h"
+#include "util/sparsepp/spp.h"
 #include "tableIdTree.h"
-#include "../util/winDll.h"
+#include "util/winDll.h"
+#include "metaTimeline.h"
 struct charsetInfo;
 namespace STORE{
 class client;
@@ -22,6 +24,7 @@ namespace SQL_PARSER
 class sqlParser;
 struct handle;
 };
+
 typedef std::unordered_map<const char *,const  charsetInfo*,StrHash,StrCompare> CharsetTree ;
 namespace META {
 	struct tableMeta;
@@ -32,11 +35,11 @@ namespace META {
 	class newTableInfo;
 	struct Table;
 	struct databaseInfo;
-
+	typedef spp::sparse_hash_map<const char*, MetaTimeline<dbInfo>*, StrHash, StrCompare> dbTree;
 	class DLL_EXPORT metaDataCollection
 	{
 	private:
-		trieTree m_dbs;
+		dbTree m_dbs;
 		CharsetTree m_charsetSizeList;
 		const charsetInfo * m_defaultCharset;
 		tableIdTree m_allTables;
@@ -75,3 +78,4 @@ namespace META {
 	};
 }
 #endif /* METADATACOLLECTION_H_ */
+

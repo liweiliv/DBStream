@@ -121,13 +121,32 @@ namespace DATA_SOURCE {
 		m_descEvent = new formatEvent(4, "5.6.16");
 		initColumnTypeInfo();
 		m_parsedRecords = new DATABASE_INCREASE::record*[2048];
+                m_sqlParser = new SQL_PARSER::sqlParser();
 	}
 	BinlogEventParser::~BinlogEventParser()
 	{
 		if (m_descEvent != NULL)
 			delete m_descEvent;
 		delete[]m_parsedRecords;
+		delete m_sqlParser;
 	}
+	int BinlogEventParser::init(const char * sqlParserFuncLibPath,const char* sqlParserTreePath)
+	{
+		if(0!=m_sqlParser->LoadFuncs(sqlParserFuncLibPath))
+		{
+			LOG(ERROR)<<"BinlogEventParser load sqlParser funcs from lib :"<<sqlParserFuncLibPath<<" failed";
+			return -1;
+		}
+		if(0!=m_sqlParser->LoadParseTreeFromFile(sqlParserTreePath))
+		{
+			LOG(ERROR)<<"load parse tree from file :"<<sqlParserTreePath<<" failed";
+			return -1;
+		}
+		LOG(INFO)<<"sqlParser in BinlogEventParser init from :"<<sqlParserFuncLibPath<<" and "<<sqlParserTreePath<<" sucess";
+		return 0;
+	}
+
+	
 	void BinlogEventParser::setInstance(const char* instance)
 	{
 		m_instance = instance;
@@ -157,7 +176,7 @@ namespace DATA_SOURCE {
 			if (tmp->head.timestamp == 0)
 			{
 				uint64_t fileID = getFileId(tmp->fileName);
-				LOG(ERROR) << "get new file " << tmp->fileName << " " << fileID << ",current file:m_currentFileID";
+				LOG(ERROR) << "get new file " << tmp->fileName << " " << fileID << ",current file:"<<m_currentFileID;
 				if (fileID == m_currentFileID + 1 || m_currentFileID == 0)
 				{
 					m_currentFileID = fileID;
@@ -438,6 +457,8 @@ namespace DATA_SOURCE {
 			}
 			if (type == DATABASE_INCREASE::R_UPDATE || type == DATABASE_INCREASE::R_DELETE)
 			{
+				if (type == DATABASE_INCREASE::R_UPDATE)
+					record->startSetUpdateOldValue();
 				if (unlikely(ParseStatus::OK
 					!= (rtv = parseRowData(record, parsePos, end - parsePos, false, type == DATABASE_INCREASE::R_UPDATE? updatedColumnBitMap: columnBitmap))))
 				{

@@ -438,13 +438,13 @@ public:
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if(t->current == nullptr)
 			{
-				if ((m_pageNum + 1 + (t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount) >= m_maxPageNum || m_size + psize >= m_maxSize)
+				if ((m_pageNum + 1 + (t->meta==nullptr?0:(t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageNum || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
 					return B_FULL;
 				}
-				m_pageNum+=t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount;//every index look as a page
+				m_pageNum += 1 + (t->meta==nullptr?0:t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount);//every index look as a page
 			}
 			else
 			{
@@ -454,11 +454,12 @@ public:
 					m_cond.wakeUp();
 					return B_FULL;
 				}
+				m_pageNum++;
 			}
 
 			t->current = m_blockManager->allocPage(psize);
-			t->current->pageId = (t->meta->m_primaryKey.count==0?0:1)+t->meta->m_uniqueKeysCount+t->pages.size();
-			m_pages[m_pageNum++] = t->current;
+			t->current->pageId = m_pageNum; 
+			m_pages[m_pageNum] = t->current;
 			t->pages.append(t->current);
 		}
 		mem = t->current->pageData + t->current->pageUsedSize;

@@ -50,10 +50,10 @@ int main()
 		printf("load parse tree from file :%s failed\n", mysqlParserTree);
 		return -1;
 	}
-	const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
-	testSql(&parser,"alter table test.t1 add column a int unsignedd");
-	testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
-	testSql(&parser,"alter table t2 add column(c1 int,c2 char(20),c3 varcahr(20))");
+	//const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
+	//testSql(&parser,"alter table test.t1 add column a int unsignedd");
+	//testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
+	testSql(&parser,"alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
 	destroyStackLog();
 }
 

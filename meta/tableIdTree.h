@@ -75,7 +75,7 @@ namespace META {
 			{
 				if (n->serial)
 				{
-					uint16_t cid = (uint16_t)((tableId - n->startId) / (1 << (n->level * 9)));
+					uint16_t cid = (uint16_t)((tableId - n->startId) >> (n->level * 9));//every node has 512(1<<9) slot
 					if (cid >= 512)
 					{
 						assert(n == m_root);

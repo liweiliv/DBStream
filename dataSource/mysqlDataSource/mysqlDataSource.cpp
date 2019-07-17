@@ -9,6 +9,15 @@
 #include "initMetaData.h"
 #include <thread>
 namespace DATA_SOURCE {
+#ifdef OS_WIN
+	#define mysqlFuncLib "../lib/mysqlParserFuncs.dll"
+	#define mysqlParserTree "ParseTree"
+#endif
+#ifdef OS_LINUX
+	#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
+	#define mysqlParserTree "sqlParser/ParseTree"
+#endif
+
 	static constexpr uint64_t BEGIN_RECORD  = 0x1ffffffffffffffful;
 	static constexpr uint64_t COMMIT_RECORD = 0x2ffffffffffffffful;
 	static constexpr auto ASYNC = "async";
@@ -92,6 +101,7 @@ namespace DATA_SOURCE {
 	}
 	DATABASE_INCREASE::record* mysqlDataSource::asyncRead()
 	{
+		static int i = 0;
 		DATABASE_INCREASE::record* record = nullptr;
 		do {
 			if (m_outputQueue.pop(record, 10))
@@ -102,7 +112,8 @@ namespace DATA_SOURCE {
 					m_store->commit();
 				else
 				{
-					m_prevRecord = record;
+                        		if((++i&0xfff) == 0)
+                                		LOG(ERROR)<<record->head->logOffset;
 					return record;
 				}
 			}
@@ -111,6 +122,7 @@ namespace DATA_SOURCE {
 	}
 	DATABASE_INCREASE::record* mysqlDataSource::syncRead()
 	{
+		static int i = 0;
 		DATABASE_INCREASE::record* record = nullptr;
 		if (nullptr != (record = m_parser->getRecord()))
 			return record;
@@ -125,7 +137,12 @@ namespace DATA_SOURCE {
 			case BinlogEventParser::OK:
 			{
 				if (nullptr != (record = m_parser->getRecord()))
+				{
+                        if((++i&0xfff) == 0)
+                                LOG(ERROR)<<record->head->logOffset;
+
 					return record;
+				}
 				break;
 			}
 			case BinlogEventParser::FILTER:
@@ -209,6 +226,13 @@ namespace DATA_SOURCE {
 		{
 			m_async = true;
 			m_thread = std::thread(asyncReadThread, this);
+		}
+		else
+			m_async = false;
+		if(0 != m_parser->init(mysqlFuncLib,mysqlParserTree))
+		{
+			LOG(ERROR) << "init binlog parser failed";
+			return false;
 		}
 		return true;
 	}

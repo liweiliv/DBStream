@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include "barrier.h"
 #include "likely.h"
 template<class T>
 class ringFixedQueue
@@ -10,7 +11,7 @@ private:
 	T* array;
 	uint32_t arraySize;
 	uint32_t mask;
-	std::atomic<int32_t> head;
+	int32_t head;
 	std::atomic<int32_t> end;
 public:
 	ringFixedQueue(uint32_t size = 32):arraySize(1)
@@ -23,7 +24,7 @@ public:
 		}
 		mask = arraySize - 1;
 		array = new T[arraySize];
-		head.store(0, std::memory_order_relaxed);
+		head = 0;
 		end.store(0, std::memory_order_relaxed);
 	}
 	~ringFixedQueue()
@@ -33,37 +34,37 @@ public:
 	/*
 	only one thread can push
 	if queue is full,return false
-	outtime: in ms
+	outtime: in us
 	*/
 	inline bool push(const T& v, int32_t outtime = 0)
 	{
-		int32_t h;
-		while (unlikely((h=((head.load(std::memory_order_relaxed) + 1) & mask)) == end.load(std::memory_order_relaxed)))
+		int32_t next = (head + 1) & mask;
+		while (unlikely(next == end.load(std::memory_order_relaxed)))
 		{
 			if (outtime <= 0)
 				return false;
-			std::this_thread::sleep_for(std::chrono::nanoseconds(1000000));
+			std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 			outtime--;
 		}
-		array[h] = v;
-		head.store(h, std::memory_order_acquire);
+		array[head] = v;
+		head = next;
 		return true;
 	}
 	/*
 	thread safe,multi thread can pop
 	if queue is empty,return false
-	outtime: in ms
+	outtime: in us
 	*/
 	inline bool pop(T& v, int32_t outtime = 0)
 	{
 		int32_t e = end.load(std::memory_order_relaxed);
 		do
 		{
-			while (e == head.load(std::memory_order_relaxed))
+			while (e == head)
 			{
 				if (outtime <= 0)
 					return false;
-				std::this_thread::sleep_for(std::chrono::nanoseconds(1000000));
+				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 				outtime--;
 			}
 			v = array[e];

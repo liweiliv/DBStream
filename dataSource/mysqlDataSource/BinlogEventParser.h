@@ -81,6 +81,7 @@ namespace DATA_SOURCE
 			return nullptr;
 		}
 		ParseStatus parser(const char * logEvent);
+		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
 	};
 }
 #endif /* BINLOGEVENTPARSER_H_ */
