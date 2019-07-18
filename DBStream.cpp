@@ -4,6 +4,7 @@
 #include "store/store.h"
 #include "util/config.h"
 #include "glog/logging.h"
+#include "sqlParser/sqlParserUtil.h"
 #include <stdio.h>
 #ifdef OS_WIN
 #define mysqlFuncLib "mysqlParserFuncs.dll"
@@ -28,6 +29,7 @@ int main(int argc, char* argv[])
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
+	initKeyWords();
 	STORE::store store(&conf);
 	META::metaDataCollection collection("utf8",nullptr);
         if(0!=collection.initSqlParser(mysqlParserTree,mysqlFuncLib))

@@ -1,5 +1,6 @@
 #pragma once
 #include "../util/likely.h"
+#include <string>
 namespace META {
 	template<typename T>
 	class MetaTimeline
@@ -15,9 +16,10 @@ namespace META {
 		MetaInfo* m_current;
 		uint64_t m_id;
 		uint16_t m_version;
+		std::string m_name;
 	public:
-		MetaTimeline(uint64_t id) :
-			m_current(NULL), m_id(id), m_version(0)
+		MetaTimeline(uint64_t id,const char *name) :
+			m_current(NULL), m_id(id), m_version(0),m_name(name)
 		{
 		}
 		~MetaTimeline()
@@ -26,6 +28,10 @@ namespace META {
 		}
 		void setID(uint64_t id) {
 			m_id = id;
+		}
+		const std::string & getName()
+		{
+			return m_name;
 		}
 		/*can be concurrent*/
 		inline T* get(uint64_t originCheckPoint)

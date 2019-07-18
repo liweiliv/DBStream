@@ -140,6 +140,13 @@ namespace META {
 			for (int i = 0; i < m_indexCount; i++)
 				m_indexs[i] = t.m_indexs[i];
 		}
+		m_fixedColumnCount = t.m_fixedColumnCount;
+		m_varColumnCount = t.m_varColumnCount;
+		m_realIndexInRowFormat = new uint16_t[m_columnsCount];
+		memcpy(m_realIndexInRowFormat,t.m_realIndexInRowFormat,sizeof(uint16_t)*m_columnsCount);
+		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount+1];
+		memcpy(m_fixedColumnOffsetsInRecord,t.m_fixedColumnOffsetsInRecord,sizeof(uint16_t)*(m_fixedColumnCount+1));
+		
 		return *this;
 	}
 	void tableMeta::buildColumnOffsetList()

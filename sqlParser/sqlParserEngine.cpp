@@ -28,7 +28,7 @@
 #include "util/winString.h"
 #endif
 using namespace std;
-//#define DEBUG
+#define DEBUG
 namespace SQL_PARSER
 {
 
@@ -943,18 +943,6 @@ PARSE_SUCCESS:
 			currentHandle = _h;
 		}
 	}
-	void printfS(const char *s)
-	{
-		char buf[200];
-		for(int i=0;i<sizeof(buf)-1;i++)
-		{
-			buf[i] = s[i];
-			if(buf[i]=='\0')
-				break;
-		}
-		buf[199] = '\0';
-		printf("error when parse:%s,abort\n",buf);
-	}
 	DLL_EXPORT parseValue sqlParser::parse(handle*& h, const char* sql)
 	{
 		h = new handle;
@@ -979,7 +967,6 @@ PARSE_SUCCESS:
 				}
 			}
 			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
-			printfS(sql);
 			delete h;
 			h = NULL;
 			return NOT_MATCH;

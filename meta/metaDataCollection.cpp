@@ -191,10 +191,10 @@ namespace META {
 		getDbInfo(database, db);
 		if (db == NULL)
 		{
-			db = new MetaTimeline<dbInfo>(offset);
+			db = new MetaTimeline<dbInfo>(offset,database);
 			db->put(dbmeta,offset);
 			barrier;
-			if (!m_dbs.insert(std::pair<const char*, MetaTimeline<dbInfo>*>(dbmeta->name.c_str(), db)).second)
+			if (!m_dbs.insert(std::pair<const char*, MetaTimeline<dbInfo>*>(db->getName().c_str(), db)).second)
 			{
 				delete db;
 				return -1;
@@ -246,7 +246,7 @@ namespace META {
 		if (metas == NULL)
 		{
 			newMeta = true;
-			metas = new MetaTimeline<tableMeta>(m_maxTableId++);
+			metas = new MetaTimeline<tableMeta>(m_maxTableId++,table);
 		}
 		metas->put(meta, originCheckPoint);//here meta id will be set
 
@@ -379,6 +379,7 @@ namespace META {
 				key->keyIndexs[meta->m_primaryKey.count++] = _c->m_columnIndex;
 			}
 		}
+		meta->buildColumnOffsetList();
 		if (0
 			!= put(newTable.database.c_str(), newTable.table.c_str(), meta, originCheckPoint))
 		{
@@ -650,7 +651,7 @@ namespace META {
 				current->charset = database->charset;
 				if (current->charset == nullptr)
 					current->charset = m_defaultCharset;
-				db = new MetaTimeline<dbInfo>(m_maxDatabaseId++);
+				db = new MetaTimeline<dbInfo>(m_maxDatabaseId++,database->name.c_str());
 				db->put(current,originCheckPoint);
 				barrier;
 				if (!m_dbs.insert(std::pair<const char *, MetaTimeline<dbInfo>*>(database->name.c_str(), db)).second)
@@ -715,6 +716,7 @@ namespace META {
 		while (currentHandle != NULL)
 		{
 			metaChangeInfo * meta = static_cast<metaChangeInfo*>(currentHandle->userData);
+			meta->print();
 			if (meta->database.type
 				!= databaseInfo::MAX_DATABASEDDL_TYPE)
 			{
