@@ -272,16 +272,12 @@ namespace DATA_SOURCE {
 	{
 		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)logEvent;
 		QueryEvent query(logEvent, size, m_descEvent);
+		LOG(ERROR)<<"ddl:"<<query.query;
 		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord)+DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(),query.query.size()));
-		r->initRecord(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord));
+		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord),query.charset,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
-		r->head->size = DATABASE_INCREASE::recordRealSize;
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 		r->head->type = DATABASE_INCREASE::R_DDL;
-		r->setCharset(query.charset);
-		r->setDataBase(query.db.c_str());
-		r->setSqlMode(query.sql_mode);
-		memcpy((char*)r->ddl, query.query.c_str(), query.query.size());
 		m_parsedRecords[m_parsedRecordCount++] = r;
 		m_metaDataManager->processDDL(query.query.c_str(), r->head->logOffset);
 		return ParseStatus::OK;

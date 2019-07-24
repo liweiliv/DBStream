@@ -479,11 +479,22 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_STRING(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (newOrOld)
-			record->setVarColumn(colMeta->m_columnIndex, data+1, (uint8_t)data[0]);
+		if(colMeta->m_size>=0xffu)
+		{
+			if (newOrOld)
+				record->setVarColumn(colMeta->m_columnIndex, data+2, *(uint16_t*)data);
+			else
+				record->setVardUpdatedColumn(colMeta->m_columnIndex, data+2, *(uint16_t*)data);
+			data += (*(uint16_t*)data)+2;
+		}
 		else
-			record->setVardUpdatedColumn(colMeta->m_columnIndex, data+1, (uint8_t)data[0]);
-		data += (uint8_t)data[0]+1;
+		{
+			if (newOrOld)
+				record->setVarColumn(colMeta->m_columnIndex, data+1, *(uint8_t*)data);
+			else
+				record->setVardUpdatedColumn(colMeta->m_columnIndex, data+1, *(uint8_t*)data);
+			data += (*(uint8_t*)data)+1;
+		}
 		return 0;
 	}
 	uint32_t lengthOf_MYSQL_TYPE_BIT(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,

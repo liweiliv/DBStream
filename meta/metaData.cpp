@@ -171,7 +171,7 @@ namespace META {
 		{
 			if (columnInfos[m_columns[i].m_columnType].fixed)
 			{
-				m_fixedColumnOffsetsInRecord[i] = fixedOffset;
+				m_fixedColumnOffsetsInRecord[m_fixedColumnCount] = fixedOffset;
 				fixedOffset += columnInfos[m_columns[i].m_columnType].columnTypeSize;
 				m_realIndexInRowFormat[i] = m_fixedColumnCount++;
 			}

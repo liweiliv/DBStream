@@ -28,7 +28,7 @@
 #include "util/winString.h"
 #endif
 using namespace std;
-#define DEBUG
+//#define DEBUG
 namespace SQL_PARSER
 {
 

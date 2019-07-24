@@ -253,6 +253,7 @@ namespace DATABASE_INCREASE
 		template<class T>
 		inline void setFixedColumn(uint16_t id, T value)
 		{
+			assert(meta->m_realIndexInRowFormat[id]<meta->m_fixedColumnCount);
 			*(T*)(columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[id]]) = value;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
@@ -436,6 +437,37 @@ namespace DATABASE_INCREASE
 		const char* database;
 		const char* ddl;
 		/*----------------------------------------------*/
+		DDLRecord(){}
+		inline void create(const char* data,const char * charset, uint64_t sqlMode,const char * database,const char * query,uint32_t querySize)
+		{
+			initRecord(data);
+			this->sqlMode = sqlMode;
+			*(uint64_t*)(data + head->headSize) = sqlMode;
+			charsetId = ascii;
+			if (charset != nullptr)
+			{
+				const charsetInfo* ci = getCharset(charset);
+				if (likely(ci != nullptr))
+					charsetId = ci->id;
+			}
+			*(uint16_t*)(data + head->headSize + sizeof(uint64_t)) = charsetId;
+			this->database = data + head->headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
+			if (database != nullptr)
+			{
+				*(uint8_t*)(this->database - 1) = strlen(database) + 1;
+				memcpy((char*)this->database, database, *(uint8_t*)(database - 1));
+			}
+			else
+			{
+				*(uint8_t*)(this->database - 1) = 0;
+			}
+			ddl = data + *(uint8_t*)(this->database - 1);
+			memcpy((char*)ddl, query, querySize);
+			head->size = ddl - data + querySize;
+			if (database == nullptr || *(uint8_t*)(this->database - 1) == 0)
+				this->database = nullptr;
+		}
+		/*---------------------------------------------*/
 		DDLRecord(const char* data)
 		{
 			initRecord(data);
@@ -455,25 +487,6 @@ namespace DATABASE_INCREASE
 			  {do some thing}
 				 ...
 			   */
-		}
-		inline void setCharset(const char * charset)
-		{
-			const charsetInfo* ci = getCharset(charset);
-			if (unlikely(ci == nullptr))
-				charsetId = ascii;
-			else
-				charsetId = ci->id;
-			*(uint16_t*)(data + head->headSize + sizeof(uint64_t)) = charsetId;
-		}
-		inline void setSqlMode(uint64_t sqlMode)
-		{
-			this->sqlMode = sqlMode;
-			*(uint64_t*)(data + head->headSize) = sqlMode;
-		}
-		inline void setDataBase(const char* database)
-		{
-			*(uint8_t*)(database - 1) = strlen(database)+1;
-			memcpy((char*)this->database, database, *(uint8_t*)(database - 1));
 		}
 		static inline uint32_t allocSize(uint32_t dataBaseSize,uint32_t ddlSize)
 		{
