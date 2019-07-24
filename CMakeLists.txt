@@ -180,6 +180,8 @@ TARGET_LINK_LIBRARIES(testTrieTree util)
 
 ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 
+ADD_EXECUTABLE(testString util/unittest/testString.cpp)
+TARGET_LINK_LIBRARIES(testString util)
 
 ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
 TARGET_LINK_LIBRARIES(testRingFixedQueue util)

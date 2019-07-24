@@ -71,6 +71,14 @@ int main(int argc, char* argv[])
 				return -1;
 			}
 		}
+		else if(!ds->getLastError().empty())
+		{
+			LOG(ERROR) << "read record from datasource failed";
+			store.stop();
+			ds->stop();
+			return -1;
+		}
 	}
+	DATA_SOURCE::dataSource::destroyDataSource(ds);
 	google::ShutdownGoogleLogging();
 }

@@ -264,7 +264,10 @@ namespace STORE{
 		if (columnCount > 0)
 		{
 			if (!m_ukMeta.init(columnIdxs, columnCount, meta))
+			{
+				m_type = T_MAX_TYPE;
 				return;
+			}
 			m_type = T_UNION;
 		}
 		else

@@ -9,10 +9,10 @@
 #define BINLOGEVENTPARSER_H_
 #include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
+#include "util/String.h"
 #include <map>
-#include "../../message/record.h"
-#include "../../memory/ringBuffer.h"
+#include "message/record.h"
+#include "memory/ringBuffer.h"
 #include "columnParser.h"
 #include "BinaryLogEvent.h"
 namespace SQL_PARSER {
@@ -36,6 +36,7 @@ namespace DATA_SOURCE
 		ringBuffer* m_memPool;
 		DATABASE_INCREASE::record** m_parsedRecords;
 		int16_t m_parsedRecordCount;
+		std::String m_error;
 	public:
 		enum ParseStatus {
 			OK,
@@ -82,6 +83,7 @@ namespace DATA_SOURCE
 		}
 		ParseStatus parser(const char * logEvent);
 		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
+		std::String getError();
 	};
 }
 #endif /* BINLOGEVENTPARSER_H_ */

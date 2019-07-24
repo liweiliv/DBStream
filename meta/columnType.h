@@ -64,16 +64,16 @@ namespace META {
 	{T_DATE,4,false,true,false},
 	{T_YEAR,2,false,true,false},
 	{T_TIME,8,false,true,false},
-	{T_BLOB,4,false,true,false},
-	{T_STRING,4,false,false,true},
+	{T_BLOB,4,true,true,false},
+	{T_STRING,4,true,false,true},
 	{T_JSON,4,false,true,true},
 	{T_XML,4,false,true,true},
 	{T_GEOMETRY,4,false,true,false},
 	{T_SET,8,false,true,true},
 	{T_ENUM,2,false,true,true},
 	{T_BYTE,8,false,true,false},
-	{T_BINARY,4,false,false,false},
-	{T_TEXT,4,false,false,true}
+	{T_BINARY,4,true,false,false},
+	{T_TEXT,4,true,false,true}
 	};
 #pragma pack(1)
 	struct timestamp

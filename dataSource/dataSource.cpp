@@ -89,5 +89,17 @@ namespace DATA_SOURCE {
 		LOG(INFO) << "load dataSource from :" << path << " success";
 		return ds;
 	}
+	DLL_EXPORT void  dataSource::destroyDataSource(dataSource *ds)
+	{
+		void* handle = ds->m_dllHandle;
+		delete ds;
+#ifdef OS_LINUX
+		dlclose(handle);
+#endif
+#ifdef OS_WIN
+		FreeLibrary(handle);
+#endif
+	}
+
 
 }

@@ -379,12 +379,14 @@ namespace DATA_SOURCE {
 			{
 				if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
 				{
-					LOG(ERROR)<<"unsupport column type :"<<ctype;
+					m_error = std::String("unsupport column type :")<<ctype;
+					LOG(ERROR)<<m_error;
 					return ParseStatus::META_NOT_MATCH;
 				}
 				if (unlikely(0!= m_columnInfo[ctype].parseFunc(columnMeta,record,data,newORold)))
 				{
-					LOG(ERROR) << "parse column type " << ctype << " in " << m_currentOffset << "@" << m_currentFileID << " failed,table :" << record->meta->m_dbName << "." << record->meta->m_tableName;
+					m_error =  std::String("parse column type ") << ctype << " in " << m_currentOffset << "@" << m_currentFileID << " failed,table :" << record->meta->m_dbName << "." << record->meta->m_tableName;
+					LOG(ERROR)<<m_error;
 					return ParseStatus::ILLEGAL;
 				}
 			}
@@ -426,12 +428,14 @@ namespace DATA_SOURCE {
 		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID,m_currentOffset));
 		if (meta == nullptr)
 		{
-			LOG(ERROR) << "can not get meta of table " << m_tableMap.dbName << "." << m_tableMap.tableName << "from metaDataManager in " << m_currentOffset << "@" << m_currentFileID;
+			m_error =  std::String("can not get meta of table ") << m_tableMap.dbName << "." << m_tableMap.tableName << "from metaDataManager in " << m_currentOffset << "@" << m_currentFileID;
+			LOG(ERROR)<<m_error;
 			return ParseStatus::NO_META;
 		}
 		if (meta->m_columnsCount != m_tableMap.columnCount)
 		{
-			LOG(ERROR) << "column count from table_map [" << m_tableMap.columnCount << "] of table " << m_tableMap.dbName << "." << m_tableMap.tableName << " is diffrent from which is from metaDataManager [" << meta->m_columnsCount << "]";
+			m_error =  std::String("column count from table_map [") << m_tableMap.columnCount << "] of table " << m_tableMap.dbName << "." << m_tableMap.tableName << " is diffrent from which is from metaDataManager [" << meta->m_columnsCount << "]";
+			LOG(ERROR)<<m_error;
 			return ParseStatus::META_NOT_MATCH;
 		}
 		ParseStatus rtv = ParseStatus::OK;
@@ -466,7 +470,8 @@ namespace DATA_SOURCE {
 			m_parsedRecords[m_parsedRecordCount++] = record;
 			if (unlikely(parsePos > end))
 			{
-				LOG(ERROR) << "parse record failed for read over the end of log event,table :" << m_tableMap.dbName << "." << m_tableMap.tableName << " ,checkpoint:" << m_currentOffset << "@" << m_currentFileID;
+				m_error =  std::String("parse record failed for read over the end of log event,table :") << m_tableMap.dbName << "." << m_tableMap.tableName << " ,checkpoint:" << m_currentOffset << "@" << m_currentFileID;
+				LOG(ERROR)<<m_error;
 				return ParseStatus::ILLEGAL;
 			}
 		}
@@ -526,9 +531,13 @@ namespace DATA_SOURCE {
 		}
 		else
 		{
-			LOG(ERROR)<<("parse failed");
+			LOG(ERROR)<<"parse failed ,error:"<<m_error;
 			return rtv;
 		}
+	}
+	std::String BinlogEventParser::getError()
+	{
+		return m_error;
 	}
 
 }

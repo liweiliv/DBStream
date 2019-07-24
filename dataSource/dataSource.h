@@ -39,6 +39,8 @@ namespace DATA_SOURCE
 		DLL_EXPORT virtual DATABASE_INCREASE::record* read()=0;
 		DLL_EXPORT virtual const char* dataSourceName() const = 0;
 		DLL_EXPORT static dataSource* loadDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
+		DLL_EXPORT static void destroyDataSource(dataSource *ds);
+
 	};
 	extern "C" DLL_EXPORT dataSource* instance(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
 }

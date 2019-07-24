@@ -38,7 +38,7 @@ namespace DATA_SOURCE {
 	{
 
 	}
-	mysqlDataSource::mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store):dataSource(conf,metaDataCollection,store)
+	mysqlDataSource::mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store):dataSource(conf,metaDataCollection,store),m_async(false),m_running(false)
 	{
 		m_readerBufferPool = new ringBuffer();
 		m_recordBufferPool = new ringBuffer();
@@ -48,7 +48,6 @@ namespace DATA_SOURCE {
 		m_reader = new mysqlBinlogReader(m_readerBufferPool,m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 		m_prevRecord = nullptr;
-		m_async = false;
 	}
 	mysqlDataSource::~mysqlDataSource()
 	{
@@ -91,6 +90,7 @@ namespace DATA_SOURCE {
 				asyncPushRecord(static_cast<DATABASE_INCREASE::record*>((void*)COMMIT_RECORD));
 				break;
 			default:
+				m_lastError = m_parser->getError();
 				goto FAILED;
 			}
 			m_readerBufferPool->freeMem((void*)logEvent);
@@ -138,9 +138,8 @@ namespace DATA_SOURCE {
 			{
 				if (nullptr != (record = m_parser->getRecord()))
 				{
-                        if((++i&0xfff) == 0)
-                                LOG(ERROR)<<record->head->logOffset;
-
+					if((++i&0xfff) == 0)
+						LOG(ERROR)<<record->head->logOffset;
 					return record;
 				}
 				break;
@@ -154,6 +153,7 @@ namespace DATA_SOURCE {
 				m_store->commit();
 				break;
 			default:
+				m_lastError = m_parser->getError();
 				return nullptr;
 			}
 		} while (likely(m_running));
