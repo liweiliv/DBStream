@@ -202,7 +202,7 @@ namespace DATA_SOURCE {
 		char end = sql[sqlSize];
 		((char*)sql)[sqlSize] = '\0';
 		SQL_PARSER::handle *handle = nullptr;
-		SQL_PARSER::parseValue pret = m_sqlParser->parse(handle,sql);
+		SQL_PARSER::parseValue pret = m_sqlParser->parse(handle,nullptr,sql);
 		if (pret != SQL_PARSER::OK||handle == nullptr)
 		{
 			LOG(ERROR) << "parse ddl :[" << sql << "] failed";
@@ -279,7 +279,7 @@ namespace DATA_SOURCE {
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 		r->head->type = DATABASE_INCREASE::R_DDL;
 		m_parsedRecords[m_parsedRecordCount++] = r;
-		m_metaDataManager->processDDL(query.query.c_str(), r->head->logOffset);
+		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty()?nullptr:query.query.c_str(),r->head->logOffset);
 		return ParseStatus::OK;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::begin(const char * logEvent,size_t size)
