@@ -60,7 +60,7 @@ namespace META {
 		int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);
 		int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
 		int purge(uint64_t originCheckPoint);
-		int processDDL(const char * ddl, uint64_t originCheckPoint);
+		int processDDL(const char * ddl, const char * database,uint64_t originCheckPoint);
 		int setDefaultCharset(const charsetInfo* defaultCharset);
 		const charsetInfo* getDefaultCharset();
 	private:
