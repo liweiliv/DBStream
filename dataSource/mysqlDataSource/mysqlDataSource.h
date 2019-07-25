@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <thread>
 #include <assert.h>
-#include "../dataSource.h"
-#include "../../util/ringFixedQueue.h"
+#include "dataSource/dataSource.h"
+#include "util/ringFixedQueue.h"
 class ringBuffer;
 namespace DATA_SOURCE
 {
