@@ -112,8 +112,8 @@ namespace DATA_SOURCE {
 					m_store->commit();
 				else
 				{
-                        		if((++i&0xfff) == 0)
-                                		LOG(ERROR)<<record->head->logOffset;
+					if((++i&0xfff) == 0)
+						LOG(ERROR)<<record->head->logOffset;
 					return record;
 				}
 			}
@@ -156,6 +156,7 @@ namespace DATA_SOURCE {
 				m_lastError = m_parser->getError();
 				return nullptr;
 			}
+			m_readerBufferPool->freeMem((void*)logEvent);
 		} while (likely(m_running));
 		return nullptr;
 	}
