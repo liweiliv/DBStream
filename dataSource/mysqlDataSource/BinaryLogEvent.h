@@ -450,14 +450,20 @@ namespace DATA_SOURCE {
 		const uint8_t* types;
 		const uint8_t* metaInfo;
 		uint32_t metaInfoSize;
-		const char* metaData;
+		char* metaData;
+		tableMap() 
+		{
+			metaData = (char*)malloc(1024 * 8);
+		}
+		~tableMap()
+		{
+			free(metaData);
+		}
 		inline void init(
 			const formatEvent* description_event,
 			const char* metaData_, size_t size)
 		{
-			assert(size > 16);
-			tableID = 0;
-			metaData = metaData_ + description_event->common_header_len;
+			memcpy(metaData, metaData_ + description_event->common_header_len, size - description_event->common_header_len);
 			const char* pos = metaData;
 			if (description_event->post_header_len[TABLE_MAP_EVENT - 1]
 				== 6)
@@ -478,7 +484,7 @@ namespace DATA_SOURCE {
 			columnCount = get_field_length((uint8_t * *)& pos);
 			types = (const uint8_t*)pos;
 			pos += columnCount;
-			if (pos - metaData_ < (uint32_t)size)
+			if (pos - metaData + description_event->common_header_len < (uint32_t)size)
 			{
 				metaInfoSize = get_field_length((uint8_t * *)& pos);
 				assert(metaInfoSize <= columnCount * sizeof(uint16_t));
@@ -489,10 +495,10 @@ namespace DATA_SOURCE {
 				metaInfo = NULL;
 			}
 		}
-		tableMap() {}
 		tableMap(const formatEvent* description_event,
 			const char* metaData_, size_t size)
 		{
+			metaData = (char*)malloc(1024 * 8);
 			init(description_event, metaData_, size);
 		}
 	};
