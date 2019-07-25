@@ -743,20 +743,16 @@ namespace SQL_PARSER
 	{
 		if (m_funcsHandle != NULL)
 			FreeLibrary(m_funcsHandle);
-		const char* end = fileName + strlen(fileName);
-		while (*end != '.' && end != fileName)
-			end--;
-		string soName = string("lib").append(fileName, end - fileName).append(".dll");
-		m_funcsHandle = LoadLibrary(fileName);
+		m_funcsHandle = LoadLibraryEx(fileName,0, LOAD_WITH_ALTERED_SEARCH_PATH);
 		if (m_funcsHandle == NULL)
 		{
-			fprintf(stderr, "load %s failed for %d,%s\n", fileName, GetLastError(), strerror(GetLastError()));
+			LOG(ERROR)<<"load "<< fileName <<" failed for "<< GetLastError()<<","<<strerror(GetLastError());
 			return -3;
 		}
 		m_initUserDataFunc = (void(*)(handle*)) GetProcAddress(m_funcsHandle, "createUserData");
 		if (nullptr == m_initUserDataFunc)
 		{
-			fprintf(stderr, "load %s failed for %d,%s\n", fileName, GetLastError(), strerror(GetLastError()));
+			LOG(ERROR) << "load func: createUserData from " << fileName << " failed for " << GetLastError() << "," << strerror(GetLastError());
 			FreeLibrary(m_funcsHandle);
 			m_funcsHandle = nullptr;
 			return -3;
@@ -764,7 +760,7 @@ namespace SQL_PARSER
 		m_destroyUserDataFunc = (void(*)(handle*)) GetProcAddress(m_funcsHandle, "destroyUserData");
 		if (nullptr == m_destroyUserDataFunc)
 		{
-			fprintf(stderr, "load %s failed for %d,%s\n", fileName, GetLastError(), strerror(GetLastError()));
+			LOG(ERROR) << "load func: destroyUserData from " << fileName << " failed for " << GetLastError() << "," << strerror(GetLastError());
 			FreeLibrary(m_funcsHandle);
 			m_funcsHandle = nullptr;
 			return -3;
@@ -851,7 +847,10 @@ namespace SQL_PARSER
 	{
 		fileHandle fd = openFile(file, true, false, false);
 		if (!fileHandleValid(fd))
+		{
+			LOG(ERROR)<<"open parse tree file:"<<file<<" failed for "<< GetLastError()<<","<<strerror(GetLastError());
 			return -1;
+		}
 		long size = seekFile(fd, 0, SEEK_END);
 		seekFile(fd, 0, SEEK_SET);
 		char* buf = (char*)malloc(size + 1);
@@ -943,9 +942,11 @@ PARSE_SUCCESS:
 			currentHandle = _h;
 		}
 	}
-	DLL_EXPORT parseValue sqlParser::parse(handle*& h, const char* sql)
+	DLL_EXPORT parseValue sqlParser::parse(handle*& h,const char * database, const char* sql)
 	{
 		h = new handle;
+		if (database != nullptr)
+			h->dbName = database;
 		handle* currentHandle = h;
 		while (true)
 		{
@@ -994,6 +995,8 @@ PARSE_SUCCESS:
 
 			/*sql do not finish,go on prase */
 			handle* _h = new handle;
+			if (!currentHandle->dbName.empty())
+				h->dbName = currentHandle->dbName;
 			currentHandle->next = _h;
 			currentHandle = _h;
 		}
