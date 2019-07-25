@@ -13,6 +13,12 @@ using namespace META;
 namespace SQL_PARSER {
 #define  NOT_FIXED_DEC 31
 #define createMeta(h) (h)->userData = new metaChangeInfo();
+	static inline void setTableName(Table* table, const string& tableName, handle* h)
+	{
+		table->table = tableName;
+		if (table->database.empty())
+			table->database = h->dbName;
+	}
 	static inline metaChangeInfo* getMeta(handle* h)
 	{
 		metaChangeInfo* meta =  static_cast<metaChangeInfo*>((h)->userData);
@@ -484,7 +490,7 @@ namespace SQL_PARSER {
 	{
 		newTableInfo* t = getLastTable(h);
 		t->type = META::newTableInfo::CREATE_TABLE;
-		t->table.table = sql;
+		setTableName(&t->table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  createTableLike(handle* h, const string& sql)
@@ -502,7 +508,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  NewTableLikedTableName(handle* h, const string& sql)
 	{
 		newTableInfo* t = getLastTable(h);
-		t->likedTable.table = sql;
+		setTableName(&t->likedTable, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  AlterNewColumnAtFirst(handle* h, const string& sql)
@@ -573,7 +579,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  alterTableTableName(handle* h, const string& sql)
 	{
 		newTableInfo* t = getLastTable(h);
-		t->table.table = sql;
+		setTableName(&t->table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  createUK(handle* h, const string& sql)
@@ -605,14 +611,14 @@ namespace SQL_PARSER {
 	{
 		newTableInfo* t = getLastTable(h);
 		if (t != NULL && t->table.table.empty() && t->type == newTableInfo::ALTER_TABLE && t->newKeys.size() == 1 && (*(t->newKeys.begin()))->type == newKeyInfo::UNIQUE_KEY)
-			t->table.table = sql;
+			setTableName(&t->table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  tableName(handle* h, const string& sql)
 	{
 		newTableInfo* t = getLastTable(h);
 		if (t != NULL && t->table.table.empty() && t->type == newTableInfo::ALTER_TABLE && t->newKeys.size() == 1 && (*(t->newKeys.begin()))->type == newKeyInfo::UNIQUE_KEY)
-			t->table.table = sql;
+			setTableName(&t->table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  createUkByColumn(handle* h, const string& sql)
@@ -640,7 +646,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  dropIndexOnTableName(handle* h, const string& sql)
 	{
 		newTableInfo* t = getLastTable(h);
-		t->table.table = sql;
+		setTableName(&t->table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  dropTable(handle* h, const string& sql)
@@ -655,7 +661,8 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  dropTableTableName(handle* h, const string& sql)
 	{
-		(*getMeta(h)->oldTables.rbegin()).table = sql;
+		Table& table = *getMeta(h)->oldTables.rbegin();
+		setTableName(&table, sql, h);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  renameTableDatabaseName(handle* h, const string& sql)
@@ -666,10 +673,12 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  renameTableTableName(handle* h, const string& sql)
 	{
 		Table& t = *getMeta(h)->oldTables.rbegin();
-		if (t.table.empty() && !t.database.empty())
+		if (t.table.empty() && !t.database.empty())//has setted dbname,only set table name
 			t.table = sql;
 		else
-			getMeta(h)->oldTables.push_back(Table("", sql));
+		{
+			getMeta(h)->oldTables.push_back(Table(h->dbName, sql));//dot not set db name and table name,look as new table name 
+		}
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  renameNewTable(handle* h, const string& sql)
@@ -689,6 +698,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  renameTableToTableName(handle* h, const string& sql)
 	{
 		newTableInfo* t = getLastTable(h);
+		setTableName(&t->table, sql, h);
 		t->table.table = sql;
 		return OK;
 	}
