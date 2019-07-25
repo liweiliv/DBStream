@@ -4,12 +4,16 @@ project (DBStream)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_DEFINITIONS(-DOS_LINUX)
 	set(CMAKE_CXX_FLAGS "-g  -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
+	SET(LIBRARY_OUTPUT_PATH lib)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
 		ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
+		SET(LIBRARY_OUTPUT_PATH bin)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-include (GenerateExportHeader)
+include (GenerateExportHeader) 
 include_directories("./")
+
+SET(EXECUTABLE_OUTPUT_PATH bin)
 
 #lz4
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -34,10 +38,10 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	ADD_DEFINITIONS(-DGLOG_NO_ABBREVIATED_SEVERITIES)
 	include_directories("C:\\Program Files (x86)\\glog\\include" "C:\\Program Files (x86)\\gflags\\include")
-	find_library(GLOG glog "C:\\Program Files (x86)\\glog\\bin")
+	find_library(GLOG glog "C:\\Program Files (x86)\\glog\\lib")
 	if(NOT GLOG)
         message(FATAL_ERROR "glog library not found")
-	endif()
+	endif() 
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 
@@ -49,7 +53,8 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	endif()
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	include_directories("C:\\Program Files\\MySQL\\MySQL Server 8.0\\include")
-	find_library(MYSQL_CLIENT mysqlclient "C:\\Program Files\\MySQL\\MySQL Server 8.0\\lib")
+	#find_library(MYSQL_CLIENT mysqlclient "C:\\Program Files\\MySQL\\MySQL Server 8.0\\lib")
+	find_library(MYSQL_CLIENT mysqlclient  "D:\\mysql817\\archive_output_directory\\Debug")
 	if(NOT MYSQL_CLIENT)
         message(FATAL_ERROR "mysqlclient library not found")
 	endif()
@@ -57,7 +62,6 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 
 #util
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(util utilDir)
 add_library(util SHARED ${utilDir})
 TARGET_LINK_LIBRARIES(util ${GLOG})
@@ -65,13 +69,11 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(util pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #meta
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(meta metaDir)
 add_library(meta SHARED ${metaDir})
 TARGET_LINK_LIBRARIES(meta util sqlParser ${GLOG})
 
 #sql parser
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
 TARGET_LINK_LIBRARIES(sqlParser util ${GLOG})
@@ -79,18 +81,15 @@ TARGET_LINK_LIBRARIES(sqlParser util ${GLOG})
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
 TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG})
 #memory
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
 TARGET_LINK_LIBRARIES(memory util ${GLOG})
 #store
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
 TARGET_LINK_LIBRARIES(store  util memory meta ${LZ4} ${GLOG})
 
 #datasource
-SET(LIBRARY_OUTPUT_PATH lib)
 aux_source_directory(dataSource dataSourceDir)
 add_library(dataSource SHARED ${dataSourceDir})
 TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG})
@@ -98,7 +97,6 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(dataSource dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #mysqlDataSource
-SET(LIBRARY_OUTPUT_PATH lib)
 include_directories(/usr/include/mysql)
 aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
 add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
@@ -107,7 +105,6 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
-SET(EXECUTABLE_OUTPUT_PATH bin)
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
 TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta memory)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -125,7 +122,6 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 #------------------------------------------------------------------------------
 #unit test
-SET(EXECUTABLE_OUTPUT_PATH test)
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)
 TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -182,6 +178,7 @@ ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 
 ADD_EXECUTABLE(testString util/unittest/testString.cpp)
 TARGET_LINK_LIBRARIES(testString util)
+
 
 ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
 TARGET_LINK_LIBRARIES(testRingFixedQueue util)
