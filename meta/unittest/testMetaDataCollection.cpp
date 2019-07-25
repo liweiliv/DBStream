@@ -24,11 +24,11 @@ int test()
 	initKeyWords();
 	META::metaDataCollection m("utf8");
 	m.initSqlParser(mysqlParserTree,mysqlFuncLib);
-	m.processDDL("create  database test",1);
-	m.processDDL("create table test.t1 (a int primary key)",2);
+	m.processDDL("create  database test",nullptr,1);
+	m.processDDL("create table test.t1 (a int primary key)", nullptr, 2);
 	printf("%s\n",m.get("test","t1",2)->toString().c_str());
-	m.processDDL("alter table test.t1 add column b varchar(20)",3);
-	m.processDDL("alter table test.t1 add column c int unsigned",4);
+	m.processDDL("alter table test.t1 add column b varchar(20)", nullptr, 3);
+	m.processDDL("alter table test.t1 add column c int unsigned", nullptr, 4);
 	printf("%s\n",m.get("test","t1",5)->toString().c_str());
 	return 0;
 }
