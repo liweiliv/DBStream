@@ -8,6 +8,7 @@
 #include <string.h>
 #include "metaDataCollection.h"
 #include "metaData.h"
+#include "glog/logging.h"
 #include "../sqlParser/sqlParser.h"
 #include "../store/client/client.h"
 #include "charset.h"
@@ -54,11 +55,13 @@ namespace META {
 		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
 		{
 			delete m_sqlParser;
+			m_sqlParser = nullptr;
 			return -1;
 		}
 		if(0!=m_sqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
 		{
 			delete m_sqlParser;
+			m_sqlParser = nullptr;
 			return -1;
 		}
 		return 0;
@@ -704,12 +707,12 @@ namespace META {
 			return -1;
 	}
 
-	int metaDataCollection::processDDL(const char * ddl, uint64_t originCheckPoint)
+	int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
 	{
 		handle * h = NULL;
-		if (OK != m_sqlParser->parse(h, ddl))
+		if (OK != m_sqlParser->parse(h, database,ddl))
 		{
-			printf("parse ddl %s failed\n", ddl);
+			LOG(ERROR)<<"parse ddl :"<<ddl<<" failed";
 			return -1;
 		}
 		handle * currentHandle = h;
