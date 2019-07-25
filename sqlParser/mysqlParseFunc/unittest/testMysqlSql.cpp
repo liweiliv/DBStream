@@ -11,17 +11,17 @@
 #include "../../../util/stackLog.h"
 #ifdef OS_WIN
 #pragma comment(lib,"lib\\sqlParser.lib")
-#define mysqlFuncLib "../lib/mysqlParserFuncs.dll"
-#define mysqlParserTree "ParseTree"
+#define mysqlFuncLib "..\\lib\\mysqlParserFuncs.dll"
+#define mysqlParserTree "..\\..\\..\\..\\sqlParser\\ParseTree"
 #endif
 #ifdef OS_LINUX
 #define mysqlFuncLib "lib/libmysqlParserFuncs.so"
 #define mysqlParserTree "sqlParser/ParseTree"
 #endif
-int testSql(SQL_PARSER::sqlParser * parser,const char * sql)
+int testSql(SQL_PARSER::sqlParser * parser,const char * dbname,const char * sql)
 {
 	SQL_PARSER::handle * h = nullptr;
-	SQL_PARSER::parseValue v = parser->parse(h,sql);
+	SQL_PARSER::parseValue v = parser->parse(h, dbname,sql);
 	if(v!=SQL_PARSER::OK)
 	{
 		if(h!=nullptr)
@@ -36,6 +36,7 @@ int testSql(SQL_PARSER::sqlParser * parser,const char * sql)
 }
 int main()
 {
+	SetDllDirectory(".\\lib");
 	initStackLog();
 	initKeyWords();
 	SQL_PARSER::sqlParser parser;
@@ -53,7 +54,7 @@ int main()
 	//const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
 	//testSql(&parser,"alter table test.t1 add column a int unsignedd");
 	//testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
-	testSql(&parser,"alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
+	testSql(&parser,"test","alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
 	destroyStackLog();
 }
 
