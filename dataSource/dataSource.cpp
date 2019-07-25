@@ -41,7 +41,7 @@ namespace DATA_SOURCE {
 	dataSource* dataSource::loadFromDll(const char* fileName, config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
 	{
 		HINSTANCE dllHandle;
-		dllHandle = LoadLibrary(fileName);
+		dllHandle = LoadLibraryEx(fileName,0, LOAD_WITH_ALTERED_SEARCH_PATH);
 		if (dllHandle == NULL)
 		{
 			LOG(ERROR) << "load shared lib:" << fileName << " failed for " << GetLastError() << "," << strerror(GetLastError());
@@ -78,7 +78,7 @@ namespace DATA_SOURCE {
 		std::string path = dataSourceLibDirPath.append("lib").append(dataSourceType).append("DataSource.so");
 #endif
 #ifdef OS_WIN
-		std::string path = dataSourceLibDirPath.append(dataSourceType).append("DataSource.dll");
+		std::string path = dataSourceLibDirPath+(dataSourceType)+("DataSource.dll");
 #endif
 		dataSource* ds = loadFromDll(path.c_str(), conf, metaDataCollection, store);
 		if (ds == nullptr)
@@ -97,7 +97,7 @@ namespace DATA_SOURCE {
 		dlclose(handle);
 #endif
 #ifdef OS_WIN
-		FreeLibrary(handle);
+		FreeLibrary((HINSTANCE)handle);
 #endif
 	}
 
