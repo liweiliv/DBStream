@@ -848,7 +848,7 @@ namespace SQL_PARSER
 		fileHandle fd = openFile(file, true, false, false);
 		if (!fileHandleValid(fd))
 		{
-			LOG(ERROR)<<"open parse tree file:"<<file<<" failed for "<< GetLastError()<<","<<strerror(GetLastError());
+			LOG(ERROR)<<"open parse tree file:"<<file<<" failed for "<< errno<<","<<strerror(errno);
 			return -1;
 		}
 		long size = seekFile(fd, 0, SEEK_END);

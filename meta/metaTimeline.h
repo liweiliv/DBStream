@@ -70,7 +70,8 @@ namespace META {
 			MetaInfo* m = new MetaInfo;
 			m->startPos = originCheckPoint;
 			m->meta = meta;
-			meta->m_id = tableMeta::genTableId(m_id, m_version++);
+			if(meta!=nullptr)
+				meta->m_id = tableMeta::genTableId(m_id, m_version++);
 			if (m_current == NULL)
 			{
 				barrier;
@@ -92,7 +93,7 @@ namespace META {
 		}
 		int disableCurrent(uint64_t originCheckPoint)
 		{
-			return put(NULL, originCheckPoint);
+			return put(nullptr, originCheckPoint);
 		}
 		void purge(uint64_t originCheckPoint)
 		{

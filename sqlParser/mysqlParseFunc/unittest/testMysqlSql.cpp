@@ -36,7 +36,9 @@ int testSql(SQL_PARSER::sqlParser * parser,const char * dbname,const char * sql)
 }
 int main()
 {
+#ifdef OS_WIN
 	SetDllDirectory(".\\lib");
+#endif
 	initStackLog();
 	initKeyWords();
 	SQL_PARSER::sqlParser parser;

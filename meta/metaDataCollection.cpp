@@ -355,7 +355,7 @@ namespace META {
 			}
 			else if (k->type == newKeyInfo::UNIQUE_KEY)
 			{
-				key = &meta->m_uniqueKeys[meta->m_uniqueKeysCount];
+				key = &meta->m_uniqueKeys[meta->m_uniqueKeysCount++];
 				key->name = k->name;
 			}
 			else if (k->type == newKeyInfo::KEY)
@@ -379,7 +379,7 @@ namespace META {
 					_c->m_isUnique = true;
 				else if (k->type == newKeyInfo::KEY)
 					continue;//todo
-				key->keyIndexs[meta->m_primaryKey.count++] = _c->m_columnIndex;
+				key->keyIndexs[key->count++] = _c->m_columnIndex;
 			}
 		}
 		meta->buildColumnOffsetList();
@@ -391,6 +391,7 @@ namespace META {
 			delete meta;
 			return -1;
 		}
+		printf("%s\n",meta->toString().c_str());
 		return 0;
 	}
 	int metaDataCollection::createTableLike(handle * h, const newTableInfo *t,

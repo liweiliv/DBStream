@@ -20,7 +20,6 @@ int main(int argc, char* argv[])
 	SetDllDirectory(".\\lib\\");
 #endif
 	google::InitGoogleLogging(argv[0]);
-	FLAGS_log_dir = "./dlog";
 	const char* confPath = nullptr;
 	if (argc <= 1)
 		confPath = "d.cnf";
