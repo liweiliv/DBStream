@@ -8,7 +8,7 @@
 #include <stdio.h>
 #ifdef OS_WIN
 #define mysqlFuncLib "mysqlParserFuncs.dll"
-#define mysqlParserTree "ParseTree"
+#define mysqlParserTree "..\\..\\..\\..\\sqlParser\\ParseTree"
 #endif
 #ifdef OS_LINUX
 #define mysqlFuncLib "lib/libmysqlParserFuncs.so"
@@ -16,10 +16,14 @@
 #endif
 int main(int argc, char* argv[])
 {
+#ifdef OS_WIN
+	SetDllDirectory(".\\lib\\");
+#endif
 	google::InitGoogleLogging(argv[0]);
+	FLAGS_log_dir = "./dlog";
 	const char* confPath = nullptr;
 	if (argc <= 1)
-		confPath = "./d.cnf";
+		confPath = "d.cnf";
 	else
 		confPath = argv[1];
 	config conf(confPath);
