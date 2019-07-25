@@ -244,6 +244,8 @@ DLL_EXPORT trieTree::iterator::iterator(const iterator & iter)
     memcpy(keyStack, iter.keyStack, sizeof(keyStack));
     keyStackTop = iter.keyStackTop;
     stacks * copy = iter.m_top, *newStack = NULL;
+	if (copy == nullptr)
+		return;
     while (copy != &iter.m_stack)
     {
         if (m_top == NULL)
