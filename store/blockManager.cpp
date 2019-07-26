@@ -162,7 +162,7 @@ namespace STORE {
 			m_blockDefaultSize, m_redoFlushDataSize,
 			m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 
-		newBlock->m_blockID = m_current->m_blockID+1;
+		newBlock->m_blockID = m_current->m_blockID + 1;
 		m_current->m_flag |= BLOCK_FLAG_FINISHED;
 		if (m_current->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
@@ -174,7 +174,7 @@ namespace STORE {
 		}
 		while (!m_unflushedBlocks.push(m_current, 1000))
 		{
-			if (m_status!=BM_RUNNING)
+			if (m_status != BM_RUNNING)
 			{
 				delete newBlock;
 				return false;
@@ -182,7 +182,7 @@ namespace STORE {
 			m_threadPool.createNewThread();
 		}
 		m_blocks.set(newBlock->m_blockID, newBlock);
-		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_acquire);
+		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_release);
 		m_current = newBlock;
 		return true;
 	}
@@ -206,7 +206,7 @@ namespace STORE {
 	{
 		block* last = nullptr;
 		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
-		if(blockId<1)
+		if (blockId < 1)
 			return false;
 		while ((last = getBasciBlock(blockId)) != nullptr)
 		{
@@ -224,7 +224,7 @@ namespace STORE {
 		return false;
 	}
 
-	block* blockManager::updateBasicBlockToSolidBlock(block *b)
+	block* blockManager::updateBasicBlockToSolidBlock(block* b)
 	{
 		while (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
 		{
@@ -251,7 +251,7 @@ namespace STORE {
 	}
 	block* blockManager::getBasciBlock(uint32_t blockId)
 	{
-		if (m_lastBlockId.load(std::memory_order_relaxed)<1||m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
+		if (m_lastBlockId.load(std::memory_order_relaxed) < 1 || m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
 			return nullptr;
 		m_blockLock.lock_shared();
 		block* b = static_cast<block*>(m_blocks.get(blockId));
@@ -276,14 +276,14 @@ namespace STORE {
 			return nullptr;
 	RESET:
 		tmp = m_blocks.set(blockId, b);
-		if ((!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID)))&&tmp==b)
+		if ((!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))) && tmp == b)
 		{
 			m_blockLock.unlock_shared();
 			return b;
 		}
 		else
 		{
-			if(!tmp->use())
+			if (!tmp->use())
 			{
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 				goto RESET;
@@ -323,9 +323,9 @@ namespace STORE {
 		}
 		s->use();
 		m_blockLock.lock_shared();
-RESET:
+	RESET:
 		tmp = m_blocks.set(blockId, s);
-		if ((tmp->m_flag & BLOCK_FLAG_APPENDING) || ((tmp->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
+		if ((tmp->m_flag & BLOCK_FLAG_APPENDING) || ((tmp->m_flag & BLOCK_FLAG_SOLID) && static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
 		{
 			if (!tmp->use())//this block will been destroied
 			{
@@ -385,7 +385,7 @@ RESET:
 	{
 		appendingBlock* block;
 		uint32_t idleRound = 0;
-		while (m_status==BM_RUNNING&&idleRound<1000)
+		while (m_status == BM_RUNNING && idleRound < 1000)
 		{
 			if (!m_unflushedBlocks.pop(block, 10))
 			{
@@ -408,7 +408,7 @@ RESET:
 		{
 			char fileName[512];
 			genBlockFileName(blockId, fileName);
-			if (checkFileExist(fileName,0) == 0)
+			if (checkFileExist(fileName, 0) == 0)
 			{
 				if (getFileTime(fileName) < time(nullptr) - m_outdated)
 					return 0;
@@ -435,7 +435,7 @@ RESET:
 	}
 	int blockManager::gc()//todo
 	{
-		for (block * b = static_cast<block*>(m_blocks.begin());b!=nullptr;b = static_cast<block*>(m_blocks.get(b->m_blockID+1)))
+		for (block* b = static_cast<block*>(m_blocks.begin()); b != nullptr; b = static_cast<block*>(m_blocks.get(b->m_blockID + 1)))
 		{
 		}
 		return 0;
@@ -445,11 +445,11 @@ RESET:
 	{
 		m->purge();
 	}
-	int blockManager::recoveryFromRedo(uint32_t from,uint32_t to)
+	int blockManager::recoveryFromRedo(uint32_t from, uint32_t to)
 	{
 		LOG(WARNING) << "try recovery block " << from << " to " << to << " from redo";
 		for (uint32_t blockId = from; blockId <= to; blockId++)
-		{	
+		{
 			char fileName[512];
 			genBlockFileName(blockId, fileName);
 			strcat(fileName, ".redo");
@@ -503,66 +503,71 @@ RESET:
 		int prefixSize = strlen(m_logPrefix);
 		std::set<uint64_t> ids;
 		std::set<uint64_t> redos;
+		errno = 0;
 #ifdef OS_WIN
 		WIN32_FIND_DATA findFileData;
 		std::string findString(m_logDir);
 		findString.append("\\").append(m_logPrefix).append(".*");
+		CreateDirectory(m_logDir, nullptr);
 		HANDLE hFind = FindFirstFile(findString.c_str(), &findFileData);
-		if (INVALID_HANDLE_VALUE == hFind)
+		if (INVALID_HANDLE_VALUE == hFind && errno != 0)
 		{
 			LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
 			return -1;
 		}
-		do
+		if (INVALID_HANDLE_VALUE != hFind)
 		{
-			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-				continue;
-			const char* fileName = findFileData.cFileName;
+			do
+			{
+				if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+					continue;
+				const char* fileName = findFileData.cFileName;
 #endif
 #ifdef OS_LINUX
-			DIR* dir = opendir(m_logDir);
-			if (dir == nullptr)
-			{
-				mkdir(m_logDir,S_IRUSR|S_IREAD);
-				goto CREATE_CURRENT;
-				LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
-				return -1;
-			}
-			dirent* file;
-			while ((file = readdir(dir)) != nullptr)
-			{
-				if (file->d_type != 8)
-					continue;
-				const char* fileName = file->d_name;
-#endif
-				if (strncmp(fileName, m_logPrefix, prefixSize) != 0)
-					continue;
-				if (fileName[prefixSize] != '.')
-					continue;
-				const char* pos = fileName + prefixSize + 1;
-				uint64_t id = 0;
-				while (*pos <= '9' && *pos >= '0')
+				DIR* dir = opendir(m_logDir);
+				if (dir == nullptr)
 				{
-					id = id * 10 + *pos - '0';
-					pos++;
+					mkdir(m_logDir, S_IRUSR | S_IREAD);
+					goto CREATE_CURRENT;
+					LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
+					return -1;
 				}
-				if (*pos == '\0')
-					ids.insert(id);
-				else if(strcmp(pos, ".redo") == 0)
-					redos.insert(id);
+				dirent* file;
+				while ((file = readdir(dir)) != nullptr)
+				{
+					if (file->d_type != 8)
+						continue;
+					const char* fileName = file->d_name;
+#endif
+					if (strncmp(fileName, m_logPrefix, prefixSize) != 0)
+						continue;
+					if (fileName[prefixSize] != '.')
+						continue;
+					const char* pos = fileName + prefixSize + 1;
+					uint64_t id = 0;
+					while (*pos <= '9' && *pos >= '0')
+					{
+						id = id * 10 + *pos - '0';
+						pos++;
+					}
+					if (*pos == '\0')
+						ids.insert(id);
+					else if (strcmp(pos, ".redo") == 0)
+						redos.insert(id);
 #ifdef OS_WIN
-			}while (FindNextFile(hFind, &findFileData));
+			} while (FindNextFile(hFind, &findFileData));
 			FindClose(hFind);
+		}
 #endif
 #ifdef OS_LINUX
 		}
 		closedir(dir);
 #endif
-		if (ids.size() > 0||redos.size()>0)
+		if (ids.size() > 0 || redos.size() > 0)
 		{
 			int64_t prev = -1;
 			char fileName[512];
-			
+
 			for (std::set<uint64_t>::iterator iter = ids.begin(); iter != ids.end(); iter++)
 			{
 				if (prev == -1)
@@ -572,7 +577,7 @@ RESET:
 				}
 				if (prev != -1 && *iter != (uint64_t)(prev + 1))
 				{
-					LOG(ERROR) << "block index is not increase strictly,block from:"<<prev+1<<" to "<<*iter - 1<<" are not exist";
+					LOG(ERROR) << "block index is not increase strictly,block from:" << prev + 1 << " to " << *iter - 1 << " are not exist";
 					int ret = recoveryFromRedo(prev + 1, *iter - 1);
 					if (ret == 1)
 					{
@@ -585,7 +590,7 @@ RESET:
 						break;
 					}
 				}
-				block* b = new block(this,nullptr);
+				block* b = new block(this, nullptr);
 				if (0 != b->loadFromFile(*iter, this))
 				{
 					LOG(ERROR) << "load block basic info from block:" << (*iter) << " failed,stop load remind block,and move remind block to .bak file";
@@ -603,7 +608,7 @@ RESET:
 			}
 			if (!redos.empty() && *redos.rbegin() > m_lastBlockId.load(std::memory_order_relaxed))
 			{
-				recoveryFromRedo(m_lastBlockId.load(std::memory_order_relaxed), * redos.rbegin());
+				recoveryFromRedo(m_lastBlockId.load(std::memory_order_relaxed), *redos.rbegin());
 				for (std::set<uint64_t>::iterator iter = redos.begin(); iter != redos.end(); iter++)
 				{
 					if (m_current == nullptr || m_current->m_blockID != *iter)
@@ -634,31 +639,31 @@ RESET:
 		m_current->m_blockID = m_lastBlockId.load(std::memory_order_relaxed) + 1;
 		m_blocks.set(m_lastBlockId.load(std::memory_order_relaxed) + 1, m_current);
 		m_lastBlockId.fetch_add(1, std::memory_order_relaxed);
-		if(m_firstBlockId.load(std::memory_order_relaxed)==0)
+		if (m_firstBlockId.load(std::memory_order_relaxed) == 0)
 			m_firstBlockId.store(1, std::memory_order_relaxed);
 		return 0;
 	}
 	int blockManager::initConfig()
 	{
-		strncpy(m_logDir,m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(),256);
+		strncpy(m_logDir, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(), 256);
 
-		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log.").c_str(),256);
+		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log.").c_str(), 256);
 
 		m_redo = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_REDO), "off") == "on");
 
 		m_compress = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_COMPRESS), "off") == "on");
 
-		m_blockDefaultSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_BLOCK_DEFAULT_SIZE), 33554432, 32 * 1024, 1024  * 1024 * 1024);
+		m_blockDefaultSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_BLOCK_DEFAULT_SIZE), 33554432, 32 * 1024, 1024 * 1024 * 1024);
 
-		m_redoFlushDataSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_REDO_FLUSH_DATA_SIZE), -1,-1, m_blockDefaultSize);
+		m_redoFlushDataSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_REDO_FLUSH_DATA_SIZE), -1, -1, m_blockDefaultSize);
 
-		m_redoFlushPeriod = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_REDO_FLUSH_PERIOD), -1,-1,100000000);
+		m_redoFlushPeriod = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_REDO_FLUSH_PERIOD), -1, -1, 100000000);
 
-		m_outdated = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_OUTDATED), 86400,0, 864000);
+		m_outdated = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_OUTDATED), 86400, 0, 864000);
 
-		m_maxUnflushedBlock = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_MAX_UNFLUSHED_BLOCK), 8,0,1000);
+		m_maxUnflushedBlock = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_MAX_UNFLUSHED_BLOCK), 8, 0, 1000);
 
-		m_fileSysPageSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_FILESYS_PAGE_SIZE), 512,0,1024*1024);
+		m_fileSysPageSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_FILESYS_PAGE_SIZE), 512, 0, 1024 * 1024);
 
 		m_threadPool.updateCurrentMaxThread(
 			m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_MAX_FLUSH_THREAD), 4, 1, MAX_FLUSH_THREAD));
