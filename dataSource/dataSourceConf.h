@@ -5,7 +5,7 @@ namespace DATA_SOURCE
 	static constexpr auto DATASOURCE_TYPE = "dataSourceType";
 	static constexpr auto DATASOURCE_LIBDIR_PATH = "dataSourceLibDirPath";
 #ifdef OS_WIN
-	static constexpr auto DATASOURCE_LIBDIR_DEFAULT_PATH = "..\\lib\\";
+	static constexpr auto DATASOURCE_LIBDIR_DEFAULT_PATH = ".\\";
 #endif
 #ifdef OS_LINUX
 	static constexpr auto DATASOURCE_LIBDIR_DEFAULT_PATH = "./lib/dataSource/";
