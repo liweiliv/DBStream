@@ -176,7 +176,7 @@ namespace DATA_SOURCE {
 		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
 		int len = s.size();
 		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
-		fsync(m_logFile);
+		fflush(m_logFile);
 		return m_prevRecord;
 	}
 	const char* mysqlDataSource::dataSourceName() const

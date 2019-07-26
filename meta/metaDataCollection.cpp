@@ -617,15 +617,8 @@ namespace META {
 	{
 		MetaTimeline<dbInfo> * db = NULL;
 		if (table->database.empty())
-		{
-			if (h->dbName.empty())
-				return -1;
-			getDbInfo(h->dbName.c_str(), db);
-		}
-		else
-		{
-			getDbInfo(table->database.c_str(), db);
-		}
+			return -1;
+		getDbInfo(table->database.c_str(), db);
 		if (db == NULL)
 			return -1;
 		dbInfo * currentDB = db->get(originCheckPoint);

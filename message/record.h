@@ -71,18 +71,28 @@ namespace DATABASE_INCREASE
 		{
 			this->data = data;
 			head = (recordHead*)data;
+			memset(head,0,sizeof(recordHead));
 			head->headSize = sizeof(recordHead);
 		}
 		record() {}
 		record(const char* data) {
 			this->data = data;
 			head = (recordHead*)data;
+			memset(head,0,sizeof(recordHead));
+			head->recordId=0;
 		}
 		std::String toString()
 		{
+			head->recordId=0;
+			head->version = 0;
 			std::String str;
-			return str <<"type:"<<head->type<<"\ntimestamp:"<<head->timestamp<<"\nlogOffset:"<<head->logOffset<<
-				"\nrecordId:"<<head->recordId<<"\nversion:"<<head->version<<"\ntid:"<<head->txnId<<"\n";
+			str = str <<"type:"<<head->type;
+			str = str<<"\ntimestamp:"<<head->timestamp;
+			str = str<<"\nlogOffset:"<<head->logOffset;
+			str = str<<"\nrecordId:"<<head->recordId;
+			str = str<<"\nversion:"<<head->version;
+			str = str<<"\ntid:"<<head->txnId<<"\n";
+			return str;
 		}
 	};
 	static constexpr auto recordSize = sizeof(record) + sizeof(recordHead);
@@ -181,7 +191,7 @@ namespace DATABASE_INCREASE
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over uk names
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over enum and set value lists
 			if (head->version == 0)
-				assert(ptr = data + head->size);
+				assert(ptr == data + head->size);
 			/*if version increased in future,add those code:
 			  if(head->version >0)
 			  {do some thing}
@@ -387,7 +397,7 @@ namespace DATABASE_INCREASE
 		{
 			if (!TEST_BITMAP(nullBitmap, index))
 				return 0;
-			return varLengthColumns[meta->m_realIndexInRowFormat[index + 1]] - varLengthColumns[meta->m_realIndexInRowFormat[index]];
+			return varLengthColumns[meta->m_realIndexInRowFormat[index]+1] - varLengthColumns[meta->m_realIndexInRowFormat[index]];
 		}
 		inline const char* oldColumnOfUpdateType(uint16_t index) const
 		{
@@ -578,6 +588,7 @@ namespace DATABASE_INCREASE
 		std::String toString()
 		{
 			std::String str = record::toString();
+			str.append("database:").append(meta->m_dbName).append("\ntable:").append(meta->m_tableName).append("\n");
 			for (uint32_t idx = 0; idx < meta->m_columnsCount; idx++)
 			{
 				const META::columnMeta* c = meta->getColumn(idx);
@@ -627,7 +638,7 @@ namespace DATABASE_INCREASE
 			if (database != nullptr &&strlen(database)>0)
 			{
 				*(uint8_t*)(this->database - 1) = strlen(database) + 1;
-				memcpy((char*)this->database, database, *(uint8_t*)(database - 1));
+				memcpy((char*)this->database, database, *(uint8_t*)(this->database - 1));
 			}
 			else
 			{
@@ -671,9 +682,9 @@ namespace DATABASE_INCREASE
 			str = str<<"sqlMode:"<< sqlMode<<"\n"<<"charset:"<< charsets[charsetId].name<<"\n";
 			if (database != nullptr && *(const uint8_t*)(database - 1) > 0)
 			{
-				str.append("database:").append(database, *(const uint8_t*)(database - 1)).append("\n");
+				str.append("database:").append(database).append("\n");
 			}
-			str.append("query:").append(ddl);
+			str.append("query:").append(ddl).append("\n");
 			return str;
 		}
 	};
