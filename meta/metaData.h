@@ -45,9 +45,11 @@ namespace META {
 		}
 		stringArray &operator =(const stringArray &c)
 		{
+			clean();
 			m_Count = c.m_Count;
 			if (m_Count > 0)
 			{
+				m_array = (char**)malloc(sizeof(char*) * m_Count);
 				for (uint32_t i = 0; i < m_Count; i++)
 				{
 					int32_t size = (int)strlen(c.m_array[i]);
@@ -56,8 +58,6 @@ namespace META {
 					m_array[i][size] = '\0';
 				}
 			}
-			else
-				m_array = NULL;
 			return *this;
 		}
 		stringArray &operator =(const std::list<std::string> &l)
