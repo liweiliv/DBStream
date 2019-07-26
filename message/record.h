@@ -10,9 +10,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../meta/metaData.h"
-#include "../meta/metaDataCollection.h"
-#include "../util/likely.h"
+#include "util/String.h"
+#include "meta/metaData.h"
+#include "meta/metaDataCollection.h"
+#include "util/likely.h"
 namespace DATABASE_INCREASE
 {
 #pragma pack(1)
@@ -77,12 +78,19 @@ namespace DATABASE_INCREASE
 			this->data = data;
 			head = (recordHead*)data;
 		}
+		std::String toString()
+		{
+			std::String str;
+			return str <<"type:"<<head->type<<"\ntimestamp:"<<head->timestamp<<"\nlogOffset:"<<head->logOffset<<
+				"\nrecordId:"<<head->recordId<<"\nversion:"<<head->version<<"\ntid:"<<head->txnId<<"\n";
+		}
 	};
 	static constexpr auto recordSize = sizeof(record) + sizeof(recordHead);
 	static constexpr auto recordRealSize = sizeof(recordHead);
 	static constexpr auto recordHeadSize = sizeof(recordHead);
 #define TEST_BITMAP(m,i) (((m)[(i)>>3]>>(i&0x7))&0x1)
 #define SET_BITMAP(m,i)  (m)[(i)>>3]|= (0x01<<(i&0x7))
+#define UNSET_BITMAP(m,i) (m)[(i)>>3] &= (~(0x01<<(i&0x7)))
 	/*
 	* [16 bit charsetID][database string+ 1 byte '\0']
 	*/
@@ -247,7 +255,7 @@ namespace DATABASE_INCREASE
 			columns = ptr;
 			ptr += meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount];
 			varLengthColumns = (const uint32_t*)ptr;
-			((uint32_t*)varLengthColumns)[meta->m_columnsCount] = ptr + sizeof(uint32_t) * (meta->m_columnsCount + 1) - columns;
+			((uint32_t*)varLengthColumns)[meta->m_varColumnCount] = ptr + sizeof(uint32_t) * (meta->m_varColumnCount + 1) - columns;
 		}
 
 		template<class T>
@@ -259,18 +267,23 @@ namespace DATABASE_INCREASE
 		}
 		inline char* allocVarColumn()
 		{
-			return ((char*)columns) + varLengthColumns[meta->m_columnsCount];
+			return ((char*)columns) + varLengthColumns[meta->m_varColumnCount];
 		}
 		inline void filledVarColumns(uint16_t id, size_t size)
 		{
-			((uint32_t*)varLengthColumns)[meta->m_realIndexInRowFormat[id]] =((uint32_t*)varLengthColumns)[meta->m_columnsCount];
-			((uint32_t*)varLengthColumns)[meta->m_columnsCount] += size;
+			((uint32_t*)varLengthColumns)[meta->m_realIndexInRowFormat[id]] = varLengthColumns[meta->m_varColumnCount];
+			((uint32_t*)varLengthColumns)[meta->m_varColumnCount] += size;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
 		inline void setVarColumn(uint16_t id, const char* value, size_t size)
 		{
-			memcpy(((char*)columns) + varLengthColumns[meta->m_columnsCount], value, size);
+			memcpy(((char*)columns) + varLengthColumns[meta->m_varColumnCount], value, size);
 			filledVarColumns(id,size);
+		}
+		inline void setVarColumnNull(uint16_t idx)
+		{
+			UNSET_BITMAP((uint8_t*)nullBitmap, idx);
+			((uint32_t*)varLengthColumns)[meta->m_realIndexInRowFormat[idx]] = varLengthColumns[meta->m_varColumnCount];
 		}
 		inline void startSetUpdateOldValue()
 		{
@@ -279,6 +292,7 @@ namespace DATABASE_INCREASE
 			memset((void*)updatedBitmap, 0, bitmapSize*2);
 			updatedNullBitmap = updatedBitmap+ bitmapSize;
 			oldColumnsSizeOfUpdateType = (uint64_t*)(updatedNullBitmap + bitmapSize);
+			*oldColumnsSizeOfUpdateType = 0;
 			oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) +sizeof(oldColumnsSizeOfUpdateType);
 		}
 		inline void setUpdatedColumnNull(uint16_t id)
@@ -299,7 +313,7 @@ namespace DATABASE_INCREASE
 		}
 		inline void filledVardUpdatedColumn(uint16_t id, size_t size)
 		{
-			((uint32_t*)varLengthColumns)[meta->m_columnsCount] += size;
+			((uint32_t*)varLengthColumns)[meta->m_varColumnCount] += size;
 			(*oldColumnsSizeOfUpdateType) += size;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
@@ -309,6 +323,7 @@ namespace DATABASE_INCREASE
 			(*oldColumnsSizeOfUpdateType) += size;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
+
 		inline void finishedSet()
 		{
 			if(oldColumnsOfUpdateType==nullptr)
@@ -367,8 +382,11 @@ namespace DATABASE_INCREASE
 			else
 				return columns + varLengthColumns[meta->m_realIndexInRowFormat[index]];
 		}
+
 		inline uint32_t varColumnSize(uint16_t index)const
 		{
+			if (!TEST_BITMAP(nullBitmap, index))
+				return 0;
 			return varLengthColumns[meta->m_realIndexInRowFormat[index + 1]] - varLengthColumns[meta->m_realIndexInRowFormat[index]];
 		}
 		inline const char* oldColumnOfUpdateType(uint16_t index) const
@@ -409,6 +427,8 @@ namespace DATABASE_INCREASE
 		}
 		inline uint32_t oldVarColumnSizeOfUpdateType(uint16_t index, const char* value) const
 		{
+			if (value == nullptr)
+				return 0;
 			if (TEST_BITMAP(updatedBitmap, index))
 				return *(uint32_t*)(value - sizeof(uint32_t));
 			else
@@ -422,6 +442,158 @@ namespace DATABASE_INCREASE
 					return true;
 			}
 			return false;
+		}
+
+		std::String columnValue(const char* value,uint32_t length, const META::columnMeta* column)
+		{
+			std::String str;
+			if (value == nullptr)
+				return "null\n";
+			switch (column->m_columnType)
+			{
+			case T_UINT8:
+				str = str << *(const uint8_t*)value << "\n";
+				break;
+			case T_INT8:
+				str = str << *value << "\n";
+				break;
+			case T_INT16:
+				str = str << *(const int16_t*)value << "\n";
+				break;
+			case T_UINT16:
+			case T_YEAR:
+				str = str << *(const uint16_t*)value << "\n";
+				break;
+			case T_INT32:
+				str = str << *(const int32_t*)value << "\n";
+				break;
+			case T_UINT32:
+				str = str << *(const uint32_t*)value << "\n";
+				break;
+			case T_INT64:
+				str = str << *(const int64_t*)value << "\n";
+				break;
+			case T_UINT64:
+				str = str << *(const uint64_t*)value << "\n";
+				break;
+			case T_STRING:
+			case T_DECIMAL:
+			case T_BIG_NUMBER:
+			case T_TEXT:
+			case T_JSON:
+			case T_XML:
+				str.append(value, length).append("\n");
+				break;
+			case T_FLOAT:
+				str = str << *(float*)value << "\n";
+				break;
+			case T_DOUBLE:
+				str = str << *(double*)value << "\n";
+				break;
+			case T_TIMESTAMP:
+			{
+				META::timestamp t;
+				t.time = *(const uint64_t*)value;
+				char s[32] = { 0 };
+				t.toString(s);
+				str.append(s).append("\n");
+			}
+			break;
+			case T_DATETIME:
+			{
+				META::dateTime d;
+				d.time = *(const uint64_t*)value;
+				char s[32] = { 0 };
+				d.toString(s);
+				str.append(s).append("\n");
+			}
+			break;
+			case T_DATE:
+			{
+				META::Date d;
+				d.time = *(const uint32_t*)value;
+				char s[32] = { 0 };
+				d.toString(s);
+				str.append(s).append("\n");
+			}
+			break;
+			case T_TIME:
+			{
+				META::Time t;
+				t.time = *(const uint64_t*)value;
+				char s[32] = { 0 };
+				t.toString(s);
+				str.append(s).append("\n");
+			}
+			break;
+			case T_BINARY:
+			case T_BLOB:
+			case T_GEOMETRY:
+			{
+				char* buf = new char[length * 2 + 2];
+				for (uint32_t off = 0; off < length; off++)
+				{
+					uint8_t c = ((const uint8_t*)value)[off] >> 4;
+					if (c < 10)
+						buf[off * 2] = c + '0';
+					else
+						buf[off * 2] = c - 10 + 'A';
+					c = ((const uint8_t*)value)[off] & 0xffu;
+					if (c < 10)
+						buf[off * 2 + 1] = c + '0';
+					else
+						buf[off * 2 + 1] = c - 10 + 'A';
+				}
+				buf[length * 2] = '\n';
+				buf[length * 2+1] = '\0';
+				str.append(buf);
+				delete[]buf;
+			}
+			break;
+			case T_SET:
+			{
+				for (uint8_t idx = 0; idx < column->m_setAndEnumValueList.m_Count; idx++)
+				{
+					if (TEST_BITMAP(value, idx))
+					{
+						str.append(column->m_setAndEnumValueList.m_array[idx]);
+					}
+				}
+				str.append("\n");
+			}
+			break;
+			case T_ENUM:
+			{
+				uint16_t idx = *(const uint16_t*)value;
+				assert(idx < column->m_setAndEnumValueList.m_Count);
+				str.append(column->m_setAndEnumValueList.m_array[idx]).append("\n");
+			}
+			break;
+			default:
+				str = std::String("unknown type:") << column->m_columnType << "\n";
+				break;
+			}
+			return str;
+		}
+		std::String toString()
+		{
+			std::String str = record::toString();
+			for (uint32_t idx = 0; idx < meta->m_columnsCount; idx++)
+			{
+				const META::columnMeta* c = meta->getColumn(idx);
+				str.append(c->m_columnName).append(":\n");
+				const char * value = column(idx);
+				uint32_t valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : varColumnSize(idx);
+				std::String cv = columnValue(value, valueLength, c);
+				str.append(cv.c_str());
+				if (head->type == R_UPDATE || head->type == R_REPLACE)
+				{
+					value = oldColumnOfUpdateType(idx);
+					valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
+					str.append(columnValue(value, valueLength, c));
+				}
+			}
+			return str;
 		}
 	};
 	struct DDLRecord :public record
@@ -440,7 +612,7 @@ namespace DATABASE_INCREASE
 		DDLRecord(){}
 		inline void create(const char* data,const char * charset, uint64_t sqlMode,const char * database,const char * query,uint32_t querySize)
 		{
-			initRecord(data);
+			init(data);
 			this->sqlMode = sqlMode;
 			*(uint64_t*)(data + head->headSize) = sqlMode;
 			charsetId = ascii;
@@ -452,7 +624,7 @@ namespace DATABASE_INCREASE
 			}
 			*(uint16_t*)(data + head->headSize + sizeof(uint64_t)) = charsetId;
 			this->database = data + head->headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
-			if (database != nullptr)
+			if (database != nullptr &&strlen(database)>0)
 			{
 				*(uint8_t*)(this->database - 1) = strlen(database) + 1;
 				memcpy((char*)this->database, database, *(uint8_t*)(database - 1));
@@ -461,9 +633,10 @@ namespace DATABASE_INCREASE
 			{
 				*(uint8_t*)(this->database - 1) = 0;
 			}
-			ddl = data + *(uint8_t*)(this->database - 1);
+			ddl = this->database + *(uint8_t*)(this->database - 1);
 			memcpy((char*)ddl, query, querySize);
-			head->size = ddl - data + querySize;
+			((char*)ddl)[querySize] = '\0';
+			head->size = ddl - data + querySize + 1;
 			if (database == nullptr || *(uint8_t*)(this->database - 1) == 0)
 				this->database = nullptr;
 		}
@@ -490,7 +663,18 @@ namespace DATABASE_INCREASE
 		}
 		static inline uint32_t allocSize(uint32_t dataBaseSize,uint32_t ddlSize)
 		{
-			return sizeof(recordHead) + sizeof(sqlMode) + sizeof(charsetId) + 1 + dataBaseSize + ddlSize;
+			return sizeof(recordHead) + sizeof(sqlMode) + sizeof(charsetId) + 1 + dataBaseSize + ddlSize + 1;
+		}
+		std::String toString()
+		{
+			std::String str = record::toString();
+			str = str<<"sqlMode:"<< sqlMode<<"\n"<<"charset:"<< charsets[charsetId].name<<"\n";
+			if (database != nullptr && *(const uint8_t*)(database - 1) > 0)
+			{
+				str.append("database:").append(database, *(const uint8_t*)(database - 1)).append("\n");
+			}
+			str.append("query:").append(ddl);
+			return str;
 		}
 	};
 	static record* createRecord(const char* data, META::metaDataCollection* mc)
@@ -521,10 +705,25 @@ namespace DATABASE_INCREASE
 			return new record(data);
 		}
 	}
+	static std::String getString(record * r)
+	{
+		switch (r->head->type)
+		{
+		case R_INSERT:
+		case R_DELETE:
+		case R_UPDATE:
+		case R_REPLACE:
+		{
+			return static_cast<DMLRecord*>(r)->toString();
+		}
+		case R_DDL:
+		{
+			return static_cast<DDLRecord*>(r)->toString();
+		}
+		default:
+			return r->toString();
+		}
+	}
 #pragma pack()
 }
-
-
-
-
 #endif /* RECORD_H_ */
