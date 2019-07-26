@@ -371,29 +371,30 @@ namespace DATA_SOURCE {
 		data += BYTES_FOR_BITS(m_tableMap.columnCount);
 		for (uint32_t idx = 0; idx < m_tableMap.columnCount; idx++)
 		{
-			if (!TEST_BITMAP(columnBitmap, idx))
-				continue;
 			const META::columnMeta* columnMeta = record->meta->getColumn(idx);
-			int ctype = getRealType(m_tableMap.types[idx],columnMeta->m_srcColumnType,m_tableMap.metaInfo + metaIndex);
-			if (NULL_BIT(nullBitMap, idx) == 0)
+			if (!TEST_BITMAP(columnBitmap, idx)|| NULL_BIT(nullBitMap, idx))
 			{
-				if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
+				if (newORold)
 				{
-					m_error = std::String("unsupport column type :")<<ctype;
-					LOG(ERROR)<<m_error;
-					return ParseStatus::META_NOT_MATCH;
+					if (!META::columnInfos[columnMeta->m_columnType].fixed)
+						record->setVarColumnNull(idx);
 				}
-				if (unlikely(0!= m_columnInfo[ctype].parseFunc(columnMeta,record,data,newORold)))
-				{
-					m_error =  std::String("parse column type ") << ctype << " in " << m_currentOffset << "@" << m_currentFileID << " failed,table :" << record->meta->m_dbName << "." << record->meta->m_tableName;
-					LOG(ERROR)<<m_error;
-					return ParseStatus::ILLEGAL;
-				}
-			}
-			else
-			{
-				if (!newORold)
+				else
 					record->setUpdatedColumnNull(idx);
+				continue;
+			}
+			int ctype = getRealType(m_tableMap.types[idx],columnMeta->m_srcColumnType,m_tableMap.metaInfo + metaIndex);
+			if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
+			{
+				m_error = std::String("unsupport column type :") << ctype;
+				LOG(ERROR) << m_error;
+				return ParseStatus::META_NOT_MATCH;
+			}
+			if (unlikely(0 != m_columnInfo[ctype].parseFunc(columnMeta, record, data, newORold)))
+			{
+				m_error = std::String("parse column type ") << ctype << " in " << m_currentOffset << "@" << m_currentFileID << " failed,table :" << record->meta->m_dbName << "." << record->meta->m_tableName;
+				LOG(ERROR) << m_error;
+				return ParseStatus::ILLEGAL;
 			}
 			metaIndex += m_columnInfo[ctype].metaLength;
 		}
