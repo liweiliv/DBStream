@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "dataSource/dataSource.h"
 #include "util/ringFixedQueue.h"
+#include <stdio.h>
 class ringBuffer;
 namespace DATA_SOURCE
 {
@@ -33,6 +34,7 @@ namespace DATA_SOURCE
 		}
 		std::thread m_thread;
 
+		FILE* m_logFile;
 
 	public:
 		mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
