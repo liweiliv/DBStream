@@ -10,8 +10,8 @@
 #include "stdio.h"
 #include "../../../util/stackLog.h"
 #ifdef OS_WIN
-#pragma comment(lib,"lib\\sqlParser.lib")
-#define mysqlFuncLib "..\\lib\\mysqlParserFuncs.dll"
+#pragma comment(lib,"sqlParser.lib")
+#define mysqlFuncLib "mysqlParserFuncs.dll"
 #define mysqlParserTree "..\\..\\..\\..\\sqlParser\\ParseTree"
 #endif
 #ifdef OS_LINUX
