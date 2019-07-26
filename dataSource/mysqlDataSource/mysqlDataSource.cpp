@@ -10,8 +10,8 @@
 #include <thread>
 namespace DATA_SOURCE {
 #ifdef OS_WIN
-	#define mysqlFuncLib "../lib/mysqlParserFuncs.dll"
-	#define mysqlParserTree "ParseTree"
+#define mysqlFuncLib "mysqlParserFuncs.dll"
+#define mysqlParserTree "..\\..\\..\\..\\sqlParser\\ParseTree"
 #endif
 #ifdef OS_LINUX
 	#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
@@ -48,6 +48,10 @@ namespace DATA_SOURCE {
 		m_reader = new mysqlBinlogReader(m_readerBufferPool,m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 		m_prevRecord = nullptr;
+		remove("r.log");
+		m_logFile = fopen("r.log", "w+");
+		if (m_logFile == nullptr)
+			LOG(ERROR) << "open log file failed for" << errno << "," << strerror(errno);
 	}
 	mysqlDataSource::~mysqlDataSource()
 	{
@@ -56,6 +60,7 @@ namespace DATA_SOURCE {
 		delete m_connector;
 		delete m_readerBufferPool;
 		delete m_recordBufferPool;
+		fclose(m_logFile);
 	}
 	void mysqlDataSource::readThread()
 	{
@@ -167,7 +172,12 @@ namespace DATA_SOURCE {
 			m_recordBufferPool->freeMem(m_prevRecord);
 			m_prevRecord = nullptr;
 		}
-		return (m_prevRecord = m_async ? asyncRead() : syncRead());
+		m_prevRecord = m_async ? asyncRead() : syncRead();
+		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
+		int len = s.size();
+		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
+		fsync(m_logFile);
+		return m_prevRecord;
 	}
 	const char* mysqlDataSource::dataSourceName() const
 	{
