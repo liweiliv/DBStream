@@ -52,7 +52,7 @@ namespace DATA_SOURCE {
 	}
 	static int parseEnumOrSetValueList(META::columnMeta* column, const char* values)
 	{
-		const char* pos = strchr(values, '\'');
+		const char* pos = strchr(values, '\'') + 1;
 		if (pos == nullptr)
 		{
 			LOG(ERROR) << "enum or set column:" << column->m_columnName << " value array is illegal:" << values;
@@ -80,16 +80,14 @@ namespace DATA_SOURCE {
 					pos++;
 				if (*pos != '\'')
 				{
-					if (*pos != ',')
-					{
-						LOG(ERROR) << "enum or set column:" << column->m_columnName << " value array is illegal:" << values;
-						return -1;
-					}
+					LOG(ERROR) << "enum or set column:" << column->m_columnName << " value array is illegal:" << values;
+					return -1;
 				}
+				valueBegin = pos + 1;
 			}
 			pos++;
 		}
-		column->m_setAndEnumValueList.m_Count = valueList.size();
+		column->m_setAndEnumValueList.m_Count = 0;
 		column->m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*)* valueList.size());
 		for (std::vector<std::string>::const_iterator iter = valueList.begin(); iter != valueList.end(); iter++)
 		{
