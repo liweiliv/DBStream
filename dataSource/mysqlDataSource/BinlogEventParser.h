@@ -81,7 +81,7 @@ namespace DATA_SOURCE
 				return m_parsedRecords[--m_parsedRecordCount];
 			return nullptr;
 		}
-		ParseStatus parser(const char * logEvent);
+		ParseStatus parser(const char * logEvent,size_t size);
 		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
 		std::String getError();
 	};
