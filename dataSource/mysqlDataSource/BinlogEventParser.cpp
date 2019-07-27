@@ -274,7 +274,7 @@ namespace DATA_SOURCE {
 		QueryEvent query(logEvent, size, m_descEvent);
 		LOG(ERROR)<<"ddl:"<<query.query;
 		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord)+DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(),query.query.size()));
-		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord),query.charset,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
+		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord), query.charset_inited?query.charset:nullptr,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 		r->head->type = DATABASE_INCREASE::R_DDL;
@@ -372,6 +372,7 @@ namespace DATA_SOURCE {
 		for (uint32_t idx = 0; idx < m_tableMap.columnCount; idx++)
 		{
 			const META::columnMeta* columnMeta = record->meta->getColumn(idx);
+			int ctype = getRealType(m_tableMap.types[idx], columnMeta->m_srcColumnType, m_tableMap.metaInfo + metaIndex);
 			if (!TEST_BITMAP(columnBitmap, idx)|| NULL_BIT(nullBitMap, idx))
 			{
 				if (newORold)
@@ -381,12 +382,12 @@ namespace DATA_SOURCE {
 				}
 				else
 					record->setUpdatedColumnNull(idx);
+				metaIndex += m_columnInfo[ctype].metaLength;
 				continue;
 			}
-			int ctype = getRealType(m_tableMap.types[idx],columnMeta->m_srcColumnType,m_tableMap.metaInfo + metaIndex);
 			if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
 			{
-				m_error = std::String("unsupport column type :") << ctype;
+				m_error = std::String("unsupport column type :") << ctype<<",column :"<<columnMeta->m_columnName<<",id:"<< columnMeta->m_columnIndex;
 				LOG(ERROR) << m_error;
 				return ParseStatus::META_NOT_MATCH;
 			}
@@ -452,7 +453,7 @@ namespace DATA_SOURCE {
 				if (unlikely(ParseStatus::OK
 					!= (rtv = parseRowData(record, parsePos, end - parsePos, true, columnBitmap))))
 				{
-					LOG(ERROR) << "parse record failed";
+					LOG(ERROR) << "parse record failed ,column:"<<record->meta->m_dbName<<"."<<record->meta->m_tableName;
 					return rtv;
 				}
 			}
@@ -483,10 +484,8 @@ namespace DATA_SOURCE {
 	{
 		return ParseStatus::OK;
 	}
-	BinlogEventParser::ParseStatus BinlogEventParser::parser(const char* rawData)
+	BinlogEventParser::ParseStatus BinlogEventParser::parser(const char* logEvent,size_t size)
 	{
-		size_t size = *(uint64_t*)rawData;
-		const char* logEvent = rawData + sizeof(uint64_t);
 		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		m_currentOffset = header->eventOffset;
 		ParseStatus rtv = ParseStatus::OK;
@@ -532,7 +531,7 @@ namespace DATA_SOURCE {
 		}
 		else
 		{
-			LOG(ERROR)<<"parse failed ,error:"<<m_error;
+			LOG(ERROR)<<"parse failed ,error:"<<m_error<<" in "<<m_currentOffset<<"@"<<m_currentFileID;
 			return rtv;
 		}
 	}
