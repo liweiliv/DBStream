@@ -319,25 +319,30 @@ namespace DATABASE_INCREASE
 		}
 		inline char* allocVardUpdatedColumn()
 		{
-			return (char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType;
+			return (char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType + sizeof(uint32_t);
 		}
 		inline void filledVardUpdatedColumn(uint16_t id, size_t size)
 		{
-			((uint32_t*)varLengthColumns)[meta->m_varColumnCount] += size;
-			(*oldColumnsSizeOfUpdateType) += size;
-			SET_BITMAP((uint8_t*)nullBitmap, id);
+			*(uint32_t*)(oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) = size;
+			oldColumnsSizeOfUpdateType += sizeof(uint32_t) + size;
+			SET_BITMAP((uint8_t*)updatedBitmap, id);
 		}
 		inline void setVardUpdatedColumn(uint16_t id, const char* value, size_t size)
 		{
+			*(uint32_t*)(oldColumnsOfUpdateType+ *oldColumnsSizeOfUpdateType) = size;
+			(*oldColumnsSizeOfUpdateType) += sizeof(uint32_t);
 			memcpy((char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType, value, size);
 			(*oldColumnsSizeOfUpdateType) += size;
-			SET_BITMAP((uint8_t*)nullBitmap, id);
+			SET_BITMAP((uint8_t*)updatedBitmap, id);
 		}
 
 		inline void finishedSet()
 		{
-			if(oldColumnsOfUpdateType==nullptr)
+			if (oldColumnsOfUpdateType == nullptr)
+			{
 				head->size = (columns + varLengthColumns[meta->m_varColumnCount]) - data;
+				oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) + sizeof(oldColumnsSizeOfUpdateType);
+			}
 			else
 				head->size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
 		}
@@ -406,29 +411,19 @@ namespace DATABASE_INCREASE
 				if (TEST_BITMAP(updatedNullBitmap, index))
 					return nullptr;
 				const char* pos = oldColumnsOfUpdateType;
-				for (uint16_t i = 0; i < meta->m_columnsCount; i++)
+				for (uint16_t i = 0; i < index; i++)
 				{
-					if (*(uint16_t*)(pos) < index)
-					{
-						if (!TEST_BITMAP(updatedNullBitmap, index))
-						{
-							if (META::columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
-								pos += sizeof(uint16_t) + META::columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].columnTypeSize;
-							else
-								pos += sizeof(uint16_t) + sizeof(uint32_t) + *(uint32_t*)(pos + sizeof(uint16_t));
-						}
-					}
-					else if (*(uint16_t*)(pos) == index)
-					{
-						if (META::columnInfos[meta->m_columns[*(uint16_t*)(pos)].m_columnType].fixed)
-							return pos + sizeof(uint16_t);
-						else
-							return pos + sizeof(uint16_t) + sizeof(uint32_t);
-					}
+					if (!TEST_BITMAP(updatedBitmap, index)|| TEST_BITMAP(updatedNullBitmap, i))
+						continue;
+					if (META::columnInfos[meta->m_columns[i].m_columnType].fixed)
+						pos += META::columnInfos[meta->m_columns[i].m_columnType].columnTypeSize;
 					else
-						return nullptr;
+						pos += sizeof(uint32_t) + *(uint32_t*)pos;
 				}
-				return nullptr;
+				if (META::columnInfos[meta->m_columns[index].m_columnType].fixed)
+					return pos;
+				else
+					return pos + sizeof(uint32_t);
 			}
 			else
 			{
