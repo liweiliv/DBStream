@@ -35,7 +35,7 @@ namespace DATA_SOURCE {
 		uint32_t m_connectTimeOut;
 		config* m_conf;
 	public:
-		mysqlConnector(config *conf):m_port(0),m_conf(conf)
+		mysqlConnector(config *conf):m_port(0), m_readTimeOut(0), m_connectTimeOut(0),m_conf(conf)
 		{
 		}
 		std::string initByConf()
