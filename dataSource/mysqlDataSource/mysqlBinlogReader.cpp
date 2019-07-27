@@ -26,7 +26,7 @@ namespace DATA_SOURCE {
 		binlogFileInfo(const binlogFileInfo& info) :file(info.file), size(info.size) {}
 	};
 
-	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool,mysqlConnector * connector) :m_mysqlConnector(connector),m_pool(pool)
+	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool, mysqlConnector* connector) :m_mysqlConnector(connector), m_pool(pool)
 	{
 		m_conn = NULL;
 		m_serverId = mysqlConnector::genSrvierId(time(nullptr));
@@ -253,26 +253,27 @@ namespace DATA_SOURCE {
 		int ret = 0;
 		if (!m_readLocalBinlog)
 		{
-	READ:		if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
-		{
-			int retryTimes = 32;
-			if (READ_FAILED_NEED_RETRY == ret && --retryTimes > 0)
+		READ:
+			if (READ_OK != (ret = readRemoteBinlog(logEvent, size)))
 			{
-				while (--retryTimes > 0 && (ret = connectAndDumpBinlog(m_currFile.c_str(), m_currentPos) != 0))
-					std::this_thread::sleep_for(std::chrono::seconds(1));
-				if (ret != 0)
+				int retryTimes = 32;
+				if (READ_FAILED_NEED_RETRY == ret && --retryTimes > 0)
 				{
-					LOG(ERROR) << "dump binlog failed";
-					return READ_FAILED;
+					while (--retryTimes > 0 && (ret = connectAndDumpBinlog(m_currFile.c_str(), m_currentPos) != 0))
+						std::this_thread::sleep_for(std::chrono::seconds(1));
+					if (ret != 0)
+					{
+						LOG(ERROR) << "dump binlog failed";
+						return READ_FAILED;
+					}
+					else
+						goto READ;
 				}
 				else
-					goto READ;
+				{
+					return ret;
+				}
 			}
-			else
-			{
-				return ret;
-			}
-		}
 		}
 		else
 		{
@@ -303,11 +304,9 @@ namespace DATA_SOURCE {
 		}
 		return ret;
 	}
-	int mysqlBinlogReader::readBinlog(const char*& data)
+	int mysqlBinlogReader::readBinlog(const char*& binlogEvent, size_t& size)
 	{
-		const char* binlogEvent;
-		size_t size;
-		int ret = readRemoteBinlog(binlogEvent, size);
+		int ret = readRemoteBinlog(binlogEvent, size);//todo
 		if (READ_OK != ret)
 			return ret;
 
@@ -345,12 +344,6 @@ namespace DATA_SOURCE {
 		}
 		else
 			m_currentPos = header->eventOffset;
-		if (!m_isTypeNeedParse[header->type])
-			size = sizeof(commonMysqlBinlogEventHeader_v4) < size ? sizeof(commonMysqlBinlogEventHeader_v4) : size;
-		char * wrap = (char*)m_pool->alloc(size + sizeof(size));
-		*(uint64_t*)wrap = size;
-		memcpy(wrap + sizeof(size), binlogEvent, size);
-		data = wrap;
 		return READ_OK;
 	}
 	static int showBinaryLogs(MYSQL* conn,
@@ -637,7 +630,7 @@ namespace DATA_SOURCE {
 				}
 			}
 			else
-				iter = binaryLogs.find(iter->first-1);
+				iter = binaryLogs.find(iter->first - 1);
 		}
 		m_currFile = iter->second.fileName;
 		m_currFileID = iter->first;
@@ -778,7 +771,7 @@ namespace DATA_SOURCE {
 			return ret;
 		if ((ret = seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick)) != READ_OK)
 			return ret;
-		if((ret= dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog))!=READ_OK)
+		if ((ret = dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog)) != READ_OK)
 			return ret;
 		return READ_OK;
 	}
