@@ -68,6 +68,6 @@ namespace DATA_SOURCE
 		int init();
 		int initRemoteServerID(uint32_t serverID);
 		formatEvent* getFmtDescEvent();
-		int readBinlog(const char*& data);
+		int readBinlog(const char*& data,size_t &size);
 	};
 }
