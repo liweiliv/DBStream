@@ -68,9 +68,10 @@ namespace DATA_SOURCE {
 		while (likely(m_running))
 		{
 			const char* logEvent;
-			if(unlikely(m_reader->readBinlog(logEvent)!= mysqlBinlogReader::READ_OK|| logEvent == nullptr))
+			size_t size;
+			if(unlikely(m_reader->readBinlog(logEvent, size)!= mysqlBinlogReader::READ_OK|| logEvent == nullptr))
 				goto FAILED;
-			parseStatus = m_parser->parser(logEvent);
+			parseStatus = m_parser->parser(logEvent, size);
 			switch (parseStatus)
 			{
 			case BinlogEventParser::OK:
@@ -132,11 +133,12 @@ namespace DATA_SOURCE {
 		if (nullptr != (record = m_parser->getRecord()))
 			return record;
 		const char* logEvent = nullptr;
+		size_t size = 0;
 		BinlogEventParser::ParseStatus parseStatus;
 		do {
-			if (unlikely(m_reader->readBinlog(logEvent) != mysqlBinlogReader::READ_OK || logEvent == nullptr))
+			if (unlikely(m_reader->readBinlog(logEvent, size) != mysqlBinlogReader::READ_OK || logEvent == nullptr))
 				return nullptr;
-			parseStatus = m_parser->parser(logEvent);
+			parseStatus = m_parser->parser(logEvent, size);
 			switch (parseStatus)
 			{
 			case BinlogEventParser::OK:
@@ -173,6 +175,8 @@ namespace DATA_SOURCE {
 			m_prevRecord = nullptr;
 		}
 		m_prevRecord = m_async ? asyncRead() : syncRead();
+		if (m_prevRecord == nullptr)
+			return nullptr;
 		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
 		int len = s.size();
 		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
