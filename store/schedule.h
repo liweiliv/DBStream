@@ -2,7 +2,7 @@
  * cond.h
  *
  *  Created on: 2019年1月14日
- *      Author: liwei
+ *	  Author: liwei
  */
 
 #ifndef SCHEDULE_H_
@@ -49,41 +49,41 @@ private:
 	config * m_config;
 	threadPool<schedule, void> m_threadPool;
 public:
-    schedule(config * conf):m_running(false), m_allScore(0),m_config(conf), m_threadPool(createThreadPool(32,this,&schedule::worker, C_SCHEDULE))
-    {
-        m_maxWorders = m_config->getLong("store",C_MAX_WORKERS,8,1,32);
+	schedule(config * conf):m_running(false), m_allScore(0),m_config(conf), m_threadPool(createThreadPool(32,this,&schedule::worker, C_SCHEDULE))
+	{
+		m_maxWorders = m_config->getLong("store",C_MAX_WORKERS,8,1,32);
 		m_maxIdleRound = m_config->getLong("store", C_MAX_IDLE_ROUND, 100, 1, 100000);
 		m_threadPool.updateCurrentMaxThread(m_maxWorders);
-    }
+	}
 	std::string updateConfig(const char* key, const char* value);
-    inline void putJobToRunning(job * j)
-    {
+	inline void putJobToRunning(job * j)
+	{
 		m_taskLock.lock();
 		m_task.push(j);
 		m_taskLock.unlock();
-    }
-    int start()
-    {
-        m_running = true;
-        LOG(INFO)<<"schedule work thread starting...";
-		m_threadPool.createNewThread();
-        LOG(INFO)<<"schedule started";
-        return 0;
-    }
-    int stop()
-    {
-        LOG(INFO)<<"schedule stoping...";
-        m_running =  false;
+	}
+	int start()
+	{
+		m_running = true;
+		LOG(INFO)<<"schedule work thread starting...";
+		//m_threadPool.createNewThread();
+		LOG(INFO)<<"schedule started";
+		return 0;
+	}
+	int stop()
+	{
+		LOG(INFO)<<"schedule stoping...";
+		m_running =  false;
 		m_threadPool.join();
 		while (!m_task.empty())
 		{
-	//todo		job* j = m_task.top();
-	//		j->kill();
+		//todo	job* j = m_task.top();
+		//	j->kill();
 			m_task.pop();
 		}
 		LOG(INFO)<<"schedule stopped";
-        return 0;
-    }
+		return 0;
+	}
 private:
 	inline job* getNextActiveHandle();
 	void process(job* j);
