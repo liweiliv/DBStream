@@ -51,12 +51,17 @@ struct arrayList
 			next->size = 1;
 			barrier;
 			end->next = next;
+			end = next;
 			nodeCount++;
 		}
 	}
 	inline uint32_t size()
 	{
 		return (nodeCount - 1)*arrayListNodeSize + end->size;
+	}
+	inline bool empty()
+	{
+		return head == nullptr || head->size == 0;
 	}
 	void begin(iterator &iter)
 	{
