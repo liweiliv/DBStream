@@ -20,7 +20,7 @@ namespace SQL_PARSER {
 }
 namespace DATA_SOURCE
 {
-
+	static constexpr uint16_t M_PARSER_RECORD_CACHE_VOLUMN = 2048;
 #define MAX_BATCH 32
 	struct tableMap;
 	class BinlogEventParser {
@@ -36,6 +36,7 @@ namespace DATA_SOURCE
 		ringBuffer* m_memPool;
 		DATABASE_INCREASE::record** m_parsedRecords;
 		int16_t m_parsedRecordCount;
+		int16_t m_parsedRecordBegin;
 		std::String m_error;
 	public:
 		enum ParseStatus {
@@ -45,7 +46,8 @@ namespace DATA_SOURCE
 			FILTER,
 			NO_META,
 			META_NOT_MATCH,
-			ILLEGAL
+			ILLEGAL,
+			REMAIND_RECORD_UNREAD
 		};
 	private:
 		struct MySQL_COLUMN_TYPE_INFO {
@@ -73,13 +75,15 @@ namespace DATA_SOURCE
 		ParseStatus parseRowData(DATABASE_INCREASE::DMLRecord* record, const char*& data, size_t size, bool newORold,const uint8_t* columnBitmap);
 		inline uint64_t getTableID(const char* data, Log_event_type event_type);
 		ParseStatus parseRowLogevent(const char* logEvent, size_t size,DATABASE_INCREASE::RecordType type);
+		ParseStatus parseUpdateRowLogevent(const char* logEvent, size_t size);
 		ParseStatus parseTraceID(const char* rawData, size_t size);
 	public:
-		inline DATABASE_INCREASE::record* getRecord()
+		inline  DATABASE_INCREASE::record*  getRecord()
 		{
-			if (m_parsedRecordCount > 0)
-				return m_parsedRecords[--m_parsedRecordCount];
-			return nullptr;
+			if (likely(m_parsedRecordBegin<m_parsedRecordCount))
+				return m_parsedRecords[m_parsedRecordBegin++];
+			else
+				return nullptr;
 		}
 		ParseStatus parser(const char * logEvent,size_t size);
 		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
