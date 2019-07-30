@@ -37,6 +37,7 @@ namespace DATA_SOURCE {
 #define DDL_SQL_NAME_HEAD_STR "SET names "
 #define DEFAULT_ENCODING  "UTF8"
 
+#define PUSH_RECORD(r) m_parsedRecords[m_parsedRecordCount++] = (r);
 	void BinlogEventParser::initColumnTypeInfo()
 	{
 		memset(m_columnInfo, 0, sizeof(m_columnInfo));
@@ -116,12 +117,12 @@ namespace DATA_SOURCE {
 
 	}
 	BinlogEventParser::BinlogEventParser(META::metaDataCollection * metaDataManager, ringBuffer* memPool) :
-		m_metaDataManager(metaDataManager),  m_currentFileID(0), m_currentOffset(0), m_threadID(0), m_memPool(memPool),m_parsedRecordCount(0)
+		m_metaDataManager(metaDataManager),  m_currentFileID(0), m_currentOffset(0), m_threadID(0), m_memPool(memPool), m_parsedRecordCount(0), m_parsedRecordBegin(0)
 	{
 		m_descEvent = new formatEvent(4, "5.6.16");
 		initColumnTypeInfo();
-		m_parsedRecords = new DATABASE_INCREASE::record*[2048];
-                m_sqlParser = new SQL_PARSER::sqlParser();
+		m_parsedRecords = new DATABASE_INCREASE::record*[M_PARSER_RECORD_CACHE_VOLUMN];
+		m_sqlParser = new SQL_PARSER::sqlParser();
 	}
 	BinlogEventParser::~BinlogEventParser()
 	{
@@ -265,7 +266,7 @@ namespace DATA_SOURCE {
 		r->head->size = DATABASE_INCREASE::recordRealSize;
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 		r->head->type = DATABASE_INCREASE::R_ROLLBACK;
-		m_parsedRecords[m_parsedRecordCount++] = r;
+		PUSH_RECORD(r);
 		return ParseStatus::OK;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::ddl(const char* logEvent, size_t size)
@@ -278,7 +279,7 @@ namespace DATA_SOURCE {
 		setRecordBasicInfo(header, r);
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 		r->head->type = DATABASE_INCREASE::R_DDL;
-		m_parsedRecords[m_parsedRecordCount++] = r;
+		PUSH_RECORD(r);
 		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty()?nullptr:query.db.c_str(),r->head->logOffset);
 		return ParseStatus::OK;
 	}
@@ -448,28 +449,14 @@ namespace DATA_SOURCE {
 			setRecordBasicInfo(header, record);
 			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 
-			if (type == DATABASE_INCREASE::R_UPDATE || type == DATABASE_INCREASE::R_INSERT)
+			if (unlikely(ParseStatus::OK
+				!= (rtv = parseRowData(record, parsePos, end - parsePos, true, columnBitmap))))
 			{
-				if (unlikely(ParseStatus::OK
-					!= (rtv = parseRowData(record, parsePos, end - parsePos, true, columnBitmap))))
-				{
-					LOG(ERROR) << "parse record failed ,column:"<<record->meta->m_dbName<<"."<<record->meta->m_tableName;
-					return rtv;
-				}
-			}
-			if (type == DATABASE_INCREASE::R_UPDATE || type == DATABASE_INCREASE::R_DELETE)
-			{
-				if (type == DATABASE_INCREASE::R_UPDATE)
-					record->startSetUpdateOldValue();
-				if (unlikely(ParseStatus::OK
-					!= (rtv = parseRowData(record, parsePos, end - parsePos, false, type == DATABASE_INCREASE::R_UPDATE? updatedColumnBitMap: columnBitmap))))
-				{
-					LOG(ERROR)<<"parse record failed";
-					return rtv;
-				}
+				LOG(ERROR) << "parse record failed ,column:" << record->meta->m_dbName << "." << record->meta->m_tableName;
+				return rtv;
 			}
 			record->finishedSet();
-			m_parsedRecords[m_parsedRecordCount++] = record;
+			PUSH_RECORD(record);
 			if (unlikely(parsePos > end))
 			{
 				m_error =  std::String("parse record failed for read over the end of log event,table :") << m_tableMap.dbName << "." << m_tableMap.tableName << " ,checkpoint:" << m_currentOffset << "@" << m_currentFileID;
@@ -484,12 +471,73 @@ namespace DATA_SOURCE {
 	{
 		return ParseStatus::OK;
 	}
+	BinlogEventParser::ParseStatus BinlogEventParser::parseUpdateRowLogevent(const char* logEvent, size_t size)
+	{
+		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
+		if (m_descEvent->alg != BINLOG_CHECKSUM_ALG_OFF && m_descEvent->alg != BINLOG_CHECKSUM_ALG_UNDEF)
+			size = size - BINLOG_CHECKSUM_LEN;
+		uint64_t tableID = 0;
+		const uint8_t* columnBitmap = nullptr, * updatedColumnBitMap = nullptr;
+		const char* parsePos = logEvent, * end = logEvent + size;
+		parseRowLogEventHeader(parsePos, size, tableID, columnBitmap, updatedColumnBitMap);
+		assert(m_tableMap.tableID == tableID);
+		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID, m_currentOffset));
+
+		if (meta == nullptr)
+		{
+			m_error = std::String("can not get meta of table ") << m_tableMap.dbName << "." << m_tableMap.tableName << "from metaDataManager in " << m_currentOffset << "@" << m_currentFileID;
+			LOG(ERROR) << m_error;
+			return ParseStatus::NO_META;
+		}
+		if (meta->m_columnsCount != m_tableMap.columnCount)
+		{
+			m_error = std::String("column count from table_map [") << m_tableMap.columnCount << "] of table " << m_tableMap.dbName << "." << m_tableMap.tableName << " is diffrent from which is from metaDataManager [" << meta->m_columnsCount << "]";
+			LOG(ERROR) << m_error;
+			return ParseStatus::META_NOT_MATCH;
+		}
+
+		ParseStatus rtv = ParseStatus::OK;
+		while (parsePos < end)
+		{
+			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DMLRecord) + DATABASE_INCREASE::recordHeadSize + header->eventSize * 4);
+			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, DATABASE_INCREASE::R_UPDATE);
+			setRecordBasicInfo(header, record);
+			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
+
+			if (unlikely(ParseStatus::OK
+				!= (rtv = parseRowData(record, parsePos, end - parsePos, true, columnBitmap))))
+			{
+				LOG(ERROR) << "parse record failed ,column:" << record->meta->m_dbName << "." << record->meta->m_tableName;
+				return rtv;
+			}
+			record->startSetUpdateOldValue();
+
+			if (unlikely(ParseStatus::OK
+				!= (rtv = parseRowData(record, parsePos, end - parsePos, false, updatedColumnBitMap))))
+			{
+				LOG(ERROR) << "parse record failed";
+				return rtv;
+			}
+			record->finishedSet();
+			PUSH_RECORD(record);
+			if (unlikely(parsePos > end))
+			{
+				m_error = std::String("parse record failed for read over the end of log event,table :") << m_tableMap.dbName << "." << m_tableMap.tableName << " ,checkpoint:" << m_currentOffset << "@" << m_currentFileID;
+				LOG(ERROR) << m_error;
+				return ParseStatus::ILLEGAL;
+			}
+		}
+		return ParseStatus::OK;
+	}
+
 	BinlogEventParser::ParseStatus BinlogEventParser::parser(const char* logEvent,size_t size)
 	{
+		if (unlikely(m_parsedRecordCount > m_parsedRecordBegin))
+			return ParseStatus::REMAIND_RECORD_UNREAD;
+		m_parsedRecordCount = m_parsedRecordBegin = 0;
 		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		m_currentOffset = header->eventOffset;
 		ParseStatus rtv = ParseStatus::OK;
-		m_parsedRecordCount = 0;
 		switch (header->type)
 		{
 		case WRITE_ROWS_EVENT:
@@ -498,7 +546,7 @@ namespace DATA_SOURCE {
 			break;
 		case UPDATE_ROWS_EVENT:
 		case UPDATE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(logEvent,size, DATABASE_INCREASE::R_UPDATE);
+			rtv = parseUpdateRowLogevent(logEvent,size);
 			break;
 		case DELETE_ROWS_EVENT:
 		case DELETE_ROWS_EVENT_V1:
