@@ -118,7 +118,7 @@ namespace DATA_SOURCE {
 					m_store->commit();
 				else
 				{
-					if((++i&0xfff) == 0)
+					if((++i&0xffff) == 0)
 						LOG(ERROR)<<record->head->logOffset;
 					return record;
 				}
@@ -145,7 +145,7 @@ namespace DATA_SOURCE {
 			{
 				if (nullptr != (record = m_parser->getRecord()))
 				{
-					if((++i&0xfff) == 0)
+					if((++i&0xffff) == 0)
 						LOG(ERROR)<<record->head->logOffset;
 					return record;
 				}
@@ -177,10 +177,10 @@ namespace DATA_SOURCE {
 		m_prevRecord = m_async ? asyncRead() : syncRead();
 		if (m_prevRecord == nullptr)
 			return nullptr;
-		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
-		int len = s.size();
-		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
-		fflush(m_logFile);
+//		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
+//		int len = s.size();
+//		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
+//		fflush(m_logFile);
 		return m_prevRecord;
 	}
 	const char* mysqlDataSource::dataSourceName() const
