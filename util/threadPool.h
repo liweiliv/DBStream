@@ -2,6 +2,7 @@
 #include <thread>
 #include <atomic>
 #include <string>
+#include <mutex>
 #include "delegate.h"
 template <class T, class R, class ... P>
 class threadPool
@@ -19,12 +20,24 @@ private:
 	uint16_t m_currentMaxThreads;
 	std::atomic < uint16_t> m_currentThreadCount;
 	_mem_delegateZ<T, R, P...> m_delegate;
+	std::mutex m_quitLock;
+	std::thread::id m_quitThreadid;
 	std::string m_name;
 private:
 
-	static R wrap(_mem_delegateZ<T, R, P...>* d, P&& ... args)
+	static R wrap(threadPool *p, P&& ... args)
 	{
-		return (*d)(std::forward<P>(args) ...);
+		p->m_delegate(std::forward<P>(args) ...);
+		if (p->m_quitThreadid == std::this_thread::get_id())
+		{
+			p->m_quitThreadid = std::thread::id();
+			p->m_quitLock.unlock();
+		}
+		else if (p->m_quitThreadid != std::thread::id())
+		{
+			abort();//todo
+		}
+		p->m_currentThreadCount--;
 	}
 	bool run(int id, P&& ...args)
 	{
@@ -37,7 +50,7 @@ private:
 				m_threadStatus[id] = T_IDLE;
 				return false;
 			}
-			m_threads[id] = std::thread(wrap, &m_delegate, std::forward<P>(args) ...);
+			m_threads[id] = std::thread(wrap, this, std::forward<P>(args) ...);
 			return true;
 		}
 		else
@@ -106,9 +119,9 @@ public:
 	void updateCurrentMaxThread(uint16_t currentMaxThread)
 	{
 		if (currentMaxThread > m_maxThreads)
-			m_currentThreadCount = m_maxThreads;
+			m_currentMaxThreads  = m_maxThreads;
 		else
-			m_currentThreadCount = currentMaxThread;
+			m_currentMaxThreads = currentMaxThread;
 	}
 	bool createNewThread(P&& ...argv)
 	{
@@ -138,6 +151,20 @@ public:
 	inline uint16_t getCurrentThreadNumber()
 	{
 		return m_currentThreadCount.load(std::memory_order_relaxed);
+	}
+	bool quitIfThreadMoreThan(int threadCount)
+	{
+		m_quitLock.lock();
+		if (m_currentThreadCount > threadCount)
+		{
+			m_quitThreadid = std::this_thread::get_id();
+			return true;
+		}
+		else
+		{
+			m_quitLock.unlock();
+			return false;
+		}
 	}
 };
 template <class T, class R, typename... P>
