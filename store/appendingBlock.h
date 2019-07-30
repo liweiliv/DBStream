@@ -1,9 +1,9 @@
 /*
- * appendingBlock.h
- *
- *  Created on: 2019年1月7日
- *      Author: liwei
- */
+ *  * appendingBlock.h
+ *   *
+ *    *  Created on: 2019年1月7日
+ *     *      Author: liwei
+ *      */
 #include <atomic>
 #include <time.h>
 #include "util/file.h"
@@ -140,8 +140,7 @@ private:
 	std::map<uint64_t, tableData*> m_tableDatas;
 
 	page ** m_pages;
-	uint16_t m_pageNum;
-	uint16_t m_maxPageNum;
+	uint16_t m_maxPageCount;
 
 	fileHandle m_redoFd;
 
@@ -156,18 +155,18 @@ private:
 public:
 	appendingBlock(uint32_t flag,
 			uint32_t bufSize, int32_t redoFlushDataSize,
-			int32_t redoFlushPeriod, uint64_t startID, blockManager * manager,META::metaDataCollection *metaDataCollection) :block(manager, metaDataCollection),
+			int32_t redoFlushPeriod, uint64_t startID, blockManager * manager,META::metaDataCollection *metaDataCollection) :block(manager, metaDataCollection,flag),
 			m_size(0), m_maxSize(bufSize), m_status(B_OK), m_defaultData(
-					m_blockID, nullptr, &m_arena, 4096),m_pageNum(
-					0), m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(
+					m_blockID, nullptr, &m_arena, 4096),
+					 m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(
 					redoFlushDataSize), m_redoFlushPeriod(redoFlushPeriod), m_txnId(
 					0), m_lastFLushTime(0)
 	{
 		m_recordIDs = (uint32_t*) m_blockManager->allocMem(
 				sizeof(uint32_t) * maxRecordInBlock);
-		m_maxPageNum = m_maxSize / (32 * 1204);
+		m_maxPageCount = m_maxSize / (32 * 1204);
 		m_pages = (page**) m_blockManager->allocMem(
-				sizeof(page*) * m_maxPageNum);
+				sizeof(page*) * m_maxPageCount);
 		m_minTime = m_maxTime = 0;
 		m_minLogOffset = m_maxLogOffset = 0;
 		m_minRecordId = startID;
@@ -230,6 +229,11 @@ public:
 	{
 		return (recordId >= m_minRecordId && recordId < m_minRecordId + m_recordCount);
 	}
+	inline const char* getRecordByIdx(uint64_t recordIdx)
+	{
+		uint32_t offset = m_recordIDs[recordIdx];
+		return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
+	}
 	inline const char * getRecord(uint64_t recordId)
 	{
 		uint32_t offset = m_recordIDs[recordId - m_minRecordId];
@@ -260,11 +264,11 @@ public:
 	}
 
 	/*
-	return value
-	1: redo file not ended,and read success
-	0: redo file ended,and  read success
-	-1:read redo file failed
-	*/
+ * 	return value
+ * 		1: redo file not ended,and read success
+ * 			0: redo file ended,and  read success
+ * 				-1:read redo file failed
+ * 					*/
 	int recoveryFromRedo()
 	{
 		int ret = 1;
@@ -438,28 +442,28 @@ public:
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if(t->current == nullptr)
 			{
-				if ((m_pageNum + 1 + (t->meta==nullptr?0:(t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageNum || m_size + psize >= m_maxSize)
+				if ((m_pageCount + 1 + (t->meta==nullptr?0:(t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageCount || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
 					return B_FULL;
 				}
-				m_pageNum += 1 + (t->meta==nullptr?0:t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount);//every index look as a page
+				m_pageCount += 1 + (t->meta==nullptr?0:t->meta->m_primaryKey.count>0?1:0+t->meta->m_uniqueKeysCount);//every index look as a page
 			}
 			else
 			{
-				if (m_pageNum + 1 >= m_maxPageNum || m_size + psize >= m_maxSize)
+				if (m_pageCount + 1 >= m_maxPageCount || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
 					return B_FULL;
 				}
-				m_pageNum++;
+				m_pageCount++;
 			}
-
 			t->current = m_blockManager->allocPage(psize);
-			t->current->pageId = m_pageNum; 
-			m_pages[m_pageNum] = t->current;
+			t->current->pageId = m_pageCount;
+			m_pages[m_pageCount] = t->current;
+			m_size += t->current->pageSize;
 			t->pages.append(t->current);
 		}
 		mem = t->current->pageData + t->current->pageUsedSize;
@@ -589,13 +593,11 @@ public:
 	{
 		if (!use())
 			return nullptr;
-		solidBlock * block = new solidBlock(m_blockManager, m_metaDataCollection);
+		solidBlock * block = new solidBlock(m_blockManager, m_metaDataCollection,(m_flag&(~BLOCK_FLAG_APPENDING))|BLOCK_FLAG_FINISHED);
 		uint32_t firstPageSize = sizeof(tableDataInfo)*m_tableCount+(sizeof(recordGeneralInfo)+sizeof(uint32_t))*m_recordCount+sizeof(uint64_t)*(m_pageCount+1)+m_pageCount*offsetof(page, _ref);
 		block->firstPage = m_blockManager->allocPage(firstPageSize);
 		block->pages = (page**)m_blockManager->allocMem(sizeof(page*)*m_pageCount);
-		memcpy(&block->m_version,&m_version,sizeof(block)-offsetof(STORE::block,m_version));
-		block->m_flag &= (~BLOCK_FLAG_APPENDING);
-		block->m_flag |= BLOCK_FLAG_FINISHED;
+		memcpy(&block->m_blockID,&m_blockID,sizeof(STORE::block)-offsetof(STORE::block,m_blockID));
 		char * pos = block->firstPage->pageData;
 		block->m_tableInfo = (tableDataInfo*)pos;
 		pos += sizeof(tableDataInfo)*m_tableCount;
@@ -636,29 +638,34 @@ public:
 			}
 			else
 				block->m_tableInfo[tableIdx].tableId = 0;
-
-			arrayList<page*>::iterator piter ;
-			t->pages.begin(piter);
-			do{
-				block->pages[pageId] = piter.value();
-				block->pages[pageId]->pageId = pageId;
-				pageId++;
-			}while(piter.next());
-			arrayList<uint32_t>::iterator riter ;
-			t->recordIds.begin(riter);
-			block->m_tableInfo[tableIdx].recordCount = t->recordIds.size();
-			block->m_tableInfo[tableIdx].recordIdsOffset =recordIdsOffset;
-			do{
-				uint32_t rid = riter.value();
-				uint32_t &currentOffset = m_recordIDs[rid],&newOffset =block->m_recordInfos[rid].offset;
-				setRecordPosition(newOffset, pageId(currentOffset)+keyPageCount,offsetInPage(currentOffset));
-				block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
-				const DATABASE_INCREASE::recordHead *head = (const DATABASE_INCREASE::recordHead *)getRecord(rid);
-				block->m_recordInfos[rid].tableIndex = tableIdx;
-				block->m_recordInfos[rid].recordType = head->type;
-				block->m_recordInfos[rid].timestamp = head->timestamp;
-				block->m_recordInfos[rid].logOffset = head->logOffset;
-			}while(riter.next());
+			if (!t->pages.empty())
+			{
+				arrayList<page*>::iterator piter;
+				t->pages.begin(piter);
+				do {
+					block->pages[pageId] = piter.value();
+					block->pages[pageId]->pageId = pageId;
+					pageId++;
+				} while (piter.next());
+			}
+			if (!t->recordIds.empty())
+			{
+				arrayList<uint32_t>::iterator riter;
+				t->recordIds.begin(riter);
+				block->m_tableInfo[tableIdx].recordCount = t->recordIds.size();
+				block->m_tableInfo[tableIdx].recordIdsOffset = recordIdsOffset;
+				do {
+					uint32_t rid = riter.value();
+					uint32_t& currentOffset = m_recordIDs[rid], & newOffset = block->m_recordInfos[rid].offset;
+					setRecordPosition(newOffset, pageId(currentOffset) + keyPageCount, offsetInPage(currentOffset));
+					block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
+					const DATABASE_INCREASE::recordHead* head = (const DATABASE_INCREASE::recordHead*)getRecordByIdx(rid);
+					block->m_recordInfos[rid].tableIndex = tableIdx;
+					block->m_recordInfos[rid].recordType = head->type;
+					block->m_recordInfos[rid].timestamp = head->timestamp;
+					block->m_recordInfos[rid].logOffset = head->logOffset;
+				} while (riter.next());
+			}
 			tableIdx++;
 		}
 		unuse();
@@ -701,11 +708,11 @@ public:
 			m_block->unuse();
 	}
 	/*
-find record by timestamp
-[IN]timestamp ,start time by micro second
-[IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
-[IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
-*/
+ * find record by timestamp
+ * [IN]timestamp ,start time by micro second
+ * [IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
+ * [IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
+ * */
 	bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter)//timestamp not increase strictly
 	{
 		m_status = UNINIT;
@@ -849,4 +856,5 @@ find record by timestamp
 };
 #pragma pack()
 }
+
 
