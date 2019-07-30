@@ -129,12 +129,13 @@ namespace STORE
 		DLL_EXPORT int start()//todo
 		{
 			m_status = BM_RUNNING;
-
+			m_threadPool.createNewThread();
 			return 0;
 		}
 		int stop() //todo
 		{
 			m_status = BM_STOPPED;
+			m_threadPool.join();
 			return 0;
 		}
 		int load();
