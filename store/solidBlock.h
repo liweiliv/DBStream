@@ -39,7 +39,7 @@ namespace STORE
 		friend class appendingBlock;
 		friend class solidBlockIterator;
 	public:
-		solidBlock(blockManager* blockManager, META::metaDataCollection* metaDataCollection) :block(blockManager, metaDataCollection), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+		solidBlock(blockManager* blockManager, META::metaDataCollection* metaDataCollection,uint32_t flag) :block(blockManager, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 		}
