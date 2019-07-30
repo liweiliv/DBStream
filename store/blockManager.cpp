@@ -264,7 +264,7 @@ namespace STORE {
 		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
 			return nullptr;
 		block* tmp;
-		b = new block(this, m_metaDataCollection);
+		b = new block(this, m_metaDataCollection,0);
 		if (0 != b->loadFromFile(blockId, this, m_metaDataCollection))
 		{
 			delete b;
@@ -315,7 +315,7 @@ namespace STORE {
 			return nullptr;
 		block* tmp;
 		solidBlock* s;
-		s = new solidBlock(this, m_metaDataCollection);
+		s = new solidBlock(this, m_metaDataCollection,0);
 		if (0 != s->loadFromFile(blockId, this, m_metaDataCollection))
 		{
 			delete s;
@@ -385,11 +385,15 @@ namespace STORE {
 	{
 		appendingBlock* block;
 		uint32_t idleRound = 0;
-		while (m_status == BM_RUNNING && idleRound < 1000)
+		while (likely(m_status == BM_RUNNING))
 		{
 			if (!m_unflushedBlocks.pop(block, 10))
 			{
-				idleRound++;
+				if (++idleRound > 1000)
+				{
+					if (m_threadPool.quitIfThreadMoreThan(1))
+						return;
+				}
 				continue;
 			}
 			if (0 != flush(block))
@@ -527,7 +531,7 @@ namespace STORE {
 				DIR* dir = opendir(m_logDir);
 				if (dir == nullptr)
 				{
-					mkdir(m_logDir, S_IRUSR | S_IREAD);
+					mkdir(m_logDir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 					goto CREATE_CURRENT;
 					LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
 					return -1;
@@ -590,7 +594,7 @@ namespace STORE {
 						break;
 					}
 				}
-				block* b = new block(this, nullptr);
+				block* b = new block(this, nullptr,0);
 				if (0 != b->loadFromFile(*iter, this))
 				{
 					LOG(ERROR) << "load block basic info from block:" << (*iter) << " failed,stop load remind block,and move remind block to .bak file";
@@ -647,11 +651,11 @@ namespace STORE {
 	{
 		strncpy(m_logDir, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(), 256);
 
-		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log.").c_str(), 256);
+		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log").c_str(), 256);
 
 		m_redo = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_REDO), "off") == "on");
 
-		m_compress = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_COMPRESS), "off") == "on");
+		m_compress = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_COMPRESS), "on") == "on");
 
 		m_blockDefaultSize = m_config->getLong(C_STORE_SCTION, REAL_CONF_STRING(C_BLOCK_DEFAULT_SIZE), 33554432, 32 * 1024, 1024 * 1024 * 1024);
 
