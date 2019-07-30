@@ -99,10 +99,10 @@ namespace STORE {
 		uint32_t m_solidBlockHeadPageRawSize;
 		uint32_t m_solidBlockHeadPageSize;
 		uint32_t m_crc;
-		block(blockManager* blockManager, META::metaDataCollection* metaDataCollection) :m_blockManager(blockManager), m_metaDataCollection(metaDataCollection)
+		block(blockManager* blockManager, META::metaDataCollection* metaDataCollection,uint32_t flag) :m_blockManager(blockManager), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
 			m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
-			memset(&m_version, 0, sizeof(block) - offsetof(block, m_metaDataCollection));
+			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
 		}
 		block(block* b)
 		{
