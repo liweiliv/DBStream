@@ -40,7 +40,7 @@ namespace STORE {
 		bool init(const uint16_t *columnIndexs, uint16_t columnCount, const META::tableMeta* meta);
 		~unionKeyMeta() {
 			if (m_types != nullptr)
-				delete m_types;
+				delete []m_types;
 		}
 	};
 	struct unionKey {
