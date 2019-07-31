@@ -31,7 +31,7 @@ namespace SQL_PARSER
 #else
 		void* m_funcsHandle;
 #endif
-		SQLWord* loadSQlWordFromJson(jsonValue* json);
+		SQLWord* loadSQlWordFromJson(jsonValue* json, uint32_t id, SQLWord* top = nullptr);
 		void (*m_initUserDataFunc)(handle* h);
 		void (*m_destroyUserDataFunc)(handle* h);
 	public:
