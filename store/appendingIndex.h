@@ -16,10 +16,11 @@
 #include "iterator.h"
 #include "../meta/columnType.h"
 namespace STORE {
+	/*every key may have multi record in one block,use keyChildInfo to save those records*/
 	struct keyChildInfo {
 		uint32_t *subArray;
-		uint32_t arraySize;
-		uint32_t count;
+		uint32_t arraySize; //volumn
+		uint32_t count;     //current record count
 	};
 
 	template <typename T>
@@ -103,6 +104,7 @@ namespace STORE {
 				k = (KeyTemplate<T> *)iter.key();
 			if (k->child.count >= k->child.arraySize)
 			{
+				/*do not free alloced memory ,only copy*/
 				uint32_t * tmp = (uint32_t*)index->m_arena->AllocateAligned(sizeof(uint32_t)*(k->child.arraySize * 2));
 				memcpy(tmp, k->child.subArray, sizeof(uint32_t)*k->child.arraySize);
 				k->child.arraySize *= 2;
@@ -249,8 +251,8 @@ namespace STORE {
 			bool fixed = false;
 			if (m_columnCount == 1)
 			{
-				keySize = META::columnInfos[m_columnIdxs[0]].columnTypeSize;
-				fixed = META::columnInfos[m_columnIdxs[0]].fixed;
+				keySize = META::columnInfos[m_meta->m_columns[m_columnIdxs[0]].m_columnType].columnTypeSize;
+				fixed = META::columnInfos[m_meta->m_columns[m_columnIdxs[0]].m_columnType].fixed;
 			}
 			else
 			{
@@ -270,8 +272,8 @@ namespace STORE {
 			bool fixed = false;
 			if (m_columnCount == 1)
 			{
-				keySize = META::columnInfos[m_columnIdxs[0]].columnTypeSize;
-				fixed = META::columnInfos[m_columnIdxs[0]].fixed;
+				keySize = META::columnInfos[m_meta->m_columns[m_columnIdxs[0]].m_columnType].columnTypeSize;
+				fixed = META::columnInfos[m_meta->m_columns[m_columnIdxs[0]].m_columnType].fixed;
 			}
 			else
 			{
