@@ -72,11 +72,12 @@ namespace STORE {
 			{
 				if (++idleRound >= m_maxIdleRound&&m_threadPool.getCurrentThreadNumber()>1)//at least we keep one thread work
 				{
-					return;
+					if(m_threadPool.quitIfThreadMoreThan(1))
+						return;
 				}
 				else
 				{
-					std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+					std::this_thread::sleep_for(std::chrono::nanoseconds(100000));
 					continue;
 				}
 			}
@@ -94,18 +95,18 @@ namespace STORE {
 	job* schedule::getNextActiveHandle()
 	{
 		m_taskLock.lock();
-		job* j = m_task.top();
-		if (j != nullptr)
+		if (!m_task.empty())
 		{
-			m_task.pop();
-			m_allScore -= j->m_vtime;
-			m_taskLock.unlock();
-			return j;
+			job* j = m_task.top();
+			if (j != nullptr)
+			{
+				m_task.pop();
+				m_allScore -= j->m_vtime;
+				m_taskLock.unlock();
+				return j;
+			}
 		}
-		else
-		{
-			m_taskLock.unlock();
-			return nullptr;
-		}
+		m_taskLock.unlock();
+		return nullptr;
 	}
 }
