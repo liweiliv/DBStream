@@ -23,7 +23,7 @@ namespace STORE {
 				return -1;
 		} while (1);
 		int readSize = 0;
-		int headSize = sizeof(block) - offsetof(solidBlock, m_version);
+		int headSize = sizeof(m_crc) + offsetof(solidBlock, m_crc) - offsetof(solidBlock, m_version);
 		if (headSize != (readSize = readFile(h, (char*)& m_version, headSize)))
 		{
 			LOG(ERROR) << "load block file " << id << " failed for read head failed ";
@@ -38,7 +38,8 @@ namespace STORE {
 			LOG(ERROR) << "load block file " << id << " failed for id check failed,id in block is:" << m_blockID;
 			return -1;
 		}
-		if (hwCrc32c(0, (const char*)& m_version, headSize - sizeof(m_crc)) != m_crc)
+		uint32_t crc = hwCrc32c(0, (const char*)& m_version, headSize - sizeof(m_crc));
+		if (crc != m_crc)
 		{
 			LOG(ERROR) << "load block file " << id << " failed for crc check failed";
 			return -1;
@@ -55,7 +56,7 @@ namespace STORE {
 			LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
 			return nullptr;
 		}
-		block* b = new block(blockManager, metaDataCollection);
+		block* b = new block(blockManager, metaDataCollection,0);
 		if (0 != b->loadBlockInfo(h, id))
 		{
 			closeFile(h);
