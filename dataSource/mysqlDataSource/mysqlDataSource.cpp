@@ -199,8 +199,14 @@ namespace DATA_SOURCE {
 		uint64_t timestamp = 0, logOffset = 0;
 		if (!m_store->checkpoint(timestamp, logOffset))
 		{
-			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0ffffffffffffffful);
-			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0x0ffffffffffffffful);
+			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0fffffffffffffffull);
+			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0x0fffffffffffffffull);
+		}
+		else
+		{
+			META::timestamp t;
+			t.time = timestamp;
+			timestamp = t.seconds;
 		}
 		if (logOffset > 0)
 		{
@@ -214,7 +220,7 @@ namespace DATA_SOURCE {
 		{
 			if (mysqlBinlogReader::READ_OK != m_reader->seekBinlogByTimestamp(timestamp))
 			{
-				LOG(ERROR) << "mysql datasource init from timestamp:" << timestamp<< " failed";
+				LOG(ERROR) << "mysql datasource init from timestamp:" << timestamp << " failed";
 				return false;
 			}
 		}
