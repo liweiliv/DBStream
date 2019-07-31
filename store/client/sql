@@ -1,0 +1,96 @@
+{
+	"column":{
+	"ID":10001,
+	"name":"column",
+	"C":[
+		{
+			"OR":true,
+			"C":[
+				{
+					"COMMENT": "tableName.column",
+					"C": [
+					{
+						"K": "_N_",
+						"F": "columnTableName"
+					},
+					{ "K": "_C_:." },
+					{
+						"K": "_N_",
+						"F": "columnName"
+					}
+					]
+				},
+				{
+					"K": "_N_",
+					"COMMENT": "column",
+					"F": "columnName"
+				}
+			]
+		},
+		{"OPT":true,"K":"_AS_"}
+	]
+	},
+	"func":{
+		"ID":10002,
+		"name":"func",
+		"C":[
+			{"K":"_AS_"},
+			{"K":"_C_:("}
+			{"LOOP": "_C_:,"
+			"OR":true,
+			"C":[
+				{"INCLUDE":10001},
+				{"K":"_A_"},
+				{"K":"_NUM_"},
+				{"INCLUDE":10002}
+			]
+			},
+			{"K":"_C_:)"}
+		]
+	}
+	"select":{
+	"ID":10000,
+	"name":"select",
+	"HEAD": true,
+	"C":[
+		{"K":"_S_:select"},
+		{
+		"LOOP": "_C_:,",
+		"OR":true,
+		"C":[
+			{"INCLUDE": 10001},
+			{"INCLUDE": 10002}
+		]},
+		{"K":"_S_:from"},
+		{
+            "OR": true,
+            "C": [
+				{
+					"COMMENT": "dbName.tableName",
+					"C": [
+					{
+						"K": "_N_",
+						"F": "selectDbName"
+					},
+					{ "K": "_C_:." },
+					{
+						"K": "_N_",
+						"F": "selectTableName"
+					}
+					]
+				},
+				{
+					"K": "_N_",
+					"COMMENT": "tableName",
+					"F": "selectTableName"
+				}
+            ]
+		},
+		{"OR":true,
+		"C":[
+			{"K":"_S_:WHERE"}
+		]
+		}
+	]
+	}
+}
