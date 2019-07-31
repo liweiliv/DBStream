@@ -146,15 +146,21 @@ namespace STORE {
 				int c = s.compare(d);
 				if (c != 0)
 					return c;
-				srcKey += sizeof(uint16_t) + *(uint16_t*)srcKey;
-				destKey += sizeof(uint16_t) + *(uint16_t*)destKey;
 				break;
 			}
 			default:
 				abort();
 			}
-			srcKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
-			destKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
+			if (META::columnInfos[meta->m_types[i]].fixed)
+			{
+				srcKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
+				destKey += META::columnInfos[meta->m_types[i]].columnTypeSize;
+			}
+			else
+			{
+				srcKey += sizeof(uint16_t) + *(uint16_t*)srcKey;
+				destKey += sizeof(uint16_t) + *(uint16_t*)destKey;
+			}
 		}
 		return 0;
 	}
@@ -165,8 +171,9 @@ namespace STORE {
 	*/
 	const char* unionKey::initKey(leveldb::Arena * arena, unionKeyMeta * keyMeta, uint16_t *columnIdxs, uint16_t columnCount, const DATABASE_INCREASE::DMLRecord * r, bool keyUpdated)
 	{
-		uint32_t externSize = 0;
+		uint32_t keySize = 0;
 		char *  key = nullptr;
+		char* ptr;
 		char *externPtr = nullptr;
 		if (!keyMeta->m_fixed)
 		{
@@ -175,19 +182,20 @@ namespace STORE {
 				if (!META::columnInfos[keyMeta->m_types[idx]].fixed)
 				{
 					if (keyUpdated)
-						externSize += r->oldVarColumnSizeOfUpdateType(columnIdxs[idx], r->oldColumnOfUpdateType(columnIdxs[idx])) + sizeof(uint16_t);
+						keySize += r->oldVarColumnSizeOfUpdateType(columnIdxs[idx], r->oldColumnOfUpdateType(columnIdxs[idx])) + sizeof(uint16_t);
 					else
-						externSize += r->varColumnSize(columnIdxs[idx]);
+						keySize += r->varColumnSize(columnIdxs[idx]);
 				}
 			}
-			key = arena->Allocate(keyMeta->m_size + externSize + sizeof(uint16_t));
-			externPtr = key + keyMeta->m_size;
-			*(uint16_t*)externPtr = keyMeta->m_size + externSize;
-			externPtr += sizeof(uint16_t);
+			keySize += keyMeta->m_size;
+			key = arena->Allocate(keySize + sizeof(uint16_t));
+			ptr = key + sizeof(uint16_t);//first 16bit is length
 		}
 		else
+		{
 			key = arena->Allocate(keyMeta->m_size);
-		char * ptr = key;
+			ptr = key;
+		}
 		if (r->head->type == DATABASE_INCREASE::R_INSERT || r->head->type == DATABASE_INCREASE::R_DELETE ||
 			((r->head->type == DATABASE_INCREASE::R_UPDATE || r->head->type == DATABASE_INCREASE::R_REPLACE) && !keyUpdated))
 		{
@@ -200,11 +208,9 @@ namespace STORE {
 				}
 				else
 				{
-					*(uint16_t*)ptr = externPtr - key;
-					*(uint16_t*)externPtr = r->varColumnSize(i);
-					memcpy(externPtr + sizeof(uint16_t), r->column(columnIdxs[i]), *(uint16_t*)externPtr);
-					externPtr += *(uint16_t*)externPtr + sizeof(uint16_t);
-					ptr += sizeof(uint16_t);
+					*(uint16_t*)ptr = r->varColumnSize(i);
+					memcpy(ptr + sizeof(uint16_t), r->column(columnIdxs[i]), *(uint16_t*)ptr);
+					ptr += sizeof(uint16_t)+ *(uint16_t*)ptr;
 				}
 			}
 		}
@@ -219,12 +225,10 @@ namespace STORE {
 				}
 				else
 				{
-					const char * v = r->column(columnIdxs[i]);
-					*(uint16_t*)ptr = externPtr - key;
-					*(uint16_t*)externPtr = r->oldVarColumnSizeOfUpdateType(i, v);
-					memcpy(externPtr + sizeof(uint16_t), v, *(uint16_t*)externPtr);
-					externPtr += *(uint16_t*)externPtr + sizeof(uint16_t);
-					ptr += sizeof(uint16_t);
+					const char* v = r->column(columnIdxs[i]);
+					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(i, v);
+					memcpy(ptr + sizeof(uint16_t), v, *(uint16_t*)ptr);
+					ptr += sizeof(uint16_t) + *(uint16_t*)ptr;
 				}
 			}
 		}
