@@ -202,7 +202,7 @@ namespace STORE {
 		else
 			return nullptr;
 	}
-	bool blockManager::checkpoint(uint64_t& timestamp, uint64_t logOffset)
+	bool blockManager::checkpoint(uint64_t& timestamp, uint64_t &logOffset)
 	{
 		block* last = nullptr;
 		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
@@ -264,11 +264,11 @@ namespace STORE {
 		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
 			return nullptr;
 		block* tmp;
-		b = new block(this, m_metaDataCollection,0);
-		if (0 != b->loadFromFile(blockId, this, m_metaDataCollection))
+		b = block::loadFromFile(blockId, this,m_metaDataCollection);
+		if (b == nullptr)
 		{
-			delete b;
 			LOG(ERROR) << "load block" << blockId << " failed";
+			return nullptr;
 		}
 		b->use();
 		m_blockLock.lock_shared();
@@ -314,12 +314,13 @@ namespace STORE {
 		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
 			return nullptr;
 		block* tmp;
-		solidBlock* s;
-		s = new solidBlock(this, m_metaDataCollection,0);
-		if (0 != s->loadFromFile(blockId, this, m_metaDataCollection))
+		solidBlock* s = new solidBlock(this, m_metaDataCollection,0);
+		s->m_blockID = blockId;
+		if (s->loadFromFile()!=0)
 		{
-			delete s;
 			LOG(ERROR) << "load block" << blockId << " failed";
+			delete s;
+			return nullptr;
 		}
 		s->use();
 		m_blockLock.lock_shared();
@@ -387,7 +388,7 @@ namespace STORE {
 		uint32_t idleRound = 0;
 		while (likely(m_status == BM_RUNNING))
 		{
-			if (!m_unflushedBlocks.pop(block, 10))
+			if (!m_unflushedBlocks.pop(block, 1000))
 			{
 				if (++idleRound > 1000)
 				{
@@ -594,8 +595,8 @@ namespace STORE {
 						break;
 					}
 				}
-				block* b = new block(this, nullptr,0);
-				if (0 != b->loadFromFile(*iter, this))
+				block* b = block::loadFromFile(*iter, this,m_metaDataCollection);
+				if (nullptr == b)
 				{
 					LOG(ERROR) << "load block basic info from block:" << (*iter) << " failed,stop load remind block,and move remind block to .bak file";
 					for (; iter != ids.end(); iter++)
@@ -603,7 +604,6 @@ namespace STORE {
 						genBlockFileName(*iter, fileName);
 						rename(fileName, std::string(fileName).append(".bak").c_str());
 					}
-					delete b;
 					break;
 				}
 				m_blocks.set(*iter, b);
