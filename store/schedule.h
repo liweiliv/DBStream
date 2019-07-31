@@ -66,7 +66,7 @@ public:
 	{
 		m_running = true;
 		LOG(INFO)<<"schedule work thread starting...";
-		//m_threadPool.createNewThread();
+		m_threadPool.createNewThread();
 		LOG(INFO)<<"schedule started";
 		return 0;
 	}
