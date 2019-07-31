@@ -2,7 +2,7 @@
  * solidBlock.h
  *
  *  Created on: 2019年1月7日
- *      Author: liwei
+ *	  Author: liwei
  */
 #ifndef SOLIDBLOCK_H_
 #define SOLIDBLOCK_H_
@@ -18,6 +18,7 @@
 #include "util/barrier.h"
 #include "blockManager.h"
 #include "block.h"
+#include "util/threadLocal.h"
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
@@ -25,6 +26,8 @@ namespace STORE
 {
 	class solidBlockIterator;
 	class appendingBlock;
+	static threadLocal<char> compressBuffer;
+	static threadLocal<uint32_t> compressBufferSize;
 #pragma pack(1)
 	class solidBlock :public STORE::block {
 		fileHandle m_fd;
@@ -242,8 +245,39 @@ namespace STORE
 			}
 			return 0;
 		}
+		inline char* getCompressbuffer(uint32_t size)
+		{
+			char* cbuf = compressBuffer.get();
+			uint32_t* csize;
+			if (cbuf == nullptr)
+			{
+				cbuf = new char[size];
+				csize = new uint32_t;
+				*csize = size;
+				compressBuffer.set(cbuf);
+				compressBufferSize.set(csize);
+			}
+			else
+			{
+				csize = compressBufferSize.get();
+				if (*csize < size)
+				{
+					cbuf = new char[size];
+					compressBuffer.set(cbuf);
+					*csize = size;
+				}
+				else if (*csize > size && size < DEFAULT_PAGE_SIZE)
+				{
+					cbuf = new char[DEFAULT_PAGE_SIZE];
+					compressBuffer.set(cbuf);
+					*csize = DEFAULT_PAGE_SIZE;
+				}
+			}
+			return cbuf;
+		}
 		int64_t writepage(page* p, uint64_t offset, bool compress)
 		{
+			errno = 0;
 			if (seekFile(m_fd, 0, SEEK_CUR) != (int64_t)offset)
 			{
 				if (seekFile(m_fd, offset, SEEK_SET) != (int64_t)offset)
@@ -255,14 +289,14 @@ namespace STORE
 			if (compress)
 			{
 				p->crc = 0;
-				int64_t compressedSize = 0;
-				char* compressBuf = nullptr;
+				char* compressBuf;
+				uint32_t compressedSize = 0;
 				if (unlikely(p->pageUsedSize > LZ4_MAX_INPUT_SIZE))
 				{
 					uint32_t fullCount = p->pageUsedSize / LZ4_MAX_INPUT_SIZE;
-					uint32_t notFullTailSize = p->pageUsedSize % LZ4_MAX_INPUT_SIZE;
+					uint64_t notFullTailSize = p->pageUsedSize % LZ4_MAX_INPUT_SIZE;
 					uint64_t compressBufSize = sizeof(uint32_t) * (fullCount + 1 + notFullTailSize ? 1 : 0) + fullCount * LZ4_COMPRESSBOUND(LZ4_MAX_INPUT_SIZE) + notFullTailSize ? LZ4_COMPRESSBOUND(p->pageUsedSize % LZ4_MAX_INPUT_SIZE) : 0;
-					compressBuf = (char*)m_blockManager->allocMem(compressBufSize);
+					compressBuf = getCompressbuffer(compressBufSize);
 					char* compressPos = compressBuf + sizeof(uint32_t) * (fullCount + 1 + notFullTailSize ? 1 : 0), * dataPos = p->pageData;
 					uint32_t idx;
 					for (idx = 0; idx < fullCount; idx++)
@@ -282,18 +316,20 @@ namespace STORE
 				else
 				{
 					uint32_t compressBufSize = LZ4_COMPRESSBOUND(p->pageUsedSize);
-					compressBuf = (char*)m_blockManager->allocMem(compressBufSize);
+					compressBuf = getCompressbuffer(compressBufSize);
 					compressedSize = LZ4_compress_default(p->pageData, compressBuf, p->pageUsedSize, compressBufSize);
+					if (compressedSize != writeFile(m_fd, compressBuf, compressedSize))
+					{
+						LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
+						return -1;
+					}
 				}
 				if (compressedSize != writeFile(m_fd, compressBuf, compressedSize))
 				{
 					LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
-					bufferPool::free(compressBuf);
 					return -1;
 				}
-				bufferPool::free(compressBuf);
 				return compressedSize;
-
 			}
 			else
 			{
@@ -347,7 +383,6 @@ public:
 					return -1;
 				pagePos = ALIGN(pagePos + writedSize, 512);
 			}
-
 			m_solidBlockHeadPageSize = writepage(firstPage, headSize, m_flag & BLOCK_FLAG_COMPRESS);
 			m_solidBlockHeadPageRawSize = firstPage->pageUsedSize;
 			if (seekFile(m_fd, 0, SEEK_SET) != 0)
@@ -355,6 +390,7 @@ public:
 				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
 				return -1;
 			}
+			m_crc = hwCrc32c(0,(char*)& m_version, headSize-sizeof(m_crc));
 			if (headSize != (writeSize = writeFile(m_fd, (char*)& m_version, headSize)))
 			{
 				LOG(ERROR) << "write head info to block file " << tmpFile << " failed for errno:" << errno << " ," << strerror(errno);
@@ -376,6 +412,24 @@ public:
 			m_flag |= BLOCK_FLAG_FLUSHED;
 			return 0;
 		}
+		int loadFromFile()
+		{   
+			char fileName[512];
+			m_blockManager->genBlockFileName(m_blockID, fileName);
+			m_fd = openFile(fileName, true, false, false);
+			if (!fileHandleValid(m_fd))
+			{   
+				LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
+				return -1; 
+			}   
+			if (0 != loadBlockInfo(m_fd, m_blockID))
+			{   
+				closeFile(m_fd);
+				m_fd = INVALID_HANDLE_VALUE;
+				return -1; 
+			}   
+			return 0;
+		}  
 	};
 #pragma pack()
 	class solidBlockIterator :public iterator {
