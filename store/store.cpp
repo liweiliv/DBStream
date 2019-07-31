@@ -51,7 +51,7 @@ namespace STORE {
 	{
 		return m_mainStreamblockManager->commit();
 	}
-	DLL_EXPORT bool store::checkpoint(uint64_t& timestamp, uint64_t logOffset)
+	DLL_EXPORT bool store::checkpoint(uint64_t& timestamp, uint64_t &logOffset)
 	{
 		return m_mainStreamblockManager->checkpoint(timestamp, logOffset);
 	}
