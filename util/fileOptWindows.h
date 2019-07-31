@@ -56,11 +56,12 @@ static int64_t writeFile(fileHandle fd, const char* data, uint64_t size)
 {
 	DWORD writed = 0;
 	uint64_t remain = size;
-	while (!WriteFile(fd, data+(size- remain), size, &writed, nullptr))
+	while (WriteFile(fd, data+(size- remain), size, &writed, nullptr))
 	{
 		if (writed > 0)
 		{
-			remain -= writed;
+			if (0 == (remain -= writed))
+				break;
 			writed = 0;
 		}
 		else
