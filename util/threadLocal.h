@@ -50,6 +50,8 @@ public:
 	inline void set(T* v)
 	{
 		getThreadLocalWrap().idle();
+		if (m_var[getThreadId()] != nullptr)
+			delete m_var[getThreadId()];
 		m_var[getThreadId()] = v;
 	}
 	inline void unset()
