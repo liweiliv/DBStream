@@ -37,7 +37,7 @@ public:
 	DLL_EXPORT void begin();
 	DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
 	DLL_EXPORT void commit();
-	DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
+	DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t &logOffset);
 	DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 };
 
