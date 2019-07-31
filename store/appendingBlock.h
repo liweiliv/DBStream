@@ -50,7 +50,7 @@ private:
 		page * current;
 		uint32_t pageSize;
 		tableData(uint64_t blockID, const META::tableMeta * meta,
-				leveldb::Arena *arena, uint32_t _pageSize = 512 * 1024) :
+				leveldb::Arena *arena, uint32_t _pageSize = DEFAULT_PAGE_SIZE) :
 				blockID(blockID), meta(meta), primaryKey(nullptr), uniqueKeys(
 						nullptr), recordIds(arena), pages(arena), current(
 						nullptr), pageSize(_pageSize)
@@ -597,7 +597,7 @@ public:
 		uint32_t firstPageSize = sizeof(tableDataInfo)*m_tableCount+(sizeof(recordGeneralInfo)+sizeof(uint32_t))*m_recordCount+sizeof(uint64_t)*(m_pageCount+1)+m_pageCount*offsetof(page, _ref);
 		block->firstPage = m_blockManager->allocPage(firstPageSize);
 		block->pages = (page**)m_blockManager->allocMem(sizeof(page*)*m_pageCount);
-		memcpy(&block->m_blockID,&m_blockID,sizeof(STORE::block)-offsetof(STORE::block,m_blockID));
+		memcpy(&block->m_blockID,&m_blockID, offsetof(STORE::solidBlock, m_fd) -offsetof(STORE::solidBlock,m_blockID));
 		char * pos = block->firstPage->pageData;
 		block->m_tableInfo = (tableDataInfo*)pos;
 		pos += sizeof(tableDataInfo)*m_tableCount;
