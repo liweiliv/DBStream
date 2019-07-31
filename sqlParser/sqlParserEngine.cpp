@@ -469,7 +469,7 @@ namespace SQL_PARSER
 			return rtv;
 		}
 	};
-	SQLWord* sqlParser::loadSQlWordFromJson(jsonValue* json)
+	SQLWord* sqlParser::loadSQlWordFromJson(jsonValue* json, uint32_t id, SQLWord* top)
 	{
 		SQLWord* s = NULL;
 		jsonObject* obj = static_cast<jsonObject*>(json);
@@ -529,6 +529,8 @@ namespace SQL_PARSER
 			{
 				SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect num");
 			}
+			if (static_cast<jsonNum*>(value)->m_value == id)//recursive 
+				return top;
 			map<uint32_t, SQLWord*>::iterator iter = m_parseTree.find(
 				static_cast<jsonNum*>(value)->m_value);
 			if (iter == m_parseTree.end())
@@ -547,6 +549,11 @@ namespace SQL_PARSER
 			if (s == nullptr)
 			{
 				return nullptr;
+			}
+			if (top == nullptr)
+			{
+				top = s;
+				top->m_id = id;
 			}
 			if ((value = obj->get("F")) != NULL)
 			{
@@ -600,6 +607,11 @@ namespace SQL_PARSER
 			{
 				s = new SQLWordArray(optional, OR, false,nullptr);
 			}
+			if (top == nullptr)
+			{
+				top = s;
+				top->m_id = id;
+			}
 			for (list<jsonValue*>::iterator iter =
 				static_cast<jsonArray*>(value)->m_values.begin();
 				iter != static_cast<jsonArray*>(value)->m_values.end(); iter++)
@@ -609,7 +621,7 @@ namespace SQL_PARSER
 					delete s;
 					SET_STACE_LOG_AND_RETURN_(NULL, -1, "expect OBJECT type");
 				}
-				SQLWord* child = loadSQlWordFromJson(*iter);
+				SQLWord* child = loadSQlWordFromJson(*iter,id,top);
 				if (child == NULL)
 				{
 					delete s;
@@ -621,8 +633,6 @@ namespace SQL_PARSER
 		}
 		if (s)
 		{
-			static int id = 0;
-			s->m_id = id++;
 			s->m_comment = json->toString();
 			s->m_sqlType = sqlType;
 			//printf("%d,%s\n", s->m_id, s->m_comment.c_str());
@@ -817,7 +827,7 @@ namespace SQL_PARSER
 					head = static_cast<jsonBool*>(value)->m_value;
 				}
 
-				SQLWord* s = loadSQlWordFromJson(sentence);
+				SQLWord* s = loadSQlWordFromJson(sentence,id);
 				if (s == NULL)
 				{
 					delete segment;
