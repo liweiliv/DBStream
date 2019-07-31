@@ -163,7 +163,7 @@ namespace STORE
 			m_pool->free(p);
 		}
 		void* allocMemForRecord(META::tableMeta* table, size_t size);
-		bool checkpoint(uint64_t& timestamp, uint64_t logOffset);
+		bool checkpoint(uint64_t& timestamp, uint64_t &logOffset);
 
 	};
 	class blockManagerIterator : public iterator
