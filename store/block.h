@@ -25,7 +25,7 @@ namespace STORE {
 #define BLOCK_FLAG_HAS_REDO     0x10
 #define BLOCK_FLAG_COMPRESS     0x20
 #define BLOCK_FLAG_MULTI_TABLE  0x40
-
+	static constexpr auto DEFAULT_PAGE_SIZE = 512 * 1024;
 	enum BLOCK_LOAD_STATUS {
 		BLOCK_UNLOAD,
 		BLOCK_LOADING_HEAD,
