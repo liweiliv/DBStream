@@ -760,7 +760,7 @@
         "F": "newColumn"
       },
       {
-        "INCLUDE": 4000,
+        "INCLUDE": "COLUMN_TYPE",
         "COMMENT": "column type"
       },
       {
@@ -792,7 +792,7 @@
           }
         ]
       },
-      { "INCLUDE": 20000 },
+      { "INCLUDE": "DEFAULT_VALUE" },
       {
         "OPT": true,
         "K": "_S_:AUTO_INCREMENT"
@@ -1003,7 +1003,7 @@
                 ]
               },
               { "K": "_C_:)" },
-              { "INCLUDE": 1001 }
+              { "INCLUDE": "index_option" }
             ]
           },
           {
@@ -1058,7 +1058,7 @@
                 ]
               },
               { "K": "_C_:)" },
-              { "INCLUDE": 1001 }
+              { "INCLUDE": "index_option" }
             ]
           }
         ]
@@ -1074,8 +1074,8 @@
       {
         "OR": true,
         "C": [
-          { "INCLUDE": 0 },
-          { "INCLUDE": 2001 },
+          { "INCLUDE": "COLUMN_INFO" },
+          { "INCLUDE": "CONSTRAINT" },
           {
             "OPT": true,
             "C": [
@@ -1098,7 +1098,7 @@
                 ]
               },
               { "K": "_B_" },
-              { "INCLUDE": 1001 }
+              { "INCLUDE": "index_option" }
             ]
           },
           {
@@ -1124,7 +1124,7 @@
                 "K": "_N_"
               },
               { "K": "_B_" },
-              { "INCLUDE": 1001 }
+              { "INCLUDE": "index_option" }
             ]
           }
         ]
@@ -1662,9 +1662,9 @@
           {
             "C": [
               { "K": "_C_:(" },
-              { "INCLUDE": 6000 },
+              { "INCLUDE": "create_definition" },
               { "K": "_C_:)" },
-              { "INCLUDE": 7000 }
+              { "INCLUDE": "table_options" }
             ]
           }
         ]
@@ -1682,7 +1682,7 @@
     "C": [
       { "K": "_S_:ADD" },
       { "K": "_S_:COLUMN" },
-      { "INCLUDE": 0 },
+      { "INCLUDE": "COLUMN_INFO" },
       {
         "OPT": true,
         "OR": true,
@@ -1714,7 +1714,7 @@
       { "K": "_C_:(" },
 		{ "LOOP":"_C_:,",
 			"C":[
-			{ "INCLUDE": 0 },
+        { "INCLUDE": "COLUMN_INFO" },
 		]},
       { "K": "_C_:)" }
     ]
@@ -1729,7 +1729,7 @@
         "OPT": true,
         "K": "_S_:COLUMN"
       },
-      { "INCLUDE": 0 },
+      { "INCLUDE": "COLUMN_INFO" },
       {
         "OPT": true,
         "OR": true,
@@ -1757,7 +1757,7 @@
     "type": "ALTER_TABLE_ADD_CONSTRAINT",
     "C": [
       { "K": "_S_:ADD" },
-      { "INCLUDE": 2001 }
+      { "INCLUDE": "CONSTRAINT" }
     ]
   },
   "alter_table_add_key": {
@@ -1795,7 +1795,7 @@
             ]
           },
           { "K": "_B_" },
-          { "INCLUDE": 1001 }
+          { "INCLUDE": "index_option" }
         ]
       }
     ]
@@ -1834,7 +1834,7 @@
         "K": "_N_",
         "F": "alterChangeColumnName"
       },
-      { "INCLUDE": 0 },
+      { "INCLUDE": "COLUMN_INFO" },
       {
         "OPT": true,
         "OR": true,
@@ -1944,16 +1944,16 @@
           {
             "OR": true,
             "C": [
-              { "INCLUDE": 10000 },
-              { "INCLUDE": 10010 },
-              { "INCLUDE": 10020 },
-              { "INCLUDE": 10030 },
-              { "INCLUDE": 10040 },
-              { "INCLUDE": 10050 },
-              { "INCLUDE": 10060 },
-              { "INCLUDE": 10070 },
-              { "INCLUDE": 10080 },
-              { "INCLUDE": 10090 },
+              { "INCLUDE": "alter_table_add_column" },
+              { "INCLUDE": "alter_table_add_columns" },
+              { "INCLUDE": "alter_table_MODIFY_column" },
+              { "INCLUDE": "alter_table_add_CONSTRAINT" },
+              { "INCLUDE": "alter_table_add_key" },
+              { "INCLUDE": "alter_table_drop_index" },
+              { "INCLUDE": "alter_table_change_column" },
+              { "INCLUDE": "alter_table_drop_column" },
+              { "INCLUDE": "alter_table_drop_primary_key" },
+              { "INCLUDE": "alter_table_drop_foreign_key" },
               {
                 "C": [
                   { "K": "_S_:COMMENT" },
@@ -2059,7 +2059,7 @@
         ]
       },
       { "K": "_C_:)" },
-      { "INCLUDE": 1001 },
+      { "INCLUDE": "index_option" },
       {
         "OR": true,
         "OPT": true,
