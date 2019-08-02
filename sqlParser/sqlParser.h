@@ -23,15 +23,15 @@ namespace SQL_PARSER
 	class sqlParser
 	{
 	private:
-		std::map<uint32_t, SQLWord*> m_parseTree;
-		std::map<uint32_t, SQLWord*> m_parseTreeHead;
+		std::map<std::string, SQLWord*> m_parseTree;
+		std::map<std::string, SQLWord*> m_parseTreeHead;
 		SQL_TYPE_TREE m_sqlTypes;
 #ifdef OS_WIN
 		HINSTANCE m_funcsHandle;
 #else
 		void* m_funcsHandle;
 #endif
-		SQLWord* loadSQlWordFromJson(jsonValue* json, uint32_t id, SQLWord* top = nullptr);
+		SQLWord* loadSQlWordFromJson(jsonValue* json, const std::string & name, SQLWord* top = nullptr);
 		void (*m_initUserDataFunc)(handle* h);
 		void (*m_destroyUserDataFunc)(handle* h);
 	public:
