@@ -28,7 +28,7 @@ public:
     type t;
     jsonValue(type _t);
     virtual ~jsonValue(){};
-    virtual string toString()=0;
+    virtual string toString(int level = 0)=0;
     static type getType(const char * data);
     static jsonValue * Parse(const char* data,int &size);
 };
@@ -38,7 +38,7 @@ public:
     std::string m_value;
     jsonString(const char * data=NULL);
     int parse(const char * data);
-    string toString();
+    string toString(int level = 0);
     ~jsonString(){}
 };
 class DLL_EXPORT jsonNum :public jsonValue
@@ -47,7 +47,7 @@ public:
     long m_value;
     jsonNum(const char * data = NULL);
     int parse(const char * data);
-    string toString();
+    string toString(int level = 0);
     ~jsonNum(){}
 };
 class DLL_EXPORT jsonObject :public jsonValue
@@ -71,7 +71,7 @@ public:
     ~jsonObject();
     void clean();
     int parse(const char * data);
-    string toString();
+    string toString(int level = 0);
 };
 class DLL_EXPORT jsonArray :public jsonValue
 {
@@ -81,7 +81,7 @@ public:
     ~jsonArray();
     void clean();
     int parse(const char * data);
-    string toString();
+    string toString(int level = 0);
 };
 class DLL_EXPORT jsonBool :public jsonValue
 {
@@ -89,7 +89,7 @@ public:
     bool m_value;
     jsonBool(const char * data = NULL);
     int parse(const char * data);
-    string toString();
+    string toString(int level = 0);
 };
 
 #endif
