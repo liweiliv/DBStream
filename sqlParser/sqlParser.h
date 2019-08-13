@@ -31,6 +31,7 @@ namespace SQL_PARSER
 #else
 		void* m_funcsHandle;
 #endif
+		bool checkWords();
 		SQLWord* loadSQlWordFromJson(jsonValue* json, const std::string & name, SQLWord* top = nullptr);
 		void (*m_initUserDataFunc)(handle* h);
 		void (*m_destroyUserDataFunc)(handle* h);
