@@ -1714,7 +1714,7 @@
       { "K": "_C_:(" },
 		{ "LOOP":"_C_:,",
 			"C":[
-        { "INCLUDE": "COLUMN_INFO" },
+        { "INCLUDE": "COLUMN_INFO" }
 		]},
       { "K": "_C_:)" }
     ]
