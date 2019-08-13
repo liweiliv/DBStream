@@ -111,9 +111,12 @@ jsonString::jsonString(const char * data ) :
 {
     parse(data);
 }
-string jsonString::toString()
+string jsonString::toString(int level)
 {
-    string s("\"");
+	string s;
+	for (int l = 0; l < level; l++)
+		s.append("\t");
+	s.append("\"");
     s.append(m_value).append("\"");
     return s;
 }
@@ -165,11 +168,15 @@ int jsonNum::parse(const char * data)
         m_value = -m_value;
     return (int)(ptr - data);
 }
-string jsonNum::toString()
+string jsonNum::toString(int level)
 {
+	string s;
+	for (int l = 0; l < level; l++)
+		s.append("\t");
     char buf[32] = {0};
     sprintf(buf,"%ld",m_value);
-    return buf;
+	s.append(buf);
+    return s;
 }
 jsonObject::jsonObject(const char * data ) :
         jsonValue(J_OBJECT)
@@ -266,9 +273,12 @@ int jsonObject::parse(const char * data)
     }
     return (int)(ptr - data + 1);
 }
-string jsonObject::toString()
+string jsonObject::toString(int level)
 {
-    string s = "{";
+    string s ;
+	for (int l = 0; l < level; l++)
+		s.append("\t");
+	s.append("{\n");
     bool first = true;
     for(std::map<std::string, jsonValue*>::iterator i = m_values.begin(); i != m_values.end();i++)
     {
@@ -276,12 +286,27 @@ string jsonObject::toString()
         if(v!=NULL)
         {
             if(!first)
-                s.append(",");
+                s.append(",\n");
             else
                 first = false;
-            s.append("\"").append(i->first).append("\":").append(v->toString());
+			if (v->t != J_ARRAY && v->t != J_OBJECT)
+			{
+				for (int l = 0; l <= level; l++)
+					s.append("\t");
+				s.append("\"").append(i->first).append("\":").append(v->toString());
+			}
+			else
+			{
+				for (int l = 0; l <= level; l++)
+					s.append("\t");
+				s.append("\"").append(i->first).append("\":\n");
+				s.append(v->toString(level + 1));
+			}
         }
     }
+	s.append("\n");
+	for (int l = 0; l < level; l++)
+		s.append("\t");
     s.append("}");
     return s;
 }
@@ -346,9 +371,12 @@ int jsonArray::parse(const char * data)
     }
     return (int)(ptr - data + 1);
 }
-string jsonArray::toString()
+string jsonArray::toString(int level)
 {
-    string s = "[";
+	string s;
+	for (int l = 0; l < level; l++)
+		s.append("\t");
+	s.append("[\n");
     bool first = true;
     for(list<jsonValue*>::iterator i = m_values.begin(); i != m_values.end();i++)
     {
@@ -356,12 +384,15 @@ string jsonArray::toString()
         if(v!=NULL)
         {
             if(!first)
-                s.append(",");
+                s.append(",\n");
             else
                 first = false;
-            s+=v->toString();
+            s+=v->toString(level+1);
         }
     }
+	s.append("\n");
+	for (int l = 0; l < level; l++)
+		s.append("\t");
     s.append("]");
     return s;
 }
@@ -392,7 +423,7 @@ int jsonBool::parse(const char * data)
     else
         return -1;
 }
-string jsonBool::toString()
+string jsonBool::toString(int level)
 {
     return m_value?"true":"false";
 }
