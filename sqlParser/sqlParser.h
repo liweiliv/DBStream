@@ -10,11 +10,11 @@
 #include <string>
 #include <map>
 #include "sqlParserHandle.h"
-#include "../util/unorderMapUtil.h"
+#include "util/unorderMapUtil.h"
 #ifdef  OS_WIN
 #include <wtypes.h>
 #endif
-#include "..//util/winDll.h"
+#include "util/winDll.h"
 class jsonValue;
 namespace SQL_PARSER
 {
