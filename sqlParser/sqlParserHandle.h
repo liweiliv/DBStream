@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "sqlValue.h"
 namespace SQL_PARSER
 {
 	enum parseValue
@@ -42,10 +43,22 @@ namespace SQL_PARSER
 	struct handle;
 	struct statusInfo
 	{
-		parseValue(*parserFunc)(handle* h, const std::string &sql);
-		std::string sql;
-		statusInfo * next;
-		statusInfo() :parserFunc(nullptr), next(nullptr) {}
+		statusInfo* next;
+		parseValue(*parserFunc)(handle* h, SQLValue* value);
+		SQLValue* value;
+		statusInfo(): next(nullptr), value(nullptr){}
+		virtual parseValue process(handle* h)
+		{
+			if (parserFunc != nullptr)
+				return parserFunc(h, value);
+			else
+				return OK;
+		}
+		~statusInfo()
+		{
+			if (value != nullptr && --value->ref <= 0)
+				delete value;
+		}
 	};
 	struct handle
 	{
@@ -60,6 +73,14 @@ namespace SQL_PARSER
 		handle(void *_userData = nullptr) :charset(0), type(UNSUPPORT),
 			userData(_userData), head(nullptr), end(nullptr), next(nullptr), destroyUserDataFunc(nullptr)
 		{
+		}
+		void addStatus(statusInfo * s)
+		{
+			if (head == nullptr)
+				head = s;
+			else
+				end->next = s;
+			end = s;
 		}
 		~handle()
 		{
