@@ -56,12 +56,14 @@ static const char * nextWord(const char * str)
     return str;
 }
 static bool getName(const char * str, const char *& start, uint16_t &size,
-        const char * &realEnd)
+        const char * &realEnd,char quote = 0)
 {
-    char quote;
     if (*str == '`' || *str == '\'' || *str == '"')
     {
-        quote = *str;
+		if (quote == 0)
+			quote = *str;
+		else if (quote != *str)
+			return false;
         start = str + 1;
         realEnd = strchr(start, quote);
         if (realEnd == NULL)
@@ -83,6 +85,9 @@ static bool getName(const char * str, const char *& start, uint16_t &size,
     }
 }
 DLL_EXPORT void initKeyWords();
+DLL_EXPORT int initOpreationPriority();
+DLL_EXPORT int getOpreationPriority(const char* opt);
+
 DLL_EXPORT void destroyKeyWords();
 DLL_EXPORT bool isKeyWord(const char * str,uint32_t size);
 DLL_EXPORT bool isKeyChar(uint8_t c);
