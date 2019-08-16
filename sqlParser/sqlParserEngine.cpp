@@ -628,7 +628,7 @@ PARSE_SUCCESS:
 			statusInfo* s = currentHandle->head;
 			while (s)
 			{
-				if (s->parserFunc&& OK != s->parserFunc(currentHandle, s->sql))
+				if (s->process(h) != OK)
 				{
 					delete h;
 					return NOT_MATCH;
