@@ -10,8 +10,8 @@ namespace SQL_PARSER {
 			return new SQLArrayWord(optional);
 		else if (str == "_AS_")
 			return new SQLAnyStringWord(optional);
-		else if (str == "_DB_")
-			return new SQLDBNameWord(optional);
+		else if (str == "_N_")
+			return new SQLNameWord(optional);
 		else if (str == "_TABLE_")
 			return new SQLTableNameWord(optional);
 		else if (str == "_COLUMN_")
@@ -38,7 +38,7 @@ namespace SQL_PARSER {
 		if (m_word[0] != c)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
@@ -59,7 +59,7 @@ namespace SQL_PARSER {
 		sql = p + 1;
 		return value;
 	}
-	SQLValue* SQLDBNameWord::match(handle* h, const char*& sql, bool needValue)
+	SQLValue* SQLNameWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		std::string matchedWord;
@@ -69,7 +69,7 @@ namespace SQL_PARSER {
 		if (!getName(p, nameStart, nameSize, nameEnd))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
@@ -100,7 +100,7 @@ namespace SQL_PARSER {
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (*(nameEnd + 1) == '.')
 		{
@@ -108,7 +108,7 @@ namespace SQL_PARSER {
 			if (!getName(p, nameStart[1], nameSize[1], nameEnd))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
-				return NOT_MATCH;
+				return NOT_MATCH_PTR;
 			}
 		}
 		if (m_parser != nullptr || needValue)
@@ -148,7 +148,7 @@ namespace SQL_PARSER {
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (*(nameEnd + 1) == '.')
 		{
@@ -156,7 +156,7 @@ namespace SQL_PARSER {
 			if (!getName(p, nameStart[1], nameSize[1], nameEnd))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
-				return NOT_MATCH;
+				return NOT_MATCH_PTR;
 			}
 			if (*(nameEnd + 1) == '.')
 			{
@@ -164,7 +164,7 @@ namespace SQL_PARSER {
 				if (!getName(p, nameStart[2], nameSize[2], nameEnd))
 				{
 					LOG(ERROR) << m_comment << " do not match " << sql;
-					return NOT_MATCH;
+					return NOT_MATCH_PTR;
 				}
 			}
 		}
@@ -209,7 +209,7 @@ namespace SQL_PARSER {
 		if (*p != '\'' && *p != '"')
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}		
 		char quote = *p;
 		const char* end = p + 1;
@@ -240,7 +240,7 @@ namespace SQL_PARSER {
 		if (*end == '\0')
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
@@ -269,7 +269,7 @@ namespace SQL_PARSER {
 			|| (!isSpaceOrComment(p + m_word.size()) && p[m_word.size()] != '\0' && !isKeyChar(p[m_word.size()])))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		LOG(ERROR) << m_comment << "match " << sql;
 		sql = p + m_word.size();
@@ -306,7 +306,7 @@ namespace SQL_PARSER {
 					if (n != p)
 					{
 						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH;
+						return NOT_MATCH_PTR;
 					}
 					n++;
 					while (*n == ' ' || *n == '\t')
@@ -318,7 +318,7 @@ namespace SQL_PARSER {
 					if (hasDot)
 					{
 						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH;
+						return NOT_MATCH_PTR;
 					}
 					else
 						hasDot = true;
@@ -330,7 +330,7 @@ namespace SQL_PARSER {
 						if (n == p)
 						{
 							LOG(ERROR) << m_comment << " do not match " << sql;
-							return NOT_MATCH;
+							return NOT_MATCH_PTR;
 						}
 						else
 							break;
@@ -340,7 +340,7 @@ namespace SQL_PARSER {
 					else
 					{
 						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH;
+						return NOT_MATCH_PTR;
 					}
 				}
 			}
@@ -373,12 +373,12 @@ namespace SQL_PARSER {
 		if (end == nullptr)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (isKeyWord(p, end - p))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
@@ -407,7 +407,7 @@ namespace SQL_PARSER {
 		if (*p != '(')
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		const char* end = p + 1;
 		int32_t bracketCount = 1;
@@ -425,7 +425,7 @@ namespace SQL_PARSER {
 		if (*end == '\0')
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
@@ -461,13 +461,13 @@ namespace SQL_PARSER {
 				const char* str = nextWord(sql);
 				if (s == nullptr)
 					continue;
-				if ((rtv = s->match(h, str)) != NOT_MATCH)
+				if ((rtv = s->match(h, str)) == NOT_MATCH_PTR)
 				{
 					if (m_or)
 						continue;
 					if (s->m_optional)
 					{
-						rtv = nullptr;
+						rtv = MATCH;
 						continue;
 					}
 					else
@@ -480,7 +480,7 @@ namespace SQL_PARSER {
 						break;
 				}
 			}
-			if (rtv == NOT_MATCH)
+			if (rtv == NOT_MATCH_PTR)
 			{
 				if (m_loop && matched)
 				{
@@ -498,7 +498,7 @@ namespace SQL_PARSER {
 				{
 					beforeLoop = sql;
 					const char* str = nextWord(sql);
-					if (m_loopCondition->match(nullptr, str) != NOT_MATCH)
+					if (m_loopCondition->match(nullptr, str) != NOT_MATCH_PTR)
 					{
 						sql = str;
 						continue;
@@ -511,7 +511,7 @@ namespace SQL_PARSER {
 				break;
 		} while (1);
 
-		if (rtv == NOT_MATCH) //rollback
+		if (rtv == NOT_MATCH_PTR) //rollback
 		{
 			for (statusInfo* s = top ? top->next : nullptr; s != nullptr;)
 			{
@@ -554,30 +554,30 @@ namespace SQL_PARSER {
 				brackets.push_back(pos);
 				pos = nextWord(pos + 1);
 			}
-			if ((value = match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH||
-				(value = func->match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH)
+			if ((value = match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH_PTR ||
+				(value = func->match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH_PTR)
 			{
 				pos = nextWord(pos);
 			}
 		} while (*pos != '\0');
-		return NOT_MATCH;
+		return NOT_MATCH_PTR;
 	}
 
 	SQLValue* SQLWordFunction::match(handle* h, const char*& sql, bool needValue)
 	{
 		SQLValue * name = nullptr;
 		const char* pos = nextWord(sql);
-		if ((name = asWord.match(nullptr, pos, needValue || m_parserFunc != nullptr)) == NOT_MATCH)
-			return NOT_MATCH;
+		if ((name = asWord.match(nullptr, pos, needValue || m_parserFunc != nullptr)) == NOT_MATCH_PTR)
+			return NOT_MATCH_PTR;
 		pos = nextWord(pos);
 		if (*pos != '(')
-			return NOT_MATCH;
+			return NOT_MATCH_PTR;
 		SQLFunctionValue* sfv = MATCH;
 
 		if (needValue || m_parserFunc != nullptr)
 		{
 			if (name == nullptr)
-				return NOT_MATCH;
+				return NOT_MATCH_PTR;
 			sfv = new SQLFunctionValue();
 			sfv->funcName = static_cast<SQLStringValue*>(name)->value;
 			delete name;
@@ -602,11 +602,11 @@ namespace SQL_PARSER {
 				return sfv;
 			}
 			SQLValue* value = MATCH;
-			if ((value = expressionWord.match(h, pos, needValue)) != NOT_MATCH ||
-				(value = numberArgv.match(h, pos, needValue)) != NOT_MATCH ||
-				(value = nameWord.match(h, pos, needValue)) != NOT_MATCH ||
-				(value = strWord.match(h, pos, needValue)) != NOT_MATCH||
-				(value = match(nullptr, pos, needValue)) != NOT_MATCH)
+			if ((value = expressionWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = numberArgv.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = nameWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = strWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = match(nullptr, pos, needValue)) != NOT_MATCH_PTR)
 			{
 				if (sfv != nullptr)
 					sfv->argvs.push_back(value);
@@ -615,7 +615,7 @@ namespace SQL_PARSER {
 			{
 				if (sfv != nullptr)
 					delete sfv;
-				return NOT_MATCH;
+				return NOT_MATCH_PTR;
 			}
 
 			pos = nextWord(pos);
@@ -626,7 +626,7 @@ namespace SQL_PARSER {
 				{
 					if (sfv != nullptr)
 						delete sfv;
-					return NOT_MATCH;
+					return NOT_MATCH_PTR;
 				}
 			}
 			else
@@ -635,12 +635,12 @@ namespace SQL_PARSER {
 				{
 					if (sfv != nullptr)
 						delete sfv;
-					return NOT_MATCH;
+					return NOT_MATCH_PTR;
 				}
 			}
 		}
 		if (sfv != nullptr)
 			delete sfv;
-		return NOT_MATCH;
+		return NOT_MATCH_PTR;
 	}
 }
