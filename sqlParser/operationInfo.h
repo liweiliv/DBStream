@@ -57,7 +57,7 @@ namespace SQL_PARSER {
 		uint8_t priority;
 		OPERATION_TYPE optType;
 		bool hasRightValue;
-		boll hasLeftValues;
+		bool hasLeftValues;
 		char signStr[4];
 	};
 	constexpr static operationInfo operationInfos[] = {
