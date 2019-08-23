@@ -43,7 +43,6 @@ namespace SQL_PARSER
 		DLL_EXPORT int LoadParseTreeFromFile(const char* file);
 	public:
 		DLL_EXPORT parseValue parse(handle*& h, const char * database,const char* sql);
-		DLL_EXPORT parseValue parseSqlType(handle*& h, const char* sql);
 	};
 };
 #endif /* SQLPARSER_H_ */
