@@ -8,7 +8,7 @@ namespace SQL_PARSER {
 		enum SQLValueType {
 			NUMBER_TYPE,
 			STRING_TYPE,
-			DB_NAME_TYPE,
+			NAME_TYPE,
 			TABLE_NAME_TYPE,
 			COLUMN_NAME_TYPE,
 			FUNCTION_TYPE,
@@ -27,7 +27,7 @@ namespace SQL_PARSER {
 	class SQLDBNameValue :public SQLValue {
 	public:
 		std::string database;
-		SQLDBNameValue() :SQLValue(DB_NAME_TYPE) {}
+		SQLDBNameValue() :SQLValue(NAME_TYPE) {}
 	};
 	class SQLTableNameValue :public SQLValue {
 	public:
