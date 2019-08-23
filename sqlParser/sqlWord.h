@@ -5,7 +5,7 @@
 #include "sqlParserUtil.h"
 #include "sqlValue.h"
 namespace SQL_PARSER {
-	static constexpr SQLValue* NOT_MATCH = (SQLValue*)0xffffffffffffffffULL;
+	#define NOT_MATCH_PTR  ((SQLValue*)0xffffffffffffffffULL)
 	#define MATCH  nullptr
 	class SQLWord
 	{
@@ -41,7 +41,7 @@ namespace SQL_PARSER {
 		enum sqlSingleWordType
 		{
 			S_CHAR, //single char 
-			S_DBNAME,
+			S_NAME,
 			S_TABLE_NAME,
 			S_COLUMN_NAME,
 			S_ARRAY, //"xxxx" or 'xxxx'
@@ -157,7 +157,7 @@ namespace SQL_PARSER {
 				iter != m_words.end(); iter++)
 			{
 				SQLWord* s = static_cast<SQLWord*>(*iter);
-				if (s != NULL)
+				if (s != nullptr)
 				{
 					if (s->deInclude())
 						delete (*iter);
