@@ -165,14 +165,14 @@ namespace SQL_PARSER
 #ifdef OS_LINUX
 				if (nullptr
 					== (static_cast<SQLSingleWord*>(s)->m_parser =
-					(parseValue(*)(handle*, const string&)) dlsym(
+					(parseValue(*)(handle * h, SQLValue * value)) dlsym(
 						m_funcsHandle,
 						static_cast<jsonString*>(value)->m_value.c_str())))
 #endif
 #ifdef OS_WIN
 				if (nullptr
 					== (static_cast<SQLSingleWord*>(s)->m_parser =
-					(parseValue(*)(handle*, const string&)) GetProcAddress(
+					(parseValue(*)(handle * h, SQLValue * value)) GetProcAddress(
 						m_funcsHandle,
 						static_cast<jsonString*>(value)->m_value.c_str())))
 #endif
@@ -467,6 +467,7 @@ namespace SQL_PARSER
 				{
 					delete segment;
 					LOG(ERROR) << "load parse tree failed";
+					return -1;
 				}
 				s->include();
 				if (s->m_forwardDeclare)
@@ -562,37 +563,6 @@ namespace SQL_PARSER
 		*(dest - 1) = '\0';
 		return newSql;
 	}
-	DLL_EXPORT parseValue sqlParser::parseSqlType(handle*& h, const char* sql)
-	{
-		h = new handle;
-		handle* currentHandle = h;
-		while (true)
-		{
-			for (map<std::string, SQLWord*>::iterator iter = m_parseTreeHead.begin();
-				iter != m_parseTreeHead.end(); iter++)
-			{
-				const char* tmp = sql;
-				SQLWord* s = static_cast<SQLWord*>(iter->second);
-				if (s->match(currentHandle, tmp) != OK)
-					continue;
-				sql = nextWord(tmp);
-				goto PARSE_SUCCESS;
-			}
-			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
-			delete h;
-			h = nullptr;
-			return NOT_MATCH;
-PARSE_SUCCESS:
-			while (sql[0] == ';')
-				sql = nextWord(sql + 1);
-			if (sql[0] == '\0') //sql has finished ,return
-				return OK;
-			/*sql do not finish,go on prase */
-			handle* _h = new handle;
-			currentHandle->next = _h;
-			currentHandle = _h;
-		}
-	}
 	DLL_EXPORT parseValue sqlParser::parse(handle*& h,const char * database, const char* sql)
 	{
 		h = new handle;
@@ -606,7 +576,7 @@ PARSE_SUCCESS:
 			{
 				const char* tmp = sql;
 				SQLWord* s = static_cast<SQLWord*>(iter->second);
-				if (s->match(currentHandle, tmp) != OK)
+				if (s->match(currentHandle, tmp) == NOT_MATCH_PTR)
 				{
 					continue;
 				}
@@ -619,7 +589,7 @@ PARSE_SUCCESS:
 			/*not match after compare to all SQLWords in m_parseTreeHead,return*/
 			delete h;
 			h = nullptr;
-			return NOT_MATCH;
+			return parseValue::NOT_MATCH;
 PARSE_SUCCESS:
 			if (m_initUserDataFunc)
 				m_initUserDataFunc(h);
@@ -631,7 +601,7 @@ PARSE_SUCCESS:
 				if (s->process(h) != OK)
 				{
 					delete h;
-					return NOT_MATCH;
+					return parseValue::NOT_MATCH;
 				}
 				s = s->next;
 			}
