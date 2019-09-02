@@ -1,9 +1,6 @@
 #include "../threadLocal.h"
 #include <stdio.h>
 #include <thread>
-#ifdef OS_WIN
-#pragma comment(lib,"lib\\util.lib")
-#endif
 struct test{
 	int i;
 	int j;

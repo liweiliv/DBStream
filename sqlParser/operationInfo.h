@@ -1,4 +1,6 @@
 #pragma once
+#include "util/winString.h"
+#include "sqlParserUtil.h"
 namespace SQL_PARSER {
 	enum OPERATOR {
 		LEFT_BRACKET,//(
@@ -42,7 +44,10 @@ namespace SQL_PARSER {
 		BIT_OR,//|
 		QUESTION,//?:
 		EQUAL,//=
-		COMMA,//,
+		AND_W,// AND
+		OR_W,// OR
+		IN_,//IN
+		NOT_IN,//NOT IN
 		NOT_OPERATION
 	};
 	enum OPERATION_TYPE
@@ -58,7 +63,7 @@ namespace SQL_PARSER {
 		OPERATION_TYPE optType;
 		bool hasRightValue;
 		bool hasLeftValues;
-		char signStr[4];
+		char signStr[7];
 	};
 	constexpr static operationInfo operationInfos[] = {
 		{LEFT_BRACKET,1,POSITION,false,false,"("},
@@ -102,11 +107,14 @@ namespace SQL_PARSER {
 		{BIT_OR,10,MATHS,true,true,"|"},
 		{QUESTION,13,MATHS,true,true,"?"},
 		{EQUAL,14,MATHS,true,true,"="},
-		{COMMA,15,POSITION,false,false,"."}
+		{AND_W,11,LOGIC,true,true,"AND"},
+		{OR_W,12,LOGIC,true,true,"OR"},
+		{IN_,2,LOGIC,true,true,"IN"},
+		{NOT_IN,2,LOGIC,true,true,"NOT IN"}
 	};
 	static OPERATOR parseOperation(const char*& data)
 	{
-		for (uint8_t idx = 0; idx < sizeof(operationInfos) / sizeof(operationInfo); idx++)
+		for (uint8_t idx = 0; idx < AND_W; idx++)
 		{
 			uint8_t len = 0;
 			do {
@@ -116,6 +124,38 @@ namespace SQL_PARSER {
 			if (operationInfos[idx].signStr[len] == '\0')
 			{
 				data += len;
+				return operationInfos[idx].type;
+			}
+		}
+		for (uint8_t idx = AND_W; idx < NOT_IN; idx++)
+		{
+			if (strncasecmp(operationInfos[idx].signStr, data, strlen(operationInfos[idx].signStr)) == 0)
+			{
+				data += strlen(operationInfos[idx].signStr);
+				return operationInfos[idx].type;
+			}
+		}
+		for (uint8_t idx = NOT_IN; idx < NOT_OPERATION; idx++)
+		{
+			const char* src = operationInfos[idx].signStr;
+			const char* dest = data;
+			const char* wordEnd = endOfWord(src);
+			while (*src != '\0')
+			{
+				if (strncasecmp(src, dest, wordEnd - src) != 0)
+					break;
+				dest += wordEnd - src;
+				if (*wordEnd != '\0')
+				{
+					if (*dest != ' ' || *dest != '\t')
+						break;
+				}
+				src = nextWord(wordEnd);
+				wordEnd = endOfWord(src);
+			}
+			if (*src == '\0')
+			{
+				data = dest;
 				return operationInfos[idx].type;
 			}
 		}

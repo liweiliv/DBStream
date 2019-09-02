@@ -24,6 +24,19 @@ namespace SQL_PARSER {
 			return new SQLStringWord(optional, str.c_str() + 4);
 		else if (strncmp(str.c_str(), "_C_:", 4) == 0)
 			return new SQLCharWord(optional, str.c_str() + 4);
+		else if (strncmp(str.c_str(), "_E_:", 4) == 0)
+		{
+			if (strncasecmp(str.c_str() + 4, "LOGIC", 6) == 0)
+				return new SQLWordExpressions(optional, true);
+			else if (strncasecmp(str.c_str() + 4, "MATH", 5) == 0)
+				return new SQLWordExpressions(optional, false);
+			else
+				return nullptr;
+		}
+		else if (str == "_F_")
+			return new SQLWordFunction(optional);
+		else if (str == "_VL_")
+			return new SQLValueListWord(optional);
 		else
 			return nullptr;
 	}
@@ -35,14 +48,14 @@ namespace SQL_PARSER {
 		char c = *p;
 		if (c >= 'A' && c <= 'Z')
 			c += 'a' - 'A';
-		if (m_word[0] != c)
+		if (m_word != c)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(p, 1);
 			if (needValue)
 				value->ref++;
@@ -95,7 +108,7 @@ namespace SQL_PARSER {
 		const char* p = nextWord(sql);
 		const char* nameStart[2] = { 0 };
 		const char* nameEnd;
-		uint16_t nameSize[2] = {0};
+		uint16_t nameSize[2] = { 0 };
 		SQLTableNameValue* value = MATCH;
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
 		{
@@ -178,7 +191,7 @@ namespace SQL_PARSER {
 				value->table.assign(nameStart[1], nameSize[1]);
 				value->columnName.assign(nameStart[2], nameSize[2]);
 			}
-			else if(nameStart[1] != nullptr)
+			else if (nameStart[1] != nullptr)
 			{
 				value->table.assign(nameStart[0], nameSize[0]);
 				value->columnName.assign(nameStart[1], nameSize[1]);
@@ -210,7 +223,7 @@ namespace SQL_PARSER {
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
-		}		
+		}
 		char quote = *p;
 		const char* end = p + 1;
 		while (true)
@@ -244,7 +257,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(p + 1, end - p - 1);
 			if (needValue)
 				value->ref++;
@@ -276,7 +289,7 @@ namespace SQL_PARSER {
 
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(m_word);
 			if (needValue)
 				value->ref++;
@@ -348,7 +361,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(p, n - p);
 			if (needValue)
 				value->ref++;
@@ -382,7 +395,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(p, end - p);
 			if (needValue)
 				value->ref++;
@@ -398,6 +411,68 @@ namespace SQL_PARSER {
 		LOG(ERROR) << m_comment << "match " << sql;
 		sql = end;
 		return value;
+	}
+	SQLValue* SQLOperatorWord::match(handle* h, const char*& sql, bool needValue)
+	{
+		OPERATOR op = parseOperation(sql);
+		if (op == NOT_OPERATION)
+			return NOT_MATCH_PTR;
+		return new SQLOperatorValue(op);
+	}
+	SQLValue* SQLValueListWord::match(handle* h, const char*& sql, bool needValue)
+	{
+		const char* pos = nextWord(sql);
+		if (*pos != '(')
+			return NOT_MATCH_PTR;
+		pos = nextWord(pos + 1);
+		if (*pos == ')')//not allowed empty list
+			return NOT_MATCH_PTR;
+		SQLValueList* vlist = needValue ? new SQLValueList() : nullptr;
+		SQLValue* v;
+		SQLValueType valuesType = SQLValueType::MAX_TYPE;
+		bool nextIsValue = false;
+		while (*pos != '\0')
+		{
+			if (NOT_MATCH_PTR != (v = expressionWord.match(nullptr, pos, needValue)))
+			{
+				if (needValue)
+					vlist->values.push_back(v);
+			}
+			else if (NOT_MATCH_PTR != (v = funcWord.match(nullptr, pos, needValue)) ||
+				NOT_MATCH_PTR != (v = strWord.match(nullptr, pos, needValue)) ||
+				NOT_MATCH_PTR != (v = numberArgv.match(nullptr, pos, needValue)))
+			{
+				if (needValue)
+					vlist->values.push_back(v);
+				if (valuesType == SQLValueType::MAX_TYPE)
+					valuesType = v->type;
+				else if (valuesType != v->type)
+				{
+					if (vlist != nullptr)
+						delete vlist;
+					return NOT_MATCH_PTR;
+				}
+			}
+			else
+			{
+				if (vlist != nullptr)
+					delete vlist;
+				return NOT_MATCH_PTR;
+			}
+			pos = nextWord(pos);
+			if(*pos==',')
+				pos = nextWord(pos + 1);
+			else if (*pos == ')')
+				break;
+			else
+			{
+				if (vlist != nullptr)
+					delete vlist;
+				return NOT_MATCH_PTR;
+			}
+		}
+		sql = pos+1;
+		return vlist;
 	}
 	SQLValue* SQLBracketsWord::match(handle* h, const char*& sql, bool needValue)
 	{
@@ -429,7 +504,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(SQLValue::STRING_TYPE);
+			value = new SQLStringValue(STRING_TYPE);
 			value->value.assign(p, end - p);
 			if (needValue)
 				value->ref++;
@@ -448,7 +523,7 @@ namespace SQL_PARSER {
 	}
 	SQLValue* SQLWordArray::match(handle* h, const char*& sql, bool needValue)
 	{
-		SQLValue * rtv = nullptr;
+		SQLValue* rtv = nullptr;
 		bool matched = false;
 		const char* savePoint = sql, * beforeLoop = nullptr;
 		statusInfo* top = h->end;
@@ -535,37 +610,208 @@ namespace SQL_PARSER {
 		}
 		return rtv;
 	}
-	SQLWordExpressions::SQLWordExpressions(bool optional) :SQLWord(SQL_EXPRESSION, optional), m_parserFunc(nullptr), numberArgv(false), strWord(false), nameWord(false), func(nullptr)
+	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), m_parserFunc(nullptr), opWord(false), numberWord(false), strWord(false), nameWord(false), func(nullptr)
 	{
 		func = new SQLWordFunction(false);
+		valueList = new SQLValueListWord(false);
 	}
 	SQLWordExpressions::~SQLWordExpressions()
 	{
 		delete func;
+		delete valueList;
 	}
+	SQLValue* SQLWordExpressions::matchValue(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
+	{
+		SQLValue* value;
+		if ((value = this->valueList->match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+		{
+			if (opStack.empty() || (opStack.top()->opera != IN_ && opStack.top()->opera != NOT_IN))
+			{
+				if (value != nullptr)
+					delete value;
+				return NOT_MATCH_PTR;
+			}
+			else
+			{
+				valueList.push_back(value);
+				return value;
+			}
+		}
+		else if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+			(value = numberWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+			(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+			(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+		{
+			valueList.push_back(value);
+			return value;
+		}
+		else
+		{
+			SQLValue* opValue;
+			if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR &&
+				!operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
+				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
+			{
+				if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+					(value = numberWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+					(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+					(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+				{
+					while (!opStack.empty() && operationInfos[opStack.top()->opera].priority < operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+					{
+						valueList.push_back(opStack.top());
+						opStack.pop();
+					}
+					opStack.push(static_cast<SQLOperatorValue*>(opValue));
+					valueList.push_back(value);
+					return value;
+				}
+			}
+		}
+		return NOT_MATCH_PTR;
+	}
+	SQLValue* SQLWordExpressions::matchOperation(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
+	{
+		SQLValue* opValue;
+		if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR)
+		{
+			if (operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
+				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
+			{
+				while (!opStack.empty() && operationInfos[opStack.top()->opera].priority < operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+				{
+					valueList.push_back(opStack.top());
+					opStack.pop();
+				}
+				opStack.push(static_cast<SQLOperatorValue*>(opValue));
+				return opValue;
+			}
+			else
+			{
+				delete opValue;
+				return NOT_MATCH_PTR;
+			}
+		}
+		else
+			return NOT_MATCH_PTR;
+	}
+	SQLValue* SQLWordExpressions::matchLBrac(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
+	{
+		const char* ptr = nextWord(sql);
+		if (*ptr == '(')
+		{
+			SQLOperatorValue* op = new SQLOperatorValue(LEFT_BRACKET);
+			opStack.push(op);
+			sql = ptr + 1;
+			return op;
+		}
+	}
+	SQLValue* SQLWordExpressions::matchRBrac(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
+	{
+		const char* ptr = nextWord(sql);
+		if (*ptr == ')')
+		{
+			SQLOperatorValue* op = nullptr;
+			while (!opStack.empty() && (op = opStack.top(), op->opera != LEFT_BRACKET))
+			{
+				opStack.pop();
+				valueList.push_back(op);
+			}
+			if (op == nullptr || op->opera != LEFT_BRACKET)
+				return NOT_MATCH_PTR;
+			sql = ptr + 1;
+			return MATCH;
+		}
+		return NOT_MATCH_PTR;
+	}	/*trans mid-prefix to back-prefix*/
 	SQLValue* SQLWordExpressions::match(handle* h, const char*& sql, bool needValue)
 	{
-		std::list<const char*> brackets;
-		SQLValue* value = MATCH;
+		std::stack<SQLOperatorValue*> opStack;
+		std::list<SQLValue*> valueList;
+		SQLExpressionValue* value = nullptr;
+		SQLValue* currentValue = MATCH;
 		const char* pos = nextWord(sql);
+		bool status = true;
 		do {
-			while (*pos == '(')
+			if (status)
 			{
-				brackets.push_back(pos);
-				pos = nextWord(pos + 1);
+				if (matchValue(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+					status = false;
+				else
+					goto NOT_MATCH;
 			}
-			if ((value = match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH_PTR ||
-				(value = func->match(nullptr, pos, needValue || m_parserFunc != nullptr)) != NOT_MATCH_PTR)
+			else
 			{
-				pos = nextWord(pos);
+				if (matchOperation(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+				{
+					pos = nextWord(pos);
+					if (matchValue(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+					{
+						pos = nextWord(pos);
+						matchRBrac(pos, needValue, opStack, valueList);
+						break;
+					}
+					else if (matchLBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+					{
+						status = true;
+						break;
+					}
+					else
+						goto NOT_MATCH;
+				}
+				else
+				{
+					if (valueList.size() + opStack.size() <= 1)
+						goto NOT_MATCH;
+					else
+						goto CHECK;
+				}
 			}
+			pos = nextWord(pos);
 		} while (*pos != '\0');
+
+	CHECK:
+		while (!opStack.empty())
+		{
+			if (opStack.top()->opera == LEFT_BRACKET)
+				goto NOT_MATCH;
+		}
+		value = new SQLExpressionValue();
+		value->valueStack = new SQLValue * [valueList.size() + opStack.size()];
+		value->count = 0;
+		for (std::list <SQLValue*>::iterator iter = valueList.begin(); iter != valueList.end(); iter++)
+			value->valueStack[value->count++] = *iter;
+		while (!opStack.empty())
+		{
+			value->valueStack[value->count++] = opStack.top();
+			opStack.pop();
+		}
+		if(value->count == 0||value->valueStack[value->count-1]->type!= OPERATOR_TYPE||
+			(operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType==LOGIC)^logicOrMath
+			|| !value->check())
+		{
+			delete value;
+			return NOT_MATCH_PTR;
+		}
+		sql = pos;
+		return value;
+	NOT_MATCH:
+		for (std::list <SQLValue*>::iterator iter = valueList.begin(); iter != valueList.end(); iter++)
+		{
+			if (*iter != nullptr)
+				delete* iter;
+		}
+		while (!opStack.empty())
+		{
+			delete opStack.top();
+			opStack.pop();
+		}
 		return NOT_MATCH_PTR;
 	}
 
 	SQLValue* SQLWordFunction::match(handle* h, const char*& sql, bool needValue)
 	{
-		SQLValue * name = nullptr;
+		SQLValue* name = nullptr;
 		const char* pos = nextWord(sql);
 		if ((name = asWord.match(nullptr, pos, needValue || m_parserFunc != nullptr)) == NOT_MATCH_PTR)
 			return NOT_MATCH_PTR;
@@ -591,7 +837,7 @@ namespace SQL_PARSER {
 				sql = pos + 1;
 				if (needValue)
 					sfv->ref++;
-				if (h != nullptr&&m_parserFunc != nullptr)
+				if (h != nullptr && m_parserFunc != nullptr)
 				{
 					statusInfo* s = new statusInfo();
 					sfv->ref++;

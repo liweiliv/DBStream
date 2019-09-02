@@ -5,8 +5,9 @@
 #include "sqlParserUtil.h"
 #include "sqlValue.h"
 namespace SQL_PARSER {
-	#define NOT_MATCH_PTR  ((SQLValue*)0xffffffffffffffffULL)
+	#define NOT_MATCH_PTR  ((SQL_PARSER::SQLValue*)0xffffffffffffffffULL)
 	#define MATCH  nullptr
+	typedef parseValue(*parserFunc)(handle*, SQLValue*);
 	class SQLWord
 	{
 	public:
@@ -48,13 +49,16 @@ namespace SQL_PARSER {
 			S_STRING,
 			S_ANY_WORD,
 			S_BRACKETS, //(xxxx)
-			S_NUMBER
+			S_NUMBER,
+			S_OPERATOR,
+			S_VALUE_LIST,
+			S_FUNC,
+			S_EXPRESSION
 		};
-		std::string m_word;
 		sqlSingleWordType m_wtype;
-		parseValue(*m_parser)(handle* h, SQLValue * value);
-		SQLSingleWord(bool optional, sqlSingleWordType type, const std::string& word) :
-			SQLWord(SQL_SIGNLE_WORD, optional), m_word(word), m_wtype(type), m_parser(nullptr)
+		parserFunc m_parser;
+		SQLSingleWord(bool optional, sqlSingleWordType type) :
+			SQLWord(SQL_SIGNLE_WORD, optional),m_wtype(type), m_parser(nullptr)
 		{
 		}
 		virtual ~SQLSingleWord() {}
@@ -65,8 +69,10 @@ namespace SQL_PARSER {
 	class SQLCharWord : public SQLSingleWord
 	{
 	public:
-		SQLCharWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_CHAR, word)
+		char m_word;
+		SQLCharWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_CHAR)
 		{
+			m_word = word.c_str()[0];
 		}
 		virtual ~SQLCharWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
@@ -74,7 +80,7 @@ namespace SQL_PARSER {
 	class SQLNameWord :public SQLSingleWord
 	{
 	public:
-		SQLNameWord(bool optional) :SQLSingleWord(optional, S_NAME, "")
+		SQLNameWord(bool optional) :SQLSingleWord(optional, S_NAME)
 		{
 		}
 		virtual ~SQLNameWord() {}
@@ -83,7 +89,7 @@ namespace SQL_PARSER {
 	class SQLTableNameWord :public SQLSingleWord
 	{
 	public:
-		SQLTableNameWord(bool optional) :SQLSingleWord(optional, S_TABLE_NAME, "")
+		SQLTableNameWord(bool optional) :SQLSingleWord(optional, S_TABLE_NAME)
 		{
 		}
 		virtual ~SQLTableNameWord() {}
@@ -91,7 +97,7 @@ namespace SQL_PARSER {
 	};
 	class SQLColumnNameWord :public SQLSingleWord {
 	public:
-		SQLColumnNameWord(bool optional) :SQLSingleWord(optional, S_COLUMN_NAME, "")
+		SQLColumnNameWord(bool optional) :SQLSingleWord(optional, S_COLUMN_NAME)
 		{
 		}
 		virtual ~SQLColumnNameWord() {}
@@ -100,7 +106,7 @@ namespace SQL_PARSER {
 	class SQLArrayWord :public SQLSingleWord
 	{
 	public:
-		SQLArrayWord(bool optional) :SQLSingleWord(optional, S_ARRAY, "")
+		SQLArrayWord(bool optional) :SQLSingleWord(optional, S_ARRAY)
 		{
 		}
 		virtual ~SQLArrayWord() {}
@@ -109,7 +115,8 @@ namespace SQL_PARSER {
 	class SQLStringWord :public SQLSingleWord
 	{
 	public:
-		SQLStringWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_STRING, word)
+		std::string m_word;
+		SQLStringWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_STRING),m_word(word)
 		{
 		}
 		virtual ~SQLStringWord() {}
@@ -118,7 +125,7 @@ namespace SQL_PARSER {
 	class SQLNumberWord :public SQLSingleWord
 	{
 	public:
-		SQLNumberWord(bool optional) :SQLSingleWord(optional, S_NUMBER, "")
+		SQLNumberWord(bool optional) :SQLSingleWord(optional, S_NUMBER)
 		{
 		}
 		virtual ~SQLNumberWord() {}
@@ -127,7 +134,7 @@ namespace SQL_PARSER {
 	class SQLAnyStringWord :public SQLSingleWord
 	{
 	public:
-		SQLAnyStringWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD, "")
+		SQLAnyStringWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD)
 		{
 		}
 		virtual ~SQLAnyStringWord() {}
@@ -136,18 +143,26 @@ namespace SQL_PARSER {
 	class SQLBracketsWord :public SQLSingleWord
 	{
 	public:
-		SQLBracketsWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD, ""){}
+		SQLBracketsWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD){}
 		virtual ~SQLBracketsWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
+	class SQLOperatorWord :public SQLSingleWord
+	{
+	public:
+		SQLOperatorWord(bool optional) :SQLSingleWord(optional, S_OPERATOR) {}
+		virtual ~SQLOperatorWord() {}
+		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
+	};
+
 	class SQLWordArray : public SQLWord
 	{
 	public:
 		std::list<SQLWord*> m_words;
 		bool m_or;
 		bool m_loop;
-		SQLSingleWord* m_loopCondition;
-		SQLWordArray(bool optional, bool _or, bool loop, SQLSingleWord* loopCondition) :
+		SQLWord* m_loopCondition;
+		SQLWordArray(bool optional, bool _or, bool loop, SQLWord* loopCondition) :
 			SQLWord(SQL_ARRAY, optional), m_or(_or), m_loop(loop), m_loopCondition(loopCondition)
 		{
 		}
@@ -177,18 +192,27 @@ namespace SQL_PARSER {
 	};
 
 	class SQLWordFunction;
-	class SQLWordExpressions :public SQLWord {
+	class SQLValueListWord;
+	class SQLWordExpressions :public SQLSingleWord {
+	private:
+		SQLValue* matchValue(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList);
+		SQLValue* matchOperation(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList);
+		SQLValue* matchLBrac(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList);
+		SQLValue* matchRBrac(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList);
 	public:
-		SQLNumberWord numberArgv;
+		bool logicOrMath;
+		SQLOperatorWord opWord;
+		SQLNumberWord numberWord;
 		SQLArrayWord strWord;
 		SQLColumnNameWord nameWord;
 		SQLWordFunction* func;
+		SQLValueListWord* valueList;
 		parseValue(*m_parserFunc)(handle* h, SQLValue* values);
-		SQLWordExpressions(bool optional);
+		SQLWordExpressions(bool optional,bool logicOrMath);
 		~SQLWordExpressions();
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
-	class SQLWordFunction :public SQLWord {
+	class SQLWordFunction :public SQLSingleWord {
 	private:
 		SQLNumberWord numberArgv;
 		SQLArrayWord strWord;
@@ -197,7 +221,18 @@ namespace SQL_PARSER {
 		SQLAnyStringWord asWord;
 	public:
 		parseValue(*m_parserFunc)(handle* h, SQLValue * values);
-		SQLWordFunction(bool optional) :SQLWord(SQL_FUNCTION, optional),numberArgv(false), strWord(false), nameWord(false), expressionWord(false),asWord(false){}
+		SQLWordFunction(bool optional) :SQLSingleWord(optional, S_FUNC),numberArgv(false), strWord(false), nameWord(false), expressionWord(false),asWord(false){}
+		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
+	};
+	class SQLValueListWord :public SQLSingleWord
+	{
+	public:
+		SQLNumberWord numberArgv;
+		SQLArrayWord strWord;
+		SQLWordExpressions expressionWord;
+		SQLWordFunction funcWord;
+		SQLValueListWord(bool optional) :SQLSingleWord(optional, S_VALUE_LIST), numberArgv(false), strWord(false),expressionWord(false), funcWord(false) {}
+		virtual ~SQLValueListWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
 }

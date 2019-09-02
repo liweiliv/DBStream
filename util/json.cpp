@@ -111,7 +111,7 @@ jsonString::jsonString(const char * data ) :
 {
     parse(data);
 }
-string jsonString::toString(int level)
+string jsonString::toString(int level) const 
 {
 	string s;
 	for (int l = 0; l < level; l++)
@@ -168,7 +168,7 @@ int jsonNum::parse(const char * data)
         m_value = -m_value;
     return (int)(ptr - data);
 }
-string jsonNum::toString(int level)
+string jsonNum::toString(int level)const
 {
 	string s;
 	for (int l = 0; l < level; l++)
@@ -273,14 +273,14 @@ int jsonObject::parse(const char * data)
     }
     return (int)(ptr - data + 1);
 }
-string jsonObject::toString(int level)
+string jsonObject::toString(int level)const
 {
     string s ;
 	for (int l = 0; l < level; l++)
 		s.append("\t");
 	s.append("{\n");
     bool first = true;
-    for(std::map<std::string, jsonValue*>::iterator i = m_values.begin(); i != m_values.end();i++)
+    for(std::map<std::string, jsonValue*>::const_iterator i = m_values.begin(); i != m_values.end();i++)
     {
 		jsonValue* v = i->second;
         if(v!=NULL)
@@ -371,14 +371,14 @@ int jsonArray::parse(const char * data)
     }
     return (int)(ptr - data + 1);
 }
-string jsonArray::toString(int level)
+string jsonArray::toString(int level)const
 {
 	string s;
 	for (int l = 0; l < level; l++)
 		s.append("\t");
 	s.append("[\n");
     bool first = true;
-    for(list<jsonValue*>::iterator i = m_values.begin(); i != m_values.end();i++)
+    for(list<jsonValue*>::const_iterator i = m_values.begin(); i != m_values.end();i++)
     {
         jsonValue * v = *i;
         if(v!=NULL)
@@ -423,7 +423,7 @@ int jsonBool::parse(const char * data)
     else
         return -1;
 }
-string jsonBool::toString(int level)
+string jsonBool::toString(int level)const
 {
     return m_value?"true":"false";
 }

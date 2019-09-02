@@ -1,23 +1,49 @@
 #pragma once
 #include <string>
 #include <list>
+#include <stack>
+#include <assert.h>
 #include "operationInfo.h"
 namespace SQL_PARSER {
+	enum SQLValueType {
+		OPERATOR_TYPE,
+		NUMBER_TYPE,
+		STRING_TYPE,
+		LIST_TYPE,
+		NAME_TYPE,
+		TABLE_NAME_TYPE,
+		COLUMN_NAME_TYPE,
+		FUNCTION_TYPE,
+		EXPRESSION_TYPE,
+		MAX_TYPE
+	};
 	class SQLValue {
 	public:
-		enum SQLValueType {
-			NUMBER_TYPE,
-			STRING_TYPE,
-			NAME_TYPE,
-			TABLE_NAME_TYPE,
-			COLUMN_NAME_TYPE,
-			FUNCTION_TYPE,
-			EXPRESSION_TYPE
-		};
+
 		SQLValueType type;
 		uint32_t ref;
 		SQLValue(SQLValueType type) :type(type), ref(0){}
 		virtual ~SQLValue() {}
+	};
+	class SQLOperatorValue :public SQLValue {
+	public:
+		OPERATOR opera;
+		SQLOperatorValue(const char* op) :SQLValue(OPERATOR_TYPE)
+		{
+			opera = parseOperation(op);
+		}
+		SQLOperatorValue(OPERATOR opera) :SQLValue(OPERATOR_TYPE), opera(opera)
+		{}
+	};
+	class SQLValueList :public SQLValue {
+	public:
+		std::list<SQLValue*> values;
+		SQLValueList() :SQLValue(LIST_TYPE) {}
+		~SQLValueList()
+		{
+			for (std::list<SQLValue*>::iterator iter = values.begin(); iter != values.end(); iter++)
+				delete* iter;
+		}
 	};
 	class SQLStringValue :public SQLValue {
 	public:
@@ -55,16 +81,50 @@ namespace SQL_PARSER {
 	};
 	class SQLExpressionValue :public SQLValue {
 	public:
-		SQLValue *rightValue;
-		OPERATOR opt;
-		SQLValue *leftValue;
-		SQLExpressionValue() :SQLValue(EXPRESSION_TYPE), rightValue(nullptr), leftValue(nullptr){}
+		SQLValue** valueStack;
+		int count;
+		SQLExpressionValue() :SQLValue(EXPRESSION_TYPE), valueStack(nullptr), count(0){}
 		~SQLExpressionValue()
 		{
-			if (rightValue)
-				delete rightValue;
-			if (leftValue)
-				delete leftValue;
+			if (valueStack != nullptr)
+			{
+				for (int idx = 0; idx < count; idx++)
+				{
+					if (valueStack[idx]!=nullptr&&--valueStack[idx]->ref <= 0)
+						delete valueStack[idx];
+				}
+				delete[]valueStack;
+			}
+		}
+		bool check()
+		{
+			if (valueStack == nullptr || count == 0)
+				return true;
+			int lValueCount = 0;
+			for (int idx = 0; idx < count; idx++)
+			{
+				if (valueStack[idx]->type == SQLValueType::OPERATOR_TYPE)
+				{
+					if (!operationInfos[static_cast<SQLOperatorValue*>(valueStack[idx])->opera].hasLeftValues)
+					{
+						if (lValueCount < 1)
+							return false;
+						continue;
+					}
+					else
+					{
+						if (lValueCount < 2)
+							return false;
+						lValueCount--;
+					}
+				}
+				else
+					lValueCount++;
+			}
+			if (lValueCount != 1)
+				return false;
+			else
+				return true;
 		}
 	};
 }

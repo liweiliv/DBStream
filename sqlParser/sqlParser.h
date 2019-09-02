@@ -16,6 +16,12 @@
 #endif
 #include "util/winDll.h"
 class jsonValue;
+class jsonString;
+class jsonArray;
+class jsonObject;
+class SQLWord;
+class SQLWordArray;
+class SQLSingleWord;
 namespace SQL_PARSER
 {
 	typedef std::unordered_map<const char*, SQL_TYPE, StrHash, StrCompare> SQL_TYPE_TREE;
@@ -23,16 +29,22 @@ namespace SQL_PARSER
 	class sqlParser
 	{
 	private:
-		std::map<std::string, SQLWord*> m_parseTree;
-		std::map<std::string, SQLWord*> m_parseTreeHead;
+		std::map<std::string, SQLWordArray*> m_parseTree;
+		std::map<std::string, SQLWordArray*> m_parseTreeHead;
 		SQL_TYPE_TREE m_sqlTypes;
 #ifdef OS_WIN
 		HINSTANCE m_funcsHandle;
 #else
 		void* m_funcsHandle;
 #endif
+		bool getLoopCondition(jsonValue* loop, SQLWord*& condition);
 		bool checkWords();
-		SQLWord* loadSQlWordFromJson(jsonValue* json, const std::string & name, SQLWord* top = nullptr);
+		void* getFunc(const jsonString* json);
+		bool forwardDeclare(jsonArray* value);
+		SQLWord* getInclude(jsonString* value, const std::string& topName, SQLWord* top);
+		SQLWordArray* loadWordArrayFromJson (jsonObject* json, const char* name, SQLWordArray* top);
+		SQLSingleWord* loadSingleWordFromJson(jsonObject* json);
+
 		void (*m_initUserDataFunc)(handle* h);
 		void (*m_destroyUserDataFunc)(handle* h);
 	public:

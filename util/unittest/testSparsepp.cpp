@@ -11,6 +11,7 @@ int test()
 			m.erase(j);
 		}
 	}
+	return 0;
 }
 int test1()
 {
@@ -23,7 +24,7 @@ int test1()
 		rtv.first->second = 101;
 	}
 	printf("%ld\n",m.find(100)->second);
-
+	return 0;
 }
 int main()
 {

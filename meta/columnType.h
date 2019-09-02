@@ -37,6 +37,7 @@ namespace META {
 #define T_BYTE 25
 #define T_BINARY 26
 #define T_TEXT 27
+#define T_CURRENT_VERSION_MAX_TYPE  28
 #define T_MAX_TYPE 255
 	struct columnTypeInfo
 	{
