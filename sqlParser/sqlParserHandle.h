@@ -41,12 +41,13 @@ namespace SQL_PARSER
 		UNSUPPORT = 255
 	};
 	struct handle;
+	typedef parseValue(*parserFuncType)(handle*, SQLValue*);
 	struct statusInfo
 	{
 		statusInfo* next;
-		parseValue(*parserFunc)(handle* h, SQLValue* value);
+		parserFuncType parserFunc;
 		SQLValue* value;
-		statusInfo(): next(nullptr), value(nullptr){}
+		statusInfo(): next(nullptr), parserFunc(nullptr),value(nullptr){}
 		virtual parseValue process(handle* h)
 		{
 			if (parserFunc != nullptr)
@@ -54,7 +55,7 @@ namespace SQL_PARSER
 			else
 				return OK;
 		}
-		~statusInfo()
+		virtual ~statusInfo()
 		{
 			if (value != nullptr && --value->ref <= 0)
 				delete value;

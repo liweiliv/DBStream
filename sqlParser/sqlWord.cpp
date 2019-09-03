@@ -43,7 +43,6 @@ namespace SQL_PARSER {
 	SQLValue* SQLCharWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
-		parseValue rtv = OK;
 		SQLStringValue* value = MATCH;
 		char c = *p;
 		if (c >= 'A' && c <= 'Z')
@@ -430,7 +429,6 @@ namespace SQL_PARSER {
 		SQLValueList* vlist = needValue ? new SQLValueList() : nullptr;
 		SQLValue* v;
 		SQLValueType valuesType = SQLValueType::MAX_TYPE;
-		bool nextIsValue = false;
 		while (*pos != '\0')
 		{
 			if (NOT_MATCH_PTR != (v = expressionWord.match(nullptr, pos, needValue)))
@@ -610,7 +608,7 @@ namespace SQL_PARSER {
 		}
 		return rtv;
 	}
-	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), m_parserFunc(nullptr), opWord(false), numberWord(false), strWord(false), nameWord(false), func(nullptr)
+	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), opWord(false), numberWord(false), strWord(false), nameWord(false), func(nullptr)
 	{
 		func = new SQLWordFunction(false);
 		valueList = new SQLValueListWord(false);
@@ -705,6 +703,8 @@ namespace SQL_PARSER {
 			sql = ptr + 1;
 			return op;
 		}
+		else
+			return NOT_MATCH_PTR;
 	}
 	SQLValue* SQLWordExpressions::matchRBrac(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
 	{
@@ -729,7 +729,6 @@ namespace SQL_PARSER {
 		std::stack<SQLOperatorValue*> opStack;
 		std::list<SQLValue*> valueList;
 		SQLExpressionValue* value = nullptr;
-		SQLValue* currentValue = MATCH;
 		const char* pos = nextWord(sql);
 		bool status = true;
 		do {
@@ -787,7 +786,7 @@ namespace SQL_PARSER {
 			opStack.pop();
 		}
 		if(value->count == 0||value->valueStack[value->count-1]->type!= OPERATOR_TYPE||
-			(operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType==LOGIC)^logicOrMath
+			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType==LOGIC)^logicOrMath)
 			|| !value->check())
 		{
 			delete value;
@@ -813,14 +812,14 @@ namespace SQL_PARSER {
 	{
 		SQLValue* name = nullptr;
 		const char* pos = nextWord(sql);
-		if ((name = asWord.match(nullptr, pos, needValue || m_parserFunc != nullptr)) == NOT_MATCH_PTR)
+		if ((name = asWord.match(nullptr, pos, needValue ||  m_parser != nullptr)) == NOT_MATCH_PTR)
 			return NOT_MATCH_PTR;
 		pos = nextWord(pos);
 		if (*pos != '(')
 			return NOT_MATCH_PTR;
 		SQLFunctionValue* sfv = MATCH;
 
-		if (needValue || m_parserFunc != nullptr)
+		if (needValue || m_parser != nullptr)
 		{
 			if (name == nullptr)
 				return NOT_MATCH_PTR;
@@ -837,11 +836,11 @@ namespace SQL_PARSER {
 				sql = pos + 1;
 				if (needValue)
 					sfv->ref++;
-				if (h != nullptr && m_parserFunc != nullptr)
+				if (h != nullptr && m_parser != nullptr)
 				{
 					statusInfo* s = new statusInfo();
 					sfv->ref++;
-					s->parserFunc = m_parserFunc;
+					s->parserFunc = m_parser;
 					s->value = sfv;
 					h->addStatus(s);
 				}

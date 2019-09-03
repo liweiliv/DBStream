@@ -39,7 +39,7 @@ namespace SQL_PARSER
 #endif
 		bool getLoopCondition(jsonValue* loop, SQLWord*& condition);
 		bool checkWords();
-		void* getFunc(const jsonString* json);
+		parserFuncType getFunc(const jsonString* json);
 		bool forwardDeclare(jsonArray* value);
 		SQLWord* getInclude(jsonString* value, const std::string& topName, SQLWord* top);
 		SQLWordArray* loadWordArrayFromJson (jsonObject* json, const char* name, SQLWordArray* top);

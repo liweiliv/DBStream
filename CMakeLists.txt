@@ -28,7 +28,19 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	endif()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-
+#gflags
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        find_library(GFLAGS gflags /usr/local/lib)
+        if(NOT GFLAGS)
+        message(FATAL_ERROR "gflags library not found")
+        endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        include_directories("C:\\Program Files (x86)\\gflags\\include" "C:\\Program Files (x86)\\gflags\\include")
+        find_library(GFLAGs gflags "C:\\Program Files (x86)\\gflags\\lib")
+        if(NOT GFLAGS)
+        message(FATAL_ERROR "gflags library not found")
+        endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #glog
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	find_library(GLOG glog /usr/local/lib)
@@ -64,7 +76,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #util
 aux_source_directory(util utilDir)
 add_library(util SHARED ${utilDir})
-TARGET_LINK_LIBRARIES(util ${GLOG})
+TARGET_LINK_LIBRARIES(util ${GLOG} ${GFLAGS})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(util pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -76,23 +88,23 @@ TARGET_LINK_LIBRARIES(meta util sqlParser ${GLOG})
 #sql parser
 aux_source_directory(sqlParser sqlparserDir)
 add_library(sqlParser SHARED ${sqlparserDir})
-TARGET_LINK_LIBRARIES(sqlParser util ${GLOG})
+TARGET_LINK_LIBRARIES(sqlParser util ${GLOG} ${GLFAGS})
 
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
-TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG})
+TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG} ${GLFAGS})
 #memory
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
-TARGET_LINK_LIBRARIES(memory util ${GLOG})
+TARGET_LINK_LIBRARIES(memory util ${GLOG} ${GFLAGS})
 #store
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util memory meta ${LZ4} ${GLOG})
+TARGET_LINK_LIBRARIES(store  util memory meta ${LZ4} ${GLOG} ${GFLAGS})
 
 #datasource
 aux_source_directory(dataSource dataSourceDir)
 add_library(dataSource SHARED ${dataSourceDir})
-TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG})
+TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG} ${GFLAGS})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(dataSource dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

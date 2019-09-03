@@ -21,7 +21,7 @@ namespace STORE
 			uint8_t valueType;
 			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const = 0;
 			virtual void* finalValueFunc(void* historyValue, uint32_t count) const  = 0;
-			groupFunc(uint8_t argvType, uint8_t valueType) :argvType(argvType), valueType(valueType) {}
+			groupFunction(uint8_t argvType, uint8_t valueType) :argvType(argvType), valueType(valueType) {}
 			virtual ~groupFunction() {}
 		};
 		void initFunction();

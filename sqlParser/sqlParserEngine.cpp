@@ -61,19 +61,19 @@ namespace SQL_PARSER
 		else
 			return false;
 	}
-	void* sqlParser::getFunc(const jsonString* json )
+	parserFuncType sqlParser::getFunc(const jsonString* json )
 	{
-		parserFunc func = nullptr;
+		parserFuncType func = nullptr;
 #ifdef OS_LINUX
 		if (nullptr
 			== (func =
-			(parserFunc) dlsym(
+			(parserFuncType) dlsym(
 				m_funcsHandle,
 				json->m_value.c_str())))
 #endif
 #ifdef OS_WIN
 		if (nullptr
-			== (func =(parserFunc) GetProcAddress(
+			== (func =(parserFuncType) GetProcAddress(
 				m_funcsHandle,json->m_value.c_str())))
 #endif
 		{
@@ -91,7 +91,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect string type in [" << value->toString() << "]";
 				return false;
 			}
-			map<std::string, SQLWordArray*>::iterator wordIter = m_parseTree.find(static_cast<jsonString*>(*iter)->m_value);
+			std::map<std::string, SQLWordArray*>::iterator wordIter = m_parseTree.find(static_cast<jsonString*>(*iter)->m_value);
 			if (wordIter == m_parseTree.end())
 			{
 				SQLWordArray* w = new SQLWordArray(false, false, false, nullptr);
@@ -112,7 +112,7 @@ namespace SQL_PARSER
 			}
 			return top;
 		}
-		map<std::string, SQLWordArray*>::iterator iter = m_parseTree.find(
+		std::map<std::string, SQLWordArray*>::iterator iter = m_parseTree.find(
 			static_cast<jsonString*>(value)->m_value);
 		if (iter == m_parseTree.end())
 		{
@@ -126,7 +126,7 @@ namespace SQL_PARSER
 	{
 		jsonValue* value = json->get("OPT");
 		bool optional = false; //default  false
-		parserFunc func = nullptr;
+		parserFuncType func = nullptr;
 		if (value != nullptr)
 		{
 			if (value->t != jsonObject::J_BOOL)
@@ -143,7 +143,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "function type expect string type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			if (nullptr == (func = static_cast<parserFunc>(getFunc(static_cast<jsonString*>(value)))))
+			if (nullptr == (func = static_cast<parserFuncType>(getFunc(static_cast<jsonString*>(value)))))
 			{
 				LOG(ERROR) << "can not fund func: [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -169,7 +169,7 @@ namespace SQL_PARSER
 	{
 		jsonValue* value ;
 		bool optional = false; //default  false
-		bool or = false;
+		bool OR = false;
 		bool loop = false;
 		SQLWord* loopCondition = nullptr;
 		SQLWordArray* array = nullptr;
@@ -201,7 +201,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			or = static_cast<jsonBool*>(value)->m_value;
+			OR = static_cast<jsonBool*>(value)->m_value;
 		}
 		if (nullptr != (value = json->get("DECLARE")))
 		{
@@ -252,7 +252,7 @@ namespace SQL_PARSER
 				}
 				array->m_sqlType = sqlType;
 				array->m_optional = optional;
-				array->m_or = or ;
+				array->m_or = OR ;
 				array->m_loop = loop;
 				array->m_loopCondition = loopCondition;
 				array->m_forwardDeclare = false;
@@ -261,7 +261,7 @@ namespace SQL_PARSER
 
 		if(array==nullptr)
 		{
-			array = new SQLWordArray(optional, or, loop, loopCondition);
+			array = new SQLWordArray(optional, OR, loop, loopCondition);
 			array->m_sqlType = sqlType;
 		}
 		if (top == nullptr)

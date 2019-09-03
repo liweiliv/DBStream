@@ -20,7 +20,6 @@ namespace STORE {
 		class MAX_FUNC :public function {
 			MAX_FUNC(uint8_t typeCode) :function(2, typeCode)
 			{
-				argvTypes[0] = argvTypes[1] = typeCode;
 			}
 			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
 			{
@@ -39,7 +38,6 @@ namespace STORE {
 		class MIN_FUNC :public function {
 			MIN_FUNC(uint8_t typeCode) :function(2, typeCode)
 			{
-				argvTypes[0] = argvTypes[1] = typeCode;
 			}
 			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
 			{
@@ -58,7 +56,6 @@ namespace STORE {
 		class ABS_FUNC :public function {
 			ABS_FUNC(uint8_t typeCode) :function(1, typeCode)
 			{
-				argvTypes[0] = typeCode;
 			}
 			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
 			{
@@ -149,7 +146,7 @@ namespace STORE {
 		*/
 		template<typename T>
 		class GROUP_SUM_FUNC :public groupFunction {
-			GROUP_SUM_FUNC(uint8_t typeCode) :groupFunction(typeCode)
+			GROUP_SUM_FUNC(uint8_t typeCode) :groupFunction(typeCode,typeCode)
 			{
 			}
 			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)

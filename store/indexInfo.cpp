@@ -174,7 +174,6 @@ namespace STORE {
 		uint32_t keySize = 0;
 		char *  key = nullptr;
 		char* ptr;
-		char *externPtr = nullptr;
 		if (!keyMeta->m_fixed)
 		{
 			for (uint16_t idx = 0; idx < keyMeta->m_keyCount; idx++)

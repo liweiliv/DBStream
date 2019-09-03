@@ -7,7 +7,6 @@
 namespace SQL_PARSER {
 	#define NOT_MATCH_PTR  ((SQL_PARSER::SQLValue*)0xffffffffffffffffULL)
 	#define MATCH  nullptr
-	typedef parseValue(*parserFunc)(handle*, SQLValue*);
 	class SQLWord
 	{
 	public:
@@ -56,7 +55,7 @@ namespace SQL_PARSER {
 			S_EXPRESSION
 		};
 		sqlSingleWordType m_wtype;
-		parserFunc m_parser;
+		parserFuncType m_parser;
 		SQLSingleWord(bool optional, sqlSingleWordType type) :
 			SQLWord(SQL_SIGNLE_WORD, optional),m_wtype(type), m_parser(nullptr)
 		{
@@ -207,7 +206,6 @@ namespace SQL_PARSER {
 		SQLColumnNameWord nameWord;
 		SQLWordFunction* func;
 		SQLValueListWord* valueList;
-		parseValue(*m_parserFunc)(handle* h, SQLValue* values);
 		SQLWordExpressions(bool optional,bool logicOrMath);
 		~SQLWordExpressions();
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
@@ -220,8 +218,7 @@ namespace SQL_PARSER {
 		SQLWordExpressions expressionWord;
 		SQLAnyStringWord asWord;
 	public:
-		parseValue(*m_parserFunc)(handle* h, SQLValue * values);
-		SQLWordFunction(bool optional) :SQLSingleWord(optional, S_FUNC),numberArgv(false), strWord(false), nameWord(false), expressionWord(false),asWord(false){}
+		SQLWordFunction(bool optional) :SQLSingleWord(optional, S_FUNC),numberArgv(false), strWord(false), nameWord(false), expressionWord(false,false),asWord(false){}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
 	class SQLValueListWord :public SQLSingleWord
@@ -231,7 +228,7 @@ namespace SQL_PARSER {
 		SQLArrayWord strWord;
 		SQLWordExpressions expressionWord;
 		SQLWordFunction funcWord;
-		SQLValueListWord(bool optional) :SQLSingleWord(optional, S_VALUE_LIST), numberArgv(false), strWord(false),expressionWord(false), funcWord(false) {}
+		SQLValueListWord(bool optional) :SQLSingleWord(optional, S_VALUE_LIST), numberArgv(false), strWord(false),expressionWord(false,false), funcWord(false) {}
 		virtual ~SQLValueListWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
