@@ -25,7 +25,7 @@ namespace DATA_SOURCE
 		void* m_dllHandle;
 		static dataSource* loadFromDll(const char* fileName, config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
 	public:
-		DLL_EXPORT dataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :m_conf(conf), m_metaDataCollection(metaDataCollection), m_store(store)
+		DLL_EXPORT dataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :m_conf(conf), m_metaDataCollection(metaDataCollection), m_store(store),m_dllHandle(nullptr)
 		{}
 		DLL_EXPORT virtual ~dataSource()
 		{}

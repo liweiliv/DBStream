@@ -312,7 +312,7 @@ namespace DATA_SOURCE {
 			postStart += ROWS_FLAGS_OFFSET;
 		}
 		/*
-		*not use not
+		*not use now
 		uint16_t m_flags = uint2korr(postStart);
 		*/
 		postStart += 2;

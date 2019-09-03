@@ -14,24 +14,16 @@
 #include <errno.h>
 #include <assert.h>
 #include "glog/logging.h"
-#include "trieTree.h"
+#include "util/sparsepp/spp.h"
+#include "util/unorderMapUtil.h"
+typedef spp::sparse_hash_map<std::string,std::string,StrHash,StrCompare> SECTION_TYPE;
+typedef spp::sparse_hash_map<std::string,SECTION_TYPE*,StrHash,StrCompare> CONFIG_TYPE;
 class config{
 private:
-	trieTree m_sections;
+	CONFIG_TYPE m_sections;
 	std::string m_filePath;
 	shared_mutex m_lock;
 public:
-	static int freeValue(void* v)
-	{
-		printf("delete :%s\n",static_cast<char*>(v));
-		delete []static_cast<char*>(v);
-		return 0;
-	}
-	static int freeSection(void* v)
-	{
-		delete static_cast<trieTree*>(v);
-		return 0;
-	}
 	static bool char2num(const char* str, long& num)
 	{
 		num = 0;
@@ -44,7 +36,7 @@ public:
 			return false;
 		return true;
 	}
-	config(const char * path):m_sections(freeSection),m_filePath(path==nullptr?"":path)
+	config(const char * path):m_filePath(path==nullptr?"":path)
 	{
 	}
 	~config()
@@ -66,21 +58,21 @@ public:
 	std::string get(const char* section,const char* key,const char * defaultValue = NULL)
 	{
 		m_lock.lock_shared();
-		trieTree* sectionTree = static_cast<trieTree*>(m_sections.find((const uint8_t*)section));
-		if(sectionTree == nullptr)
+		CONFIG_TYPE::const_iterator secIter =  m_sections.find(section);
+		if(secIter == m_sections.end())
 		{
 			m_lock.unlock_shared();
 			return defaultValue?defaultValue:std::string();
 		}
-		const char* value = static_cast<const char *>(sectionTree->find((const uint8_t*)key));
-		if(value == nullptr)
+		SECTION_TYPE::const_iterator kvIter = secIter->second->find(key);
+		if(kvIter == secIter->second->end())
 		{
 			m_lock.unlock_shared();
 			return defaultValue?defaultValue:std::string();
 		}
 		else
 		{
-			std::string _value = value;
+			std::string _value = kvIter->second;
 			m_lock.unlock_shared();
 			return _value;
 		}
@@ -89,26 +81,25 @@ public:
 	{
 		char* _value = new char[strlen(value) + 1];
 		strcpy(_value, value);
+		SECTION_TYPE * sec = nullptr;
 		m_lock.lock();
-		trieTree* sectionTree = static_cast<trieTree*>(m_sections.find((const uint8_t*)section));
-		if (sectionTree == nullptr)
+		CONFIG_TYPE::iterator secIter =  m_sections.find(section);
+		if(secIter == m_sections.end())
 		{
-			sectionTree = new trieTree(freeValue);
-			sectionTree->insert((const uint8_t*)key, _value);
-			m_sections.insert((uint8_t*)section, sectionTree);
+			sec  = new SECTION_TYPE();
+			m_sections.insert(std::pair<std::string,SECTION_TYPE*>(section,sec));
 		}
 		else
-		{
-			sectionTree->insert((const uint8_t*)key, _value);
-		}
+			sec = secIter->second;
+		sec->insert(std::pair<std::string,std::string>(key,value));
 		m_lock.unlock();
 	}
 	static std::string trim(const char * str,size_t size)
 	{
 		const char *start = str,*end = str+size-1;
-		while(start-str<(uint32_t)size&&(*start=='\t'||*start==' '||*start=='\n'))
+		while(start-str<(uint32_t)size&&(*start=='\t'||*start==' '||*start=='\n'||*start=='\r'))
 			start++;
-		while(end>=start&&(*end=='\t'||*end==' '||*end=='\n'))
+		while(end>=start&&(*end=='\t'||*end==' '||*end=='\n'||*end=='\r'))
 			end--;
 		if(end<start)
 			return std::string();
@@ -173,19 +164,18 @@ public:
 			LOG(ERROR) << "save conf to file"<<file<<" failed for open file failed,errno"<<errno<<","<<strerror(errno);
 			return -1;
 		}
-		for (trieTree::iterator secIter = m_sections.begin(); secIter.valid(); secIter.next())
+		for(CONFIG_TYPE::const_iterator secIter =  m_sections.begin();secIter!=m_sections.end();secIter++)
 		{
-			
-			if (strlen((const char*)secIter.key()) != fwrite((const char*)secIter.key(),1, strlen((const char*)secIter.key()), fp)|| 1!=fwrite("\n", 1,1, fp))
+			if (secIter->first.size() != fwrite(secIter->first.c_str(),1, secIter->first.size(), fp)|| 1!=fwrite("\n", 1,1, fp))
 			{
 				LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);
 				return -1;
 			}
-			for (trieTree::iterator confIter = static_cast<trieTree*>(secIter.value())->begin(); confIter.valid(); confIter.next())
+			for (SECTION_TYPE::const_iterator confIter = secIter->second->begin(); confIter!=secIter->second->end(); confIter++)
 			{
-				if (strlen((const char*)confIter.key()) != fwrite((const char*)confIter.key(),1, strlen((const char*)confIter.key()), fp) ||
+				if (confIter->first.size() != fwrite(confIter->first.c_str(),1, confIter->first.size(), fp) ||
 					3!= fwrite(" = ",1, 3, fp)||
-					strlen((const char*)confIter.value()) != fwrite((const char*)confIter.value(), 1, strlen((const char*)confIter.value()), fp)
+					confIter->second.size() != fwrite(confIter->second.c_str(),1, confIter->second.size(), fp)
 					||1 != fwrite("\n", 1,1, fp))
 				{
 					LOG(ERROR) << "save conf to file" << file << " failed for write file failed,errno" << errno << "," << strerror(errno);

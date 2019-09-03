@@ -451,7 +451,7 @@ namespace DATA_SOURCE {
 		const uint8_t* metaInfo;
 		uint32_t metaInfoSize;
 		char* metaData;
-		tableMap() 
+		tableMap(): tableID(0),dbName(nullptr),tableName(nullptr),columnCount(0),types(nullptr),metaInfo(nullptr),metaInfoSize(0),metaData(nullptr)
 		{
 			metaData = (char*)malloc(1024 * 8);
 		}

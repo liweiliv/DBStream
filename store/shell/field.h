@@ -2,14 +2,17 @@
 #include "message/record.h"
 #include "meta/metaData.h"
 #include "function.h"
+#include "util/threadLocal.h"
 namespace STORE
 {
 	namespace SHELL {
+		static constexpr int MAX_EXPRESSION_LENGTH = 1024;
 		class field {
 		public:
 			uint8_t type;
 			virtual void* getValue(const DATABASE_INCREASE::DMLRecord * row) const = 0;
-			filed(uint8_t type) :type(type) {}
+			field(uint8_t type) :type(type) {}
+			virtual ~field(){}
 		};
 		class columnFiled :public field {
 		private:
@@ -33,7 +36,7 @@ namespace STORE
 					float v = *(float*)row->column(column->m_columnIndex);
 					return *(void**)&v;
 				}
-				case T_DOUBLE
+				case T_DOUBLE:
 				{
 					float v = *(double*)row->column(column->m_columnIndex);
 					return *(void**)&v;
@@ -50,7 +53,7 @@ namespace STORE
 					return row->column(column->m_columnIndex);
 				}
 			}
-			columnFiled(const META::columnMeta* column):field(column->m_columnType),column(column)
+			columnFiled(const META::columnMeta* column):field(column->m_columnType),column(column){}
 		};
 		class functionFiled :public field
 		{
@@ -60,12 +63,18 @@ namespace STORE
 			functionFiled(field** argvs, const function* func) :field(func->returnValueType), argvs(argvs), func(func) {}
 			virtual void* getValue(const DATABASE_INCREASE::DMLRecord* row) const
 			{
-				return func->exec(argvs);
+				return func->exec(argvs,row);
 			}
 		};
 		class expressionField :public field
 		{
-
+		private:
+			static threadLocal<field **>stack;
+		public:
+			field **list;
+			uint32_t listSize;
+			bool logicOrMath;
+			virtual void* getValue(const DATABASE_INCREASE::DMLRecord* row) const;
 		};
 	}
 }

@@ -26,13 +26,21 @@ public:
     {
         return _hash(s);
     }
+    inline uint32_t operator()(const std::string & s) const
+    {
+        return _hash(s.c_str());
+    }
 };
 class StrCompare
 {
 public:
-    inline bool operator()(const char * s, const char * d) const
+    inline bool operator()(const char* s,const char* d) const
     {
-        return strcmp(s, d)==0;
+        return strcmp(s,d)==0;
+    }
+    inline bool operator()(const std::string & s,const std::string & d) const
+    {
+        return s.size()==d.size()&&memcmp(s.c_str(),d.c_str(),s.size())==0;
     }
 };
 

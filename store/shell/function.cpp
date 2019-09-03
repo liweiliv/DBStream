@@ -3,6 +3,10 @@
 #include "util/sparsepp/spp.h"
 #include "util/unorderMapUtil.h"
 #include "field.h"
+#include <time.h>
+#ifdef OS_WIN
+#include "util/winTime.h"
+#endif
 namespace STORE {
 	namespace SHELL {
 		typedef spp::sparse_hash_map<const char*, function*, StrHash, StrCompare> FUNC_ARGV_MAP;
@@ -10,7 +14,23 @@ namespace STORE {
 
 		typedef spp::sparse_hash_map<const char*, groupFunction*, StrHash, StrCompare> GROUP_FUNC_ARGV_MAP;
 		typedef spp::sparse_hash_map<const char*, GROUP_FUNC_ARGV_MAP*, StrHash, StrCompare> GROUP_FUNC_MAP;
+		class CONCAT_FUNC:public function{
+			CONCAT_FUNC():function(2,T_STRING){}
+			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)const
+			{
 
+			}
+		};
+
+		class NOW_FUNC:public function{
+			NOW_FUNC():function(0,T_TIMESTAMP){}
+			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)const
+			{
+				struct timespec tm;
+				clock_gettime(CLOCK_REALTIME,&tm);
+				return (void*)META::timestamp::create(tm.tv_sec,tm.tv_nsec);
+			}
+		};
 		/*****************************************************inner functions********************************************************/
 		/*
 		func MAX(a,b)
@@ -21,7 +41,7 @@ namespace STORE {
 			MAX_FUNC(uint8_t typeCode) :function(2, typeCode)
 			{
 			}
-			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = valueList[0]->getValue(row), * d = valueList[1]->getValue(row);
 				if (*static_cast<T*>(&s) > *static_cast<T*>(&d))
@@ -39,7 +59,7 @@ namespace STORE {
 			MIN_FUNC(uint8_t typeCode) :function(2, typeCode)
 			{
 			}
-			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = valueList[0]->getValue(row), * d = valueList[1]->getValue(row);
 				if (*static_cast<T*>(&s) < *static_cast<T*>(&d))
@@ -57,7 +77,7 @@ namespace STORE {
 			ABS_FUNC(uint8_t typeCode) :function(1, typeCode)
 			{
 			}
-			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void* exec(const field** valueList, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = valueList[0]->getValue(row);
 				if (*static_cast<T*>(&s) < (T)0)
@@ -79,14 +99,14 @@ namespace STORE {
 			GROUP_MAX_FUNC(uint8_t typeCode) :groupFunction(typeCode, typeCode)
 			{
 			}
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = currentValue->getValue(row);
 				if (count == 0 || *static_cast<T*>((void*)&historyValue) < *static_cast<T*>(&s))
 					historyValue = s;
 				count++;
 			}
-			virtual void* finalValueFunc(void* historyValue, uint32_t count)
+			virtual void* finalValueFunc(void* historyValue, uint32_t count)const
 			{
 				return historyValue;
 			}
@@ -101,14 +121,14 @@ namespace STORE {
 			GROUP_MIN_FUNC(uint8_t typeCode) :groupFunction(typeCode, typeCode)
 			{
 			}
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = currentValue->getValue(row);
 				if (count == 0 || *static_cast<T*>((void*)&historyValue) > *static_cast<T*>(&s))
 					historyValue = s;
 				count++;
 			}
-			virtual void* finalValueFunc(void* historyValue, uint32_t count)
+			virtual void* finalValueFunc(void* historyValue, uint32_t count)const
 			{
 				return historyValue;
 			}
@@ -122,7 +142,7 @@ namespace STORE {
 			GROUP_AVG_FUNC(uint8_t typeCode) :groupFunction(typeCode, typeCode)
 			{
 			}
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = currentValue->getValue(row);
 				if (count == 0)
@@ -134,7 +154,7 @@ namespace STORE {
 				}
 				count++;
 			}
-			virtual void* finalValueFunc(void* historyValue, uint32_t count)
+			virtual void* finalValueFunc(void* historyValue, uint32_t count)const
 			{
 				T v = *static_cast<T*>((void*)&historyValue) / count;
 				return *(void**)(void*)&v;
@@ -149,7 +169,7 @@ namespace STORE {
 			GROUP_SUM_FUNC(uint8_t typeCode) :groupFunction(typeCode,typeCode)
 			{
 			}
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				void* s = currentValue->getValue(row);
 				if (count == 0)
@@ -161,7 +181,7 @@ namespace STORE {
 				}
 				count++;
 			}
-			virtual void* finalValueFunc(void* historyValue, uint32_t count)
+			virtual void* finalValueFunc(void* historyValue, uint32_t count)const
 			{
 				return historyValue;
 			}
@@ -175,11 +195,11 @@ namespace STORE {
 			GROUP_COUNT_FUNC(uint8_t typeCode) :groupFunction(T_UINT32, typeCode)
 			{
 			}
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)
+			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const
 			{
 				count++;
 			}
-			virtual void* finalValueFunc(void* historyValue, uint32_t count)
+			virtual void* finalValueFunc(void* historyValue, uint32_t count)const
 			{
 				return *(void**)(void*)&count;
 			}

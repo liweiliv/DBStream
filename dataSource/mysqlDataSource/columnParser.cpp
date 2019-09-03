@@ -548,11 +548,11 @@ namespace DATA_SOURCE {
 			size = *((const uint8_t*)data);
 			data += 1;
 			break;
-		case MYSQL_TYPE_MEDIUM_BLOB  :
+		case MYSQL_TYPE_BLOB:
 			size = *(const uint16_t*)data;
 			data += 2;
 			break;
-		case MYSQL_TYPE_BLOB:
+		case MYSQL_TYPE_MEDIUM_BLOB:
 			size = uint3korr((const uint8_t * )data);
 			data += 3;
 			break;
