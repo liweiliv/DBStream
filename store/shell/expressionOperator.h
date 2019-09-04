@@ -32,7 +32,7 @@ namespace STORE
 					memset(matrix[ltype], 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
 				}
 				if (matrix[ltype][rtype] == nullptr)
-					matrix[ltype][rtype] = new operatorFuncInfo(returnType, func);
+					matrix[ltype][rtype] = new operatorFuncInfo(returnType, (void*)func);
 			}
 			inline operatorFuncInfo* get(uint8_t ltype, uint8_t rtype)
 			{
@@ -70,7 +70,7 @@ namespace STORE
 					matrix = new operatorFuncInfo *[META::T_CURRENT_VERSION_MAX_TYPE];
 					memset(matrix, 0, sizeof(operatorFuncInfo *) * META::T_CURRENT_VERSION_MAX_TYPE);
 				}
-				matrix[type] = new operatorFuncInfo(returnType, func);
+				matrix[type] = new operatorFuncInfo(returnType, (void*)func);
 			}
 			inline operatorFuncInfo* get(uint8_t type)
 			{
@@ -108,7 +108,7 @@ namespace STORE
 					memset(matrix[ltype], 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
 				}
 				if (matrix[ltype][rtype] == nullptr)
-					matrix[ltype][rtype] = new operatorFuncInfo(META::T_BOOL, func);
+					matrix[ltype][rtype] = new operatorFuncInfo(META::T_BOOL, (void*)func);
 			}
 			inline operatorFuncInfo* get(uint8_t ltype, uint8_t rtype)
 			{
@@ -146,7 +146,7 @@ namespace STORE
 					matrix = new operatorFuncInfo * [META::T_CURRENT_VERSION_MAX_TYPE];
 					memset(matrix, 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
 				}
-				matrix[type] = new operatorFuncInfo(META::T_BOOL, func);
+				matrix[type] = new operatorFuncInfo(META::T_BOOL, (void*)func);
 			}
 			inline operatorFuncInfo* get(uint8_t type)
 			{

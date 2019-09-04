@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include <windows.h>
 #ifdef OS_WIN
+#include <windows.h>
 LARGE_INTEGER
 getFILETIMEoffset()
 {
