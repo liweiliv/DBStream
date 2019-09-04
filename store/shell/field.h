@@ -7,7 +7,7 @@
 namespace STORE
 {
 	namespace SHELL {
-		extern bufferPool* shellGlobalBufferPool;
+		extern bufferPool shellGlobalBufferPool;
 		static constexpr int MAX_EXPRESSION_LENGTH = 1024;
 		class field {
 		public:
@@ -77,7 +77,7 @@ namespace STORE
 						return (void*)row->column(column->m_columnIndex);
 					else
 					{
-						varLenValue *v  = (varLenValue*)shellGlobalBufferPool->allocByLevel(0);
+						varLenValue *v  = (varLenValue*)shellGlobalBufferPool.allocByLevel(0);
 						v->alloced = false;
 						v->size = row->varColumnSize(column->m_columnIndex);
 						v->value = row->column(column->m_columnIndex);

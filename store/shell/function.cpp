@@ -233,7 +233,7 @@ namespace STORE {
 			} while (true);
 			va_end(vl);
 		end:
-			realString = (char*)shellGlobalBufferPool->alloc(chars.size());
+			realString = (char*)shellGlobalBufferPool.alloc(chars.size());
 			for (std::list<char>::const_iterator iter = chars.begin(); iter != chars.end(); iter++)
 				realString[realStringSize++] = *iter;
 			return realString;

@@ -4,6 +4,7 @@
 #include "util/likely.h"
 namespace STORE {
 	namespace SHELL {
+		bufferPool shellGlobalBufferPool;
 		static threadLocal<field*> localFieldStack;
 		static threadLocal<void*> localValueStack;
 
@@ -34,7 +35,7 @@ namespace STORE {
 			getStack(fieldStack, valueStack);
 			for (uint16_t idx = 0; idx < listSize; idx++)
 			{
-				if ((uint64_t)list[idx] & DUAL_ARGV_MATH_OP_FUNC_TYPE !=0)
+				if (((uint64_t)list[idx] & DUAL_ARGV_MATH_OP_FUNC_TYPE) !=0)
 				{
 					fieldStack[fieldStackSize++] = list[idx];
 				}

@@ -487,8 +487,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT8, operatorRem<uint8_t, int16_t>, META::T_UINT8, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT8, operatorRem<uint8_t, int32_t>, META::T_UINT8, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT8, operatorRem<uint8_t, int64_t>, META::T_UINT8, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT8, operatorRem<uint8_t, float>, META::T_UINT8, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT8, operatorRem<uint8_t, double>, META::T_UINT8, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, uint8_t>, META::T_UINT16, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, uint16_t>, META::T_UINT16, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, uint32_t>, META::T_UINT16, META::T_UINT32);
@@ -497,8 +495,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, int16_t>, META::T_UINT16, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, int32_t>, META::T_UINT16, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, int64_t>, META::T_UINT16, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, float>, META::T_UINT16, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT16, operatorRem<uint16_t, double>, META::T_UINT16, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, uint8_t>, META::T_UINT32, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, uint16_t>, META::T_UINT32, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, uint32_t>, META::T_UINT32, META::T_UINT32);
@@ -507,8 +503,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, int16_t>, META::T_UINT32, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, int32_t>, META::T_UINT32, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, int64_t>, META::T_UINT32, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, float>, META::T_UINT32, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT32, operatorRem<uint32_t, double>, META::T_UINT32, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, uint8_t>, META::T_UINT64, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, uint16_t>, META::T_UINT64, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, uint32_t>, META::T_UINT64, META::T_UINT32);
@@ -517,8 +511,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, int16_t>, META::T_UINT64, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, int32_t>, META::T_UINT64, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, int64_t>, META::T_UINT64, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, float>, META::T_UINT64, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_UINT64, operatorRem<uint64_t, double>, META::T_UINT64, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, uint8_t>, META::T_INT8, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, uint16_t>, META::T_INT8, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, uint32_t>, META::T_INT8, META::T_UINT32);
@@ -527,8 +519,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, int16_t>, META::T_INT8, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, int32_t>, META::T_INT8, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, int64_t>, META::T_INT8, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, float>, META::T_INT8, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT8, operatorRem<int8_t, double>, META::T_INT8, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, uint8_t>, META::T_INT16, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, uint16_t>, META::T_INT16, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, uint32_t>, META::T_INT16, META::T_UINT32);
@@ -537,8 +527,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, int16_t>, META::T_INT16, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, int32_t>, META::T_INT16, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, int64_t>, META::T_INT16, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, float>, META::T_INT16, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT16, operatorRem<int16_t, double>, META::T_INT16, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, uint8_t>, META::T_INT32, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, uint16_t>, META::T_INT32, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, uint32_t>, META::T_INT32, META::T_UINT32);
@@ -547,8 +535,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, int16_t>, META::T_INT32, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, int32_t>, META::T_INT32, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, int64_t>, META::T_INT32, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, float>, META::T_INT32, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT32, operatorRem<int32_t, double>, META::T_INT32, META::T_DOUBLE);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, uint8_t>, META::T_INT64, META::T_UINT8);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, uint16_t>, META::T_INT64, META::T_UINT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, uint32_t>, META::T_INT64, META::T_UINT32);
@@ -557,28 +543,6 @@ namespace STORE {
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, int16_t>, META::T_INT64, META::T_INT16);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, int32_t>, META::T_INT64, META::T_INT32);
 			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, int64_t>, META::T_INT64, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, float>, META::T_INT64, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_INT64, operatorRem<int64_t, double>, META::T_INT64, META::T_DOUBLE);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, uint8_t>, META::T_FLOAT, META::T_UINT8);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, uint16_t>, META::T_FLOAT, META::T_UINT16);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, uint32_t>, META::T_FLOAT, META::T_UINT32);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, uint64_t>, META::T_FLOAT, META::T_UINT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, int8_t>, META::T_FLOAT, META::T_INT8);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, int16_t>, META::T_FLOAT, META::T_INT16);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, int32_t>, META::T_FLOAT, META::T_INT32);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, int64_t>, META::T_FLOAT, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, float>, META::T_FLOAT, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_FLOAT, operatorRem<float, double>, META::T_FLOAT, META::T_DOUBLE);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, uint8_t>, META::T_DOUBLE, META::T_UINT8);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, uint16_t>, META::T_DOUBLE, META::T_UINT16);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, uint32_t>, META::T_DOUBLE, META::T_UINT32);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, uint64_t>, META::T_DOUBLE, META::T_UINT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, int8_t>, META::T_DOUBLE, META::T_INT8);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, int16_t>, META::T_DOUBLE, META::T_INT16);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, int32_t>, META::T_DOUBLE, META::T_INT32);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, int64_t>, META::T_DOUBLE, META::T_INT64);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, float>, META::T_DOUBLE, META::T_FLOAT);
-			dualArgvMathOperators[SQL_PARSER::REMAINDER]->set(META::T_DOUBLE, operatorRem<double, double>, META::T_DOUBLE, META::T_DOUBLE);
 		}
 		/*left shift << */
 		template<typename TL, typename TR>
