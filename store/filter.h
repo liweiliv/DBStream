@@ -54,7 +54,7 @@ namespace STORE{
 		inline bool filterByRecord(const char * record)
 		{
 			DATABASE_INCREASE::recordHead* h = (DATABASE_INCREASE::recordHead*)record;
-			if (!TEST_BITMAP(m_typeBitmap, h->type))
+			if (!TEST_BITMAP(m_typeBitmap, h->minHead.type))
 				return false;
 			if ((m_filterType & FL_CHECKPOINT) && (m_startCheckpoint > h->logOffset || m_endCheckpoint < h->logOffset))
 				return false;

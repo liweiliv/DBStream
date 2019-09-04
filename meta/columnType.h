@@ -9,39 +9,42 @@ namespace META {
 												0x3034,0x3134,0x3234,0x3334,0x3434,0x3534,0x3634,0x3734,0x3834,0x3934,
 												0x3035,0x3135,0x3235,0x3335,0x3435,0x3535,0x3635,0x3735,0x3835,0x3935,
 												0x3036,0x3136,0x3236 };
-#define T_UNION 0
-#define T_UINT8 1
-#define T_INT8  2
-#define T_UINT16 3
-#define T_INT16 4
-#define T_UINT32 5
-#define T_INT32 6
-#define T_UINT64 7
-#define T_INT64 8
-#define T_BIG_NUMBER 9
-#define T_FLOAT 10
-#define T_DOUBLE 11
-#define T_DECIMAL 12
-#define T_TIMESTAMP 13
-#define T_DATETIME 14
-#define T_DATE 15
-#define T_YEAR 16
-#define T_TIME 17
-#define T_BLOB 18
-#define T_STRING 19
-#define T_JSON 20
-#define T_XML 21
-#define T_GEOMETRY 22
-#define T_SET 23
-#define T_ENUM 24
-#define T_BYTE 25
-#define T_BINARY 26
-#define T_TEXT 27
-#define T_CURRENT_VERSION_MAX_TYPE  28
-#define T_MAX_TYPE 255
+	enum COLUMN_TYPE {
+		T_UNION = 0,
+		T_UINT8 = 1,
+		T_INT8 = 2,
+		T_UINT16 = 3,
+		T_INT16 = 4,
+		T_UINT32 = 5,
+		T_INT32 = 6,
+		T_UINT64 = 7,
+		T_INT64 = 8,
+		T_BIG_NUMBER = 9,
+		T_FLOAT = 10,
+		T_DOUBLE = 11,
+		T_DECIMAL = 12,
+		T_TIMESTAMP = 13,
+		T_DATETIME = 14,
+		T_DATE = 15,
+		T_YEAR = 16,
+		T_TIME = 17,
+		T_BLOB = 18,
+		T_STRING = 19,
+		T_JSON = 20,
+		T_XML = 21,
+		T_GEOMETRY = 22,
+		T_SET = 23,
+		T_ENUM = 24,
+		T_BYTE = 25,
+		T_BINARY = 26,
+		T_TEXT = 27,
+		T_BOOL = 28,
+		T_CURRENT_VERSION_MAX_TYPE = 29,
+		T_MAX_TYPE = 255
+	};
 	struct columnTypeInfo
 	{
-		uint8_t type;
+		COLUMN_TYPE type;
 		uint8_t columnTypeSize;
 		bool asIndex;
 		bool fixed;
@@ -168,8 +171,8 @@ namespace META {
 			uint8_t yearLength = i32toa_sse2(year(), str);
 			str[yearLength - 1] = '-';
 			*(uint16_t*)& str[yearLength] = numToStrMap[month()];
-			str[yearLength +2] = '-';
-			*(uint16_t*)& str[yearLength+3] = numToStrMap[day()];
+			str[yearLength + 2] = '-';
+			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day()];
 			str[yearLength + 5] = ' ';
 			*(uint16_t*)& str[yearLength + 6] = numToStrMap[hour()];
 			str[yearLength + 8] = ':';
@@ -178,17 +181,17 @@ namespace META {
 			*(uint16_t*)& str[yearLength + 12] = numToStrMap[sec()];
 			if (usec() != 0)
 			{
-				str[yearLength +14] = '.';
+				str[yearLength + 14] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(str+yearLength + 15) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str + yearLength + 15) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + yearLength + 15 + 6 - secLen + 1, usecBuffer, secLen);
-				return yearLength + 15+6+1;
+				return yearLength + 15 + 6 + 1;
 			}
 			else
 			{
 				str[yearLength + 14] = '\0';
-				return yearLength+15;
+				return yearLength + 15;
 			}
 		}
 		inline uint8_t toDateString(char* str)
@@ -209,7 +212,7 @@ namespace META {
 				hourLength = 1;
 				str[0] = '-';
 			}
-			hourLength += u32toa_sse2(hour(), str+ hourLength);
+			hourLength += u32toa_sse2(hour(), str + hourLength);
 			str[hourLength - 1] = ':';
 			*(uint16_t*)& str[hourLength] = numToStrMap[mi()];
 			str[hourLength + 2] = ':';
@@ -218,7 +221,7 @@ namespace META {
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(str+hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str + hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;
@@ -268,7 +271,7 @@ namespace META {
 		inline uint8_t toString(char* str)
 		{
 			uint8_t hourLength = u32toa_sse2(hour(), str);
-			str[hourLength -1] = ':';
+			str[hourLength - 1] = ':';
 			*(uint16_t*)& str[hourLength] = numToStrMap[mi()];
 			str[hourLength + 2] = ':';
 			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec()];
@@ -276,7 +279,7 @@ namespace META {
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
-				*(uint64_t*)(str+hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
+				*(uint64_t*)(str + hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
 				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;

@@ -311,14 +311,14 @@ public:
 		while((char*)head<=buf+size)
 		{
 			/*redo end normally*/
-			if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::recordHead::size) == (uint32_t)size) && head->size == ENDOF_REDO_NUM)
+			if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::minRecordHead::size) == (uint32_t)size) && head->minHead.size == ENDOF_REDO_NUM)
 			{
 				ret = 0;
 				break;
 			}
 
 			/*redo truncated*/
-			if(((char*)head)+sizeof(DATABASE_INCREASE::recordHead)>buf+size||((char*)head)+head->size>buf+size) //unfinished write ,truncate
+			if(((char*)head)+sizeof(DATABASE_INCREASE::recordHead)>buf+size||((char*)head)+head->minHead.size>buf+size) //unfinished write ,truncate
 			{
 				LOG(WARNING)<<"get an incomplete redo data in redo file of block:"<<m_blockID<<",offset is "<<((char*)head)-buf<<",truncate it";
 				
@@ -337,7 +337,7 @@ public:
 				m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
 				return -1;
 			}
-			head = (DATABASE_INCREASE::recordHead*)(((char*)head)+ head->size);
+			head = (DATABASE_INCREASE::recordHead*)(((char*)head)+ head->minHead.size);
 		}
 		m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
 		LOG(INFO)<<"recoveryFromRedo from redo file :"<<m_blockID<<" success";
@@ -350,7 +350,7 @@ public:
 			return B_FAULT;
 		DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
 		int64_t writeSize;
-		if(head->size!=(uint64_t)(writeSize=writeFile(m_redoFd,data,head->size)))
+		if(head->minHead.size!=(uint64_t)(writeSize=writeFile(m_redoFd,data,head->minHead.size)))
 		{
 			if(errno==EBADF) //maybe out time or other cause,reopen it
 			{
@@ -366,7 +366,7 @@ public:
 		clock_t now;
 		if(m_redoFlushDataSize==0|| //m_redoFlushDataSize == 0 means flush immediately
 				m_redoFlushPeriod==0||//m_redoFlushPeriod == 0 also means flush immediately
-				(m_redoFlushDataSize>0&&(m_redoUnflushDataSize+=head->size)>=m_redoFlushDataSize)||//check if unflushed data big enough
+				(m_redoFlushDataSize>0&&(m_redoUnflushDataSize+=head->minHead.size)>=m_redoFlushDataSize)||//check if unflushed data big enough
 				(m_redoFlushPeriod>0&&//check if time from last flush is long enough
 						(now = clock(),
 								now<m_lastFLushTime||now - m_lastFLushTime > m_redoFlushPeriod*CLOCKS_PER_SEC/1000)))
@@ -475,20 +475,20 @@ public:
 	}
 	inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record * record)
 	{
-		tableData *t = getTableData(likely(record->head->type <= DATABASE_INCREASE::R_REPLACE) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
+		tableData *t = getTableData(likely(record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
 		page * current = t->current;
 		if (unlikely(current == nullptr||current->pageData + current->pageUsedSize != record->data))
 		{
 			appendingBlockStaus s;
 			void *mem;
-			if (B_OK != (s = allocMemForRecord(t, record->head->size, mem)))
+			if (B_OK != (s = allocMemForRecord(t, record->head->minHead.size, mem)))
 				return s;
-			memcpy(mem, record->data, record->head->size);
+			memcpy(mem, record->data, record->head->minHead.size);
 			current = t->current;
 		}
 		((DATABASE_INCREASE::recordHead*)(current->pageData+ current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
 		setRecordPosition(m_recordIDs[m_recordCount], current->pageId, current->pageUsedSize);
-		current->pageUsedSize += record->head->size;
+		current->pageUsedSize += record->head->minHead.size;
 		return B_OK;
 	}
 	appendingBlockStaus append(const DATABASE_INCREASE::record * record)
@@ -496,7 +496,7 @@ public:
 		if (m_maxLogOffset > record->head->logOffset)
 		{
 			LOG(ERROR) << "can not append record to block for record log offset "<<record->head->logOffset<<"is less than max log offset:"<< m_maxLogOffset
-			<< "record type:"<<record->head->type;
+			<< "record type:"<<record->head->minHead.type;
 			return B_ILLEGAL;
 		}
 		appendingBlockStaus s;
@@ -511,7 +511,7 @@ public:
 				return rtv;
 			}
 		}
-		if (record->head->type <= DATABASE_INCREASE::R_REPLACE) //build index
+		if (record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE) //build index
 		{
 			const META::tableMeta * meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
 			tableData * table = static_cast<tableData*>(meta->userData);
@@ -530,7 +530,7 @@ public:
 		if (m_maxTime < record->head->timestamp)
 			m_maxTime = record->head->timestamp;
 		m_recordCount++;
-		if (record->head->txnId > m_txnId || record->head->type == DATABASE_INCREASE::R_DDL)
+		if (record->head->txnId > m_txnId || record->head->minHead.type == DATABASE_INCREASE::R_DDL)
 			m_committedRecordID.store(m_recordCount, std::memory_order_release);
 		m_txnId = record->head->txnId;
 		m_cond.wakeUp();
@@ -543,39 +543,39 @@ public:
 		{
 	        switch(meta->m_columns[columnIdxs[0]].m_columnType)
 	        {
-	        case T_INT8:
+	        case META::T_INT8:
 	        	index->toString<int8_t>(p->pageData);
 				break;
-			case T_UINT8:
+			case META::T_UINT8:
 	        	index->toString<uint8_t>(p->pageData);
 				break;
-	        case T_INT16:
+	        case META::T_INT16:
 	        	index->toString<int16_t>(p->pageData);
 				break;
-			case T_UINT16:
+			case META::T_UINT16:
 	        	index->toString<uint16_t>(p->pageData);
 				break;
-			case T_INT32:
+			case META::T_INT32:
 	        	index->toString<int32_t>(p->pageData);
 				break;
-			case T_UINT32:
+			case META::T_UINT32:
 	        	index->toString<uint32_t>(p->pageData);
 				break;
-	      case T_INT64:
+	      case META::T_INT64:
 	        	index->toString<int64_t>(p->pageData);
 				break;
-			case T_TIMESTAMP:
-			case T_UINT64:
+			case META::T_TIMESTAMP:
+			case META::T_UINT64:
 	        	index->toString<uint64_t>(p->pageData);
 	         break;
-			case T_FLOAT:
+			case META::T_FLOAT:
 	        	index->toString<float>(p->pageData);
 				break;
-			case T_DOUBLE:
+			case META::T_DOUBLE:
 				index->toString<double>(p->pageData);
 				break;
-			case T_BLOB:
-			case T_STRING:
+			case META::T_BLOB:
+			case META::T_STRING:
 				index->toString<binaryType>(p->pageData);
 				break;
 	       default:
@@ -661,7 +661,7 @@ public:
 					block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
 					const DATABASE_INCREASE::recordHead* head = (const DATABASE_INCREASE::recordHead*)getRecordByIdx(rid);
 					block->m_recordInfos[rid].tableIndex = tableIdx;
-					block->m_recordInfos[rid].recordType = head->type;
+					block->m_recordInfos[rid].recordType = head->minHead.type;
 					block->m_recordInfos[rid].timestamp = head->timestamp;
 					block->m_recordInfos[rid].logOffset = head->logOffset;
 				} while (riter.next());

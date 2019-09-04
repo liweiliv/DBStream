@@ -1,6 +1,7 @@
 #include "../threadLocal.h"
 #include <stdio.h>
 #include <thread>
+
 struct test{
 	int i;
 	int j;

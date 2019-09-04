@@ -11,7 +11,7 @@ namespace STORE
 		public:
 			uint8_t argvCount;
 			uint8_t returnValueType;
-			virtual void* exec(const field** argvs,const DATABASE_INCREASE::DMLRecord * row) const = 0;
+			virtual void* exec( field** const argvs,const DATABASE_INCREASE::DMLRecord * row) const = 0;
 			function(uint8_t argvCount, uint8_t returnValueType) :argvCount(argvCount), returnValueType(returnValueType){}
 			virtual ~function(){}
 		};

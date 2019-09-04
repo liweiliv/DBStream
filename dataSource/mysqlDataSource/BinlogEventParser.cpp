@@ -253,7 +253,7 @@ namespace DATA_SOURCE {
 	}
 	static inline void setRecordBasicInfo(const commonMysqlBinlogEventHeader_v4* header, DATABASE_INCREASE::record* r)
 	{
-		r->head->headSize = DATABASE_INCREASE::recordHeadSize;
+		r->head->minHead.headSize = DATABASE_INCREASE::recordHeadSize;
 		r->head->timestamp = META::timestamp::create(header->timestamp, 0);
 		r->head->txnId = 0;
 	}
@@ -263,9 +263,9 @@ namespace DATA_SOURCE {
 		DATABASE_INCREASE::record * r = (DATABASE_INCREASE::record*)m_memPool->alloc(DATABASE_INCREASE::recordSize);
 		r->init(((char*)r) + sizeof(DATABASE_INCREASE::record));
 		setRecordBasicInfo(header, r);
-		r->head->size = DATABASE_INCREASE::recordRealSize;
+		r->head->minHead.size = DATABASE_INCREASE::recordRealSize;
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->type = DATABASE_INCREASE::R_ROLLBACK;
+		r->head->minHead.type = DATABASE_INCREASE::R_ROLLBACK;
 		PUSH_RECORD(r);
 		return ParseStatus::OK;
 	}
@@ -278,7 +278,7 @@ namespace DATA_SOURCE {
 		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord), query.charset_inited?query.charset:nullptr,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->type = DATABASE_INCREASE::R_DDL;
+		r->head->minHead.type = DATABASE_INCREASE::R_DDL;
 		PUSH_RECORD(r);
 		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty()?nullptr:query.db.c_str(),r->head->logOffset);
 		return ParseStatus::OK;

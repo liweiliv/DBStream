@@ -79,31 +79,31 @@ namespace STORE {
 		{
 			switch (meta->m_types[i])
 			{
-			case T_UINT8:
+			case META::T_UINT8:
 				if (*(uint8_t*)srcKey != *(uint8_t*)destKey)
 					return *(uint8_t*)srcKey - *(uint8_t*)destKey;
 				break;
-			case T_INT8:
+			case META::T_INT8:
 				if (*(int8_t*)srcKey != *(int8_t*)destKey)
 					return *(int8_t*)srcKey - *(int8_t*)destKey;
 				break;
-			case T_UINT16:
+			case META::T_UINT16:
 				if (*(uint16_t*)srcKey != *(uint16_t*)destKey)
 					return *(uint16_t*)srcKey - *(uint16_t*)destKey;
 				break;
-			case T_INT16:
+			case META::T_INT16:
 				if (*(int16_t*)srcKey != *(int16_t*)destKey)
 					return *(int16_t*)srcKey - *(int16_t*)destKey;
 				break;
-			case T_UINT32:
+			case META::T_UINT32:
 				if (*(uint32_t*)srcKey != *(uint32_t*)destKey)
 					return *(uint32_t*)srcKey - *(uint32_t*)destKey;
 				break;
-			case T_INT32:
+			case META::T_INT32:
 				if (*(int32_t*)srcKey != *(int32_t*)destKey)
 					return *(int32_t*)srcKey - *(int32_t*)destKey;
 				break;
-			case T_UINT64:
+			case META::T_UINT64:
 				if (*(uint64_t*)srcKey != *(uint64_t*)destKey)
 				{
 					if (*(uint64_t*)srcKey > *(uint64_t*)destKey)
@@ -112,7 +112,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case T_INT64:
+			case META::T_INT64:
 				if (*(int64_t*)srcKey != *(int64_t*)destKey)
 				{
 					if (*(int64_t*)srcKey > *(int64_t*)destKey)
@@ -121,7 +121,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case T_FLOAT:
+			case META::T_FLOAT:
 				if (*(float*)srcKey - *(float*)destKey > 0.000001f || *(float*)srcKey - *(float*)destKey < -0.000001f)
 				{
 					if (*(float*)srcKey > *(float*)destKey)
@@ -130,7 +130,7 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case T_DOUBLE:
+			case META::T_DOUBLE:
 				if (*(double*)srcKey - *(double*)destKey > 0.000001f || *(double*)srcKey - *(double*)destKey < -0.000001f)
 				{
 					if (*(double*)srcKey > *(double*)destKey)
@@ -139,8 +139,8 @@ namespace STORE {
 						return -1;
 				}
 				break;
-			case T_STRING:
-			case T_BLOB:
+			case META::T_STRING:
+			case META::T_BLOB:
 			{
 				binaryType s(srcKey + sizeof(uint16_t), *(uint16_t*)srcKey), d(destKey + sizeof(uint16_t), *(uint16_t*)destKey);
 				int c = s.compare(d);
@@ -195,8 +195,8 @@ namespace STORE {
 			key = arena->Allocate(keyMeta->m_size);
 			ptr = key;
 		}
-		if (r->head->type == DATABASE_INCREASE::R_INSERT || r->head->type == DATABASE_INCREASE::R_DELETE ||
-			((r->head->type == DATABASE_INCREASE::R_UPDATE || r->head->type == DATABASE_INCREASE::R_REPLACE) && !keyUpdated))
+		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE ||
+			((r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE) && !keyUpdated))
 		{
 			for (uint16_t i = 0; i < keyMeta->m_keyCount; i++)
 			{

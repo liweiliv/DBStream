@@ -17,13 +17,17 @@
 namespace DATABASE_INCREASE
 {
 #pragma pack(1)
-	struct recordHead
+	struct minRecordHead
 	{
 		uint32_t size;
 		uint8_t externSize;//only used in dml type,support row data size greater than 4G
 		uint8_t headSize;
 		uint8_t type;
 		uint8_t version;
+	};
+	struct recordHead
+	{
+		minRecordHead minHead;
 		uint16_t flag;
 		uint64_t recordId;
 		uint64_t logOffset;
@@ -72,25 +76,23 @@ namespace DATABASE_INCREASE
 			this->data = data;
 			head = (recordHead*)data;
 			memset(head,0,sizeof(recordHead));
-			head->headSize = sizeof(recordHead);
+			head->minHead.headSize = sizeof(recordHead);
 		}
 		record() {}
 		record(const char* data) {
 			this->data = data;
 			head = (recordHead*)data;
-			memset(head,0,sizeof(recordHead));
-			head->recordId=0;
 		}
 		std::String toString()
 		{
 			head->recordId=0;
-			head->version = 0;
+			head->minHead.version = 0;
 			std::String str;
-			str = str <<"type:"<<head->type;
+			str = str <<"type:"<<head->minHead.type;
 			str = str<<"\ntimestamp:"<<head->timestamp;
 			str = str<<"\nlogOffset:"<<head->logOffset;
 			str = str<<"\nrecordId:"<<head->recordId;
-			str = str<<"\nversion:"<<head->version;
+			str = str<<"\nversion:"<<head->minHead.version;
 			str = str<<"\ntid:"<<head->txnId<<"\n";
 			return str;
 		}
@@ -110,9 +112,9 @@ namespace DATABASE_INCREASE
 		uint16_t charsetID;
 		const char* dbName;
 		DatabaseMetaMessage(const char* data) :record(data) {
-			id = *(uint64_t*)(data + +head->headSize);
-			charsetID = *(uint16_t*)(data + +head->headSize + sizeof(uint64_t));
-			dbName = data + +head->headSize + sizeof(uint64_t) + sizeof(uint16_t);
+			id = *(uint64_t*)(data + +head->minHead.headSize);
+			charsetID = *(uint16_t*)(data + +head->minHead.headSize + sizeof(uint64_t));
+			dbName = data + +head->minHead.headSize + sizeof(uint64_t) + sizeof(uint16_t);
 		}
 	};
 	struct TableMetaMessage :public record
@@ -150,7 +152,7 @@ namespace DATABASE_INCREASE
 		uint16_t** uniqueKeys;
 		/*-----------------------------------------------*/
 		TableMetaMessage(const char* data) :record(data) {
-			const char* ptr = data + +head->headSize;
+			const char* ptr = data + +head->minHead.headSize;
 			memcpy(&metaHead, ptr, sizeof(metaHead));
 			ptr += sizeof(metaHead);
 			database = ptr + sizeof(uint8_t);
@@ -190,12 +192,12 @@ namespace DATABASE_INCREASE
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over column names
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over uk names
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over enum and set value lists
-			if (head->version == 0)
-				assert(ptr == data + head->size);
+			if (head->minHead.version == 0)
+				assert(ptr == data + head->minHead.size);
 			/*if version increased in future,add those code:
-			  if(head->version >0)
+			  if(head->minHead.version >0)
 			  {do some thing}
-			  if(head->version >1)
+			  if(head->minHead.version >1)
 			  {do some thing}
 				 ...
 			   */
@@ -254,8 +256,8 @@ namespace DATABASE_INCREASE
 			oldColumnsSizeOfUpdateType = nullptr;
 			oldColumnsOfUpdateType = nullptr;
 			updatedBitmap = nullptr;
-			head->type = type;
-			char* ptr = data + head->headSize;
+			head->minHead.type = type;
+			char* ptr = data + head->minHead.headSize;
 			tableMetaID = meta->m_id;
 			*((uint64_t*)(ptr)) = tableMetaID;
 			ptr += sizeof(tableMetaID);
@@ -340,17 +342,17 @@ namespace DATABASE_INCREASE
 		{
 			if (oldColumnsOfUpdateType == nullptr)
 			{
-				head->size = (columns + varLengthColumns[meta->m_varColumnCount]) - data;
+				head->minHead.size = (columns + varLengthColumns[meta->m_varColumnCount]) - data;
 				oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) + sizeof(oldColumnsSizeOfUpdateType);
 			}
 			else
-				head->size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
+				head->minHead.size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
 		}
 		/*----------------------------------------------*/
 		DMLRecord(const char* data, META::metaDataCollection* mc) ://for read
 			record(data)
 		{
-			const char* ptr = data + head->headSize;
+			const char* ptr = data + head->minHead.headSize;
 			tableMetaID = *(uint64_t*)ptr;
 			if (mc == nullptr || (meta = mc->get(tableMetaID)) == nullptr)
 				return;
@@ -362,7 +364,7 @@ namespace DATABASE_INCREASE
 			ptr += meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount];
 			varLengthColumns = (const uint32_t*)ptr;
 			ptr = columns + varLengthColumns[meta->m_varColumnCount];
-			if (head->type == R_UPDATE || head->type == R_REPLACE)
+			if (head->minHead.type == R_UPDATE || head->minHead.type == R_REPLACE)
 			{
 				updatedBitmap = (uint8_t*)ptr;
 				updatedNullBitmap = updatedBitmap+bitmapSize;
@@ -377,16 +379,16 @@ namespace DATABASE_INCREASE
 				oldColumnsOfUpdateType = nullptr;
 			}
 			/*if version increased in future,add those code:
-			  if(head->version >0)
+			  if(head->minHead.version >0)
 			  {do some thing}
-			  if(head->version >1)
+			  if(head->minHead.version >1)
 			  {do some thing}
 				 ...
 			   */
 		}
 		static inline uint64_t tableId(const char* data)
 		{
-			return *(uint64_t*)(data + ((const recordHead*)data)->headSize);
+			return *(uint64_t*)(data + ((const recordHead*)data)->minHead.headSize);
 		}
 		inline const char* column(uint16_t index) const
 		{
@@ -456,46 +458,46 @@ namespace DATABASE_INCREASE
 				return "null\n";
 			switch (column->m_columnType)
 			{
-			case T_UINT8:
+			case META::T_UINT8:
 				str = str << *(const uint8_t*)value << "\n";
 				break;
-			case T_INT8:
+			case META::T_INT8:
 				str = str << *value << "\n";
 				break;
-			case T_INT16:
+			case META::T_INT16:
 				str = str << *(const int16_t*)value << "\n";
 				break;
-			case T_UINT16:
-			case T_YEAR:
+			case META::T_UINT16:
+			case META::T_YEAR:
 				str = str << *(const uint16_t*)value << "\n";
 				break;
-			case T_INT32:
+			case META::T_INT32:
 				str = str << *(const int32_t*)value << "\n";
 				break;
-			case T_UINT32:
+			case META::T_UINT32:
 				str = str << *(const uint32_t*)value << "\n";
 				break;
-			case T_INT64:
+			case META::T_INT64:
 				str = str << *(const int64_t*)value << "\n";
 				break;
-			case T_UINT64:
+			case META::T_UINT64:
 				str = str << *(const uint64_t*)value << "\n";
 				break;
-			case T_STRING:
-			case T_DECIMAL:
-			case T_BIG_NUMBER:
-			case T_TEXT:
-			case T_JSON:
-			case T_XML:
+			case META::T_STRING:
+			case META::T_DECIMAL:
+			case META::T_BIG_NUMBER:
+			case META::T_TEXT:
+			case META::T_JSON:
+			case META::T_XML:
 				str.append(value, length).append("\n");
 				break;
-			case T_FLOAT:
+			case META::T_FLOAT:
 				str = str << *(float*)value << "\n";
 				break;
-			case T_DOUBLE:
+			case META::T_DOUBLE:
 				str = str << *(double*)value << "\n";
 				break;
-			case T_TIMESTAMP:
+			case META::T_TIMESTAMP:
 			{
 				META::timestamp t;
 				t.time = *(const uint64_t*)value;
@@ -504,7 +506,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case T_DATETIME:
+			case META::T_DATETIME:
 			{
 				META::dateTime d;
 				d.time = *(const uint64_t*)value;
@@ -513,7 +515,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case T_DATE:
+			case META::T_DATE:
 			{
 				META::Date d;
 				d.time = *(const uint32_t*)value;
@@ -522,7 +524,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case T_TIME:
+			case META::T_TIME:
 			{
 				META::Time t;
 				t.time = *(const uint64_t*)value;
@@ -531,9 +533,9 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case T_BINARY:
-			case T_BLOB:
-			case T_GEOMETRY:
+			case META::T_BINARY:
+			case META::T_BLOB:
+			case META::T_GEOMETRY:
 			{
 				char* buf = new char[length * 2 + 2];
 				for (uint32_t off = 0; off < length; off++)
@@ -555,7 +557,7 @@ namespace DATABASE_INCREASE
 				delete[]buf;
 			}
 			break;
-			case T_SET:
+			case META::T_SET:
 			{
 				for (uint8_t idx = 0; idx < column->m_setAndEnumValueList.m_Count; idx++)
 				{
@@ -567,7 +569,7 @@ namespace DATABASE_INCREASE
 				str.append("\n");
 			}
 			break;
-			case T_ENUM:
+			case META::T_ENUM:
 			{
 				uint16_t idx = *(const uint16_t*)value;
 				assert(idx < column->m_setAndEnumValueList.m_Count);
@@ -592,7 +594,7 @@ namespace DATABASE_INCREASE
 				uint32_t valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : varColumnSize(idx);
 				std::String cv = columnValue(value, valueLength, c);
 				str.append(cv.c_str());
-				if (head->type == R_UPDATE || head->type == R_REPLACE)
+				if (head->minHead.type == R_UPDATE || head->minHead.type == R_REPLACE)
 				{
 					value = oldColumnOfUpdateType(idx);
 					valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
@@ -620,7 +622,7 @@ namespace DATABASE_INCREASE
 		{
 			init(data);
 			this->sqlMode = sqlMode;
-			*(uint64_t*)(data + head->headSize) = sqlMode;
+			*(uint64_t*)(data + head->minHead.headSize) = sqlMode;
 			charsetId = ascii;
 			if (charset != nullptr)
 			{
@@ -628,8 +630,8 @@ namespace DATABASE_INCREASE
 				if (likely(ci != nullptr))
 					charsetId = ci->id;
 			}
-			*(uint16_t*)(data + head->headSize + sizeof(uint64_t)) = charsetId;
-			this->database = data + head->headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
+			*(uint16_t*)(data + head->minHead.headSize + sizeof(uint64_t)) = charsetId;
+			this->database = data + head->minHead.headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
 			if (database != nullptr &&strlen(database)>0)
 			{
 				*(uint8_t*)(this->database - 1) = strlen(database) + 1;
@@ -642,7 +644,7 @@ namespace DATABASE_INCREASE
 			ddl = this->database + *(uint8_t*)(this->database - 1);
 			memcpy((char*)ddl, query, querySize);
 			((char*)ddl)[querySize] = '\0';
-			head->size = ddl - data + querySize + 1;
+			head->minHead.size = ddl - data + querySize + 1;
 			if (database == nullptr || *(uint8_t*)(this->database - 1) == 0)
 				this->database = nullptr;
 		}
@@ -655,14 +657,14 @@ namespace DATABASE_INCREASE
 		{
 			init(data);
 			const char* ptr = data;
-			sqlMode = *(uint64_t*)(ptr + head->headSize);
-			charsetId = *(uint16_t*)(ptr + head->headSize + sizeof(uint64_t));
-			database = ptr + head->headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
+			sqlMode = *(uint64_t*)(ptr + head->minHead.headSize);
+			charsetId = *(uint16_t*)(ptr + head->minHead.headSize + sizeof(uint64_t));
+			database = ptr + head->minHead.headSize + sizeof(sqlMode) + sizeof(charsetId) + 1;
 			ddl = database + *(uint8_t*)(database - 1);
 			/*if version increased in future,add those code:
-			  if(head->version >0)
+			  if(head->minHead.version >0)
 			  {do some thing}
-			  if(head->version >1)
+			  if(head->minHead.version >1)
 			  {do some thing}
 				 ...
 			   */
@@ -686,7 +688,7 @@ namespace DATABASE_INCREASE
 	static record* createRecord(const char* data, META::metaDataCollection* mc)
 	{
 		recordHead* head = (recordHead*)data;
-		switch (head->type)
+		switch (head->minHead.type)
 		{
 		case R_INSERT:
 		case R_DELETE:
@@ -713,7 +715,7 @@ namespace DATABASE_INCREASE
 	}
 	static std::String getString(record * r)
 	{
-		switch (r->head->type)
+		switch (r->head->minHead.type)
 		{
 		case R_INSERT:
 		case R_DELETE:
