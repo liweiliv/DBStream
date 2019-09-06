@@ -18,8 +18,10 @@ namespace SQL_PARSER {
 			return new SQLColumnNameWord(optional);
 		else if (str == "_B_")
 			return new SQLBracketsWord(optional);
-		else if (str == "_NUM_")
-			return new SQLNumberWord(optional);
+		else if (str == "_INT_")
+			return new SQLIntNumberWord(optional);
+		else if (str == "_FLOAT_")
+			return new SQLFloatNumberWord(optional);
 		else if (strncmp(str.c_str(), "_S_:", 4) == 0)
 			return new SQLStringWord(optional, str.c_str() + 4);
 		else if (strncmp(str.c_str(), "_C_:", 4) == 0)
@@ -77,7 +79,7 @@ namespace SQL_PARSER {
 		std::string matchedWord;
 		const char* nameStart, * nameEnd;
 		uint16_t nameSize;
-		SQLDBNameValue* value = MATCH;
+		SQLNameValue* value = MATCH;
 		if (!getName(p, nameStart, nameSize, nameEnd))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
@@ -85,8 +87,8 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLDBNameValue();
-			value->database.assign(nameStart, nameSize);
+			value = new SQLNameValue();
+			value->name.assign(nameStart, nameSize);
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -105,9 +107,9 @@ namespace SQL_PARSER {
 	SQLValue* SQLTableNameWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
-		const char* nameStart[2] = { 0 };
+		const char* nameStart[3] = { 0 };
 		const char* nameEnd;
-		uint16_t nameSize[2] = { 0 };
+		uint16_t nameSize[3] = { 0 };
 		SQLTableNameValue* value = MATCH;
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
 		{
@@ -123,9 +125,23 @@ namespace SQL_PARSER {
 				return NOT_MATCH_PTR;
 			}
 		}
+		p = nextWord(nameEnd);
+		if (strncasecmp(p, "AS", 2) == 0&& realEndOfWord(p)==p+2)
+		{
+			p = nextWord(p + 2);
+			if(*p=='\0'|| !getName(p, nameStart[2], nameSize[2], nameEnd))
+			{
+				LOG(ERROR) << m_comment << " do not match for must have alias after AS in table name" << sql;
+				return NOT_MATCH_PTR;
+			}
+		}
+		else
+			getName(p, nameStart[2], nameSize[2], nameEnd);
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLTableNameValue();
+			if(nameStart[2] != nullptr)
+				value->alias.assign(nameStart[2], nameSize[2]);
 			if (nameStart[1] != nullptr)
 			{
 				value->database.assign(nameStart[0], nameSize[0]);
@@ -303,65 +319,51 @@ namespace SQL_PARSER {
 		}
 		return value;
 	}
-	SQLValue* SQLNumberWord::match(handle* h, const char*& sql, bool needValue)
+	SQLValue* SQLIntNumberWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
-		SQLStringValue* value = MATCH;
+		SQLIntNumberValue* value = MATCH;
 		const char* n = p;
-		bool hasDot = false;
-		while (*n != '\0')
+		bool sign = true;
+		int64_t v = 0;
+		if (*n == '-'||*n=='+')
 		{
-			if (*n > '9' || *n < '0')
-			{
-				if (*n == '-')
-				{
-					if (n != p)
-					{
-						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH_PTR;
-					}
-					n++;
-					while (*n == ' ' || *n == '\t')
-						n++;
-					continue;
-				}
-				else if (*n == '.')
-				{
-					if (hasDot)
-					{
-						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH_PTR;
-					}
-					else
-						hasDot = true;
-				}
-				else
-				{
-					if (isKeyChar(*n))
-					{
-						if (n == p)
-						{
-							LOG(ERROR) << m_comment << " do not match " << sql;
-							return NOT_MATCH_PTR;
-						}
-						else
-							break;
-					}
-					else if (isSpaceOrComment(n))
-						break;
-					else
-					{
-						LOG(ERROR) << m_comment << " do not match " << sql;
-						return NOT_MATCH_PTR;
-					}
-				}
-			}
+			if(*n=='-')
+				sign = false;
 			n++;
+			while (*n == ' ')
+				n++;
 		}
+
+		while (*n <= '9' && *n >= '0')
+		{
+			int64_t tmp = v * 10 + (*n) - '0';
+			if (v < tmp)//overflow
+			{
+				LOG(ERROR) << m_comment << " do not match for int type overflow" << sql;
+				return NOT_MATCH_PTR;
+			}
+			v = tmp;
+		}
+		if (!sign)
+			v = -v;
+		if (isKeyChar(*n))
+		{
+			if (n == p||*n=='.')
+			{
+				LOG(ERROR) << m_comment << " do not match " << sql;
+				return NOT_MATCH_PTR;
+			}
+		}
+		else if (!isSpaceOrComment(n))
+		{
+			LOG(ERROR) << m_comment << " do not match " << sql;
+			return NOT_MATCH_PTR;
+		}
+
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(p, n - p);
+			value = new SQLIntNumberValue(v);
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -373,6 +375,124 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+		LOG(ERROR) << m_comment << "match " << sql;
+		sql = n;
+		return value;
+	}
+
+	SQLValue* SQLFloatNumberWord::match(handle* h, const char*& sql, bool needValue)
+	{
+		const char* p = nextWord(sql);
+		SQLFloatNumberValue* value = MATCH;
+		const char* n = p;
+		bool sign = true;
+		int64_t intValue = 0, index = 0;
+		double decmValue = 0;
+		int8_t intValueSize = 0, decmSize = 0, indexSize = 0;
+		double v = 0;
+		if (*n == '-' || *n == '+')
+		{
+			if (*n == '-')
+				sign = false;
+			n++;
+			while (*n == ' ')
+				n++;
+		}
+
+		while (*n <= '9' && *n >= '0')
+		{
+			int64_t tmp = intValue * 10 + (*n) - '0';
+			intValueSize++;
+			if (intValue < tmp|| intValueSize>16)//overflow
+			{
+				LOG(ERROR) << m_comment << " do not match for int type overflow" << sql;
+				return NOT_MATCH_PTR;
+			}
+			intValue = tmp;
+		}
+		if (*n == '.')
+		{
+			n++;
+			double pos = 0.1f;
+			while (*n <= '9' && *n >= '0')
+			{
+				decmValue += pos * ((*n) - '0');
+				pos /= 10;
+				decmSize++;
+				if ((decmSize+ intValueSize)>16)//overflow
+				{
+					LOG(ERROR) << m_comment << " do not match for decmValue overflow" << sql;
+					return NOT_MATCH_PTR;
+				}
+			}
+			if (*(n - 1) == '.')
+			{
+				LOG(ERROR) << m_comment << " do not match for no number after [.] in float number" << sql;
+				return NOT_MATCH_PTR;
+			}
+		}
+		v = intValue + decmValue;
+		if (*n == 'e' || *n == 'E')
+		{
+			bool indexSign = true;
+			n++;
+			if (*n == '-' || *n == '+')
+			{
+				if (*n == '-')
+					indexSign = false;
+				n++;
+				while (*n == ' ')
+					n++;
+			}
+			while (*n <= '9' && *n >= '0')
+			{
+				int64_t tmp = indexSize * 10 + (*n) - '0';
+				indexSize++;
+				if (indexSize < tmp||indexSize>4932)//overflow
+				{
+					LOG(ERROR) << m_comment << " do not match for index overflow" << sql;
+					return NOT_MATCH_PTR;
+				}
+				if (indexSign)
+					v *= 10;
+				else
+					v /= 10;
+				indexSize = tmp;
+			}
+			if (!indexSign)
+				index = -index;
+		}
+
+		if (isKeyChar(*n))
+		{
+			if (n == p)
+			{
+				LOG(ERROR) << m_comment << " do not match " << sql;
+				return NOT_MATCH_PTR;
+			}
+		}
+		else if (!isSpaceOrComment(n))
+		{
+			LOG(ERROR) << m_comment << " do not match " << sql;
+			return NOT_MATCH_PTR;
+		}
+
+		if (m_parser != nullptr || needValue)
+		{
+			if (!sign)
+				v = -v;
+			value = new SQLFloatNumberValue(v);
+			if (needValue)
+				value->ref++;
+			if (m_parser != nullptr)
+			{
+				value->ref++;
+				statusInfo* s = new statusInfo();
+				s->parserFunc = m_parser;
+				s->value = value;
+				h->addStatus(s);
+			}
+	}
 		LOG(ERROR) << m_comment << "match " << sql;
 		sql = n;
 		return value;
@@ -438,7 +558,8 @@ namespace SQL_PARSER {
 			}
 			else if (NOT_MATCH_PTR != (v = funcWord.match(nullptr, pos, needValue)) ||
 				NOT_MATCH_PTR != (v = strWord.match(nullptr, pos, needValue)) ||
-				NOT_MATCH_PTR != (v = numberArgv.match(nullptr, pos, needValue)))
+				NOT_MATCH_PTR != (v = intWord.match(nullptr, pos, needValue)) ||
+				NOT_MATCH_PTR != (v = floatWord.match(nullptr, pos, needValue)))
 			{
 				if (needValue)
 					vlist->values.push_back(v);
@@ -608,7 +729,7 @@ namespace SQL_PARSER {
 		}
 		return rtv;
 	}
-	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), opWord(false), numberWord(false), strWord(false), nameWord(false), func(nullptr)
+	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), opWord(false), intWord(false),floatWord(false), strWord(false), nameWord(false), func(nullptr)
 	{
 		func = new SQLWordFunction(false);
 		valueList = new SQLValueListWord(false);
@@ -636,7 +757,8 @@ namespace SQL_PARSER {
 			}
 		}
 		else if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-			(value = numberWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+			(value = intWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+			(value = floatWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 			(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 			(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
 		{
@@ -651,7 +773,8 @@ namespace SQL_PARSER {
 				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 			{
 				if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-					(value = numberWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+					(value = intWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+					(value = floatWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 					(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 					(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
 				{
@@ -848,7 +971,8 @@ namespace SQL_PARSER {
 			}
 			SQLValue* value = MATCH;
 			if ((value = expressionWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
-				(value = numberArgv.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = intWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = floatWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = nameWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = strWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = match(nullptr, pos, needValue)) != NOT_MATCH_PTR)

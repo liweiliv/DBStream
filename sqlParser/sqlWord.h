@@ -48,7 +48,8 @@ namespace SQL_PARSER {
 			S_STRING,
 			S_ANY_WORD,
 			S_BRACKETS, //(xxxx)
-			S_NUMBER,
+			S_INT_NUMBER,
+			S_FLOAT_NUMBER,
 			S_OPERATOR,
 			S_VALUE_LIST,
 			S_FUNC,
@@ -121,13 +122,22 @@ namespace SQL_PARSER {
 		virtual ~SQLStringWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
-	class SQLNumberWord :public SQLSingleWord
+	class SQLIntNumberWord :public SQLSingleWord
 	{
 	public:
-		SQLNumberWord(bool optional) :SQLSingleWord(optional, S_NUMBER)
+		SQLIntNumberWord(bool optional) :SQLSingleWord(optional, S_INT_NUMBER)
 		{
 		}
-		virtual ~SQLNumberWord() {}
+		virtual ~SQLIntNumberWord() {}
+		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
+	};
+	class SQLFloatNumberWord :public SQLSingleWord
+	{
+	public:
+		SQLFloatNumberWord(bool optional) :SQLSingleWord(optional, S_FLOAT_NUMBER)
+		{
+		}
+		virtual ~SQLFloatNumberWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
 	class SQLAnyStringWord :public SQLSingleWord
@@ -201,7 +211,8 @@ namespace SQL_PARSER {
 	public:
 		bool logicOrMath;
 		SQLOperatorWord opWord;
-		SQLNumberWord numberWord;
+		SQLIntNumberWord intWord;
+		SQLFloatNumberWord floatWord;
 		SQLArrayWord strWord;
 		SQLColumnNameWord nameWord;
 		SQLWordFunction* func;
@@ -212,23 +223,25 @@ namespace SQL_PARSER {
 	};
 	class SQLWordFunction :public SQLSingleWord {
 	private:
-		SQLNumberWord numberArgv;
+		SQLIntNumberWord intWord;
+		SQLFloatNumberWord floatWord;
 		SQLArrayWord strWord;
 		SQLColumnNameWord nameWord;
 		SQLWordExpressions expressionWord;
 		SQLAnyStringWord asWord;
 	public:
-		SQLWordFunction(bool optional) :SQLSingleWord(optional, S_FUNC),numberArgv(false), strWord(false), nameWord(false), expressionWord(false,false),asWord(false){}
+		SQLWordFunction(bool optional) :SQLSingleWord(optional, S_FUNC), intWord(false), floatWord(false), strWord(false), nameWord(false), expressionWord(false,false),asWord(false){}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
 	class SQLValueListWord :public SQLSingleWord
 	{
 	public:
-		SQLNumberWord numberArgv;
+		SQLIntNumberWord intWord;
+		SQLFloatNumberWord floatWord;
 		SQLArrayWord strWord;
 		SQLWordExpressions expressionWord;
 		SQLWordFunction funcWord;
-		SQLValueListWord(bool optional) :SQLSingleWord(optional, S_VALUE_LIST), numberArgv(false), strWord(false),expressionWord(false,false), funcWord(false) {}
+		SQLValueListWord(bool optional) :SQLSingleWord(optional, S_VALUE_LIST), intWord(false), floatWord(false), strWord(false),expressionWord(false,false), funcWord(false) {}
 		virtual ~SQLValueListWord() {}
 		virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};

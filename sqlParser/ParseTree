@@ -17,7 +17,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "bitTypeSize"
               },
               { "K": "_C_:)" }
@@ -179,7 +179,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "floatSize"
               },
               {
@@ -187,7 +187,7 @@
                 "C": [
                   { "K": "_C_:," },
                   {
-                    "K": "_NUM_",
+                    "K": "_INT_",
                     "F": "floatDigitsSize"
                   }
                 ]
@@ -218,7 +218,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "floatSize"
               },
               {
@@ -226,7 +226,7 @@
                 "C": [
                   { "K": "_C_:," },
                   {
-                    "K": "_NUM_",
+                    "K": "_INT_",
                     "F": "floatDigitsSize"
                   }
                 ]
@@ -257,7 +257,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "floatSize"
               },
               {
@@ -265,7 +265,7 @@
                 "C": [
                   { "K": "_C_:," },
                   {
-                    "K": "_NUM_",
+                    "K": "_INT_",
                     "F": "floatDigitsSize"
                   }
                 ]
@@ -296,7 +296,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "datetimeTypePrec"
               },
               { "K": "_C_:)" }
@@ -321,7 +321,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "timestampTypePrec"
               },
               { "K": "_C_:)" }
@@ -341,7 +341,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "timeTypePrec"
               },
               { "K": "_C_:)" }
@@ -361,7 +361,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+								"K": "_INT_",
                 "F": "yearTypePrec"
               },
               { "K": "_C_:)" }
@@ -394,7 +394,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "stringTypeSize"
               },
               { "K": "_C_:)" }
@@ -431,7 +431,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "stringTypeSize"
               },
               { "K": "_C_:)" }
@@ -451,7 +451,7 @@
             "C": [
               { "K": "_C_:(" },
               {
-                "K": "_NUM_",
+                "K": "_INT_",
                 "F": "stringTypeSize"
               },
               { "K": "_C_:)" }
@@ -688,64 +688,55 @@
       {
         "OPT":true,
         "OR": true,
-        "C": [
-          {
-            "C": [
-              { "K": "_NUM_" },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_C_:." },
-                  { "K": "_NUM_" }
-                ]
-              }
-            ]
-          },
-          { "K": "_A_" },
-          {
-            "OR": true,
-            "LOOP": "always",
-            "C": [
-              {
-                "C": [
-                  { "K": "_S_:CURRENT_TIMESTAMP" },
-                  {
-                    "OPT": true,
-                    "K": "_B_",
-                    "COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)"
-                  }
-                ]
-              },
-              {
-                "C": [
-                  { "K": "_S_:ON" },
-                  { "K": "_S_:UPDATE" },
-                  { "K": "_S_:CURRENT_TIMESTAMP" },
-                  {
-                    "OPT": true,
-                    "K": "_B_",
-                    "COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "C": [
-              { "K": "_AS_" },
-              { "K": "_B_" }
-            ]
-          },
-          {
-            "OR": true,
-            "C": [
-              { "K": "_S_:TRUE" },
-              { "K": "_S_:FALSE" }
-            ]
-          },
-          { "K": "_S_:NULL" },
-          { "K": "_N_" }
-        ]
+				"C": [
+					{ "K": "_INT_" },
+					{ "K": "_FLOAT_" },
+					{ "K": "_A_" },
+					{
+						"OR": true,
+						"LOOP": "always",
+						"C": [
+							{
+								"C": [
+									{ "K": "_S_:CURRENT_TIMESTAMP" },
+									{
+										"OPT": true,
+										"K": "_B_",
+										"COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)"
+									}
+								]
+							},
+							{
+								"C": [
+									{ "K": "_S_:ON" },
+									{ "K": "_S_:UPDATE" },
+									{ "K": "_S_:CURRENT_TIMESTAMP" },
+									{
+										"OPT": true,
+										"K": "_B_",
+										"COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)"
+									}
+								]
+							}
+						]
+					},
+					{
+						"C": [
+							{ "K": "_AS_" },
+							{ "K": "_B_" }
+						]
+					},
+					{
+						"OR": true,
+						"C": [
+							{ "K": "_S_:TRUE" },
+							{ "K": "_S_:FALSE" }
+						]
+					},
+					{ "K": "_S_:NULL" },
+					{"K": "_N_"},
+					{"K": "_E_"}
+				]
       }
     ]
   },

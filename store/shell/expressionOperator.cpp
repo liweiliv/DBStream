@@ -1384,16 +1384,21 @@ namespace STORE {
 		{
 			return (*(TL*)& l) == (*(TR*)& r);
 		}
-		bool operatorEqualVarString(void* l, void* r)
+		bool operatorEqualVarValue(void* l, void* r)
 		{
-			return strcmp((const char*)l,(const char*)r)==0;
+			varLenValue* lv = static_cast<varLenValue*>(l),*rv = static_cast<varLenValue*>(r);
+			bool ret = false;
+			if (lv->size == rv->size)
+				ret = memcmp(lv->value, rv->value, lv->size) == 0;
+			if (lv->alloced)
+				shellGlobalBufferPool.free((char*)lv->value);
+			if (rv->alloced)
+				shellGlobalBufferPool.free((char*)rv->value);
+			shellGlobalBufferPool.free(rv);
+			shellGlobalBufferPool.free(lv);
+			return ret;
 		}
-		bool operatorEqualChar(void* l, void* r)
-		{
-			const char* ls = (const char*)l,*rs = (const char*)r;
-			const char* end;
-			return strcmp((const char*)l, (const char*)r) == 0;
-		}
+
 		static void initEqual()
 		{
 			dualArgvLogicOperators[SQL_PARSER::EQUAL] = new dualArgvLogicOperatorMatrix(SQL_PARSER::EQUAL);
@@ -1501,6 +1506,174 @@ namespace STORE {
 			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<int64_t, int64_t>, META::T_DATETIME, META::T_DATETIME);
 			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<int64_t, int64_t>, META::T_TIME, META::T_TIME);
 			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<int32_t, int32_t>, META::T_DATE, META::T_DATE);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<uint16_t, uint16_t>, META::T_ENUM, META::T_ENUM);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<uint64_t, uint64_t>, META::T_SET, META::T_SET);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqual<bool, bool>, META::T_BOOL, META::T_BOOL);
+
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_BIG_NUMBER, META::T_BIG_NUMBER);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_BLOB, META::T_BLOB);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_DECIMAL, META::T_DECIMAL);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_GEOMETRY, META::T_GEOMETRY);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_JSON, META::T_JSON);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_XML, META::T_XML);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_BYTE, META::T_BYTE);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_TEXT, META::T_TEXT);
+			dualArgvLogicOperators[SQL_PARSER::EQUAL]->set(operatorEqualVarValue, META::T_BINARY, META::T_BINARY);
+		}
+		/*NOT EQUAL  != */
+		template<typename TL, typename TR>
+		bool operatorNotEqual(void* l, void* r)
+		{
+			return (*(TL*)& l) != (*(TR*)& r);
+		}
+		bool operatorNotEqualVarValue(void* l, void* r)
+		{
+			varLenValue* lv = static_cast<varLenValue*>(l), * rv = static_cast<varLenValue*>(r);
+			bool ret = true;
+			if (lv->size == rv->size)
+				ret = memcmp(lv->value, rv->value, lv->size) != 0;
+			if (lv->alloced)
+				shellGlobalBufferPool.free((char*)lv->value);
+			if (rv->alloced)
+				shellGlobalBufferPool.free((char*)rv->value);
+			shellGlobalBufferPool.free(rv);
+			shellGlobalBufferPool.free(lv);
+			return ret;
+		}
+
+		static void initNotEqual()
+		{
+			dualArgvLogicOperators[SQL_PARSER::EQUAL] = new dualArgvLogicOperatorMatrix(SQL_PARSER::NOT_EQUAL);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, uint8_t>, META::T_UINT8, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, uint16_t>, META::T_UINT8, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, uint32_t>, META::T_UINT8, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, uint64_t>, META::T_UINT8, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, int8_t>, META::T_UINT8, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, int16_t>, META::T_UINT8, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, int32_t>, META::T_UINT8, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, int64_t>, META::T_UINT8, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, float>, META::T_UINT8, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint8_t, double>, META::T_UINT8, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, uint8_t>, META::T_UINT16, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, uint16_t>, META::T_UINT16, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, uint32_t>, META::T_UINT16, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, uint64_t>, META::T_UINT16, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, int8_t>, META::T_UINT16, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, int16_t>, META::T_UINT16, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, int32_t>, META::T_UINT16, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, int64_t>, META::T_UINT16, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, float>, META::T_UINT16, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint16_t, double>, META::T_UINT16, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, uint8_t>, META::T_UINT32, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, uint16_t>, META::T_UINT32, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, uint32_t>, META::T_UINT32, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, uint64_t>, META::T_UINT32, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, int8_t>, META::T_UINT32, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, int16_t>, META::T_UINT32, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, int32_t>, META::T_UINT32, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, int64_t>, META::T_UINT32, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, float>, META::T_UINT32, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint32_t, double>, META::T_UINT32, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, uint8_t>, META::T_UINT64, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, uint16_t>, META::T_UINT64, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, uint32_t>, META::T_UINT64, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, uint64_t>, META::T_UINT64, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, int8_t>, META::T_UINT64, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, int16_t>, META::T_UINT64, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, int32_t>, META::T_UINT64, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, int64_t>, META::T_UINT64, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, float>, META::T_UINT64, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<uint64_t, double>, META::T_UINT64, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, uint8_t>, META::T_INT8, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, uint16_t>, META::T_INT8, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, uint32_t>, META::T_INT8, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, uint64_t>, META::T_INT8, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, int8_t>, META::T_INT8, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, int16_t>, META::T_INT8, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, int32_t>, META::T_INT8, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, int64_t>, META::T_INT8, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, float>, META::T_INT8, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int8_t, double>, META::T_INT8, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, uint8_t>, META::T_INT16, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, uint16_t>, META::T_INT16, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, uint32_t>, META::T_INT16, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, uint64_t>, META::T_INT16, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, int8_t>, META::T_INT16, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, int16_t>, META::T_INT16, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, int32_t>, META::T_INT16, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, int64_t>, META::T_INT16, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, float>, META::T_INT16, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int16_t, double>, META::T_INT16, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, uint8_t>, META::T_INT32, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, uint16_t>, META::T_INT32, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, uint32_t>, META::T_INT32, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, uint64_t>, META::T_INT32, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, int8_t>, META::T_INT32, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, int16_t>, META::T_INT32, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, int32_t>, META::T_INT32, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, int64_t>, META::T_INT32, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, float>, META::T_INT32, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int32_t, double>, META::T_INT32, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, uint8_t>, META::T_INT64, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, uint16_t>, META::T_INT64, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, uint32_t>, META::T_INT64, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, uint64_t>, META::T_INT64, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, int8_t>, META::T_INT64, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, int16_t>, META::T_INT64, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, int32_t>, META::T_INT64, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, int64_t>, META::T_INT64, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, float>, META::T_INT64, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<int64_t, double>, META::T_INT64, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, uint8_t>, META::T_FLOAT, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, uint16_t>, META::T_FLOAT, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, uint32_t>, META::T_FLOAT, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, uint64_t>, META::T_FLOAT, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, int8_t>, META::T_FLOAT, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, int16_t>, META::T_FLOAT, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, int32_t>, META::T_FLOAT, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, int64_t>, META::T_FLOAT, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, float>, META::T_FLOAT, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<float, double>, META::T_FLOAT, META::T_DOUBLE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, uint8_t>, META::T_DOUBLE, META::T_UINT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, uint16_t>, META::T_DOUBLE, META::T_UINT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, uint32_t>, META::T_DOUBLE, META::T_UINT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, uint64_t>, META::T_DOUBLE, META::T_UINT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, int8_t>, META::T_DOUBLE, META::T_INT8);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, int16_t>, META::T_DOUBLE, META::T_INT16);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, int32_t>, META::T_DOUBLE, META::T_INT32);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, int64_t>, META::T_DOUBLE, META::T_INT64);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, float>, META::T_DOUBLE, META::T_FLOAT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqual<double, double>, META::T_DOUBLE, META::T_DOUBLE);
+
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_BIG_NUMBER, META::T_BIG_NUMBER);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_BLOB, META::T_BLOB);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_DECIMAL, META::T_DECIMAL);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_GEOMETRY, META::T_GEOMETRY);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_JSON, META::T_JSON);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_XML, META::T_XML);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_BYTE, META::T_BYTE);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_TEXT, META::T_TEXT);
+			dualArgvLogicOperators[SQL_PARSER::NOT_EQUAL]->set(operatorNotEqualVarValue, META::T_BINARY, META::T_BINARY);
+		}
+		void initExpressionOperators()
+		{
+			initTilde();
+			initAdd();
+			initSub();
+			initMul();
+			initDiv();
+			initRem();
+			initLShift();
+			initRShift();
+			initXor();
+			initBitOr();
+			initBitAnd();
+			initGreaterThan();
+			initLessThan();
+			initGreaterEqual();
+			initLessEqual();
+			initEqual();
+			initNotEqual();
 		}
 	}
 }

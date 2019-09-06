@@ -1,19 +1,10 @@
 {
-	"table_reference":{
-		"C":[
-				{"K":"_TABLE_"},
-				{"OPT":TRUE,"C":[
-					{"OPT":true,"K":"_S_:AS"},
-					{"K":"_AS_"}
-				]}
-		]
-	},
 	"joined_tables":{
 		"DECLARE":["select"],
 		"LOOP":"_C_:,",
 		"OR":TRUE,
 		"C":[
-			{"INCLUDE":"table_reference"},
+			{"K":"_TABLE_","F":"selectJoinTable"},
 			{"INCLUDE":"select"}
 		]
 	}
@@ -21,29 +12,29 @@
 		"C":[
 			{"OPT":true,
 			"OR":true,"C":[
-				{"K":"_S_:LEFT"},
-				{"K":"_S_:RIGHT"},
-				{"K":"_S_:INNER"}
+				{"K":"_S_:LEFT","F":"selectLeftJoin"},
+				{"K":"_S_:RIGHT","F":"selectRightJoin"},
+				{"K":"_S_:INNER","F":"selectInnerJoin"}
 			]},
 			{"K":"_S_:JOIN"},
 			{"OR":true,"C":[
 				{"C":[
 					{"K":"_C_:("},
-					{"INCLUDE":"joined_tables"},
+					{"LOOP":"_C_:,","C":[{"K":"_TABLE_","F":"selectJoinTable"}]}
 					{"K":"_C_:)"}
 				]},
-				{"INCLUDE":"joined_tables"}
+				{"LOOP":"_C_:,","C":[{"K":"_TABLE_","F":"selectJoinTable"}]}
 			]},
 			{"OR":TRUE,"C":[
 				{"C":[
 					{"K":"_S_:ON"},
-					{"K":"_E_:LOGIC"}
+					{"K":"_E_:LOGIC","F":"selectJoinOnCondition"}
 				]},
 				{"C":[
 					{"K":"_S_:USING"},
 					{"K":"_C_:("},
 					{"LOOP":"_C_:,","C":[
-						{"K":"_N_"}
+						{"K":"_N_","F":"selectJoinUsingColumn"}
 					]},
 					{"K":"_C_:)"}
 				]}
@@ -53,21 +44,25 @@
 	"select":{
 	"HEAD": true,
 	"C":[
-		{"K":"_S_:SELECT"},
+		{"K":"_S_:SELECT","F":"selectSqlType"},
 		{
 		"LOOP": "_C_:,",
 		"OR":true,
 		"C":[
-			{"K":"_E_:MATH"},
-			{"K":"_F_"},
-			{"K":"_COLUMN_"}
+			{"K":"_E_:MATH","F":selectExpressionField"},
+			{"K":"_E_:LOGIC","F":"selectExpressionField"},
+			{"K":"_F_","F":"selectFunctionField"},
+			{"K":"_COLUMN_","F":"selectColumnField"},
+			{"K":"_A_","F":"selectStringField"},
+			{"K":"_INT_","F":"selectIntField"},
+			{"K":"_FLOAT_",,"F":"selectFloatField"}
 		]},
 		{"K":"_S_:FROM"},
-		{"INCLUDE":"table_reference"},
+		{"K":"_TABLE_","F":"selectTableName"},
 		{"OPT":true,"INCLUDE":join},
 		{"OPT":true,"C":[
 			{"K":"_S_:WHERE"},
-			{"K":"_E_:LOGIC"},
+			{"K":"_E_:LOGIC","F":"selectWhereField"},
 		]},
 		{"OPT":true,"C":[
 			{"K":"_S_:GROUP"},
@@ -91,16 +86,16 @@
 			{"K":"_S_:LIMIT"},
 			{"OR":true,"C":[
 				{"C":[
-					{"K":"_NUM_"},
+					{"K":"_INT_"},
 					{"K":"_C_:,"},
-					{"K":"_NUM_"}
+					{"K":"_INT_"}
 				]},
 				{"C":[
-					{"K":"_NUM_"},
+					{"K":"_INT_"},
 					{"K":"_S_:OFFSET"},
-					{"K":"_NUM_"}
+					{"K":"_INT_"}
 				]},
-				{"K":"_NUM_"}
+				{"K":"_INT_"}
 			]}
 		]}
 	]

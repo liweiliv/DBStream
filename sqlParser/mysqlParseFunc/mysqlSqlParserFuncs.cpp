@@ -62,7 +62,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue bitTypeSize(handle* h, SQLValue * value)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->size = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->size = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue tinyIntType(handle* h, SQLValue * value)
@@ -144,13 +144,13 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue floatSize(handle* h, SQLValue * value)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->size = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->size = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue floatDigitsSize(handle* h, SQLValue * value)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->decimals = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->decimals = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue floatType(handle* h, SQLValue * value)
@@ -183,7 +183,7 @@ namespace SQL_PARSER {
 		newColumnInfo* c = getLastColumn(h);
 		c->rawType = MYSQL_TYPE_DATETIME2;
 		c->type = mysqlTypeMaps[c->rawType];
-		c->precision = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->precision = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timestampType(handle* h, SQLValue * value)
@@ -205,7 +205,7 @@ namespace SQL_PARSER {
 		newColumnInfo* c = getLastColumn(h);
 		c->rawType = MYSQL_TYPE_TIMESTAMP2;
 		c->type = mysqlTypeMaps[c->rawType];
-		c->precision = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->precision = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue timeType(handle* h, SQLValue * value)
@@ -220,7 +220,7 @@ namespace SQL_PARSER {
 		newColumnInfo* c = getLastColumn(h);
 		c->rawType = MYSQL_TYPE_TIME2;
 		c->type = mysqlTypeMaps[c->rawType];
-		c->precision = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->precision = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue yearType(handle* h, SQLValue * value)
@@ -233,7 +233,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue yearTypePrec(handle* h, SQLValue * value)
 	{
 		newColumnInfo* c = getLastColumn(h);
-		c->precision = atoi(static_cast<SQLStringValue*>(value)->value.c_str());
+		c->precision = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue charType(handle* h, SQLValue * value)

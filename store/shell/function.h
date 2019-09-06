@@ -5,27 +5,31 @@ namespace STORE
 {
 	namespace SHELL
 	{
-		class field;
+		class Field;
 		class function
 		{
 		public:
 			uint8_t argvCount;
 			uint8_t returnValueType;
-			virtual void* exec( field** const argvs,const DATABASE_INCREASE::DMLRecord * row) const = 0;
-			function(uint8_t argvCount, uint8_t returnValueType) :argvCount(argvCount), returnValueType(returnValueType){}
-			virtual ~function(){}
+			bool rowOrGroup;
+			function(uint8_t argvCount,uint8_t returnValueType, bool rowOrGroup) :argvCount(argvCount),returnValueType(returnValueType), rowOrGroup(rowOrGroup) {}
 		};
-		class groupFunction {
+		class rowFunction:public function
+		{
 		public:
-			uint8_t argvType;
-			uint8_t valueType;
-			virtual void exec(const field* currentValue, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const = 0;
+			virtual void* exec( Field** const argvs,const DATABASE_INCREASE::DMLRecord * row) const = 0;
+			rowFunction(uint8_t argvCount, uint8_t returnValueType) :function(argvCount,returnValueType,true){}
+			virtual ~rowFunction(){}
+		};
+		class groupFunction:public function {
+		public:
+			virtual void exec(Field** const argvs, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord* row)const = 0;
 			virtual void* finalValueFunc(void* historyValue, uint32_t count) const  = 0;
-			groupFunction(uint8_t argvType, uint8_t valueType) :argvType(argvType), valueType(valueType) {}
+			groupFunction(uint8_t argvCount, uint8_t returnValueType) :function(argvCount,returnValueType, false){}
 			virtual ~groupFunction() {}
 		};
 		void initFunction();
-		const function* getFunction(const char* name, const char* argvTypes);
+		const rowFunction* getRowFunction(const char* name, const char* argvTypes);
 		const groupFunction* getGroupFunction(const char* name, const char* argvTypes);
 	}
 

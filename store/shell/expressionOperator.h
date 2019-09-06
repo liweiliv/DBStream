@@ -194,5 +194,6 @@ namespace STORE
 				return nullptr;
 			return singleArgvLogicOperators[op]->get(type);
 		}
+		void initExpressionOperators();
 	}
 }

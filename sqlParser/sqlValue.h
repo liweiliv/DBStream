@@ -7,7 +7,8 @@
 namespace SQL_PARSER {
 	enum SQLValueType {
 		OPERATOR_TYPE,
-		NUMBER_TYPE,
+		INT_NUMBER_TYPE,
+		FLOAT_NUMBER_TYPE,
 		STRING_TYPE,
 		LIST_TYPE,
 		NAME_TYPE,
@@ -24,6 +25,18 @@ namespace SQL_PARSER {
 		uint32_t ref;
 		SQLValue(SQLValueType type) :type(type), ref(0){}
 		virtual ~SQLValue() {}
+	};
+	class SQLIntNumberValue :public SQLValue
+	{
+	public:
+		int64_t number;
+		SQLIntNumberValue(int64_t number):SQLValue(INT_NUMBER_TYPE), number(number){}
+	};
+	class SQLFloatNumberValue :public SQLValue
+	{
+	public:
+		double number;
+		SQLFloatNumberValue(double number) :SQLValue(INT_NUMBER_TYPE), number(number) {}
 	};
 	class SQLOperatorValue :public SQLValue {
 	public:
@@ -50,15 +63,16 @@ namespace SQL_PARSER {
 		std::string value;
 		SQLStringValue(SQLValueType type) :SQLValue(type) {}
 	};
-	class SQLDBNameValue :public SQLValue {
+	class SQLNameValue :public SQLValue {
 	public:
-		std::string database;
-		SQLDBNameValue() :SQLValue(NAME_TYPE) {}
+		std::string name;
+		SQLNameValue() :SQLValue(NAME_TYPE) {}
 	};
 	class SQLTableNameValue :public SQLValue {
 	public:
 		std::string database;
 		std::string table;
+		std::string alias;
 		SQLTableNameValue() :SQLValue(TABLE_NAME_TYPE) {}
 	};
 	class SQLColumnNameValue :public SQLValue {
@@ -82,7 +96,7 @@ namespace SQL_PARSER {
 	class SQLExpressionValue :public SQLValue {
 	public:
 		SQLValue** valueStack;
-		int count;
+		uint16_t count;
 		SQLExpressionValue() :SQLValue(EXPRESSION_TYPE), valueStack(nullptr), count(0){}
 		~SQLExpressionValue()
 		{
