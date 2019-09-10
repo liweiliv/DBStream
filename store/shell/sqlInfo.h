@@ -25,22 +25,26 @@ namespace STORE
 			uint32_t size;
 			inline void init()
 			{
-				list = shellGlobalBufferPool.alloc(sizeof(T) * (volumn = 16));
+				list = (T*)shellGlobalBufferPool.alloc(sizeof(T) * (volumn = 16));
 				size = 0;
 			}
 			inline void add(T v)
 			{
 				if (unlikely(size >= volumn))
 				{
-					T* newList = shellGlobalBufferPool.alloc(sizeof(T) * (volumn = volumn << 1));
+					T* newList = (T*)shellGlobalBufferPool.alloc(sizeof(T) * (volumn = volumn << 1));
 					memcpy(newList, list, sizeof(T) * size);
 				}
 				list[size++] = v;
 			}
 		};
+
 		struct selectSqlInfo :public sqlBasicInfo {
 			SQL_PARSER::SQLTableNameValue * table;
 			sqlList<Field*> selectFields;
+			uint64_t selectTableId;
+			uint64_t* joinedTableIds;
+			sqlList<SQL_PARSER::SQLValue*> rawSelectFields;
 			sqlList<SQL_PARSER::SQLColumnNameValue*> inGroupColumns;
 			sqlList<SQL_PARSER::SQLColumnNameValue*> notInGroupColumns;
 			sqlList<SQL_PARSER::SQLTableNameValue*> joinedTables;
@@ -49,6 +53,8 @@ namespace STORE
 			expressionField* joinedCondition;
 			expressionField* whereCondition;
 			sqlList<Field*> groupBy;
+			sqlList<columnFiled*> groupByColumnNames;
+			expressionField* havCondition;
 			uint32_t limitCount;
 			uint32_t limitOffset;
 			Field* orderBy;
@@ -64,10 +70,34 @@ namespace STORE
 				joinType = LEFT_JOIN;
 				whereCondition = nullptr;
 				groupBy.init();
+				groupByColumnNames.init();
+				havCondition = nullptr;
 				limitCount = 0;
 				limitOffset = 0;
 				orderBy = nullptr;
 				orderByDesc = false;
+			}
+			bool isGroupColumn(const char* columnName,uint64_t tableId)
+			{
+				for (int idx = 0; idx < groupByColumnNames.size; idx++)
+				{
+					if (tableId == groupByColumnNames.list[idx]->tableId)
+					{
+						if (strcmp(groupByColumnNames.list[idx]->name, columnName) == 0||
+							strcmp(groupByColumnNames.list[idx]->alias, columnName) == 0)
+						{
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+			bool addGroupColumn(selectColumnInfo* column)
+			{
+				if (isGroupColumn(column->name, column->tableId))
+					return false;
+				groupByColumnNames.add(column);
+				return true;
 			}
 		};
 	}

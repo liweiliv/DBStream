@@ -2,14 +2,14 @@
 #include "meta/metaDataCollection.h"
 #include "meta/charset.h"
 #include "sqlParser/sqlParserHandle.h"
-#include  "util/winDll.h"
+#include "util/winDll.h"
 #include "sqlInfo.h"
 #include "field.h"
 #include "function.h"
 #include "expressionOperator.h"
 namespace STORE {
 	namespace SHELL {
-		META::metaDataCollection* metaCenter;
+		extern META::metaDataCollection* shellMetaCenter;
 		threadLocal<uint8_t> typeListBuffer;
 		static inline uint8_t* getTypeListBuf()
 		{
@@ -40,8 +40,8 @@ namespace STORE {
 		}
 		static inline rawField* SQLValue2String(SQL_PARSER::SQLValue* value)
 		{
-			rawField *field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
-			varLenValue * v = (varLenValue*)shellGlobalBufferPool.alloc(sizeof(varLenValue));
+			rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
+			varLenValue* v = (varLenValue*)shellGlobalBufferPool.alloc(sizeof(varLenValue));
 			v->size = static_cast<SQL_PARSER::SQLStringValue*>(value)->value.size();
 			v->value = static_cast<SQL_PARSER::SQLStringValue*>(value)->value.c_str();
 			v->alloced = false;
@@ -60,8 +60,15 @@ namespace STORE {
 			field->init(*(void**) & static_cast<SQL_PARSER::SQLFloatNumberValue*>(value)->number, META::T_DOUBLE);
 			return field;
 		}
-		static inline columnFiled* SQLValue2Column(SQL_PARSER::SQLValue* value)
+		static inline columnFiled* SQLValue2Column(SQL_PARSER::SQLValue* value, selectSqlInfo* sql)
 		{
+			SQL_PARSER::SQLColumnNameValue* columnValue = static_cast<SQL_PARSER::SQLColumnNameValue*>(value);
+			if (sql->joinedTables.size > 0)
+			{
+				if(sql->)
+				if (columnValue->table.empty()||)
+					return nullptr;
+			}
 			return nullptr;//todo
 		}
 		static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value);
@@ -71,7 +78,7 @@ namespace STORE {
 			uint8_t* argvTypeList = getTypeListBuf();
 			uint16_t argvListSize = 0;
 			//Field* field = (Field*)shellGlobalBufferPool.alloc(sizeof(Field));
-			Field ** argvs = (Field**)shellGlobalBufferPool.alloc(sizeof(Field*)* funcValue->argvs.size());
+			Field** argvs = (Field * *)shellGlobalBufferPool.alloc(sizeof(Field*) * funcValue->argvs.size());
 			for (decltype(funcValue->argvs)::const_iterator iter = funcValue->argvs.begin(); iter != funcValue->argvs.end(); iter++)
 			{
 				argvs[argvListSize] = createFieldFromSqlValue(*iter);
@@ -100,7 +107,7 @@ namespace STORE {
 		{
 			assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
 			SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
-			if (expValue->count <=1)
+			if (expValue->count <= 1)
 				return nullptr;
 			Field** fields = (Field * *)shellGlobalBufferPool.alloc(sizeof(Field*) * expValue->count);
 			uint8_t* typeBuffer = getTypeListBuf();
@@ -199,7 +206,7 @@ namespace STORE {
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 			assert(value->type == SQL_PARSER::FUNCTION_TYPE);
 			Field* field = SQLValue2FunctionField(value);
-			if(field==nullptr)
+			if (field == nullptr)
 				return SQL_PARSER::INVALID;
 			sql->selectFields.add(field);
 			return SQL_PARSER::OK;
@@ -264,7 +271,8 @@ namespace STORE {
 			expressionField* exp = SQLValue2ExpressionField(value);
 			if (exp == nullptr)
 				return SQL_PARSER::INVALID;
-			if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+			/*not allowed group expression in where condition,and return type of this expression must be bool*/
+			if (exp->group||static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
 			{
 				exp->clean();
 				shellGlobalBufferPool.free(exp);
@@ -301,7 +309,7 @@ namespace STORE {
 		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectJoinOnCondition(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
 		{
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-			if(sql->joinedUsingColumns.size!=0)
+			if (sql->joinedUsingColumns.size != 0)
 				return SQL_PARSER::INVALID;
 			assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
 			SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
@@ -321,11 +329,131 @@ namespace STORE {
 		{
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 			assert(value->type == SQL_PARSER::STRING_TYPE);
-			if(sql->joinedCondition!=nullptr)
+			if (sql->joinedCondition != nullptr)
 				return SQL_PARSER::INVALID;
 			sql->joinedUsingColumns.add(static_cast<SQL_PARSER::SQLStringValue*>(value)->value.c_str());
 			return SQL_PARSER::OK;
 		}
-		
+		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectGroupByColumn(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
+		{
+			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
+			if (value->type == SQL_PARSER::COLUMN_NAME_TYPE)
+			{
+				SQL_PARSER::SQLColumnNameValue* columnValue = static_cast<SQL_PARSER::SQLColumnNameValue*>(value);
+				return SQL_PARSER::OK;
+			}
+			else if (value->type == SQL_PARSER::EXPRESSION_TYPE)
+			{
+				expressionField* exp = SQLValue2ExpressionField(value);
+				if(exp==nullptr)
+					return SQL_PARSER::INVALID;
+				if (exp->valueType == META::T_BOOL)
+				{
+					exp->clean();
+					shellGlobalBufferPool.free(exp);
+					return SQL_PARSER::INVALID;
+				}
+				sql->groupBy.add(exp);
+				return SQL_PARSER::OK;
+			}
+			else if (value->type == SQL_PARSER::FUNCTION_TYPE)
+			{
+				Field* field = SQLValue2FunctionField(value);
+				if(field==nullptr)
+					return SQL_PARSER::INVALID;
+				if (field->fieldType == GROUP_FUNCTION_FIELD)
+				{
+					field->clean();
+					shellGlobalBufferPool.free(field);
+					return SQL_PARSER::INVALID;
+				}
+				sql->groupBy.add(field);
+				return SQL_PARSER::OK;
+			}
+			else
+				return SQL_PARSER::INVALID;
+		}
+		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectHavingCondition(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
+		{
+			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
+			assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+			SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
+			expressionField* exp = SQLValue2ExpressionField(value);
+			if (exp == nullptr)
+				return SQL_PARSER::INVALID;
+			/*return type of this expression must be bool*/
+			if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+			{
+				exp->clean();
+				shellGlobalBufferPool.free(exp);
+				return SQL_PARSER::INVALID;
+			}
+			sql->havCondition = exp;
+			return SQL_PARSER::OK;
+		}
+		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectOrderByExpressionField(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
+		{
+			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
+			assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+			SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
+			expressionField* exp = SQLValue2ExpressionField(value);
+			if (exp == nullptr)
+				return SQL_PARSER::INVALID;
+			/*return type of this expression must be bool*/
+			if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+			{
+				exp->clean();
+				shellGlobalBufferPool.free(exp);
+				return SQL_PARSER::INVALID;
+			}
+			sql->havCondition = exp;
+			return SQL_PARSER::OK;
+		}
+		inline bool processSelectFields(selectSqlInfo* sql)
+		{
+			for (int i = 0; i < sql->rawSelectFields.size; i++)
+			{
+				switch (sql->rawSelectFields.list[i]->type)
+				{
+				case SQL_PARSER::COLUMN_NAME_TYPE:
+				{
+					SQL_PARSER::SQLColumnNameValue* column = static_cast<SQL_PARSER::SQLColumnNameValue*>(sql->rawSelectFields.list[i]);
+					uint64_t tableId = 0;
+					uint8_t tableJoinId = 0;
+					if (column->table.empty())
+					{
+						if (sql->joinedTables.size > 0)
+							return false;
+						tableId = sql->selectTableId;
+					}
+					else
+					{
+						if(strcmp(sql->table->table.c_str(),column->table.c_str())==0 || strcmp(sql->table->alias.c_str(), column->table.c_str()) == 0)
+							tableId = sql->selectTableId;
+						else
+						{
+							for (int idx = 0; idx < sql->joinedTables.size; idx++)
+							{
+								tableJoinId++;
+								if (strcmp(sql->joinedTables.list[idx]->table.c_str(), column->table.c_str()) == 0 || strcmp(sql->joinedTables.list[idx]->alias.c_str(), column->table.c_str()) == 0)
+								{
+									tableId = sql->joinedTableIds[idx];
+									break;
+								}
+							}
+							if (tableId == 0)
+								return false;
+						}
+					}
+
+					if (sql->groupBy.size > 0)
+					{
+						if (!sql->isGroupColumn(column->columnName.c_str(), tableId))
+							return false;
+					}
+				}
+				}
+			}
+		}
 	}
 }

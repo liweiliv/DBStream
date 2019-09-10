@@ -88,7 +88,7 @@ namespace STORE {
 			}
 			shellGlobalBufferPool.free(exp->list);
 		}
-		void* expressionField::_getValue( Field* field,const DATABASE_INCREASE::DMLRecord* row)
+		void* expressionField::_getValue( Field* field,const DATABASE_INCREASE::DMLRecord**const row)
 		{
 			const expressionField* exp = static_cast<const expressionField*>(field);
 			Field** fieldStack;

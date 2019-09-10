@@ -148,7 +148,7 @@ namespace SQL_PARSER {
 				dest += wordEnd - src;
 				if (*wordEnd != '\0')
 				{
-					if (*dest != ' ' || *dest != '\t')
+					if (*dest != ' ' && *dest != '\t')
 						break;
 				}
 				src = nextWord(wordEnd);

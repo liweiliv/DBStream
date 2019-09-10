@@ -28,7 +28,7 @@
 			{"OR":TRUE,"C":[
 				{"C":[
 					{"K":"_S_:ON"},
-					{"K":"_E_:LOGIC","F":"selectJoinOnCondition"}
+					{"K":"_E_:LOGIC","F":"_selectJoinOnCondition"}
 				]},
 				{"C":[
 					{"K":"_S_:USING"},
@@ -43,19 +43,20 @@
 	},	
 	"select":{
 	"HEAD": true,
+	"F":"buildSelectInfo",
 	"C":[
 		{"K":"_S_:SELECT","F":"selectSqlType"},
 		{
 		"LOOP": "_C_:,",
 		"OR":true,
 		"C":[
-			{"K":"_E_:MATH","F":selectExpressionField"},
-			{"K":"_E_:LOGIC","F":"selectExpressionField"},
-			{"K":"_F_","F":"selectFunctionField"},
-			{"K":"_COLUMN_","F":"selectColumnField"},
-			{"K":"_A_","F":"selectStringField"},
-			{"K":"_INT_","F":"selectIntField"},
-			{"K":"_FLOAT_",,"F":"selectFloatField"}
+			{"K":"_E_:MATH","F":"_selectExpressionField"},
+			{"K":"_E_:LOGIC","F":"_selectExpressionField"},
+			{"K":"_F_","F":"_selectFunctionField"},
+			{"K":"_COLUMN_","F":"_selectColumnField"},
+			{"K":"_A_","F":"_selectStringField"},
+			{"K":"_INT_","F":"_selectIntField"},
+			{"K":"_FLOAT_","F":"_selectFloatField"}
 		]},
 		{"K":"_S_:FROM"},
 		{"K":"_TABLE_","F":"selectTableName"},
@@ -67,19 +68,19 @@
 		{"OPT":true,"C":[
 			{"K":"_S_:GROUP"},
 			{"K":"_S_:BY"},
-			{"K":"_COLUMN_"},
+			{"K":"_COLUMN_","F":"selectGroupByColumn"},
 			{"OPT":true,"C":{
 				{"K":"_S_:HAVING"},
-				{"K":"_E_:LOGIC"},
+				{"K":"_E_:LOGIC","F":"selectHavingCondition"},
 			}}
 		]},
 		{"OPT":true,"C":[
 			{"K":"_S_:ORDER"},
 			{"K":"_S_:BY"},
-			{"OR":true,"C":[
-				{"K":"_E_:MATH"},
-				{"K":"_F_"},
-				{"K":"_COLUMN_"}
+			{"OR":true,"LOOP":"_C_:,","C":[
+				{"K":"_E_:MATH","F":"selectOrderByExpressionField"},
+				{"K":"_F_","F":"selectOrderByFunction"},
+				{"K":"_COLUMN_","F":"selectOrderByColumn"}
 			]}
 		]},
 		{"OPT":true,"C":[
