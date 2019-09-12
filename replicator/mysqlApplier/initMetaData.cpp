@@ -8,10 +8,16 @@
 #include "util/winString.h"
 #include "util/unorderMapUtil.h"
 #include "meta/mysqlTypes.h"
-namespace DATA_SOURCE {
+namespace REPLICATOR {
 	static constexpr auto SELECT_ALL_COLUMNS  = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA in (%s)";
+	static constexpr auto SELECT_ALL_COLUMNS_OF_TABLE = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
+
 	static constexpr auto SELECT_ALL_CONSTRAINT = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA in (%s)";
+	static constexpr auto SELECT_ALL_CONSTRAINT_OF_TABLE = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
+
 	static constexpr auto SELECT_ALL_KEY_COLUMN = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA in (%s)";
+	static constexpr auto SELECT_ALL_KEY_COLUMN_OF_TABLE = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
+
 	static constexpr auto SELECT_ALL_TABLE = "select TABLE_SCHEMA,TABLE_NAME,TABLE_TYPE,ENGINE,TABLE_COLLATION from information_schema.TABLES where TABLE_SCHEMA in (%s)";
 	static constexpr auto SELECT_ALL_SCHEMA = "select SCHEMA_NAME ,DEFAULT_CHARACTER_SET_NAME from information_schema.SCHEMATA where SCHEMA_NAME in (%s) and SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
 	static constexpr auto SELECT_ALL_USER_SCHEMA = "select SCHEMA_NAME  from information_schema.SCHEMATA where SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
@@ -149,7 +155,7 @@ namespace DATA_SOURCE {
 	int initMetaData::loadAllColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases)
 	{
 		int ret = 0;
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_COLUMNS, databases);
+		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_COLUMNS, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load column failed";
@@ -225,7 +231,7 @@ namespace DATA_SOURCE {
 	};
 	int initMetaData::loadAllKeyColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > &constraints)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_KEY_COLUMN, databases);
+		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_KEY_COLUMN, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load key column failed";
@@ -259,9 +265,62 @@ namespace DATA_SOURCE {
 		mysql_free_result(rs);
 		return 0;
 	}
-	MYSQL_RES* initMetaData::doQuery(const char* _sql, const std::vector<std::string>& databases)
+	int initMetaData::realQuery(const char* sql, MYSQL_RES*& rs)
 	{
-		if (m_conn == nullptr && (m_conn = m_connector->getConnect())==nullptr)
+		int32_t connErrno;
+		const char* connError;
+		rs = nullptr;
+		for (int retry = 0; retry < 10; retry++)
+		{
+			if (0 != mysql_query(m_conn, sql))
+			{
+				LOG(ERROR) << "sql:" << sql << " query failed for:" << mysql_errno(m_conn) << "," << mysql_error(m_conn);
+				goto CHECK_ERROR;
+			}
+			rs = mysql_store_result(m_conn);
+			if (rs == nullptr)
+			{
+				LOG(ERROR) << "can not get any result from database";
+				goto CHECK_ERROR;
+			}
+			return 0;
+		CHECK_ERROR:
+			if (mysql_errno(m_conn) == 2003 || mysql_errno(m_conn) == 2006 || mysql_errno(m_conn) == 2013)
+			{
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+				mysql_close(m_conn);
+				if ((m_conn = m_connector->getConnect(connErrno, connError)) == nullptr)
+				{
+					LOG(ERROR) << "can not create connect to mysql server";
+					return -1;
+				}
+				continue;
+			}
+			else
+				break;
+		}
+		return -1;
+	}
+
+	MYSQL_RES* initMetaData::doQueryByString(const char* _sql, ...)
+	{
+		va_list ap;
+		va_start(ap, _sql);
+		int len = _vscprintf_p(sql, ap);
+		char* sql = new char[len + 1];
+		sprintf(s, ap);
+		va_end(ap);
+		MYSQL_RES* rs = nullptr;
+		realQuery(sql, rs);
+		delete[]sql;
+		return rs;
+	}
+
+	MYSQL_RES* initMetaData::doQueryByDataBases(const char* _sql, const std::vector<std::string>& databases)
+	{
+		int32_t connErrno;
+		const char* connError;
+		if (m_conn == nullptr && (m_conn = m_connector->getConnect(connErrno, connError))==nullptr)
 		{
 			LOG(ERROR) << "can not create connect to mysql server";
 			return nullptr;
@@ -280,44 +339,15 @@ namespace DATA_SOURCE {
 		char* sql = new char[dbList.size() + strlen(_sql)+1];
 		sprintf(sql, _sql, dbList.c_str());
 		MYSQL_RES* rs = nullptr;
-		for (int retry = 0; retry < 10; retry++)
-		{
-			if (0 != mysql_query(m_conn, sql))
-			{
-				LOG(ERROR) << "sql:" << sql << " query failed for:" << mysql_errno(m_conn) << "," << mysql_error(m_conn);
-				goto CHECK_ERROR;
-			}
-			rs = mysql_store_result(m_conn);
-			if (rs == nullptr)
-			{
-				LOG(ERROR) << "can not get any result from database";
-				goto CHECK_ERROR;
-			}
-			delete []sql;
-			return rs;
-		CHECK_ERROR:
-			if (mysql_errno(m_conn) == 2003 || mysql_errno(m_conn) == 2006 || mysql_errno(m_conn) == 2013)
-			{
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-				mysql_close(m_conn);
-				if (nullptr == (m_conn = m_connector->getConnect()))
-				{
-					LOG(ERROR) << "can not create connect to mysql server";
-					return nullptr;
-				}
-				continue;
-			}
-			else
-				break;
-		}
-		delete []sql;
-		return nullptr;
+		realQuery(sql, rs);
+		delete[]sql;
+		return rs;
 	}
 	int initMetaData::loadAllConstraint(META::metaDataCollection* collection, const std::vector<std::string>& databases)
 	{
 		int ret = 0;
 		std::map < std::string, std::map<std::string, std::map<std::string,  keyInfo*>* >* > constraints;
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_CONSTRAINT, databases);
+		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_CONSTRAINT, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load constraint failed";
@@ -420,7 +450,7 @@ namespace DATA_SOURCE {
 	}
 	int initMetaData::loadAllDataBases(META::metaDataCollection* collection, const std::vector<std::string>& databases)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_SCHEMA, databases);
+		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_SCHEMA, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load database failed";
@@ -450,7 +480,7 @@ namespace DATA_SOURCE {
 	}
 	int initMetaData::loadAllTables(META::metaDataCollection* collection, const std::vector<std::string>& databases)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_TABLE, databases);
+		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_TABLE, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load table failed";
@@ -459,6 +489,7 @@ namespace DATA_SOURCE {
 		MYSQL_ROW row;
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
+
 			META::tableMeta* meta = new META::tableMeta();
 			meta->m_dbName = row[0];
 			meta->m_tableName = row[1];
@@ -483,7 +514,7 @@ namespace DATA_SOURCE {
 	int initMetaData::getAllUserDatabases(std::vector<std::string>& databases)
 	{
 		databases.clear();
-		MYSQL_RES* rs = doQuery(SELECT_ALL_USER_SCHEMA, databases);
+		MYSQL_RES* rs = doQueryByDataBases(SELECT_ALL_USER_SCHEMA, databases);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "get database list failed";
@@ -534,4 +565,57 @@ namespace DATA_SOURCE {
 		}
 		return 0;
 	}
+	int initMetaData::update(META::metaDataCollection* collection,const char* database, const char* table)
+	{
+		int ret = 0;
+		MYSQL_RES* rs = doQueryByString(SELECT_ALL_COLUMNS_OF_TABLE, database, table);
+		if (rs == nullptr)
+		{
+			LOG(ERROR) << "load columns of"<< database<<"."<< table<<" failed";
+			return -1;
+		}
+		if (rs->row_count == 0)
+		{
+			mysql_free_result(rs);
+			LOG(ERROR) << "load columns of" << database << "." << table << " failed for no such table";
+			return -1;
+		}
+		MYSQL_ROW row;
+		META::tableMeta* meta = new META::tableMeta();
+		meta->m_columns = new META::columnMeta[rs->row_count];
+		int columnCount = 0;
+		while (nullptr != (row = mysql_fetch_row(rs)))
+		{
+			if (0 != getColumnInfo(&meta->m_columns[columnCount], row))
+			{
+				delete[]meta->m_columns;
+				mysql_free_result(rs);
+				LOG(ERROR) << "load columns of" << database << "." << table << " failed for load column failed";
+				return -1;
+			}
+		}
+		mysql_free_result(rs);
+		rs = doQueryByString(SELECT_ALL_CONSTRAINT_OF_TABLE, database,table);
+		if (rs == nullptr)
+		{
+			LOG(ERROR) << "load constraint of" << database << "." << table << " failed";
+			delete meta;
+			return -1;
+		}
+		MYSQL_ROW row;
+		std::map<std::string, int> keyMap;
+		int ukId = 0;
+		while (nullptr != (row = mysql_fetch_row(rs)))
+		{
+			if (strncasecmp(row[4], "UNIQUE", 6) == 0)
+			{
+				keyMap.insert(std::pair<string, int>(row[1], ukId++));
+			}
+			else if (strncasecmp(row[4], "KEY", 3) == 0)
+				meta->m_indexCount++;
+			else
+				continue;
+		}
+	}
+
 }

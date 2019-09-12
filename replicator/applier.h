@@ -8,7 +8,7 @@ namespace REPLICATOR
 		int m_errno;
 		std::string m_error;
 	public:
-		applier(){}
+		applier():m_errno(0){}
 		virtual ~applier() {}
 		virtual int reconnect() = 0;
 		virtual int apply(transaction* t) = 0;

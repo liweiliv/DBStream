@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <map>
-#include <../util/unorderMapUtil.h>
+#include <util/unorderMapUtil.h>
 #include <string>
 #include <string.h>
 #include <assert.h>
@@ -32,7 +32,7 @@ struct user{
 class userManager{
 private:
 
-    typedef std::tr1::unordered_map<const char *,user*,StrHash,StrCompare> userMap;
+    typedef std::unordered_map<const char *,user*,StrHash,StrCompare> userMap;
     userMap m_users;
     std::map<uint32_t,userHandle*> m_currentUsers;
     pthread_rwlock_t m_lock;

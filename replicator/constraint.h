@@ -57,22 +57,22 @@ namespace REPLICATOR {
 				return false;
 			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
 			{
-			case T_STRING:
-			case T_TEXT:
-			case T_BINARY:
-			case T_BLOB:
-			case T_BYTE:
-			case T_GEOMETRY:
-			case T_JSON:
-			case T_XML:
-			case T_DECIMAL:
-			case T_BIG_NUMBER:
+			case META::T_STRING:
+			case META::T_TEXT:
+			case META::T_BINARY:
+			case META::T_BLOB:
+			case META::T_BYTE:
+			case META::T_GEOMETRY:
+			case META::T_JSON:
+			case META::T_XML:
+			case META::T_DECIMAL:
+			case META::T_BIG_NUMBER:
 				if (src->varColumnSize(key->keyIndexs[0]) != dest->varColumnSize(keyIndexs[0]))
 					return false;
 				return memcmp(srcValue, destValue, src->varColumnSize(key->keyIndexs[0])) == 0;
-			case T_FLOAT:
+			case META::T_FLOAT:
 				return *(float*)srcValue == *(float*)destValue;
-			case T_DOUBLE:
+			case META::T_DOUBLE:
 				return *(double*)srcValue == *(double*)destValue;
 			default:
 				if (META::columnInfos[meta->m_columns[key->keyIndexs[0]].m_columnType].fixed)
@@ -96,28 +96,28 @@ namespace REPLICATOR {
 		{
 			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
 			{
-			case T_INT32:
+			case META::T_INT32:
 				return new spp::sparse_hash_map<int32_t, blockListNode*>();
-			case T_UINT32:
+			case META::T_UINT32:
 				return new spp::sparse_hash_map<uint32_t, blockListNode*>();
-			case T_INT64:
+			case META::T_INT64:
 				return new spp::sparse_hash_map<int64_t, blockListNode*>();
-			case T_UINT64:
-			case T_DATETIME:
-			case T_TIMESTAMP:
-			case T_TIME:
+			case META::T_UINT64:
+			case META::T_DATETIME:
+			case META::T_TIMESTAMP:
+			case META::T_TIME:
 				return new spp::sparse_hash_map<uint64_t, blockListNode*>();
-			case T_INT16:
+			case META::T_INT16:
 				return new spp::sparse_hash_map<int16_t, blockListNode*>();
-			case T_UINT16:
-			case T_YEAR:
-			case T_ENUM:
+			case META::T_UINT16:
+			case META::T_YEAR:
+			case META::T_ENUM:
 				return new spp::sparse_hash_map<uint16_t, blockListNode*>();
-			case T_INT8:
+			case META::T_INT8:
 				return new spp::sparse_hash_map<int8_t, blockListNode*>();
-			case T_UINT8:
+			case META::T_UINT8:
 				return new spp::sparse_hash_map<uint8_t, blockListNode*>();
-			case T_SET:
+			case META::T_SET:
 				return new spp::sparse_hash_map<uint64_t, blockListNode*>();
 			default:
 				return new spp::sparse_hash_map<uint32_t, blockListNode*>();//use hash
@@ -126,6 +126,54 @@ namespace REPLICATOR {
 		else
 		{
 			return new spp::sparse_hash_map<uint32_t, blockListNode*>();//use hash
+		}
+	}
+	static inline void destroyBukcet(const META::tableMeta* meta, const META::keyInfo* key,void * bucket)
+	{
+		if (key->count == 1)
+		{
+			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
+			{
+			case META::T_INT32:
+				delete static_cast<spp::sparse_hash_map<int32_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_UINT32:
+				delete static_cast<spp::sparse_hash_map<uint32_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_INT64:
+				delete static_cast<spp::sparse_hash_map<int64_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_UINT64:
+			case META::T_DATETIME:
+			case META::T_TIMESTAMP:
+			case META::T_TIME:
+				delete static_cast<spp::sparse_hash_map<uint64_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_INT16:
+				delete static_cast<spp::sparse_hash_map<int16_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_UINT16:
+			case META::T_YEAR:
+			case META::T_ENUM:
+				delete static_cast<spp::sparse_hash_map<uint16_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_INT8:
+				delete static_cast<spp::sparse_hash_map<int8_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_UINT8:
+				delete static_cast<spp::sparse_hash_map<uint8_t, blockListNode*>*>(bucket);
+				break;
+			case META::T_SET:
+				delete static_cast<spp::sparse_hash_map<uint64_t, blockListNode*>*>(bucket);
+				break;
+			default:
+				delete static_cast<spp::sparse_hash_map<uint32_t, blockListNode*>*>(bucket);
+				break;
+			}
+		}
+		else
+		{
+			delete static_cast<spp::sparse_hash_map<uint32_t, blockListNode*>*>(bucket);
 		}
 	}
 	static inline uint32_t getUnionKeyHash(DATABASE_INCREASE::DMLRecord* record, const META::keyInfo* key, bool newOrOld)
@@ -176,46 +224,46 @@ namespace REPLICATOR {
 				v = record->oldColumnOfUpdateType(key->keyIndexs[0]);
 			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
 			{
-			case T_INT32:
+			case META::T_INT32:
 				FIXED_INSERT(int32_t, v, blockNode, bucket, prev);
 				break;
-			case T_UINT32:
+			case META::T_UINT32:
 				FIXED_INSERT(uint32_t, v, blockNode, bucket, prev);
 				break;
-			case T_INT64:
+			case META::T_INT64:
 				FIXED_INSERT(int64_t, v, blockNode, bucket, prev);
 				break;
-			case T_UINT64:
+			case META::T_UINT64:
 				FIXED_INSERT(uint64_t, v, blockNode, bucket, prev);
 				break;
-			case T_STRING:
+			case META::T_STRING:
 			{
 				uint32_t hash = getHash(record, key, newOrOld);
 				FIXED_INSERT(uint32_t, &hash, blockNode, bucket, prev);
 				break;
 			}
-			case T_INT16:
+			case META::T_INT16:
 				FIXED_INSERT(int16_t, v, blockNode, bucket, prev);
 				break;
-			case T_UINT16:
+			case META::T_UINT16:
 				FIXED_INSERT(uint16_t, v, blockNode, bucket, prev);
 				break;
-			case T_INT8:
+			case META::T_INT8:
 				FIXED_INSERT(int8_t, v, blockNode, bucket, prev);
 				break;
-			case T_UINT8:
+			case META::T_UINT8:
 				FIXED_INSERT(uint8_t, v, blockNode, bucket, prev);
 				break;
-			case T_DATETIME:
-			case T_TIMESTAMP:
-			case T_TIME:
+			case META::T_DATETIME:
+			case META::T_TIMESTAMP:
+			case META::T_TIME:
 				FIXED_INSERT(uint64_t, v, blockNode, bucket, prev);
 				break;
-			case T_YEAR:
-			case T_ENUM:
+			case META::T_YEAR:
+			case META::T_ENUM:
 				FIXED_INSERT(uint16_t, v, blockNode, bucket, prev);
 				break;
-			case T_SET:
+			case META::T_SET:
 				FIXED_INSERT(uint64_t, v, blockNode, bucket, prev);
 				break;
 			default:
@@ -243,43 +291,43 @@ namespace REPLICATOR {
 		{
 			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
 			{
-			case T_INT32:
+			case META::T_INT32:
 				FIXED_ERASE(int32_t, blockNode, bucket);
 				break;
-			case T_UINT32:
+			case META::T_UINT32:
 				FIXED_ERASE(uint32_t, blockNode, bucket);
 				break;
-			case T_INT64:
+			case META::T_INT64:
 				FIXED_ERASE(int64_t, blockNode, bucket);
 				break;
-			case T_UINT64:
+			case META::T_UINT64:
 				FIXED_ERASE(uint64_t, blockNode, bucket);
 				break;
-			case T_STRING:
+			case META::T_STRING:
 				FIXED_ERASE(uint32_t, blockNode, bucket);
 				break;
-			case T_INT16:
+			case META::T_INT16:
 				FIXED_ERASE(int16_t, blockNode, bucket);
 				break;
-			case T_UINT16:
+			case META::T_UINT16:
 				FIXED_ERASE(uint16_t, blockNode, bucket);
 				break;
-			case T_INT8:
+			case META::T_INT8:
 				FIXED_ERASE(int8_t, blockNode, bucket);
 				break;
-			case T_UINT8:
+			case META::T_UINT8:
 				FIXED_ERASE(uint8_t, blockNode, bucket);
 				break;
-			case T_DATETIME:
-			case T_TIMESTAMP:
-			case T_TIME:
+			case META::T_DATETIME:
+			case META::T_TIMESTAMP:
+			case META::T_TIME:
 				FIXED_ERASE(uint64_t, blockNode, bucket);
 				break;
-			case T_YEAR:
-			case T_ENUM:
+			case META::T_YEAR:
+			case META::T_ENUM:
 				FIXED_ERASE(uint16_t, blockNode, bucket);
 				break;
-			case T_SET:
+			case META::T_SET:
 				FIXED_ERASE(uint64_t, blockNode, bucket);
 				break;
 			default:
@@ -306,24 +354,24 @@ namespace REPLICATOR {
 				return 0;
 			switch (meta->m_columns[key->keyIndexs[0]].m_columnType)
 			{
-			case T_STRING:
-			case T_TEXT:
-			case T_BINARY:
-			case T_BLOB:
-			case T_BYTE:
-			case T_GEOMETRY:
-			case T_JSON:
-			case T_XML:
-			case T_DECIMAL:
-			case T_BIG_NUMBER:
+			case META::T_STRING:
+			case META::T_TEXT:
+			case META::T_BINARY:
+			case META::T_BLOB:
+			case META::T_BYTE:
+			case META::T_GEOMETRY:
+			case META::T_JSON:
+			case META::T_XML:
+			case META::T_DECIMAL:
+			case META::T_BIG_NUMBER:
 				return bkdrHash(0, value, record->varColumnSize(key->keyIndexs[0]));
-			case T_FLOAT:
+			case META::T_FLOAT:
 			{
 				char floatBuffer[256];
 				my_fcvt(*(const float*)value, record->meta->m_columns[key->keyIndexs[0]].m_decimals, floatBuffer, NULL);
 				return bkdrHash(0, floatBuffer);
 			}
-			case T_DOUBLE:
+			case META::T_DOUBLE:
 			{
 				char floatBuffer[256];
 				my_fcvt(*(const double*)value, record->meta->m_columns[key->keyIndexs[0]].m_decimals, floatBuffer, NULL);
@@ -341,10 +389,9 @@ namespace REPLICATOR {
 				}
 			}
 			}
-			else
-			{
-				return getUnionKeyHash(record, key);
-			}
 		}
-
+		else
+		{
+			return getUnionKeyHash(record, key);
+		}
 	}

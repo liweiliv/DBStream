@@ -188,6 +188,9 @@ namespace META {
 		else
 			return nullptr;
 	}
+	tableMeta* metaDataCollection::getPrevVersion(uint64_t tableID) {
+		return m_allTables.getPrevVersion(tableID);
+	}
 	int metaDataCollection::put(const char * database, uint64_t offset, dbInfo *dbmeta)
 	{
 		MetaTimeline<dbInfo>* db;

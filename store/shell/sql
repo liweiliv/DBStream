@@ -50,14 +50,21 @@
 		"LOOP": "_C_:,",
 		"OR":true,
 		"C":[
-			{"K":"_E_:MATH","F":"_selectExpressionField"},
-			{"K":"_E_:LOGIC","F":"_selectExpressionField"},
-			{"K":"_F_","F":"_selectFunctionField"},
-			{"K":"_COLUMN_","F":"_selectColumnField"},
-			{"K":"_A_","F":"_selectStringField"},
-			{"K":"_INT_","F":"_selectIntField"},
-			{"K":"_FLOAT_","F":"_selectFloatField"}
-		]},
+			{"C":[
+				{"K":"_E_:MATH","F":"selectField"},
+				{"K":"_E_:LOGIC","F":"selectField"},
+				{"K":"_F_","F":"selectField"},
+				{"K":"_COLUMN_","F":"selectField"},
+				{"K":"_A_","F":"selectField"},
+				{"K":"_INT_","F":"selectField"},
+				{"K":"_FLOAT_","F":"selectField"}
+			]},
+			{"OPT":true,"C":[
+				{"OPT:"true,"K":"_S_:AS"},
+				{"K":"_N_","F":"selectFiledAlias"};
+			]}
+		]
+		},
 		{"K":"_S_:FROM"},
 		{"K":"_TABLE_","F":"selectTableName"},
 		{"OPT":true,"INCLUDE":join},

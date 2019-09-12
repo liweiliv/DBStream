@@ -21,6 +21,8 @@ namespace REPLICATOR {
 		DATABASE_INCREASE::record* record;
 		replicatorRecord* nextInTrans;
 		replicatorRecord* nextWaitForDDL;
+		replicatorRecord* mergePrev;
+		replicatorRecord* mergeNext;
 		void* tableInfo;
 		transaction* trans;
 
@@ -35,6 +37,8 @@ namespace REPLICATOR {
 		uint32_t blockCount;
 		transaction* next;
 		transaction* prev;
+
+		transaction* mergeNext;
 
 		bool committed;
 		transaction* preCommitNext;

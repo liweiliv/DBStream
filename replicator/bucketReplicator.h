@@ -1,11 +1,12 @@
 #pragma once
-#include "../memory/bufferPool.h"
-#include "../meta/metaDataCollection.h"
-#include "../meta/metaDataTimeLine.h"
-#include "../sqlParser/sqlParser.h"
-#include "../message/record.h"
-#include "../util/unorderMapUtil.h"
-#include "../util/ringFixedQueue.h"
+#include "memory/bufferPool.h"
+#include "meta/metaDataCollection.h"
+#include "meta/metaDataTimeLine.h"
+#include "sqlParser/sqlParser.h"
+#include "message/record.h"
+#include "util/sparsepp/spp.h"
+#include "util/unorderMapUtil.h"
+#include "util/ringFixedQueue.h"
 #include "replicator.h"
 #include "messageWrap.h"
 #include "constraint.h"
@@ -21,18 +22,41 @@ namespace REPLICATOR {
 		uint16_t keyCount;
 		replicatorRecord* ddlRecord;
 		replicatorRecord* ddlWaitListHead;
-		META::tableMeta* meta;
-		tableInfo *next;
-		tableInfo *prev;
+		const META::tableMeta* meta;
+		tableInfo* next;
+		tableInfo* prev;
+		tableInfo(const META::tableMeta* meta) :id(meta->m_id), empty(true), tableName(meta->m_tableName), uniqueKeysCount(meta->m_uniqueKeysCount), primaryKey(nullptr), uniqueKeys(nullptr), keyCount(meta->m_uniqueKeysCount + (meta->m_primaryKey.count > 0:1 : 0)), ddlRecord(nullptr), ddlWaitListHead(nullptr), meta(meta), next(nullptr), prev(nullptr)
+		{
+			if (meta->m_primaryKey.count > 0)
+				primaryKey = createBukcet(meta, &meta->m_primaryKey);
+			if (meta->m_uniqueKeysCount > 0)
+			{
+				uniqueKeys = new void* [meta->m_uniqueKeysCount];
+				for (int idx = 0; idx < meta->m_uniqueKeysCount; idx++)
+					uniqueKeys[idx] = createBukcet(meta, &meta->m_uniqueKeys[idx]);
+			}
+		}
+		~tableInfo()
+		{
+			if (primaryKey != nullptr)
+				destroyBukcet(meta, &meta->m_primaryKey, primaryKey);
+			if (uniqueKeys != nullptr)
+			{
+
+				for (int idx = 0; idx < uniqueKeysCount; idx++)
+					destroyBukcet(meta, &meta->m_uniqueKeys[idx], uniqueKeys[idx]);
+				delete[] uniqueKeys;
+			}
+		}
 	};
-	typedef std::unordered_map<const char*, META::MetaTimeline<tableInfo>*, StrHash, StrCompare> tableTree;
+	typedef spp::sparse_hash_map<const char*, META::MetaTimeline<tableInfo>*, StrHash, StrCompare> tableTree;
 	struct databaseInfo {
 		tableTree tables;
 		uint64_t id;
 		std::string dbName;
 	};
-	typedef std::unordered_map<const char*, META::MetaTimeline<databaseInfo>*, StrHash, StrCompare> dbTree;
-	typedef std::unordered_map<uint64_t, tableInfo *> tableIdTree;
+	typedef  spp::sparse_hash_map<const char*, META::MetaTimeline<databaseInfo>*, StrHash, StrCompare> dbTree;
+	typedef  spp::sparse_hash_map<uint64_t, tableInfo*> tableIdTree;
 
 	class bucketReplicator :public replicator {
 	private:
@@ -55,7 +79,7 @@ namespace REPLICATOR {
 			if (trans->blockCount > 0)
 				return 0;
 			trans->preCommitNext = &m_preCommitHead;
-			trans->ppreCommitPrevrev = m_preCommitHead.preCommitPrev;
+			trans->preCommitPrev = m_preCommitHead.preCommitPrev;
 			m_preCommitHead.preCommitPrev->preCommitNext = trans;
 			m_preCommitHead.preCommitPrev = trans;
 			if (unlikely(!m_preCommitTxnQueues[m_currentTxnId & (m_preCommitTxnQueueCount - 1)].push(trans, 1000)))
@@ -75,12 +99,27 @@ namespace REPLICATOR {
 		}
 		int handleFault(applier* ap)
 		{
-			if (m_ignoreErrno.find(ap->getErrno) != m_ignoreErrno.end())
-				return 1;
-			if (m_reconnectErrno.find(ap->getErrno) != m_reconnectErrno.end())
+			int retryCount = 100;//todo
+			do
 			{
-				if(0!=ap->reconnect())
-			}
+				if (m_ignoreErrno.find(ap->getErrno()) != m_ignoreErrno.end())
+					return 1;
+				if (m_reconnectErrno.find(ap->getErrno()) != m_reconnectErrno.end())
+				{
+					if (0 != ap->reconnect())
+					{
+						retryCount--;
+						continue;
+					}
+					else
+						return 1;
+				}
+				if (m_reconnectErrno.find(ap->getErrno()) != m_reconnectErrno.end())
+				{
+
+				}
+			} while (1);
+
 
 		}
 		void executeTransactionThread(int id)
@@ -111,7 +150,7 @@ namespace REPLICATOR {
 									break;
 							}
 						}
-						if (!success&&m_ignoreErrno.find(ap->getErrno) == m_ignoreErrno.end())
+						if (!success && m_ignoreErrno.find(ap->getErrno()) == m_ignoreErrno.end())
 						{
 							m_running = false;
 							return;
@@ -144,9 +183,9 @@ namespace REPLICATOR {
 
 			}
 		}
-		void processConstrint(replicatorRecord* r, uint16_t &keyIdx,bool newOrOld)
+		void processConstrint(replicatorRecord* r, uint16_t& keyIdx, bool newOrOld, tableInfo* table)
 		{
-			META::tableMeta* meta = static_cast<DATABASE_INCREASE::DMLRecord*>(r->record)->meta;
+
 			if (static_cast<DATABASE_INCREASE::DMLRecord*>(r->record)->meta->m_primaryKey.count > 0)
 			{
 				if (likely(newOrOld || static_cast<DATABASE_INCREASE::DMLRecord*>(r->record)->isKeyUpdated(meta->m_primaryKey.keyIndexs, meta->m_primaryKey.count)))
@@ -174,16 +213,15 @@ namespace REPLICATOR {
 					r->blocks[keyIdx].type = UNUSED;
 				}
 				keyIdx++;
-
 			}
 		}
-		int putDML(tableInfo * table,DATABASE_INCREASE::DMLRecord* record)
+		int putDML(DATABASE_INCREASE::DMLRecord* record)
 		{
 			replicatorRecord* r;
 			if (record->head->type == DATABASE_INCREASE::R_UPDATE || record->head->type == DATABASE_INCREASE::R_REPLACE)
 				r = (replicatorRecord*)m_pool.alloc(sizeof(replicatorRecord*) * 2 * table->keyCount + sizeof(replicatorRecord));
 			else
-				r = (replicatorRecord*)m_pool.alloc(sizeof(replicatorRecord*)  * table->keyCount + sizeof(replicatorRecord));
+				r = (replicatorRecord*)m_pool.alloc(sizeof(replicatorRecord*) * table->keyCount + sizeof(replicatorRecord));
 			r->nextInTrans = nullptr;
 			r->tableInfo = table;
 			r->trans = m_currentTxn;
@@ -195,10 +233,25 @@ namespace REPLICATOR {
 				m_currentTxn->lastRecord = r;
 			}
 			uint16_t keyIdx = 0;
+			META::tableMeta* meta = static_cast<DATABASE_INCREASE::DMLRecord*>(r->record)->meta;
+			tableInfo* table = static_cast<tableInfo*>(meta->userData);
+			if (unlikely(table == nullptr))
+			{
+				table = new tableInfo(meta);
+				META::tableMeta* prevVersion = m_metaDataCollection->getPrevVersion(meta->m_id);
+				if (prevVersion == nullptr || prevVersion->userData == nullptr)
+					table->prev = nullptr;
+				else
+				{
+					table->prev = static_cast<tableInfo*>(meta->userData);
+					table->prev->next = table;
+				}
+				meta->userData = table;
+			}
 			processConstrint(r, keyIdx, true);
 			if (record->head->type == DATABASE_INCREASE::R_UPDATE || record->head->type == DATABASE_INCREASE::R_REPLACE)
 				processConstrint(r, keyIdx, false);
-			if (unlikely(table->ddlRunning))
+			if (unlikely(table->ddlRecord != nullptr))
 			{
 				if (table->ddlWaitListHead == nullptr)
 					r->nextWaitForDDL = nullptr;
@@ -212,7 +265,19 @@ namespace REPLICATOR {
 		int putDDL(DATABASE_INCREASE::DDLRecord* record)
 		{
 			SQL_PARSER::handle* handle = nullptr;
-			m_sqlParser->parse(handle, record->ddl);
+			SQL_PARSER::parseValue rtv = m_sqlParser->parse(handle, record->database, record->ddl);
+			if (rtv != SQL_PARSER::OK)
+			{
+				//todo
+			}
+			else
+			{
+				SQL_PARSER::handle* curentHandle = handle;
+				while (curentHandle != nullptr)
+				{
+
+				}
+			}
 		}
 		inline int releaseRecord(replicatorRecord* record)
 		{
@@ -265,7 +330,7 @@ namespace REPLICATOR {
 			else if (record->record->head->type == DATABASE_INCREASE::R_DDL)
 			{
 				replicatorRecord* ddlWait = table->ddlWaitListHead;
-				while (ddlWait!=nullpt)
+				while (ddlWait != nullpt)
 				{
 					if (--ddlWait->trans->blockCount == 0)
 					{
@@ -281,7 +346,7 @@ namespace REPLICATOR {
 			bufferPool::free(record);
 			if (unlikely(table->next != nullptr))
 			{
-				if (table->empty) 
+				if (table->empty)
 				{
 					if (--table->next->ddlRecord->trans->blockCount == 0)
 					{
@@ -327,7 +392,7 @@ namespace REPLICATOR {
 					bufferPool::free(txn);
 					txn = next;
 				}
-			} while (txn!=nullptr&&failedCount < m_preCommitTxnQueueCount);
+			} while (txn != nullptr && failedCount < m_preCommitTxnQueueCount);
 		}
 		int createNewTxn(DATABASE_INCREASE::record* record)
 		{
@@ -342,7 +407,7 @@ namespace REPLICATOR {
 			m_safeCheckPointHead.prev->next = newTxn;
 			m_safeCheckPointHead.prev = newTxn;
 
-			if (likely(m_currentTxn!=nullptr)&&0 != commit(m_currentTxn))
+			if (likely(m_currentTxn != nullptr) && 0 != commit(m_currentTxn))
 			{
 				return -1;
 			}
@@ -350,22 +415,22 @@ namespace REPLICATOR {
 		}
 		int put(DATABASE_INCREASE::record* record)
 		{
-			if(unlikely(checkCommittedTxn()<0)
+			if (unlikely(checkCommittedTxn() < 0)
 				return -1;
-			if (record->head->txnId != m_currentTxnId)
-				createNewTxn(record);
-			if (likely(record->head->type <= DATABASE_INCREASE::R_REPLACE))
-				return putDML(static_cast<DATABASE_INCREASE::DMLRecord>(record));
-			else if(record->head->type == DATABASE_INCREASE::R_DDL)
-				return putDDL(static_cast<DATABASE_INCREASE::DDLRecord>(record));
-			else if (record->head->type == DATABASE_INCREASE::R_HEARTBEAT)
-			{
-				createNewTxn(record);
-			}
-			else
-			{
+				if (record->head->txnId != m_currentTxnId)
+					createNewTxn(record);
+				if (likely(record->head->type <= DATABASE_INCREASE::R_REPLACE))
+					return putDML(static_cast<DATABASE_INCREASE::DMLRecord>(record));
+				else if (record->head->type == DATABASE_INCREASE::R_DDL)
+					return putDDL(static_cast<DATABASE_INCREASE::DDLRecord>(record));
+				else if (record->head->type == DATABASE_INCREASE::R_HEARTBEAT)
+				{
+					createNewTxn(record);
+				}
+				else
+				{
 
-			}
+				}
 
 		}
 	};

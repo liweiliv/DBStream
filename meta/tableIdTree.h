@@ -154,6 +154,44 @@ namespace META {
 				}
 			}
 		}
+		inline tableMeta* getPrevVersion(uint64_t tableId)
+		{
+			uint64_t id = tableMeta::tableID(tableId);
+			node* n = m_root;
+			for (;;)
+			{
+				if (n->serial)
+				{
+					uint16_t cid = (uint16_t)((id - n->startId) >> (n->level * 9));
+					if (cid >= 512)
+						return nullptr;
+					if (n->child[cid] == nullptr)
+						return nullptr;
+					if (n->level == 0)
+					{
+						tableMetaWrap* m = static_cast<tableMetaWrap*>(n->child[cid]);
+						assert(tableMeta::tableID(m->meta->m_id) == id);
+						if (m->meta->m_id < tableId)
+							return nullptr;
+						for (; m != nullptr;)
+						{
+							if (m->meta->m_id == tableId)
+								return m->prev==nullptr?nullptr:m->prev->meta;
+							m = m->prev;
+
+						}
+						return nullptr;
+					}
+					else
+						n = static_cast<node*>(n->child[cid]);
+				}
+				else
+				{
+					abort();//not support now
+				}
+			}
+
+		}
 		inline tableMeta *get(uint64_t tableId)
 		{
 			uint64_t id = tableMeta::tableID(tableId);

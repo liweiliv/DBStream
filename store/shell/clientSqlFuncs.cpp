@@ -65,9 +65,32 @@ namespace STORE {
 			SQL_PARSER::SQLColumnNameValue* columnValue = static_cast<SQL_PARSER::SQLColumnNameValue*>(value);
 			if (sql->joinedTables.size > 0)
 			{
-				if(sql->)
-				if (columnValue->table.empty()||)
+				if (columnValue->table.empty())
 					return nullptr;
+				if (!columnValue->database.empty())
+				{
+				}
+			}
+			else
+			{
+				if (!columnValue->database.empty() && sql->table->m_dbName != columnValue->database)
+					return nullptr;
+				if (!columnValue->table.empty() && sql->table->m_tableName != columnValue->table)
+				{
+					if (sql->tableAlias != nullptr)
+					{
+						if (!columnValue->database.empty() || strcmp(sql->tableAlias, columnValue->table.c_str()) != 0)
+							return nullptr;
+					}
+					else
+						return nullptr;
+				}
+				const META::columnMeta* columnMeta;
+				if (nullptr == (columnMeta = sql->table->getColumn(columnValue->columnName.c_str())))
+					return nullptr;
+				columnFiled* field = (columnFiled*)shellGlobalBufferPool.alloc(sizeof(columnFiled*));
+				field->init(sql->table, columnMeta, 0);
+
 			}
 			return nullptr;//todo
 		}
@@ -220,6 +243,21 @@ namespace STORE {
 			if (exp == nullptr)
 				return SQL_PARSER::INVALID;
 			sql->selectFields.add(exp);
+			return SQL_PARSER::OK;
+		}
+		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectField(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
+		{
+			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
+			sql->rawSelectFields.add(value);
+			sql->selectFieldAlias.add(nullptr);
+			return SQL_PARSER::OK;
+		}
+		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectFiledAlias(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
+		{
+			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
+			if(sql->rawSelectFields.size==0)
+				return SQL_PARSER::INVALID;
+			sql->selectFieldAlias.list[sql->selectFieldAlias.size - 1] = static_cast<SQL_PARSER::SQLStringValue*>(value)->value.c_str();
 			return SQL_PARSER::OK;
 		}
 		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectColumnField(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)

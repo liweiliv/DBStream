@@ -52,6 +52,7 @@ namespace META {
 		~metaDataCollection();
 		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
 		tableMeta * get(uint64_t tableID);
+		tableMeta * getPrevVersion(uint64_t tableID);
 		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint);
 
 		tableMeta * getTableMetaFromRemote(uint64_t tableID);

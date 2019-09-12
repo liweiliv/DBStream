@@ -16,7 +16,7 @@ namespace REPLICATOR
 	static constexpr auto READ_TIMEOUT = "readTimeout";
 	static constexpr auto WRITE_TIMEOUT = "writeTimeout";
 
-	static constexpr auto STRATEGY_SECTION = "strategy."
+	static constexpr auto STRATEGY_SECTION = "strategy.";
 
 	static constexpr auto CHECKPOINT_SECTION = "checkpoint.";
 

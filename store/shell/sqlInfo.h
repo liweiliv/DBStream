@@ -40,14 +40,16 @@ namespace STORE
 		};
 
 		struct selectSqlInfo :public sqlBasicInfo {
-			SQL_PARSER::SQLTableNameValue * table;
-			sqlList<Field*> selectFields;
+			const META::tableMeta * table;
 			uint64_t selectTableId;
+			const char* tableAlias;
+			sqlList<const META::tableMeta*> joinedTables;
+			sqlList<Field*> selectFields;
+			sqlList<const char*> selectFieldAlias;
 			uint64_t* joinedTableIds;
 			sqlList<SQL_PARSER::SQLValue*> rawSelectFields;
 			sqlList<SQL_PARSER::SQLColumnNameValue*> inGroupColumns;
 			sqlList<SQL_PARSER::SQLColumnNameValue*> notInGroupColumns;
-			sqlList<SQL_PARSER::SQLTableNameValue*> joinedTables;
 			sqlList<const char *> joinedUsingColumns;
 			JOIN_TYPE joinType;
 			expressionField* joinedCondition;

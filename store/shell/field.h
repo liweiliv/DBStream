@@ -80,7 +80,6 @@ namespace STORE
 
 		struct columnFiled :public Field {
 			const char* name;
-			const char* alias;
 			uint64_t tableId;
 			uint8_t tableJoinId;			
 			const META::columnMeta* column;
@@ -140,13 +139,12 @@ namespace STORE
 				column = columnMeta;
 				return true;
 			}
-			void init(const META::tableMeta* table, const META::columnMeta* columnMeta,const char * alias, uint8_t tableJoinId)
+			void init(const META::tableMeta* table, const META::columnMeta* columnMeta, uint8_t tableJoinId)
 			{
 				initField(COLUMN_FIELD, columnMeta->m_columnType, _getValue);
 				column = columnMeta;
 				tableId = table->tableID(table->m_id);
 				this->tableJoinId = tableJoinId;
-				this->alias = alias;
 				this->name = columnMeta->m_columnName.c_str();
 			}
 		};

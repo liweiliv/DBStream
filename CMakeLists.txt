@@ -119,6 +119,15 @@ TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+#mysqlApplier
+include_directories(/usr/include/mysql)
+aux_source_directory(replicator/mysqlApplier mysqlApplierDir)
+add_library(mysqlApplier SHARED ${mysqlApplierDir})
+TARGET_LINK_LIBRARIES(mysqlApplier  util  meta  ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(mysqlApplier pthread ssl crypto rt z)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
 TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta memory)
