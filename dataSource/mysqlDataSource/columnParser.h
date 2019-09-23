@@ -7,8 +7,8 @@
 
 #ifndef COLUMNPARSER_H_
 #define COLUMNPARSER_H_
-#include "../../meta/metaData.h"
-#include "../../message/record.h"
+#include "meta/metaData.h"
+#include "message/record.h"
 #include <assert.h>
 namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_TINY(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord * record,

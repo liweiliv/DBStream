@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "../meta/columnType.h"
+#include "meta/columnType.h"
 #include "indexInfo.h"
 namespace STORE {
 	struct varSolidIndex {

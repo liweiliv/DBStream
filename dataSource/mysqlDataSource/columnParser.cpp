@@ -10,9 +10,9 @@
 #include <float.h>
 #include "columnParser.h"
 #include "mysql/decimal.h"
-#include "../../util/itoaSse.h"
-#include "../../util/dtoa.h"
-#include "../../util/likely.h"
+#include "util/itoaSse.h"
+#include "util/dtoa.h"
+#include "util/likely.h"
 namespace DATA_SOURCE {
 	constexpr const int DATETIME_MAX_DECIMALS = 6;
 #define test_bitmap(m,idx) ((m)[(idx)>>3]&(1<<((idx)&0x07)))

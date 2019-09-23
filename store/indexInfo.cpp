@@ -1,9 +1,9 @@
 #include<string.h>
 #include<assert.h>
 #include "indexInfo.h"
-#include"../util/arena.h"
-#include "../message/record.h"
-#include "../meta/metaData.h"
+#include"util/arena.h"
+#include "message/record.h"
+#include "meta/metaData.h"
 namespace STORE {
 	binaryType::binaryType() :size(0),data(nullptr){
 

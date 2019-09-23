@@ -1,8 +1,8 @@
 #pragma once
 #define ST_WITHOUT_COUNT
-#include "../util/nonBlockStack.h"
-#include "../util/unblockedQueue.h"
-#include "../util/threadLocal.h"
+#include "util/nonBlockStack.h"
+#include "util/unblockedQueue.h"
+#include "util/threadLocal.h"
 #include "job.h"
 namespace STORE {
 	extern thread_local job* currentJob;

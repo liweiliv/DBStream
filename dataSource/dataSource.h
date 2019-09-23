@@ -1,7 +1,7 @@
 #pragma once
 #include<string>
 #include "dataSourceConf.h"
-#include "../util/winDll.h"
+#include "util/winDll.h"
 class config;
 namespace META {
 	class metaDataCollection;

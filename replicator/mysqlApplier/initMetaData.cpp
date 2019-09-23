@@ -2,7 +2,7 @@
 #include <string>
 #include <string.h>
 #include <thread>
-#include"initMetaData.h"
+#include "initMetaData.h"
 #include "glog/logging.h"
 #include "meta/metaData.h"
 #include "util/winString.h"
@@ -306,9 +306,9 @@ namespace REPLICATOR {
 	{
 		va_list ap;
 		va_start(ap, _sql);
-		int len = _vscprintf_p(sql, ap);
+		int len = _vscprintf_p(_sql, ap);
 		char* sql = new char[len + 1];
-		sprintf(s, ap);
+		sprintf(sql, ap);
 		va_end(ap);
 		MYSQL_RES* rs = nullptr;
 		realQuery(sql, rs);
@@ -602,14 +602,13 @@ namespace REPLICATOR {
 			delete meta;
 			return -1;
 		}
-		MYSQL_ROW row;
 		std::map<std::string, int> keyMap;
 		int ukId = 0;
 		while (nullptr != (row = mysql_fetch_row(rs)))
 		{
 			if (strncasecmp(row[4], "UNIQUE", 6) == 0)
 			{
-				keyMap.insert(std::pair<string, int>(row[1], ukId++));
+				keyMap.insert(std::pair<std::string, int>(row[1], ukId++));
 			}
 			else if (strncasecmp(row[4], "KEY", 3) == 0)
 				meta->m_indexCount++;

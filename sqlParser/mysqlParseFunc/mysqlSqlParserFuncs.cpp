@@ -5,10 +5,10 @@
  *      Author: liwei
  */
 #include <assert.h>
-#include "../../meta/metaChangeInfo.h"
-#include "../../meta/charset.h"
-#include "../sqlParserHandle.h"
-#include  "../../util/winDll.h"
+#include "meta/metaChangeInfo.h"
+#include "meta/charset.h"
+#include "sqlparser/sqlParserHandle.h"
+#include  "util/winDll.h"
 using namespace META;
 namespace SQL_PARSER {
 #define  NOT_FIXED_DEC 31

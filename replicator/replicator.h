@@ -1,6 +1,6 @@
 #pragma once
-#include "../util/config.h"
-#include "../util/winDll.h"
+#include "util/config.h"
+#include "util/winDll.h"
 #include "replicatorConf.h"
 #include <set>
 namespace DATABASE_INCREASE {

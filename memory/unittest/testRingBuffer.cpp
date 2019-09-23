@@ -1,4 +1,4 @@
-#include "../ringBuffer.h"
+#include "memory/ringBuffer.h"
 #include <assert.h>
 void test()
 {

@@ -1,5 +1,5 @@
-#include "../appendingIndex.h"
-#include "../..//meta/metaDataCollection.h"
+#include "store/appendingIndex.h"
+#include "meta/metaDataCollection.h"
 #include <assert.h>
 #include <map>
 bool testIntIndex()

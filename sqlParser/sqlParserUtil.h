@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "..//util/winDll.h"
+#include "util/winDll.h"
 static inline bool isSpaceOrComment(const char *str)
 {
     if ((*str == ' ' || *str == '\t' || *str == '\n'))

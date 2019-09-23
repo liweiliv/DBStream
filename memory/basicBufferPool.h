@@ -2,12 +2,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "../util/nonBlockStack.h"
-#include "../util/spinlock.h"
-#include "../util/dualLinkList.h"
-#include "../util/linkList.h"
-#include "../util/threadLocal.h"
-#include "../util/winDll.h"
+#include "util/nonBlockStack.h"
+#include "util/spinlock.h"
+#include "util/dualLinkList.h"
+#include "util/linkList.h"
+#include "util/threadLocal.h"
+#include "util/winDll.h"
 #define getCache(c,tc) if(unlikely(nullptr==(((c)=(tc).get())))){(tc).set((c)=new cache(this));}
 #define getCacheWithDeclare(c,tc) cache *c ;getCache(c,tc)
 class basicBufferPool

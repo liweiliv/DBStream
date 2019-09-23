@@ -32,18 +32,18 @@ using namespace std;
 //#define DEBUG
 namespace SQL_PARSER
 {
-	bool sqlParser::getLoopCondition(jsonValue* loop,SQLWord *& condition)
+	bool sqlParser::getLoopCondition(const jsonValue* loop,SQLWord *& condition)
 	{
 		if (loop->t == jsonValue::J_STRING)
 		{
-			if (strncasecmp(static_cast<jsonString*>(loop)->m_value.c_str(), "always", 7) == 0)
+			if (strncasecmp(static_cast<const jsonString*>(loop)->m_value.c_str(), "always", 7) == 0)
 			{
 				condition = nullptr;
 				return true;
 			}
 			else
 			{
-				condition = SQLSingleWord::create(false, static_cast<jsonString*>(loop)->m_value);
+				condition = SQLSingleWord::create(false, static_cast<const jsonString*>(loop)->m_value);
 				if (condition != nullptr)
 					return true;
 				else
@@ -52,7 +52,7 @@ namespace SQL_PARSER
 		}
 		else if (loop->t == jsonValue::J_OBJECT)
 		{
-			condition = loadWordArrayFromJson(static_cast<jsonObject*>(loop), nullptr, nullptr);
+			condition = loadWordArrayFromJson(static_cast<const jsonObject*>(loop), nullptr, nullptr);
 			if (condition != nullptr)
 				return true;
 			else
@@ -82,7 +82,7 @@ namespace SQL_PARSER
 		}
 		return func;
 	}
-	bool sqlParser::forwardDeclare(jsonArray * value)
+	bool sqlParser::forwardDeclare(const jsonArray * value)
 	{
 		for (std::list<jsonValue*>::const_iterator iter = value->m_values.begin(); iter != value->m_values.end(); iter++)
 		{
@@ -101,7 +101,7 @@ namespace SQL_PARSER
 		}
 		return true;
 	}
-	SQLWord* sqlParser::getInclude(jsonString* value, const std::string& topName, SQLWord* top)
+	SQLWord* sqlParser::getInclude(const jsonString* value, const std::string& topName, SQLWord* top)
 	{
 		if (value->m_value == topName)//recursive 
 		{
@@ -113,18 +113,18 @@ namespace SQL_PARSER
 			return top;
 		}
 		std::map<std::string, SQLWordArray*>::iterator iter = m_parseTree.find(
-			static_cast<jsonString*>(value)->m_value);
+			static_cast<const jsonString*>(value)->m_value);
 		if (iter == m_parseTree.end())
 		{
-			LOG(ERROR) << "can not find INCLUDE WORD: [" << static_cast<jsonString*>(value)->m_value << "]" ;
+			LOG(ERROR) << "can not find INCLUDE WORD: [" << static_cast<const jsonString*>(value)->m_value << "]" ;
 			return nullptr;
 		}
 		iter->second->include(); //it will not be free by parent when destroy
 		return iter->second;
 	}
-	SQLSingleWord* sqlParser::loadSingleWordFromJson(jsonObject* json)
+	SQLSingleWord* sqlParser::loadSingleWordFromJson(const jsonObject* json)
 	{
-		jsonValue* value = json->get("OPT");
+		const jsonValue* value = json->get("OPT");
 		bool optional = false; //default  false
 		parserFuncType func = nullptr;
 		if (value != nullptr)
@@ -134,7 +134,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			optional = static_cast<jsonBool*>(value)->m_value;
+			optional = static_cast<const jsonBool*>(value)->m_value;
 		}
 		if (nullptr != (value = json->get("F")))
 		{
@@ -143,7 +143,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "function type expect string type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			if (nullptr == (func = static_cast<parserFuncType>(getFunc(static_cast<jsonString*>(value)))))
+			if (nullptr == (func = static_cast<parserFuncType>(getFunc(static_cast<const jsonString*>(value)))))
 			{
 				LOG(ERROR) << "can not fund func: [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -155,7 +155,7 @@ namespace SQL_PARSER
 			LOG(ERROR) << "expect key value pair :\"K\":\"type info\" by string type in [" << json->toString() << "]";
 			return nullptr;
 		}
-		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<jsonString*>(value)->m_value);
+		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<const jsonString*>(value)->m_value);
 		if (v == nullptr)
 		{
 			LOG(ERROR) << "create SQLSingleWord failed in [" << json->toString() << "]";
@@ -165,23 +165,23 @@ namespace SQL_PARSER
 		v->m_comment = json->toString();
 		return v;
 	}
-	SQLWordArray*sqlParser::loadWordArrayFromJson(jsonObject* json, const char* name, SQLWordArray *top)
+	SQLWordArray*sqlParser::loadWordArrayFromJson(const jsonObject* json, const char* name, SQLWordArray *top)
 	{
-		jsonValue* value ;
+		const jsonValue* value ;
 		bool optional = false; //default  false
 		bool OR = false;
 		bool loop = false;
 		SQLWord* loopCondition = nullptr;
 		SQLWordArray* array = nullptr;
 		SQL_TYPE sqlType = UNSUPPORT;
-		if ((value = static_cast<jsonObject*>(json)->get("TYPE")) != NULL || (value = static_cast<jsonObject*>(json)->get("type")) != NULL)
+		if ((value = static_cast<const jsonObject*>(json)->get("TYPE")) != NULL || (value = static_cast<const jsonObject*>(json)->get("type")) != NULL)
 		{
 			if (value->t != jsonObject::J_STRING)
 			{
 				LOG(ERROR) << "expect string type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			SQL_TYPE_TREE::const_iterator iter = m_sqlTypes.find(static_cast<jsonString*>(value)->m_value.c_str());
+			SQL_TYPE_TREE::const_iterator iter = m_sqlTypes.find(static_cast<const jsonString*>(value)->m_value.c_str());
 			if (iter != m_sqlTypes.end())
 				sqlType = iter->second;
 		}
@@ -192,7 +192,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			optional = static_cast<jsonBool*>(value)->m_value;
+			optional = static_cast<const jsonBool*>(value)->m_value;
 		}
 		if ((value = json->get("OR")) != nullptr)
 		{
@@ -201,7 +201,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			OR = static_cast<jsonBool*>(value)->m_value;
+			OR = static_cast<const jsonBool*>(value)->m_value;
 		}
 		if (nullptr != (value = json->get("DECLARE")))
 		{
@@ -210,7 +210,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect array type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			if (!forwardDeclare(static_cast<jsonArray*>(value)))
+			if (!forwardDeclare(static_cast<const jsonArray*>(value)))
 			{
 				LOG(ERROR) << "forwardDeclare failed in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -266,9 +266,9 @@ namespace SQL_PARSER
 		}
 		if (top == nullptr)
 			top = array;
-		for (list<jsonValue*>::iterator iter =
-			static_cast<jsonArray*>(value)->m_values.begin();
-			iter != static_cast<jsonArray*>(value)->m_values.end(); iter++)
+		for (list<jsonValue*>::const_iterator iter =
+			static_cast<const jsonArray*>(value)->m_values.begin();
+			iter != static_cast<const jsonArray*>(value)->m_values.end(); iter++)
 		{
 			if ((*iter)->t != jsonObject::J_OBJECT)
 			{
@@ -277,7 +277,7 @@ namespace SQL_PARSER
 				return nullptr;
 			}
 			SQLWord* child;
-			jsonValue* inc;
+			const jsonValue* inc;
 			if (static_cast<jsonObject*>(*iter)->get("K") != nullptr)
 			{
 				child = loadSingleWordFromJson(static_cast<jsonObject*>(*iter));
@@ -294,7 +294,7 @@ namespace SQL_PARSER
 					delete array;
 					return nullptr;
 				}
-				child = getInclude(static_cast<jsonString*>(inc), name, top);
+				child = getInclude(static_cast<const jsonString*>(inc), name, top);
 			}
 			if (child == nullptr)
 			{
@@ -498,7 +498,7 @@ namespace SQL_PARSER
 					return -1;
 				}
 				jsonObject* sentence = static_cast<jsonObject*>((*iter).value);
-				jsonValue* value;
+				const jsonValue* value;
 				bool head = false;
 
 				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t!= jsonValue::J_ARRAY)
@@ -515,7 +515,7 @@ namespace SQL_PARSER
 						LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
 						return -1;
 					}
-					head = static_cast<jsonBool*>(value)->m_value;
+					head = static_cast<const jsonBool*>(value)->m_value;
 				}
 
 				SQLWordArray* s = loadWordArrayFromJson(sentence, (*iter).key.c_str(),nullptr);

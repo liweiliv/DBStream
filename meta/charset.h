@@ -6,7 +6,7 @@
  *      Author: liwei
  */
 #include <stdint.h>
-#include "../util/winDll.h"
+#include "util/winDll.h"
 struct charsetInfo {
 	const char * name;
 	uint8_t nameSize;

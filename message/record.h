@@ -399,7 +399,10 @@ namespace DATABASE_INCREASE
 			else
 				return columns + varLengthColumns[meta->m_realIndexInRowFormat[index]];
 		}
-
+		inline bool columnIsNull(uint16_t index)const
+		{
+			return !TEST_BITMAP(nullBitmap, index);
+		}
 		inline uint32_t varColumnSize(uint16_t index)const
 		{
 			if (!TEST_BITMAP(nullBitmap, index))
@@ -440,6 +443,17 @@ namespace DATABASE_INCREASE
 				return *(uint32_t*)(value - sizeof(uint32_t));
 			else
 				return varColumnSize(index);
+		}
+		inline bool oldColumnIsNull(uint16_t index)const
+		{
+			if (TEST_BITMAP(updatedBitmap, index))
+			{
+				return !TEST_BITMAP(updatedNullBitmap, index);
+			}
+			else
+			{
+				return !TEST_BITMAP(nullBitmap, index);
+			}
 		}
 		inline bool isKeyUpdated(const uint16_t* key, uint16_t keyColumnCount) const
 		{
@@ -672,6 +686,14 @@ namespace DATABASE_INCREASE
 		static inline uint32_t allocSize(uint32_t dataBaseSize,uint32_t ddlSize)
 		{
 			return sizeof(recordHead) + sizeof(sqlMode) + sizeof(charsetId) + 1 + dataBaseSize + ddlSize + 1;
+		}
+		inline uint8_t databaseSize()const
+		{
+			return *(const uint8_t*)(database - 1);
+		}
+		inline uint32_t ddlSize()const
+		{
+			return head->minHead.size-(ddl - data);
 		}
 		std::String toString()
 		{

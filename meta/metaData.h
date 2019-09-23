@@ -15,7 +15,7 @@
 #include <assert.h>
 #include "mysqlTypes.h"
 #include "charset.h"
-#include "../util/winDll.h"
+#include "util/winDll.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }

@@ -187,16 +187,16 @@ jsonObject::~jsonObject()
 {
     clean();
 }
-jsonValue * jsonObject::get(const string &s)
+const jsonValue * jsonObject::get(const std::string &s)const
 {
-	std::map<std::string, jsonValue*>::iterator iter = m_values.find(s);
+	std::map<std::string, jsonValue*>::const_iterator iter = m_values.find(s);
 	if (iter == m_values.end())
 		return nullptr;
 	return iter->second;
 }
-jsonValue* jsonObject::get(const char* s)
+const jsonValue* jsonObject::get(const char* s) const
 {
-	std::map<std::string, jsonValue*>::iterator iter = m_values.find(s);
+	std::map<std::string, jsonValue*>::const_iterator iter = m_values.find(s);
 	if (iter == m_values.end())
 		return nullptr;
 	return iter->second;

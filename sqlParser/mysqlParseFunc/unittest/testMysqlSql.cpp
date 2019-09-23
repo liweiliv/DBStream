@@ -4,11 +4,11 @@
  *  Created on: 2019年4月27日
  *      Author: liwei
  */
-#include "../../sqlParser.h"
-#include "../../sqlParserUtil.h"
-#include "../../../meta/metaChangeInfo.h"
+#include "sqlparser/sqlParser.h"
+#include "sqlparser/sqlParserUtil.h"
+#include "meta/metaChangeInfo.h"
 #include "stdio.h"
-#include "../../../util/stackLog.h"
+#include "util/stackLog.h"
 #ifdef OS_WIN
 #pragma comment(lib,"sqlParser.lib")
 #define mysqlFuncLib "mysqlParserFuncs.dll"

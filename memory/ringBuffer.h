@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../util/barrier.h"
-#include "../util/likely.h"
+#include "util/barrier.h"
+#include "util/likely.h"
 #include <atomic>
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))

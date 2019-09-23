@@ -11,9 +11,9 @@
 #include <map>
 #include "mysqlBinlogReader.h"
 #include "BinaryLogEvent.h"
-#include "../../memory/ringBuffer.h"
-#include "../../util/fileList.h"
-#include "..//..//util/winString.h"
+#include "memory/ringBuffer.h"
+#include "util/fileList.h"
+#include "util/winString.h"
 #include "BinlogFile.h"
 
 

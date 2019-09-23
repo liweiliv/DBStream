@@ -7,8 +7,8 @@
 
 #ifndef FILTER_H_
 #define FILTER_H_
-#include "../meta/metaDataCollection.h"
-#include "../message/record.h"
+#include "meta/metaDataCollection.h"
+#include "message/record.h"
 namespace STORE{
 	#define 	FL_CHECKPOINT		0x01
 	#define 	FL_TABLE_ID			0x02

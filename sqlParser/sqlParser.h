@@ -37,13 +37,13 @@ namespace SQL_PARSER
 #else
 		void* m_funcsHandle;
 #endif
-		bool getLoopCondition(jsonValue* loop, SQLWord*& condition);
+		bool getLoopCondition(const jsonValue* loop, SQLWord*& condition);
 		bool checkWords();
 		parserFuncType getFunc(const jsonString* json);
-		bool forwardDeclare(jsonArray* value);
-		SQLWord* getInclude(jsonString* value, const std::string& topName, SQLWord* top);
-		SQLWordArray* loadWordArrayFromJson (jsonObject* json, const char* name, SQLWordArray* top);
-		SQLSingleWord* loadSingleWordFromJson(jsonObject* json);
+		bool forwardDeclare(const jsonArray* value);
+		SQLWord* getInclude(const jsonString* value, const std::string& topName, SQLWord* top);
+		SQLWordArray* loadWordArrayFromJson (const jsonObject* json, const char* name, SQLWordArray* top);
+		SQLSingleWord* loadSingleWordFromJson(const jsonObject* json);
 
 		void (*m_initUserDataFunc)(handle* h);
 		void (*m_destroyUserDataFunc)(handle* h);

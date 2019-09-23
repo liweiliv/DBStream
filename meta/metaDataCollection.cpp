@@ -9,14 +9,14 @@
 #include "metaDataCollection.h"
 #include "metaData.h"
 #include "glog/logging.h"
-#include "../sqlParser/sqlParser.h"
-#include "../store/client/client.h"
+#include "sqlParser/sqlParser.h"
+#include "store/client/client.h"
 #include "charset.h"
 #include "metaTimeline.h"
-#include "../message/record.h"
+#include "message/record.h"
 #include "metaChangeInfo.h"
-#include "../util/barrier.h"
-#include "../util/likely.h"
+#include "util/barrier.h"
+#include "util/likely.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {

@@ -11,44 +11,9 @@
 #include "messageWrap.h"
 #include "constraint.h"
 #include "applier.h"
+#include "tableInfo.h"
 namespace REPLICATOR {
-	struct tableInfo {
-		uint64_t id;
-		bool empty;
-		std::string tableName;
-		void* primaryKey;
-		void** uniqueKeys;
-		uint16_t uniqueKeysCount;
-		uint16_t keyCount;
-		replicatorRecord* ddlRecord;
-		replicatorRecord* ddlWaitListHead;
-		const META::tableMeta* meta;
-		tableInfo* next;
-		tableInfo* prev;
-		tableInfo(const META::tableMeta* meta) :id(meta->m_id), empty(true), tableName(meta->m_tableName), uniqueKeysCount(meta->m_uniqueKeysCount), primaryKey(nullptr), uniqueKeys(nullptr), keyCount(meta->m_uniqueKeysCount + (meta->m_primaryKey.count > 0:1 : 0)), ddlRecord(nullptr), ddlWaitListHead(nullptr), meta(meta), next(nullptr), prev(nullptr)
-		{
-			if (meta->m_primaryKey.count > 0)
-				primaryKey = createBukcet(meta, &meta->m_primaryKey);
-			if (meta->m_uniqueKeysCount > 0)
-			{
-				uniqueKeys = new void* [meta->m_uniqueKeysCount];
-				for (int idx = 0; idx < meta->m_uniqueKeysCount; idx++)
-					uniqueKeys[idx] = createBukcet(meta, &meta->m_uniqueKeys[idx]);
-			}
-		}
-		~tableInfo()
-		{
-			if (primaryKey != nullptr)
-				destroyBukcet(meta, &meta->m_primaryKey, primaryKey);
-			if (uniqueKeys != nullptr)
-			{
-
-				for (int idx = 0; idx < uniqueKeysCount; idx++)
-					destroyBukcet(meta, &meta->m_uniqueKeys[idx], uniqueKeys[idx]);
-				delete[] uniqueKeys;
-			}
-		}
-	};
+	
 	typedef spp::sparse_hash_map<const char*, META::MetaTimeline<tableInfo>*, StrHash, StrCompare> tableTree;
 	struct databaseInfo {
 		tableTree tables;

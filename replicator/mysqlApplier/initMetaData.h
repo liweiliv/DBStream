@@ -12,7 +12,7 @@ namespace REPLICATOR {
 		MYSQL* m_conn;
 		MYSQL_RES* doQueryByDataBases(const char* sql, const std::vector<std::string>& databases);
 		MYSQL_RES* doQueryByString(const char* _sql, ...);
-
+		int realQuery(const char* sql, MYSQL_RES*& rs);
 		int getColumnInfo(META::columnMeta* column, MYSQL_ROW row);
 		int loadAllKeyColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >& constraints);
 		int loadAllDataBases(META::metaDataCollection* collection, const std::vector<std::string>& databases);

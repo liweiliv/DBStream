@@ -1,8 +1,8 @@
 #pragma once
 #include <stdint.h>
-#include "../memory/bufferPool.h"
-#include "../util/threadLocal.h"
-#include "../util/ref.h"
+#include "memory/bufferPool.h"
+#include "util/threadLocal.h"
+#include "util/ref.h"
 namespace STORE {
 	struct page {
 		uint64_t pageId;

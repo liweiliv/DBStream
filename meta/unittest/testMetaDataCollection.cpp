@@ -5,10 +5,10 @@
  *      Author: liwei
  */
 #include <stdio.h>
-#include "../../sqlParser/sqlParserUtil.h"
+#include "sqlParser/sqlParserUtil.h"
 #include "stdio.h"
-#include "../../util/stackLog.h"
-#include "../metaDataCollection.h"
+#include "util/stackLog.h"
+#include "meta/metaDataCollection.h"
 #ifdef OS_WIN
 #include <windows.h>
 #define mysqlFuncLib "mysqlParserFuncs.dll"

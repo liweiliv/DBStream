@@ -1,5 +1,5 @@
 #pragma once
-#include "../message/record.h"
+#include "message/record.h"
 namespace REPLICATOR {
 	struct transaction;
 	struct replicatorRecord;
@@ -23,7 +23,7 @@ namespace REPLICATOR {
 		replicatorRecord* nextWaitForDDL;
 		replicatorRecord* mergePrev;
 		replicatorRecord* mergeNext;
-		void* tableInfo;
+		void* tableInfo; 
 		transaction* trans;
 
 		uint16_t prevRecordCount;

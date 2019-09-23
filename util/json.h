@@ -66,8 +66,8 @@ public:
     std::list<objectKeyValuePair> m_valueList;
     std::map<std::string, jsonValue *> m_values;
     jsonObject(const char * data=NULL);
-    jsonValue * get(const string &s);
-	jsonValue* get(const char* s);
+    const jsonValue * get(const string &s)const;
+	const jsonValue* get(const char* s)const;
     ~jsonObject();
     void clean();
     int parse(const char * data);

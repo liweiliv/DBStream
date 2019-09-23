@@ -12,9 +12,9 @@
 #include "userHandle.h"
 #include "userManager.h"
 #include "storeError.h"
-#include "../sqlParser/sqlParser.h"
+#include "sqlParser/sqlParser.h"
 #include "schedule.h"
-#include "../glog/logging.h"
+#include "glog/logging.h"
 namespace STORE
 {
 #define CMD_AUTH 0x01

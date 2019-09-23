@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "schedule.h"
-#include "../util/threadLocal.h"
+#include "util/threadLocal.h"
 namespace STORE {
         extern thread_local job* currentJob;
 	class jobProcess {

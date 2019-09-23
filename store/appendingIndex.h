@@ -10,11 +10,11 @@
 #include <stdint.h>
 #include <string.h>
 #include "indexInfo.h"
-#include "../util/skiplist.h"
-#include "../meta/metaData.h"
-#include "../message/record.h"
+#include "util/skiplist.h"
+#include "meta/metaData.h"
+#include "message/record.h"
 #include "iterator.h"
-#include "../meta/columnType.h"
+#include "meta/columnType.h"
 namespace STORE {
 	/*every key may have multi record in one block,use keyChildInfo to save those records*/
 	struct keyChildInfo {

@@ -1,7 +1,7 @@
 #include "charset.h"
 #include <string.h>
 #ifdef OS_WIN
-#include "../util/winString.h"
+#include "util/winString.h"
 #endif // OS_WIN
 
 struct charsetStringInfo {

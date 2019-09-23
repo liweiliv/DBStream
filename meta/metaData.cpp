@@ -1,5 +1,5 @@
 #include "metaData.h"
-#include "../message/record.h"
+#include "message/record.h"
 namespace META {
 	tableMeta::tableMeta() :m_charset(nullptr), m_columns(NULL),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
 		m_columnsCount(0), m_id(0),  m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr),userData(nullptr)
