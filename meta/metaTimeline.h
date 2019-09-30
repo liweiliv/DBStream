@@ -24,7 +24,7 @@ namespace META {
 		}
 		~MetaTimeline()
 		{
-			purge(0xffffffffffffffffUL);
+			purge(0xffffffffffffffffULL);
 		}
 		void setID(uint64_t id) {
 			m_id = id;
@@ -34,7 +34,7 @@ namespace META {
 			return m_name;
 		}
 		/*can be concurrent*/
-		inline T* get(uint64_t originCheckPoint)
+		inline T* get(uint64_t originCheckPoint= 0xffffffffffffffffULL)
 		{
 			MetaInfo* current = m_current;
 			barrier;

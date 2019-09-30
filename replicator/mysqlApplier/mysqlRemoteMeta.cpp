@@ -2,7 +2,8 @@
 #include <string>
 #include <string.h>
 #include <thread>
-#include "initMetaData.h"
+#include "mysql.h"
+#include "mysqlRemoteMeta.h"
 #include "glog/logging.h"
 #include "meta/metaData.h"
 #include "util/winString.h"
@@ -13,16 +14,16 @@ namespace REPLICATOR {
 	static constexpr auto SELECT_ALL_COLUMNS_OF_TABLE = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
 
 	static constexpr auto SELECT_ALL_CONSTRAINT = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_CONSTRAINT_OF_TABLE = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
+	static constexpr auto SELECT_ALL_CONSTRAINT_OF_TABLE = "select CONSTRAINT_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
 
 	static constexpr auto SELECT_ALL_KEY_COLUMN = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_KEY_COLUMN_OF_TABLE = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
+	static constexpr auto SELECT_ALL_KEY_COLUMN_OF_TABLE = "select CONSTRAINT_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA = `%s` and TABLE_NAME = `%s` ";
 
 	static constexpr auto SELECT_ALL_TABLE = "select TABLE_SCHEMA,TABLE_NAME,TABLE_TYPE,ENGINE,TABLE_COLLATION from information_schema.TABLES where TABLE_SCHEMA in (%s)";
 	static constexpr auto SELECT_ALL_SCHEMA = "select SCHEMA_NAME ,DEFAULT_CHARACTER_SET_NAME from information_schema.SCHEMATA where SCHEMA_NAME in (%s) and SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
 	static constexpr auto SELECT_ALL_USER_SCHEMA = "select SCHEMA_NAME  from information_schema.SCHEMATA where SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
 
-	initMetaData::initMetaData(mysqlConnector* connector) :m_connector(connector), m_conn(nullptr)
+	mysqlRemoteMeta::mysqlRemoteMeta(mysqlConnector* connector) :m_connector(connector), m_conn(nullptr)
 	{
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("int", MYSQL_TYPE_LONG));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("tinyint", MYSQL_TYPE_TINY));
@@ -110,7 +111,7 @@ namespace REPLICATOR {
 		}
 		return 0;
 	}
-	int initMetaData::getColumnInfo(META::columnMeta* column, MYSQL_ROW row)
+	int mysqlRemoteMeta::getColumnInfo(META::columnMeta* column, MYSQL_ROW row)
 	{
 		column->m_columnName = row[0];
 		column->m_columnIndex = atoi(row[1])-1;
@@ -152,7 +153,7 @@ namespace REPLICATOR {
 			column->m_size = (uint64_t)atol(row[11]);
 		return 0;
 	}
-	int initMetaData::loadAllColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases)
+	int mysqlRemoteMeta::loadAllColumns(const std::vector<std::string>& databases)
 	{
 		int ret = 0;
 		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_COLUMNS, databases);
@@ -165,7 +166,7 @@ namespace REPLICATOR {
 		MYSQL_ROW row;
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
-			META::tableMeta* meta = collection->get(row[3], row[4], 1);
+			META::tableMeta* meta = m_metaDataCollection->get(row[3], row[4], 1);
 			if (meta == nullptr)
 				continue;
 			META::columnMeta* column = new META::columnMeta();
@@ -211,7 +212,7 @@ namespace REPLICATOR {
 			{
 				if (ret == 0)
 				{
-					META::tableMeta* meta = collection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
+					META::tableMeta* meta = m_metaDataCollection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
 					meta->m_columns = new META::columnMeta[tableIter->second->size()];
 					for (std::map<int, META::columnMeta*>::iterator columnIter = tableIter->second->begin(); columnIter != tableIter->second->end(); columnIter++)
 						meta->m_columns[meta->m_columnsCount++] = *columnIter->second;
@@ -229,7 +230,7 @@ namespace REPLICATOR {
 		std::map<int, uint16_t> columns;
 		int type;
 	};
-	int initMetaData::loadAllKeyColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > &constraints)
+	int mysqlRemoteMeta::loadAllKeyColumns(const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > &constraints)
 	{
 		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_KEY_COLUMN, databases);
 		if (rs == nullptr)
@@ -240,7 +241,7 @@ namespace REPLICATOR {
 		MYSQL_ROW row;
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
-			META::tableMeta* meta = collection->get(row[2], row[3], 1);
+			META::tableMeta* meta = m_metaDataCollection->get(row[2], row[3], 1);
 			META::columnMeta* column;
 			if (meta == nullptr || (column = (META::columnMeta*)meta->getColumn(row[4])) == nullptr)
 				continue;
@@ -265,7 +266,7 @@ namespace REPLICATOR {
 		mysql_free_result(rs);
 		return 0;
 	}
-	int initMetaData::realQuery(const char* sql, MYSQL_RES*& rs)
+	int mysqlRemoteMeta::realQuery(const char* sql, MYSQL_RES*& rs)
 	{
 		int32_t connErrno;
 		const char* connError;
@@ -302,7 +303,7 @@ namespace REPLICATOR {
 		return -1;
 	}
 
-	MYSQL_RES* initMetaData::doQueryByString(const char* _sql, ...)
+	MYSQL_RES* mysqlRemoteMeta::doQueryByString(const char* _sql, ...)
 	{
 		va_list ap;
 		va_start(ap, _sql);
@@ -316,7 +317,7 @@ namespace REPLICATOR {
 		return rs;
 	}
 
-	MYSQL_RES* initMetaData::doQueryByDataBases(const char* _sql, const std::vector<std::string>& databases)
+	MYSQL_RES* mysqlRemoteMeta::doQueryByDataBases(const char* _sql, const std::vector<std::string>& databases)
 	{
 		int32_t connErrno;
 		const char* connError;
@@ -343,7 +344,7 @@ namespace REPLICATOR {
 		delete[]sql;
 		return rs;
 	}
-	int initMetaData::loadAllConstraint(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+	int mysqlRemoteMeta::loadAllConstraint(const std::vector<std::string>& databases)
 	{
 		int ret = 0;
 		std::map < std::string, std::map<std::string, std::map<std::string,  keyInfo*>* >* > constraints;
@@ -356,7 +357,7 @@ namespace REPLICATOR {
 		MYSQL_ROW row;
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
-			META::tableMeta* meta = collection->get(row[2], row[3], 1);
+			META::tableMeta* meta = m_metaDataCollection->get(row[2], row[3], 1);
 			if (meta == nullptr)
 				continue;
 			int type = 0;
@@ -398,7 +399,7 @@ namespace REPLICATOR {
 			table->insert(std::pair<std::string, keyInfo*>(row[1], key));
 		}
 		mysql_free_result(rs);
-		if (loadAllKeyColumns(collection, databases, constraints) != 0)
+		if (loadAllKeyColumns(databases, constraints) != 0)
 			ret = -1;
 
 		for (std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >::iterator databaseIter = constraints.begin();
@@ -408,7 +409,7 @@ namespace REPLICATOR {
 			{
 				if (ret == 0)
 				{
-					META::tableMeta* table = collection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
+					META::tableMeta* table = m_metaDataCollection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
 					if (table != nullptr)
 					{
 						if (table->m_uniqueKeysCount > 0)
@@ -448,7 +449,7 @@ namespace REPLICATOR {
 		else
 			return collation;
 	}
-	int initMetaData::loadAllDataBases(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+	int mysqlRemoteMeta::loadAllDataBases(const std::vector<std::string>& databases)
 	{
 		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_SCHEMA, databases);
 		if (rs == nullptr)
@@ -471,14 +472,14 @@ namespace REPLICATOR {
 			}
 			else
 			{
-				charset = collection->getDefaultCharset();
+				charset = m_metaDataCollection->getDefaultCharset();
 			}
-			collection->put(row[0], charset, 0);
+			m_metaDataCollection->put(row[0], charset, 0);
 		}
 		mysql_free_result(rs);
 		return 0;
 	}
-	int initMetaData::loadAllTables(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+	int mysqlRemoteMeta::loadAllTables(const std::vector<std::string>& databases)
 	{
 		MYSQL_RES  *rs = doQueryByDataBases(SELECT_ALL_TABLE, databases);
 		if (rs == nullptr)
@@ -504,14 +505,14 @@ namespace REPLICATOR {
 			}
 			else
 			{
-				meta->m_charset = collection->getDataBaseCharset(row[0], 0);
+				meta->m_charset = m_metaDataCollection->getDataBaseCharset(row[0], 0);
 			}
-			collection->put(row[0], row[1], meta, 0);
+			m_metaDataCollection->put(row[0], row[1], meta, 0);
 		}
 		mysql_free_result(rs);
 		return 0;
 	}
-	int initMetaData::getAllUserDatabases(std::vector<std::string>& databases)
+	int mysqlRemoteMeta::getAllUserDatabases(std::vector<std::string>& databases)
 	{
 		databases.clear();
 		MYSQL_RES* rs = doQueryByDataBases(SELECT_ALL_USER_SCHEMA, databases);
@@ -528,7 +529,7 @@ namespace REPLICATOR {
 		mysql_free_result(rs);
 		return 0;
 	}
-	int initMetaData::loadMeta(META::metaDataCollection* collection,const std::vector<std::string>& databases)
+	int mysqlRemoteMeta::loadMeta(const std::vector<std::string>& databases)
 	{
 		std::string charset;
 		if (!mysqlConnector::getVariables(m_conn, "character_set_server", charset))
@@ -542,43 +543,43 @@ namespace REPLICATOR {
 			LOG(ERROR) << "load meta failed for unspport charset:"<< charset;
 			return -1;
 		}
-		collection->setDefaultCharset(defaultCharset);
-		if (0 != loadAllDataBases(collection, databases))
+		m_metaDataCollection->setDefaultCharset(defaultCharset);
+		if (0 != loadAllDataBases(databases))
 		{
 			LOG(ERROR) << "load meta failed for load database list failed:";
 			return -1;
 		}
-		if (0 != loadAllTables(collection, databases))
+		if (0 != loadAllTables(databases))
 		{
 			LOG(ERROR) << "load meta failed for load table list failed:";
 			return -1;
 		}
-		if (0 != loadAllColumns(collection, databases))
+		if (0 != loadAllColumns(databases))
 		{
 			LOG(ERROR) << "load meta failed for load column failed:";
 			return -1;
 		}
-		if (0 != loadAllConstraint(collection, databases))
+		if (0 != loadAllConstraint(databases))
 		{
 			LOG(ERROR) << "load meta failed for load constraint list failed:";
 			return -1;
 		}
 		return 0;
 	}
-	int initMetaData::update(META::metaDataCollection* collection,const char* database, const char* table)
+	const META::tableMeta* mysqlRemoteMeta::update(const char* database, const char* table)
 	{
 		int ret = 0;
 		MYSQL_RES* rs = doQueryByString(SELECT_ALL_COLUMNS_OF_TABLE, database, table);
 		if (rs == nullptr)
 		{
 			LOG(ERROR) << "load columns of"<< database<<"."<< table<<" failed";
-			return -1;
+			return nullptr;
 		}
 		if (rs->row_count == 0)
 		{
 			mysql_free_result(rs);
 			LOG(ERROR) << "load columns of" << database << "." << table << " failed for no such table";
-			return -1;
+			return nullptr;
 		}
 		MYSQL_ROW row;
 		META::tableMeta* meta = new META::tableMeta();
@@ -591,7 +592,7 @@ namespace REPLICATOR {
 				delete[]meta->m_columns;
 				mysql_free_result(rs);
 				LOG(ERROR) << "load columns of" << database << "." << table << " failed for load column failed";
-				return -1;
+				return nullptr;
 			}
 		}
 		mysql_free_result(rs);
@@ -600,21 +601,95 @@ namespace REPLICATOR {
 		{
 			LOG(ERROR) << "load constraint of" << database << "." << table << " failed";
 			delete meta;
-			return -1;
+			return nullptr;
 		}
-		std::map<std::string, int> keyMap;
+		std::map<std::string, keyInfo* > keys;
 		int ukId = 0;
 		while (nullptr != (row = mysql_fetch_row(rs)))
 		{
-			if (strncasecmp(row[4], "UNIQUE", 6) == 0)
+			keyInfo* key = new keyInfo();
+			if (strncasecmp(row[4], "PRIMARY KEY", 11) == 0)
+				key->type = 1;
+			else if (strncasecmp(row[4], "UNIQUE", 6) == 0)
 			{
-				keyMap.insert(std::pair<std::string, int>(row[1], ukId++));
+				key->type = 2;
+				meta->m_uniqueKeysCount++;
 			}
 			else if (strncasecmp(row[4], "KEY", 3) == 0)
+			{
+				key->type = 3;
 				meta->m_indexCount++;
+			}
 			else
 				continue;
-		}
-	}
+			keys.insert(std::pair<std::string, keyInfo*>(row[0], key));
 
+		}
+		if (meta->m_uniqueKeysCount > 0)
+			meta->m_uniqueKeys = new META::keyInfo[meta->m_uniqueKeysCount];
+		if(meta->m_indexCount>0)
+			meta->m_indexs = new META::keyInfo[meta->m_indexCount];
+
+
+		mysql_free_result(rs);
+		rs = doQueryByString(SELECT_ALL_KEY_COLUMN_OF_TABLE, database, table);
+		if (rs == nullptr)
+		{
+			LOG(ERROR) << "load key columns of" << database << "." << table << " failed";
+			delete meta;
+			return nullptr;
+		}
+		while (nullptr != (row = mysql_fetch_row(rs)))
+		{
+			const META::columnMeta * column = meta->getColumn(row[1]);
+			std::map<std::string, keyInfo* >::iterator keyIter = keys.find(row[0]);
+			if (column==nullptr||keyIter == keys.end())//table has changed
+			{
+				delete meta;
+				return update(database, table);
+			}
+			keyIter->second->columns.insert(std::pair<int, uint16_t>(atoi(row[2]), column->m_columnIndex));
+		}
+
+		uint16_t ukCount = 0, indexCount = 0;
+		for (std::map<std::string, keyInfo*>::iterator keyIter = keys.begin(); keyIter != keys.end(); keyIter++)
+		{
+			META::keyInfo* key;
+			if (keyIter->second->type == 1)
+				key = &meta->m_primaryKey;
+			else if (keyIter->second->type == 2)
+				key = &meta->m_uniqueKeys[ukCount++];
+			else
+				key = &meta->m_indexs[indexCount++];
+			key->name = keyIter->first;
+			key->keyIndexs = new uint16_t[keyIter->second->columns.size()];
+			for (std::map<int, uint16_t>::const_iterator columnIter = keyIter->second->columns.begin(); columnIter != keyIter->second->columns.end(); columnIter++)
+				key->keyIndexs[key->count++] = columnIter->second;
+		}
+		mysql_free_result(rs);
+		m_metaDataCollection->purge(0xffffffffffffffffULL);
+		return meta;
+	}
+	int mysqlRemoteMeta::escapeTableName(const META::tableMeta* table, std::string& escaped)
+	{
+		char buf[1030] = { '`',0 };
+		int offset = 1;
+		offset += mysql_real_escape_string_quote(m_conn, &buf[1], table->m_dbName.c_str(), table->m_dbName.size(), '\\');
+		buf[offset++] = '`';
+		buf[offset++] = '.';
+		buf[offset++] = '`';
+		offset += mysql_real_escape_string_quote(m_conn, &buf[1], table->m_tableName.c_str(), table->m_tableName.size(), '\\');
+		buf[offset++] = '`';
+		escaped.assign(buf, offset);
+		return 0;
+	}
+	int mysqlRemoteMeta::escapeColumnName(const META::columnMeta* column, std::string& escaped)
+	{
+		char buf[515] = { '`',0 };
+		int offset = 1;
+		offset += mysql_real_escape_string_quote(m_conn, &buf[1], column->m_columnName.c_str(), column->m_columnName.size(), '\\');
+		buf[offset++] = '`';
+		escaped.assign(buf, offset);
+		return 0;
+	}
 }

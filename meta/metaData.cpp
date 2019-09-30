@@ -1,7 +1,8 @@
 #include "metaData.h"
 #include "message/record.h"
+#include "glog/logging.h"
 namespace META {
-	tableMeta::tableMeta() :m_charset(nullptr), m_columns(NULL),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
+	tableMeta::tableMeta() :m_charset(nullptr), m_columns(nullptr),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
 		m_columnsCount(0), m_id(0),  m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr),userData(nullptr)
 	{
 	}
@@ -239,25 +240,70 @@ namespace META {
 	int tableMeta::dropColumn(const char *column)
 	{
 		const columnMeta * d = getColumn(column);
-		if (d == NULL)
+		if (d == nullptr)
 			return -1;
 		return dropColumn(d->m_columnIndex);
 	}
+	int tableMeta::modifyColumn(const columnMeta* column,bool first, const char* addAfter)
+	{
+		const columnMeta* old = getColumn(column->m_columnName.c_str());
+		if (old == nullptr)
+		{
+			LOG(ERROR) << "modify column " << column->m_columnName << " failed for column not exist";
+			return -1;
+		}
+		int idx = old->m_columnIndex;
+		if (!first && addAfter == nullptr)
+		{
+			m_columns[idx] = *column;
+			m_columns[idx].m_columnIndex = idx;
+			if (columnInfos[m_columns[idx].m_columnType].stringType && m_columns[idx].m_charset == nullptr)
+				m_columns[idx].m_charset = m_charset;
+			buildColumnOffsetList();
+		}
+		else
+		{
+			int pos = 0;
+			if (addAfter != nullptr)
+			{
+				const columnMeta* after = getColumn(addAfter);
+				if (after == nullptr)
+				{
+					LOG(ERROR) << "modify column " << column->m_columnName << " failed for after column not exist";
+					return -1;
+				}
+				pos = after->m_columnIndex + 1;
+			}
+			columnMeta* newColumns = new columnMeta[m_columnsCount];
+
+		}
+
+	}
 	int tableMeta::addColumn(const columnMeta* column, const char * addAfter)
 	{
-		if (getColumn(column->m_columnName.c_str()) != NULL)
+		if (getColumn(column->m_columnName.c_str()) != nullptr)
+		{
+			LOG(ERROR) << "add column "<< column->m_columnName <<" failed for column exist";
 			return -1;
+		}
 		if (addAfter)
 		{
 			const columnMeta * before = getColumn(addAfter);
-			if (before == NULL)
+			if (before == nullptr)
+			{
+				LOG(ERROR) << "add column " << column->m_columnName << " after "<< addAfter <<" failed for column not exist";
 				return -2;
+			}
 			columnMeta * columns = new columnMeta[m_columnsCount + 1];
 			for (uint32_t idx = 0; idx <= before->m_columnIndex; idx++)
 				columns[idx] = m_columns[idx];
-			columns[column->m_columnIndex] = *column;
-			columns[column->m_columnIndex].m_columnIndex = before->m_columnIndex + 1;
-			for (uint32_t idx = column->m_columnIndex + 1; idx <= m_columnsCount; idx++)
+
+			columns[before->m_columnIndex] = *column;
+			columns[before->m_columnIndex].m_columnIndex = before->m_columnIndex + 1;
+			if (columnInfos[before->m_columnType].stringType && column->m_charset == nullptr)
+				columns[before->m_columnIndex].m_charset = m_charset;
+
+			for (uint32_t idx = before->m_columnIndex + 1; idx <= m_columnsCount; idx++)
 			{
 				columns[idx] = m_columns[idx - 1];
 				columns->m_columnIndex++;
@@ -289,6 +335,8 @@ namespace META {
 				columns[idx] = m_columns[idx];
 			columns[m_columnsCount] = *column;
 			columns[m_columnsCount].m_columnIndex = m_columnsCount;
+			if (columnInfos[column->m_columnType].stringType && column->m_charset == nullptr)
+				columns[m_columnsCount].m_charset = m_charset;
 			delete []m_columns;
 			m_columns = columns;
 		}
@@ -314,7 +362,7 @@ namespace META {
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
 			columnMeta * c = (columnMeta*)getColumn((*iter).c_str());
-			if (c == NULL)
+			if (c == nullptr)
 				goto ROLL_BACK;
 			if (columnInfos[c->m_columnType].fixed)
 				keySize += columnInfos[c->m_columnType].columnTypeSize;
@@ -330,7 +378,7 @@ namespace META {
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
 			columnMeta * c = (columnMeta*)getColumn((*iter).c_str());
-			if (c == NULL)
+			if (c == nullptr)
 				break;
 			c->m_isPrimary = false;
 		}
@@ -375,7 +423,7 @@ namespace META {
 	}
 	int tableMeta::addUniqueKey(const char *ukName, const std::list<std::string> &columns)
 	{
-		if (getUniqueKey(ukName) != NULL)
+		if (getUniqueKey(ukName) != nullptr)
 			return -1;
 		/*check*/
 		uint32_t keySize = 0;

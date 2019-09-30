@@ -17,6 +17,7 @@
 #include "metaChangeInfo.h"
 #include "util/barrier.h"
 #include "util/likely.h"
+#include "ddl.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
@@ -41,6 +42,16 @@ namespace META {
 		uint64_t m_id;
 		std::string name;
 		const charsetInfo* charset;
+		std::string collate;
+		dbInfo& operator = (const dbInfo& db)
+		{
+			for (tbTree::iterator iter = db.tables.begin(); iter != db.tables.end(); iter++)
+				tables.insert(iter);
+			m_id = db.m_id;
+			name = db.name;
+			charset = db.charset;
+			collate = db.collate;
+		}
 	};
 	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_dbs(),m_sqlParser(nullptr),m_client(client),
 		 m_maxTableId(1),m_maxDatabaseId(0)
@@ -174,6 +185,45 @@ namespace META {
 		put(meta->name.c_str(), msg.head->logOffset, meta);
 		return meta;
 	}
+	dbInfo* metaDataCollection::getDatabase(const char* database, uint64_t originCheckPoint)
+	{
+		dbInfo* currentDB = nullptr;
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
+		if (db == nullptr)
+		{
+			if (m_client)
+			{
+				if (nullptr == (currentDB = this->getDatabaseMetaFromRemote(database, originCheckPoint)))
+					return nullptr;
+				else
+				{
+					put(database, originCheckPoint, currentDB);
+					return currentDB;
+				}
+			}
+			return nullptr;
+		}
+		else
+		{
+			if (nullptr == (currentDB = db->get(originCheckPoint)))
+			{
+				if (m_client)
+				{
+					if (nullptr == (currentDB = this->getDatabaseMetaFromRemote(database, originCheckPoint)))
+						return nullptr;
+					else
+					{
+						put(database, originCheckPoint, currentDB);
+						return currentDB;
+					}
+				}
+				return nullptr;
+			}
+			else
+				return currentDB;
+		}
+	}
 	tableMeta *metaDataCollection::get(uint64_t tableID) {
 		tableMeta * meta = m_allTables.get(tableID);
 		if (meta!=nullptr)
@@ -236,7 +286,7 @@ namespace META {
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
 		bool newMeta = false;
-		if (db == NULL)
+		if (db == nullptr)
 		{
 			if (m_client)
 			{
@@ -249,7 +299,7 @@ namespace META {
 			currentDB = db->get(originCheckPoint);
 		MetaTimeline<tableMeta>* metas;
 		getTableInfo(table, metas, currentDB);
-		if (metas == NULL)
+		if (metas == nullptr)
 		{
 			newMeta = true;
 			metas = new MetaTimeline<tableMeta>(m_maxTableId++,table);
@@ -636,6 +686,347 @@ namespace META {
 		return metas->disableCurrent(originCheckPoint);
 	}
 
+	int metaDataCollection::createDatabase(const ddl* database,uint64_t originCheckPoint)
+	{
+		if (getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint) != nullptr)
+		{
+			LOG(ERROR) << "create database failed for database" << static_cast<const dataBaseDDL*>(database)->name << " exist";
+			return -1;
+		}
+		else
+		{
+			dbInfo* current = new dbInfo;
+			current->name = static_cast<const dataBaseDDL*>(database)->name;
+			current->charset = static_cast<const dataBaseDDL*>(database)->charset;
+			if (current->charset == nullptr)
+				current->charset = m_defaultCharset;
+			return put(current->name.c_str(), originCheckPoint, current);
+		}
+	}
+	int metaDataCollection::alterDatabase(const ddl* database,
+		uint64_t originCheckPoint)
+	{
+		dbInfo* current = getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint);
+		if (current == nullptr)
+		{
+			LOG(ERROR) << "alter database failed for database" << static_cast<const dataBaseDDL*>(database)->name << " not exist";
+			return -1;
+		}
+		else
+		{
+			if (static_cast<const dataBaseDDL*>(database)->charset != nullptr)
+				current->charset = static_cast<const dataBaseDDL*>(database)->charset;
+			if (!static_cast<const dataBaseDDL*>(database)->collate.empty())
+				current->collate = static_cast<const dataBaseDDL*>(database)->collate;//todo 
+			return 0;
+		}
+	}
+	int metaDataCollection::dropDatabase(const ddl* database,uint64_t originCheckPoint)
+	{
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(static_cast<const dataBaseDDL*>(database)->name.c_str(), db);
+		if (db == nullptr)
+		{
+			LOG(ERROR) << "drop database failed for database" << static_cast<const dataBaseDDL*>(database)->name << " not exist";
+			return -1;
+		}
+		else
+		{
+			return db->disableCurrent(originCheckPoint);
+		}
+	}
+	int metaDataCollection::createTable(const ddl* tableDDL,
+		uint64_t originCheckPoint)
+	{
+		const createTableDDL* table = static_cast<const createTableDDL*>(tableDDL);
+		tableMeta* meta = new tableMeta();
+		*meta = table->table;
+		MetaTimeline<dbInfo>* db;
+		if (meta->m_dbName.empty())
+		{
+			if (table->usedDb.empty())
+			{
+				LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+				delete meta;
+				return -1;
+			}
+			meta->m_dbName = table->usedDb;
+		}
+		dbInfo* currentDb = getDatabase(meta->m_dbName.c_str(),originCheckPoint);
+		if (currentDb == NULL)
+		{
+			LOG(ERROR) << "unknown database :" << meta->m_dbName;
+			delete meta;
+			return -1;
+		}
+		if (meta->m_charset == nullptr)
+			meta->m_charset = currentDb->charset;
+		for (int idx = 0; idx < meta->m_columnsCount; idx++)
+		{
+			if (columnInfos[meta->m_columns[idx].m_columnType].stringType && meta->m_columns[idx].m_charset == nullptr)
+				meta->m_columns[idx].m_charset = meta->m_charset;
+		}
+		meta->buildColumnOffsetList();
+		if (0
+			!= put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, originCheckPoint))
+		{
+			LOG(ERROR) << "insert new meta of table " << meta->m_dbName << "." << meta->m_tableName << " failed";
+			delete meta;
+			return -1;
+		}
+		return 0;
+	}
+	int metaDataCollection::dropTable(const ddl* tableDDL,uint64_t originCheckPoint)
+	{
+		const struct dropTable* table = static_cast<const struct dropTable*>(tableDDL);
+		dbInfo* currentDB;
+		if(!table->database.empty())
+			currentDB = getDatabase(table->database.c_str(),originCheckPoint);
+		else if(!table->usedDb.empty())
+			currentDB = getDatabase(table->usedDb.c_str(), originCheckPoint);
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+			return -1;
+		}
+
+		if (currentDB == nullptr)
+		{
+			LOG(ERROR) << "unknown database :" << table->database.empty()? table->usedDb: table->database;
+			return -1;
+		}
+		MetaTimeline<tableMeta>* metas;
+		getTableInfo(table->table.c_str(), metas, currentDB);
+		if (metas == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << currentDB->name << "." << table->table;
+			return -1;
+		}
+		return metas->disableCurrent(originCheckPoint);
+	}
+	int metaDataCollection::renameTable(const ddl* tableDDL, uint64_t originCheckPoint)
+	{
+		const struct renameTable* tables = static_cast<const struct renameTable*>(tableDDL);
+		assert(tables->databases.size() == tables->tables.size());
+		assert(tables->databases.size() == tables->destDatabases.size());
+		assert(tables->databases.size() == tables->destTables.size());
+		std::list<std::string>::const_iterator sd = tables->databases.begin(), st = tables->tables.begin(),
+			dd = tables->destDatabases.begin(), dt = tables->destTables.begin();
+
+		for (;sd!=tables->databases.end(); sd++)
+		{
+			const char* db,*destDb;
+			if (!sd->empty())
+				db = sd->c_str();
+			else if (!tables->usedDb.empty())
+				db = tables->usedDb.c_str();
+			else
+			{
+				LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			if (!dd->empty())
+				destDb = dd->c_str();
+			else if (!tables->usedDb.empty())
+				destDb = tables->usedDb.c_str();
+			else
+			{
+				LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			if (get(db, st->c_str()) == nullptr)
+			{
+				LOG(ERROR) << "rename table failed for "<< st->c_str() <<" not exist,ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			if (getDatabase(destDb) == nullptr)
+			{
+				LOG(ERROR) << "rename table failed for database " << destDb << " not exist,ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			if (get(destDb, dt->c_str()) != nullptr)
+			{
+				LOG(ERROR) << "rename table failed for " << dt->c_str() << " exist,ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			st++;
+			dd++;
+			dt++;
+		}
+		sd = tables->databases.begin();
+		st = tables->tables.begin();
+		dd = tables->destDatabases.begin();
+		dt = tables->destTables.begin();
+
+		for (; sd != tables->databases.end(); sd++)
+		{
+			const char* db, * destDb;
+			if (!sd->empty())
+				db = sd->c_str();
+			else if (!tables->usedDb.empty())
+				db = tables->usedDb.c_str();
+			if (!dd->empty())
+				destDb = dd->c_str();
+			else if (!tables->usedDb.empty())
+				destDb = tables->usedDb.c_str();
+			tableMeta* newTable = new tableMeta();
+			*newTable = *get(db, st->c_str());
+			newTable->m_tableName = dt->c_str();
+			newTable->m_dbName = destDb;
+
+			put(destDb, dt->c_str(), newTable,originCheckPoint);
+			dbInfo * srcDbInfo = getDatabase(db, originCheckPoint);
+			MetaTimeline<tableMeta>* metas;
+			getTableInfo(st->c_str(), metas, srcDbInfo);
+			metas->disableCurrent(originCheckPoint);
+			st++;
+			dd++;
+			dt++;
+		}
+		return 0;
+	}
+	int metaDataCollection::alterTableAddColumn(const struct ddl* ddl,
+		uint64_t originCheckPoint)
+	{
+		const struct addColumn* columnDdl = static_cast<const struct addColumn*>(ddl);
+		const char* db = nullptr;
+		if (!columnDdl->database.empty())
+			db = columnDdl->database.c_str();
+		else if(!columnDdl->usedDb.empty())
+			db = columnDdl->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << ddl->rawDdl;
+			return -1;
+		}
+		tableMeta* table = get(db, columnDdl->table.c_str(), originCheckPoint);
+		if (table == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
+			return -1;
+		}
+		tableMeta* newTable = new tableMeta();
+		*newTable = *table;
+		if (newTable->addColumn(&columnDdl->column, columnDdl->afterColumnName.empty() ? nullptr : columnDdl->afterColumnName.c_str())
+			!=0)
+		{
+			LOG(ERROR) << "add column in table :" << db << "." << columnDdl->table<<" failed";
+			delete newTable;
+			return -1;
+		}
+		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		return 0;
+	}
+	int metaDataCollection::alterTableAddColumns(const struct ddl* ddl,
+		uint64_t originCheckPoint)
+	{
+		const struct addColumns* columnDdl = static_cast<const struct addColumns*>(ddl);
+		const char* db = nullptr;
+		if (!columnDdl->database.empty())
+			db = columnDdl->database.c_str();
+		else if (!columnDdl->usedDb.empty())
+			db = columnDdl->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << ddl->rawDdl;
+			return -1;
+		}
+		tableMeta* table = get(db, columnDdl->table.c_str(), originCheckPoint);
+		if (table == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
+			return -1;
+		}
+		tableMeta* newTable = new tableMeta();
+		*newTable = *table;
+		for (std::list<columnMeta*>::const_iterator iter = columnDdl->columns.begin(); iter != columnDdl->columns.end(); iter++)
+		{
+			if (newTable->addColumn(*iter, nullptr)
+				!= 0)
+			{
+				LOG(ERROR) << "add column in table :" << db << "." << columnDdl->table << " failed";
+				delete newTable;
+				return -1;
+			}
+		}
+		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		return 0;
+	}
+	int metaDataCollection::alterTableRenameColumn(const struct ddl* ddl,
+		uint64_t originCheckPoint)
+	{
+		const struct renameColumn* columnDdl = static_cast<const struct renameColumn*>(ddl);
+		const char* db = nullptr;
+		if (!columnDdl->database.empty())
+			db = columnDdl->database.c_str();
+		else if (!columnDdl->usedDb.empty())
+			db = columnDdl->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << ddl->rawDdl;
+			return -1;
+		}
+		tableMeta* table = get(db, columnDdl->table.c_str(), originCheckPoint);
+		if (table == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
+			return -1;
+		}
+		const columnMeta* column = table->getColumn(columnDdl->srcColumnName.c_str());
+		if (column == nullptr)
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table<<" failed for "<< columnDdl->srcColumnName<<" not exist";
+			return -1;
+		}
+		if (table->getColumn(columnDdl->destColumnName.c_str()) != nullptr)
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->destColumnName << " exist";
+			return -1;
+		}
+		tableMeta* newTable = new tableMeta();
+		*newTable = *table; 
+		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->destColumnName;
+		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		return 0;
+	}
+
+	int metaDataCollection::alterTableModifyColumn(const struct ddl* ddl,
+		uint64_t originCheckPoint)
+	{
+		const struct modifyColumn* columnDdl = static_cast<const struct modifyColumn*>(ddl);
+		const char* db = nullptr;
+		if (!columnDdl->database.empty())
+			db = columnDdl->database.c_str();
+		else if (!columnDdl->usedDb.empty())
+			db = columnDdl->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << ddl->rawDdl;
+			return -1;
+		}
+		tableMeta* table = get(db, columnDdl->table.c_str(), originCheckPoint);
+		if (table == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
+			return -1;
+		}
+		const columnMeta* column = table->getColumn(columnDdl->srcColumnName.c_str());
+		if (column == nullptr)
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->srcColumnName << " not exist";
+			return -1;
+		}
+		if (table->getColumn(columnDdl->destColumnName.c_str()) != nullptr)
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->destColumnName << " exist";
+			return -1;
+		}
+		tableMeta* newTable = new tableMeta();
+		*newTable = *table;
+		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->destColumnName;
+		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		return 0;
+	}
 	int metaDataCollection::processDatabase(const databaseInfo * database,
 		uint64_t originCheckPoint)
 	{
@@ -703,7 +1094,6 @@ namespace META {
 		else
 			return -1;
 	}
-
 	int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
 	{
 		handle * h = NULL;
@@ -746,7 +1136,7 @@ namespace META {
 			if (db == NULL)
 				continue;
 			db->purge(originCheckPoint);
-			dbInfo * dbMeta = db->get(0xffffffffffffffffUL);
+			dbInfo * dbMeta = db->get(0xffffffffffffffffULL);
 			if (dbMeta == NULL)
 				continue;
 			for (tbTree::iterator titer = dbMeta->tables.begin(); titer!=dbMeta->tables.begin(); titer++)

@@ -34,6 +34,7 @@ namespace META {
 	class newColumnInfo;
 	class newTableInfo;
 	struct Table;
+	struct ddl;
 	struct databaseInfo;
 	typedef spp::sparse_hash_map<const char*, MetaTimeline<dbInfo>*, StrHash, StrCompare> dbTree;
 	class DLL_EXPORT metaDataCollection
@@ -53,7 +54,7 @@ namespace META {
 		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
 		tableMeta * get(uint64_t tableID);
 		tableMeta * getPrevVersion(uint64_t tableID);
-		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint);
+		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint = 0xffffffffffffffffULL);
 
 		tableMeta * getTableMetaFromRemote(uint64_t tableID);
 		tableMeta * getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint);
@@ -74,6 +75,18 @@ namespace META {
 		int processNewTable(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);
 		int processOldTable(SQL_PARSER::handle * h, const Table *table, uint64_t originCheckPoint);
 		int processDatabase(const databaseInfo * database, uint64_t originCheckPoint);
+		dbInfo* getDatabase(const char* database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
+
+		int createDatabase(const ddl* database, uint64_t originCheckPoint);
+		int alterDatabase(const ddl* database, uint64_t originCheckPoint);
+		int dropDatabase(const ddl* database,uint64_t originCheckPoint);
+		int createTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int dropTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int renameTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int alterTableAddColumn(const struct ddl* columnDdl,uint64_t originCheckPoint);
+		int alterTableAddColumns(const struct ddl* columnDdl, uint64_t originCheckPoint);
+		int alterTableRenameColumn(const struct ddl* columnDdl, uint64_t originCheckPoint);
+		int alterTableModifyColumn(const struct ddl* columnDdl, uint64_t originCheckPoint);
 	public:
 		void print();
 	};

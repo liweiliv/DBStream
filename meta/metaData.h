@@ -407,6 +407,7 @@ namespace META {
 		void buildColumnOffsetList();
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
 		int dropColumn(const char *column);
+		int modifyColumn(const columnMeta* column, bool first, const char* addAfter);
 		int addColumn(const columnMeta* column, const char * addAfter = NULL);
 		int dropPrimaryKey();
 		int createPrimaryKey(const std::list<std::string> &columns);

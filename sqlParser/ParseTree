@@ -1,693 +1,722 @@
 {
-  "COLUMN_TYPE": {
-    "ID": 4000,
-    "NAME": "COLUMN_TYPE",
-    "COMMENT": "COLUMN TYPE",
-    "OR": true,
-    "C": [
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:BIT",
-            "F": "bitType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "bitTypeSize"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:TINYINT",
-            "F": "tinyIntType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:BOOLEAN",
-        "F": "BoolType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:BOOL",
-        "F": "BoolType"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:SMALLINT",
-            "F": "smallIntType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:MEDIUMINT",
-            "F": "mediumIntType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:INTEGER",
-            "F": "intType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:INT",
-            "F": "intType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:BIGINT",
-            "F": "bigIntType"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:DECIMAL",
-            "F": "decimalType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "floatSize"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_C_:," },
-                  {
-                    "K": "_INT_",
-                    "F": "floatDigitsSize"
-                  }
-                ]
-              },
-              { "K": "_C_:)" }
-            ]
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:FLOAT",
-            "F": "floatType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "floatSize"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_C_:," },
-                  {
-                    "K": "_INT_",
-                    "F": "floatDigitsSize"
-                  }
-                ]
-              },
-              { "K": "_C_:)" }
-            ]
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:DOUBLE",
-            "F": "doubleType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "floatSize"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_C_:," },
-                  {
-                    "K": "_INT_",
-                    "F": "floatDigitsSize"
-                  }
-                ]
-              },
-              { "K": "_C_:)" }
-            ]
-          },
-          {
-            "OPT": true,
-            "K": "_S_:UNSIGNED",
-            "F": "numertypeIsUnsigned"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:ZEROFILL"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:DATETIME",
-            "F": "datetimeType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "datetimeTypePrec"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:DATE",
-        "F": "dateType"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:TIMESTAMP",
-            "F": "timestampType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "timestampTypePrec"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:TIME",
-            "F": "timeType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "timeTypePrec"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:YEAR",
-            "F": "yearType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
+	"COLUMN_TYPE": {
+		"ID": 4000,
+		"NAME": "COLUMN_TYPE",
+		"COMMENT": "COLUMN TYPE",
+		"OR": true,
+		"C": [
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:BIT",
+						"F": "bitType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
 								"K": "_INT_",
-                "F": "yearTypePrec"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OPT": true,
-            "K": "_S_:NATIONAL"
-          },
-          {
-            "OR": true,
-            "C": [
-              {
-                "K": "_S_:CHAR",
-                "F": "charType"
-              },
-              {
-                "K": "_S_:VARCHAR",
-                "F": "varcharType"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "stringTypeSize"
-              },
-              { "K": "_C_:)" }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:BINARY",
-            "F": "binaryType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "stringTypeSize"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:VARBINARY",
-            "F": "varbinaryType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_C_:(" },
-              {
-                "K": "_INT_",
-                "F": "stringTypeSize"
-              },
-              { "K": "_C_:)" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:TINYBLOB",
-        "F": "tinyBlobType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:BLOB",
-        "F": "blobType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:MEDIUMBLOB",
-        "F": "mediumBlobType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:LONGBLOB",
-        "F": "longBlobtype"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:TINYTEXT",
-            "F": "tinyTextType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:MEDIUMTEXT",
-            "F": "mediumTextType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:TEXT",
-            "F": "textType"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:LONGTEXT",
-            "F": "longTexttype"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:ENUM",
-            "F": "enumType"
-          },
-          { "K": "_C_:(" },
-          {
-            "LOOP": "_C_:,",
-            "C": [
-              {
-                "K": "_A_",
-                "F": "enumOrSetValueList"
-              }
-            ]
-          },
-          { "K": "_C_:)" },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:SET",
-            "F": "setType"
-          },
-          { "K": "_C_:(" },
-          {
-            "LOOP": "_C_:,",
-            "C": [
-              {
-                "K": "_A_",
-                "F": "enumOrSetValueList"
-              }
-            ]
-          },
-          { "K": "_C_:)" },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:CHARACTER SET" },
-              {
-                "K": "_AS_",
-                "F": "stringTypeCharSet"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:COLLATE" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:GEOMETRY",
-        "F": "geometryType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:POINT",
-        "F": "geometryType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:LINESTRING",
-        "F": "geometryType"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:JSON",
-        "F": "jsonType"
-      }
-    ]
-  },
-  "DEFAULT_VALUE": {
-    "ID": 20000,
-    "NAME": "DEFAULT_VALUE",
-    "OPT": true,
-    "C": [
-      { "K": "_S_:DEFAULT" },
-      {
-        "OPT":true,
-        "OR": true,
+								"F": "bitTypeSize"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:TINYINT",
+						"F": "tinyIntType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:BOOLEAN",
+				"F": "BoolType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:BOOL",
+				"F": "BoolType"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:SMALLINT",
+						"F": "smallIntType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:MEDIUMINT",
+						"F": "mediumIntType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:INTEGER",
+						"F": "intType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:INT",
+						"F": "intType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:BIGINT",
+						"F": "bigIntType"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:DECIMAL",
+						"F": "decimalType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "floatSize"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_C_:," },
+									{
+										"K": "_INT_",
+										"F": "floatDigitsSize"
+									}
+								]
+							},
+							{ "K": "_C_:)" }
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:FLOAT",
+						"F": "floatType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "floatSize"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_C_:," },
+									{
+										"K": "_INT_",
+										"F": "floatDigitsSize"
+									}
+								]
+							},
+							{ "K": "_C_:)" }
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:DOUBLE",
+						"F": "doubleType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "floatSize"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_C_:," },
+									{
+										"K": "_INT_",
+										"F": "floatDigitsSize"
+									}
+								]
+							},
+							{ "K": "_C_:)" }
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_S_:UNSIGNED",
+						"F": "numertypeIsUnsigned"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:ZEROFILL"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:DATETIME",
+						"F": "datetimeType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "datetimeTypePrec"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:DATE",
+				"F": "dateType"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:TIMESTAMP",
+						"F": "timestampType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "timestampTypePrec"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:TIME",
+						"F": "timeType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "timeTypePrec"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:YEAR",
+						"F": "yearType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "yearTypePrec"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OPT": true,
+						"K": "_S_:NATIONAL"
+					},
+					{
+						"OR": true,
+						"C": [
+							{
+								"K": "_S_:CHAR",
+								"F": "charType"
+							},
+							{
+								"K": "_S_:VARCHAR",
+								"F": "varcharType"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "stringTypeSize"
+							},
+							{ "K": "_C_:)" }
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:COLLATE" },
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:BINARY",
+						"F": "binaryType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "stringTypeSize"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:VARBINARY",
+						"F": "varbinaryType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_C_:(" },
+							{
+								"K": "_INT_",
+								"F": "stringTypeSize"
+							},
+							{ "K": "_C_:)" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:TINYBLOB",
+				"F": "tinyBlobType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:BLOB",
+				"F": "blobType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:MEDIUMBLOB",
+				"F": "mediumBlobType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:LONGBLOB",
+				"F": "longBlobtype"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:TINYTEXT",
+						"F": "tinyTextType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:COLLATE" },
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:MEDIUMTEXT",
+						"F": "mediumTextType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:COLLATE",
+								"F": "columnCollate"
+							},
+							{ "K": "_AS_" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:TEXT",
+						"F": "textType"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:COLLATE"
+							},
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:LONGTEXT",
+						"F": "longTexttype"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:COLLATE"
+							},
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:ENUM",
+						"F": "enumType"
+					},
+					{ "K": "_C_:(" },
+					{
+						"LOOP": "_C_:,",
+						"C": [
+							{
+								"K": "_A_",
+								"F": "enumOrSetValueList"
+							}
+						]
+					},
+					{ "K": "_C_:)" },
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:COLLATE"
+							},
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:SET",
+						"F": "setType"
+					},
+					{ "K": "_C_:(" },
+					{
+						"LOOP": "_C_:,",
+						"C": [
+							{
+								"K": "_A_",
+								"F": "enumOrSetValueList"
+							}
+						]
+					},
+					{ "K": "_C_:)" },
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:CHARACTER SET" },
+							{
+								"K": "_AS_",
+								"F": "stringTypeCharSet"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:COLLATE"
+							},
+							{
+								"K": "_AS_",
+								"F": "columnCollate"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:GEOMETRY",
+				"F": "geometryType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:POINT",
+				"F": "geometryType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:LINESTRING",
+				"F": "geometryType"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:JSON",
+				"F": "jsonType"
+			}
+		]
+	},
+	"DEFAULT_VALUE": {
+		"ID": 20000,
+		"NAME": "DEFAULT_VALUE",
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:DEFAULT" },
+			{
+				"OPT": true,
+				"OR": true,
 				"C": [
 					{ "K": "_INT_" },
 					{ "K": "_FLOAT_" },
@@ -700,9 +729,9 @@
 								"C": [
 									{ "K": "_S_:CURRENT_TIMESTAMP" },
 									{
-										"OPT": true,
+										"COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)",
 										"K": "_B_",
-										"COMMENT": "`gmt_create` timestamp(6) not null default current_timestamp(6)"
+										"OPT": true
 									}
 								]
 							},
@@ -734,1793 +763,1952 @@
 						]
 					},
 					{ "K": "_S_:NULL" },
-					{"K": "_N_"},
-					{"K": "_E_"}
+					{ "K": "_N_" },
+					{ "K": "_E_" }
 				]
-      }
-    ]
-  },
-  "COLUMN_INFO": {
-    "ID": 0,
-    "NAME": "COLUMN_INFO",
-    "COMMENT": "COLUMN INFO",
-    "C": [
-      {
-        "K": "_N_",
-        "COMMENT": "column name",
-        "F": "newColumn"
-      },
-      {
-        "INCLUDE": "COLUMN_TYPE",
-        "COMMENT": "column type"
-      },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          { "K": "_S_:NOT NULL" },
-          { "K": "_S_:NULL" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OPT": true,
-            "K": "_S_:GENERATED ALWAYS"
-          },
-          {
-            "K": "_S_:AS",
-            "F": "generatedColumn"
-          },
-          { "K": "_B_" },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:VIRTUAL" },
-              { "K": "_S_:STORED" }
-            ]
-          }
-        ]
-      },
-      { "INCLUDE": "DEFAULT_VALUE" },
-      {
-        "OPT": true,
-        "K": "_S_:AUTO_INCREMENT"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:UNIQUE",
-            "F": "columnIsUK"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:KEY"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "K": "_S_:PRIMARY",
-            "F": "columnIsPK"
-          },
-          {
-            "OPT": true,
-            "K": "_S_:KEY"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:KEY",
-        "F": "columnIsKey"
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:COMMENT" },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:COLUMN_FORMAT" },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:STORAGE" },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:REFERENCES" },
-          { "K": "_N_" },
-          { "K": "_B_" },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:MATCH" },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:FULL" },
-                  { "K": "_S_:PARTIAL" },
-                  { "K": "_S_:SIMPLE" }
-                ]
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:ON" },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:DELETE" },
-                  { "K": "_S_:UPDATE" }
-                ]
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:RESTRICT" },
-                  { "K": "_S_:CASCADE" },
-                  { "K": "_S_:SET NULL" },
-                  { "K": "_S_:NO ACTION" },
-                  { "K": "_S_:SET DEFAULT" }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "index_option": {
-    "ID": 1001,
-    "name": "index_option",
-    "OPT": true,
-    "OR": true,
-    "LOOP": "always",
-    "C": [
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:KEY_BLOCK_SIZE" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:USING" },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:WITH PARSER" },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:COMMENT" },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          { "K": "_S_:VISIBLE" },
-          { "K": "_S_:INVISIBLE" }
-        ]
-      }
-    ]
-  },
-  "CONSTRAINT": {
-    "ID": 2001,
-    "COMMENT": "CONSTRAINT",
-    "C": [
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:CONSTRAINT" },
-          {
-            "OPT": true,
-            "K": "_AS_",
-            "F": "constraintName"
-          }
-        ]
-      },
-      {
-        "OR": true,
-        "C": [
-          {
-            "C": [
-              {
-                "K": "_S_:PRIMARY KEY",
-                "F": "primaryKeys"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_S_:USING" },
-                  { "K": "_AS_" }
-                ]
-              },
-              { "K": "_C_:(" },
-              {
-                "LOOP": "_C_:,",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "keyColumn"
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_B_"
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_B_"
-                  },
-                  {
-                    "OPT": true,
-                    "OR": true,
-                    "C": [
-                      { "K": "_S_:ASC" },
-                      { "K": "_S_:DESC" }
-                    ]
-                  }
-                ]
-              },
-              { "K": "_C_:)" },
-              { "INCLUDE": "index_option" }
-            ]
-          },
-          {
-            "C": [
-              {
-                "K": "_S_:UNIQUE",
-                "F": "uniqueKeys"
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:KEY" },
-                  { "K": "_S_:INDEX" }
-                ]
-              },
-              {
-                "OPT": true,
-                "K": "_N_",
-                "F": "uniqueKeyName"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_S_:USING" },
-                  { "K": "_AS_" }
-                ]
-              },
-              { "K": "_C_:(" },
-              {
-                "LOOP": "_C_:,",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "keyColumn"
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_B_"
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_B_"
-                  },
-                  {
-                    "OPT": true,
-                    "OR": true,
-                    "C": [
-                      { "K": "_S_:ASC" },
-                      { "K": "_S_:DESC" }
-                    ]
-                  }
-                ]
-              },
-              { "K": "_C_:)" },
-              { "INCLUDE": "index_option" }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "create_definition": {
-    "ID": 6000,
-    "NAME": "create_definition",
-    "LOOP": "_C_:,",
-    "OPT": true,
-    "C": [
-      {
-        "OR": true,
-        "C": [
-          { "INCLUDE": "COLUMN_INFO" },
-          { "INCLUDE": "CONSTRAINT" },
-          {
-            "OPT": true,
-            "C": [
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:KEY" },
-                  { "K": "_S_:INDEX" }
-                ]
-              },
-              {
-                "OPT": true,
-                "K": "_N_"
-              },
-              {
-                "OPT": true,
-                "C": [
-                  { "K": "_S_:USING" },
-                  { "K": "_AS_" }
-                ]
-              },
-              { "K": "_B_" },
-              { "INCLUDE": "index_option" }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:FULLTEXT" },
-                  { "K": "_S_:SPATIAL" }
-                ]
-              },
-              {
-                "OR": true,
-                "OPT": true,
-                "C": [
-                  { "K": "_S_:KEY" },
-                  { "K": "_S_:INDEX" }
-                ]
-              },
-              {
-                "OPT": true,
-                "K": "_N_"
-              },
-              { "K": "_B_" },
-              { "INCLUDE": "index_option" }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "table_options": {
-    "ID": 7000,
-    "LOOP": "always",
-    "NAME": "table_options",
-    "OPT": true,
-    "OR": true,
-    "C": [
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:AUTO_INCREMENT" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:AVG_ROW_LENGTH" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OPT": true,
-            "K": "_S_:DEFAULT"
-          },
-          {
-            "OR": true,
-            "C": [
-              {
-                "C": [
-                  {
-                    "OR": true,
-                    "C": [
-                      { "K": "_S_:CHARACTER SET" },
-                      { "K": "_S_:CHARSET" }
-                    ]
-                  },
-                  {
-                    "OPT": true,
-                    "K": "_C_:="
-                  },
-                  {
-                    "K": "_AS_",
-                    "F": "tableCharset"
-                  }
-                ]
-              },
-              {
-                "C": [
-                  { "K": "_S_:COLLATE" },
-                  {
-                    "OPT": true,
-                    "K": "_C_:="
-                  },
-                  { "K": "_AS_" }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:CHECKSUM" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:COMMENT" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:COMPRESSION" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:CONNECTION" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              { "K": "_S_:DATA" },
-              { "K": "_S_:INDEX" }
-            ]
-          },
-          { "K": "_S_:DIRECTORY" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:DELAY_KEY_WRITE" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:ENCRYPTION" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:ENGINE" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:INSERT_METHOD" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:KEY_BLOCK_SIZE" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:MAX_ROWS" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:MIN_ROWS" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:PACK_KEYS" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:PASSWORD" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:ROW_FORMAT" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:STATS_AUTO_RECALC" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:STATS_PERSISTENT" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:STATS_SAMPLE_PAGES" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_A_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:TABLESPACE" },
-          { "K": "_AS_" },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:STORAGE" },
-              { "K": "_AS_" }
-            ]
-          },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:UNION" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_B_" }
-        ]
-      }
-    ]
-  },
-  "partition_options": {
-    "ID": 8000,
-    "NAME": "partition_options",
-    "OPT": true,
-    "OR": true,
-    "C": [
-      { "K": "_S_:PARTITION BY" },
-      {
-        "OR": true,
-        "C": [
-          {
-            "OPT": true,
-            "C": [
-              {
-                "OPT": true,
-                "K": "_S_:LINEAR"
-              },
-              {
-                "OR": true,
-                "C": [
-                  {
-                    "C": [
-                      { "K": "_S_:HASH" },
-                      { "K": "_B_" }
-                    ]
-                  },
-                  {
-                    "C": [
-                      { "K": "_S_:KEY" },
-                      {
-                        "OPT": true,
-                        "C": [
-                          { "K": "_S_:ALGORITHM" },
-                          { "K": "_C_:=" },
-                          { "K": "_AS_" }
-                        ]
-                      },
-                      { "K": "_B_" }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "C": [
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:RANGE" },
-                  { "K": "_S_:LIST" }
-                ]
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_B_" },
-                  {
-                    "C": [
-                      { "K": "_S_:COLUMNS" },
-                      { "K": "_B_" }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:PARTITIONS" },
-          { "K": "_AS_" }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:SUBPARTITION BY" },
-          {
-            "OR": true,
-            "C": [
-              {
-                "OPT": true,
-                "C": [
-                  {
-                    "OPT": true,
-                    "K": "_S_:LINEAR"
-                  },
-                  {
-                    "OR": true,
-                    "C": [
-                      {
-                        "C": [
-                          { "K": "_S_:HASH" },
-                          { "K": "_B_" }
-                        ]
-                      },
-                      {
-                        "C": [
-                          { "K": "_S_:KEY" },
-                          {
-                            "OPT": true,
-                            "C": [
-                              { "K": "_S_:ALGORITHM" },
-                              { "K": "_C_:=" },
-                              { "K": "_AS_" }
-                            ]
-                          },
-                          { "K": "_B_" }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:SUBPARTITIONS" },
-              { "K": "_AS_" }
-            ]
-          }
-        ]
-      },
-      { "K": "_B_" }
-    ]
-  },
-  "CREATE_TABLE": {
-    "ID": 3000,
-    "END": true,
-    "HEAD": true,
-    "type": "CREATE_TABLE",
-    "C": [
-      { "K": "_S_:CREATE" },
-      {
-        "OPT": true,
-        "K": "_S_:TEMPORARY"
-      },
-      {
-        "OR": true,
-        "C": [
-          {
-            "K": "_S_:TABLE",
-            "F": "newTable"
-          },
-          {
-            "K": "_S_:SEQUENCE",
-            "COMMENT": "in aliyun rds,CREATE SEQUENCE is just like CREATE TABLE",
-            "F": "newTable"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:IF NOT EXISTS"
-      },
-      {
-        "OR": true,
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              {
-                "COMMENT": "create table dbName.tableName",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "NewTableDBName"
-                  },
-                  { "K": "_C_:." },
-                  {
-                    "K": "_N_",
-                    "F": "NewTableName"
-                  }
-                ]
-              },
-              {
-                "K": "_N_",
-                "COMMENT": "create table tableName",
-                "F": "NewTableName"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "OR": true,
-        "type": "CREATE_TABLE_LIKE",
-        "C": [
-          {
-            "C": [
-              {
-                "K": "_S_:LIKE",
-                "F": "createTableLike"
-              },
-              {
-                "OR": true,
-                "C": [
-                  {
-                    "C": [
-                      {
-                        "K": "_N_",
-                        "F": "NewTableLikedDBName"
-                      },
-                      { "K": "_C_:." },
-                      {
-                        "K": "_N_",
-                        "F": "NewTableLikedTableName"
-                      }
-                    ]
-                  },
-                  {
-                    "K": "_N_",
-                    "F": "NewTableLikedTableName"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "C": [
-              { "K": "_C_:(" },
-              { "INCLUDE": "create_definition" },
-              { "K": "_C_:)" },
-              { "INCLUDE": "table_options" }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:;"
-      }
-    ]
-  },
-  "alter_table_add_column": {
-    "ID": 10000,
-    "OPT": true,
-    "type": "ALTER_TABLE_ADD_COLUMN",
-    "C": [
-      { "K": "_S_:ADD" },
-      { "K": "_S_:COLUMN" },
-      { "INCLUDE": "COLUMN_INFO" },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          {
-            "K": "_S_:FIRST",
-            "F": "AlterNewColumnAtFirst"
-          },
-          {
-            "C": [
-              { "K": "_S_:AFTER" },
-              {
-                "K": "_N_",
-                "F": "AlterNewColumnAfter"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "alter_table_add_columns": {
-    "ID": 10010,
-    "OPT": true,
-    "type": "ALTER_TABLE_ADD_COLUMNS",
-    "C": [
-      { "K": "_S_:ADD" },
-      { "K": "_S_:COLUMN" },
-      { "K": "_C_:(" },
-		{ "LOOP":"_C_:,",
-			"C":[
-        { "INCLUDE": "COLUMN_INFO" }
-		]},
-      { "K": "_C_:)" }
-    ]
-  },
-  "alter_table_MODIFY_column": {
-    "ID": 10020,
-    "OPT": true,
-    "type": "ALTER_TABLE_MODIFY_COLUMN",
-    "C": [
-      { "K": "_S_:MODIFY" },
-      {
-        "OPT": true,
-        "K": "_S_:COLUMN"
-      },
-      { "INCLUDE": "COLUMN_INFO" },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          {
-            "K": "_S_:FIRST",
-            "F": "AlterNewColumnAtFirst"
-          },
-          {
-            "C": [
-              { "K": "_S_:AFTER" },
-              {
-                "K": "_N_",
-                "F": "AlterNewColumnAfter"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "alter_table_add_CONSTRAINT": {
-    "ID": 10030,
-    "OPT": true,
-    "type": "ALTER_TABLE_ADD_CONSTRAINT",
-    "C": [
-      { "K": "_S_:ADD" },
-      { "INCLUDE": "CONSTRAINT" }
-    ]
-  },
-  "alter_table_add_key": {
-    "ID": 10040,
-    "OPT": true,
-    "type": "ALTER_TABLE_ADD_KEY",
-    "C": [
-      { "K": "_S_:ADD" },
-      {"OPT":true,
-      	"OR":true,
-      	"C":[
-      	{"K":"_S_:FULLTEXT"},
-      	{"K":"_S_:SPATIAL"}
-      	]
-      },
-      {
-        "OR": true,
-        "C": [
-          { "K": "_S_:KEY" },
-          { "K": "_S_:INDEX" }
-        ]
-      },
-      {
-        "LOOP": "_C_:,",
-        "C": [
-          {
-            "OPT": true,
-            "K": "_N_"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:USING" },
-              { "K": "_AS_" }
-            ]
-          },
-          { "K": "_B_" },
-          { "INCLUDE": "index_option" }
-        ]
-      }
-    ]
-  },
-  "alter_table_drop_index": {
-    "ID": 10050,
-    "OPT": true,
-    "type": "ALTER_TABLE_DROP_INDEX",
-    "C": [
-      { "K": "_S_:DROP" },
-      {
-        "OR": true,
-        "C": [
-          { "K": "_S_:KEY" },
-          { "K": "_S_:INDEX" }
-        ]
-      },
-      {
-        "K": "_N_",
-        "F": "dropIndex"
-      }
-    ]
-  },
-  "alter_table_change_column": {
-    "ID": 10060,
-    "OPT": true,
-    "type": "ALTER_TABLE_CHANGE_COLUMN",
-    "F": "alterChangeColumn",
-    "C": [
-      { "K": "_S_:CHANGE" },
-      {
-        "OPT": true,
-        "K": "_S_:COLUMN"
-      },
-      {
-        "K": "_N_",
-        "F": "alterChangeColumnName"
-      },
-      { "INCLUDE": "COLUMN_INFO" },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          {
-            "K": "_S_:FIRST",
-            "F": "AlterNewColumnAtFirst"
-          },
-          {
-            "C": [
-              { "K": "_S_:AFTER" },
-              {
-                "K": "_N_",
-                "F": "AlterNewColumnAfter"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "alter_table_drop_column": {
-    "ID": 10070,
-    "OPT": true,
-    "type": "ALTER_TABLE_DROP_COLUMN",
-    "C": [
-      { "K": "_S_:DROP" },
-      {
-        "OPT": true,
-        "K": "_S_:COLUMN"
-      },
-      {
-        "K": "_N_",
-        "F": "dropColumn"
-      }
-    ]
-  },
-  "alter_table_drop_primary_key": {
-    "ID": 10080,
-    "OPT": true,
-    "type": "ALTER_TABLE_DROP_PRIMARY_KEY",
-    "C": [
-      { "K": "_S_:DROP" },
-      { "K": "_S_:PRIMARY" },
-      {
-        "K": "_S_:KEY",
-        "F": "dropPrimaryKey"
-      }
-    ]
-  },
-  "alter_table_drop_foreign_key": {
-    "ID": 10090,
-    "OPT": true,
-    "type": "ALTER_TABLE_DROP_FOREIGN_KEY",
-    "C": [
-      { "K": "_S_:DROP" },
-      { "K": "_S_:FOREIGN " },
-      { "K": "_S_:KEY" },
-      {
-        "K": "_N_",
-        "F": "dropForeignKey"
-      }
-    ]
-  },
-  "alter_table": {
-    "ID": 9000,
-    "OPT": true,
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:ALTER" },
-      {
-        "K": "_S_:TABLE",
-        "F": "alterTable"
-      },
-      {
-        "OR": true,
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              {
-                "COMMENT": "alter table dbName.tableName",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "alterTableDbName"
-                  },
-                  { "K": "_C_:." },
-                  {
-                    "K": "_N_",
-                    "F": "alterTableTableName"
-                  }
-                ]
-              },
-              {
-                "K": "_N_",
-                "COMMENT": "alter table tableName",
-                "F": "alterTableTableName"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "LOOP": "_C_:,",
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              { "INCLUDE": "alter_table_add_column" },
-              { "INCLUDE": "alter_table_add_columns" },
-              { "INCLUDE": "alter_table_MODIFY_column" },
-              { "INCLUDE": "alter_table_add_CONSTRAINT" },
-              { "INCLUDE": "alter_table_add_key" },
-              { "INCLUDE": "alter_table_drop_index" },
-              { "INCLUDE": "alter_table_change_column" },
-              { "INCLUDE": "alter_table_drop_column" },
-              { "INCLUDE": "alter_table_drop_primary_key" },
-              { "INCLUDE": "alter_table_drop_foreign_key" },
-              {
-                "C": [
-                  { "K": "_S_:COMMENT" },
-                  {
-                    "OPT": true,
-                    "K": "_C_:="
-                  },
-                  { "K": "_A_" }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:;"
-      }
-    ]
-  },
-  "create_index": {
-    "ID": 12000,
-    "type": "CREATE_INDEX",
-    "OPT": true,
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:CREATE" },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:ONINE" },
-          { "K": "_S_:OFFLINE" }
-        ]
-      },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          {
-            "K": "_S_:UNIQUE",
-            "F": "createUK"
-          },
-          { "K": "_S_:FULLTEXT" },
-          { "K": "_S_:SPATIAL" }
-        ]
-      },
-      { "K": "_S_:INDEX" },
-      {
-        "K": "_N_",
-        "F": "createUKName"
-      },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:USING" },
-          { "K": "_AS_" }
-        ]
-      },
-      { "K": "_S_:ON" },
-      {
-        "OR": true,
-        "C": [
-          {
-            "COMMENT": "dbName.tableName",
-            "C": [
-              {
-                "K": "_N_",
-                "F": "createUKONDatabaseName"
-              },
-              { "K": "_C_:." },
-              {
-                "K": "_N_",
-                "F": "createUKONTableName"
-              }
-            ]
-          },
-          {
-            "K": "_N_",
-            "COMMENT": "tableName",
-            "F": "createUKONTableName"
-          }
-        ]
-      },
-      { "K": "_C_:(" },
-      {
-        "LOOP": "_C_:,",
-        "C": [
-          {
-            "K": "_N_",
-            "F": "createUkByColumn"
-          },
-          {
-            "OPT": true,
-            "K": "_B_"
-          },
-          {
-            "OPT": true,
-            "C": [
-              { "K": "_S_:ASC" },
-              { "K": "_S_:DESC" }
-            ]
-          }
-        ]
-      },
-      { "K": "_C_:)" },
-      { "INCLUDE": "index_option" },
-      {
-        "OR": true,
-        "OPT": true,
-        "C": [
-          {
-            "C": [
-              { "K": "_S_:ALGORITHM" },
-              {
-                "OPT": true,
-                "K": "_C_:="
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:DEFAULT" },
-                  { "K": "_S_:INPLACE" },
-                  { "K": "_S_:COPY" }
-                ]
-              }
-            ]
-          },
-          {
-            "C": [
-              { "K": "_S_:LOCK" },
-              {
-                "OPT": true,
-                "K": "_C_:="
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:DEFAULT" },
-                  { "K": "_S_:NONE" },
-                  { "K": "_S_:EXCLUSIVE" },
-                  { "K": "_S_:SHARED" }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "drop_index": {
-    "ID": 13000,
-    "type": "DROP_INDEX",
-    "OPT": true,
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:DROP" },
-      { "K": "_S_:INDEX" },
-      {
-        "OPT": true,
-        "C": [
-          { "K": "_S_:ONINE" },
-          { "K": "_S_:OFFLINE" }
-        ]
-      },
-      {
-        "K": "_N_",
-        "F": "dropIndexName"
-      },
-      { "K": "_S_:ON" },
-      {
-        "OR": true,
-        "C": [
-          {
-            "COMMENT": "dbName.tableName",
-            "C": [
-              {
-                "K": "_N_",
-                "F": "dropIndexOnDataBaseName"
-              },
-              { "K": "_C_:." },
-              {
-                "K": "_N_",
-                "F": "dropIndexOnTableName"
-              }
-            ]
-          },
-          {
-            "K": "_N_",
-            "COMMENT": "tableName",
-            "F": "dropIndexOnTableName"
-          }
-        ]
-      },
-      {
-        "OR": true,
-        "OPT": true,
-        "C": [
-          {
-            "C": [
-              { "K": "_S_:ALGORITHM" },
-              {
-                "OPT": true,
-                "K": "_C_:="
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:DEFAULT" },
-                  { "K": "_S_:INPLACE" },
-                  { "K": "_S_:COPY" }
-                ]
-              }
-            ]
-          },
-          {
-            "C": [
-              { "K": "_S_:LOCK" },
-              {
-                "OPT": true,
-                "K": "_C_:="
-              },
-              {
-                "OR": true,
-                "C": [
-                  { "K": "_S_:DEFAULT" },
-                  { "K": "_S_:NONE" },
-                  { "K": "_S_:EXCLUSIVE" },
-                  { "K": "_S_:SHARED" }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "DROP_TABLE": {
-    "ID": 14000,
-    "type": "DROP_TABLE",
-    "OPT": true,
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:DROP" },
-      {
-        "OPT": true,
-        "K": "_S_:TEMPORARY"
-      },
-      {
-        "K": "_S_:TABLE",
-        "F": "dropTable"
-      },
-      {
-        "OPT": true,
-        "K": "_S_:IF EXISTS"
-      },
-      {
-        "LOOP": "_C_:,",
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              {
-                "COMMENT": "dbName.tableName",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "dropTableDatabaseName"
-                  },
-                  {
-                    "K": "_C_:.",
-                    "F": "dropTableTableName"
-                  },
-                  { "K": "_N_" }
-                ]
-              },
-              {
-                "K": "_N_",
-                "COMMENT": "tableName",
-                "F": "dropTableTableName"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "K": "_C_:,"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "OR": true,
-        "C": [
-          { "K": "_S_:RESTRICT" },
-          { "K": "_S_:CASCADE" }
-        ]
-      }
-    ]
-  },
-  "RENAME_TABLE": {
-    "ID": 15000,
-    "type": "RENAME_TABLE",
-    "OPT": true,
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:RENAME" },
-      { "K": "_S_:TABLE" },
-      {
-        "LOOP": "_C_:,",
-        "C": [
-          {
-            "OR": true,
-            "C": [
-              {
-                "COMMENT": "dbName.tableName",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "renameTableDatabaseName"
-                  },
-                  { "K": "_C_:." },
-                  {
-                    "K": "_N_",
-                    "F": "renameTableTableName"
-                  }
-                ]
-              },
-              {
-                "K": "_N_",
-                "COMMENT": "tableName",
-                "F": "renameTableTableName"
-              }
-            ]
-          },
-          {
-            "K": "_S_:TO",
-            "F": "renameNewTable"
-          },
-          {
-            "OR": true,
-            "C": [
-              {
-                "COMMENT": "dbName.tableName",
-                "C": [
-                  {
-                    "K": "_N_",
-                    "F": "renameTableToDatabaseName"
-                  },
-                  { "K": "_C_:." },
-                  {
-                    "K": "_N_",
-                    "F": "renameTableToTableName"
-                  }
-                ]
-              },
-              {
-                "K": "_N_",
-                "COMMENT": "tableName",
-                "F": "renameTableToTableName"
-              }
-            ]
-          },
-          {
-            "OPT": true,
-            "K": "_C_:,"
-          }
-        ]
-      }
-    ]
-  },
-  "create_database": {
-    "ID": 30000,
-    "type": "CREATE_DATABASE",
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:CREATE" },
-      {
-        "OR": true,
-        "C": [
-          { "K": "_S_:DATABASE" },
-          { "K": "_S_:SCHEMA" }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:IF NOT EXISTS"
-      },
-      {
-        "K": "_N_",
-        "F": "createDatabase"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OPT": true,
-            "K": "_S_:DEFAULT"
-          },
-          { "K": "_S_:CHARACTER" },
-          { "K": "_S_:SET" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          {
-            "K": "_AS_",
-            "F": "databaseCharset"
-          }
-        ]
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "OPT": true,
-            "K": "_S_:DEFAULT"
-          },
-          { "K": "_S_:COLLATE" },
-          {
-            "OPT": true,
-            "K": "_C_:="
-          },
-          { "K": "_AS_" }
-        ]
-      }
-    ]
-  },
-  "drop_database": {
-    "ID": 31000,
-    "type": "DROP_DATABASE",
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:DROP" },
-      {
-        "OR": true,
-        "C": [
-          { "K": "_S_:DATABASE" },
-          { "K": "_S_:SCHEMA" }
-        ]
-      },
-      {
-        "OPT": true,
-        "K": "_S_:IF EXISTS"
-      },
-      {
-        "K": "_N_",
-        "F": "dropDatabase"
-      }
-    ]
-  },
-  "alter_database": {
-    "ID": 32000,
-    "type": "ALTER_DATABASE",
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:ALTER" },
-      {
-        "OR": true,
-        "C": [
-          { "K": "_S_:DATABASE" },
-          { "K": "_S_:SCHEMA" }
-        ]
-      },
-      {
-        "K": "_N_",
-        "F": "alterDatabase"
-      },
-      {
-        "OPT": true,
-        "C": [
-          {
-            "C": [
-              { "K": "_S_:UPGRADE DATA DIRECTORY" },
-              { "K": "_AS_" }
-            ]
-          },
-          {
-            "C": [
-              {
-                "OPT": true,
-                "C": [
-                  {
-                    "OPT": true,
-                    "K": "_S_:DEFAULT"
-                  },
-                  { "K": "_S_:CHARACTER" },
-                  { "K": "_S_:SET" },
-                  {
-                    "OPT": true,
-                    "K": "_C_:="
-                  },
-                  {
-                    "K": "_AS_",
-                    "F": "databaseCharset"
-                  }
-                ]
-              },
-              {
-                "OPT": true,
-                "C": [
-                  {
-                    "OPT": true,
-                    "K": "_S_:DEFAULT"
-                  },
-                  { "K": "_S_:COLLATE" },
-                  {
-                    "OPT": true,
-                    "K": "_C_:="
-                  },
-                  { "K": "_AS_" }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  "use_database": {
-    "ID": 23000,
-    "type": "USE_DATABASE",
-    "HEAD": true,
-    "C": [
-      { "K": "_S_:USE" },
-      {
-        "K": "_N_",
-        "F": "useDatabase"
-      }
-    ]
-  },
-  "select_column": {
-    "ID": 240001,
-    "name": "select_column",
-    "OR": true,
-    "C": [
-      { "K": "_S_:*" },
-      {
-        "C": [
-          { "K": "_S_:count" },
-          { "K": "_S_:(" },
-          { "K": "_AS_" },
-          { "K": "_S_:)" }
-        ]
-      },
-      {
-        "C": [
-          { "K": "_S_:sum" },
-          { "K": "_S_:(" },
-          { "K": "_AS_" },
-          { "K": "_S_:)" }
-        ]
-      },
-      { "K": "_AS_" }
-    ]
-  },
-  "BEGIN": {
-    "ID": 250000,
-    "HEAD": true,
-    "type": "BEGIN",
-    "C": [
-      { "K": "_S_:begin" }
-    ]
-  },
-  "COMMIT": {
-    "ID": 260000,
-    "HEAD": true,
-    "type": "COMMIT",
-    "C": [
-      { "K": "_S_:commit" }
-    ]
-  },
-  "ROLLBACK": {
-    "ID": 270000,
-    "HEAD": true,
-    "type": "ROLLBACK",
-    "C": [
-      { "K": "_S_:rollback" }
-    ]
-  }
+			}
+		]
+	},
+	"COLUMN_INFO": {
+		"ID": 0,
+		"NAME": "COLUMN_INFO",
+		"COMMENT": "COLUMN INFO",
+		"C": [
+			{
+				"K": "_N_",
+				"COMMENT": "column name",
+				"F": "newColumn"
+			},
+			{
+				"INCLUDE": "COLUMN_TYPE",
+				"COMMENT": "column type"
+			},
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{ "K": "_S_:NOT NULL" },
+					{ "K": "_S_:NULL" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OPT": true,
+						"K": "_S_:GENERATED ALWAYS"
+					},
+					{
+						"K": "_S_:AS",
+						"F": "generatedColumn"
+					},
+					{ "K": "_B_" },
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:VIRTUAL" },
+							{ "K": "_S_:STORED" }
+						]
+					}
+				]
+			},
+			{ "INCLUDE": "DEFAULT_VALUE" },
+			{
+				"OPT": true,
+				"K": "_S_:AUTO_INCREMENT"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:UNIQUE",
+						"F": "columnIsUK"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:KEY"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"K": "_S_:PRIMARY",
+						"F": "columnIsPK"
+					},
+					{
+						"OPT": true,
+						"K": "_S_:KEY"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:KEY",
+				"F": "columnIsKey"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COMMENT" },
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COLUMN_FORMAT" },
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:STORAGE" },
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:REFERENCES" },
+					{ "K": "_N_" },
+					{ "K": "_B_" },
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:MATCH" },
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:FULL" },
+									{ "K": "_S_:PARTIAL" },
+									{ "K": "_S_:SIMPLE" }
+								]
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:ON" },
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:DELETE" },
+									{ "K": "_S_:UPDATE" }
+								]
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:RESTRICT" },
+									{ "K": "_S_:CASCADE" },
+									{ "K": "_S_:SET NULL" },
+									{ "K": "_S_:NO ACTION" },
+									{ "K": "_S_:SET DEFAULT" }
+								]
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"index_option": {
+		"ID": 1001,
+		"name": "index_option",
+		"OPT": true,
+		"OR": true,
+		"LOOP": "always",
+		"C": [
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:KEY_BLOCK_SIZE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:USING" },
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:WITH PARSER" },
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COMMENT" },
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{ "K": "_S_:VISIBLE" },
+					{ "K": "_S_:INVISIBLE" }
+				]
+			}
+		]
+	},
+	"CONSTRAINT": {
+		"ID": 2001,
+		"COMMENT": "CONSTRAINT",
+		"C": [
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:CONSTRAINT" },
+					{
+						"OPT": true,
+						"K": "_AS_",
+						"F": "constraintName"
+					}
+				]
+			},
+			{
+				"OR": true,
+				"C": [
+					{
+						"C": [
+							{
+								"K": "_S_:PRIMARY KEY",
+								"F": "primaryKeys"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_S_:USING" },
+									{ "K": "_AS_" }
+								]
+							},
+							{ "K": "_C_:(" },
+							{
+								"LOOP": "_C_:,",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "keyColumn"
+									},
+									{
+										"OPT": true,
+										"K": "_B_"
+									},
+									{
+										"OPT": true,
+										"K": "_B_"
+									},
+									{
+										"OPT": true,
+										"OR": true,
+										"C": [
+											{ "K": "_S_:ASC" },
+											{ "K": "_S_:DESC" }
+										]
+									}
+								]
+							},
+							{ "K": "_C_:)" },
+							{ "INCLUDE": "index_option" }
+						]
+					},
+					{
+						"C": [
+							{
+								"K": "_S_:UNIQUE",
+								"F": "uniqueKeys"
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:KEY" },
+									{ "K": "_S_:INDEX" }
+								]
+							},
+							{
+								"OPT": true,
+								"K": "_N_",
+								"F": "uniqueKeyName"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_S_:USING" },
+									{ "K": "_AS_" }
+								]
+							},
+							{ "K": "_C_:(" },
+							{
+								"LOOP": "_C_:,",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "keyColumn"
+									},
+									{
+										"OPT": true,
+										"K": "_B_"
+									},
+									{
+										"OPT": true,
+										"K": "_B_"
+									},
+									{
+										"OPT": true,
+										"OR": true,
+										"C": [
+											{ "K": "_S_:ASC" },
+											{ "K": "_S_:DESC" }
+										]
+									}
+								]
+							},
+							{ "K": "_C_:)" },
+							{ "INCLUDE": "index_option" }
+						]
+					}
+				]
+			}
+		]
+	},
+	"create_definition": {
+		"ID": 6000,
+		"NAME": "create_definition",
+		"LOOP": "_C_:,",
+		"OPT": true,
+		"C": [
+			{
+				"OR": true,
+				"C": [
+					{ "INCLUDE": "COLUMN_INFO" },
+					{ "INCLUDE": "CONSTRAINT" },
+					{
+						"OPT": true,
+						"C": [
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:KEY" },
+									{ "K": "_S_:INDEX" }
+								]
+							},
+							{
+								"OPT": true,
+								"K": "_N_"
+							},
+							{
+								"OPT": true,
+								"C": [
+									{ "K": "_S_:USING" },
+									{ "K": "_AS_" }
+								]
+							},
+							{ "K": "_B_" },
+							{ "INCLUDE": "index_option" }
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:FULLTEXT" },
+									{ "K": "_S_:SPATIAL" }
+								]
+							},
+							{
+								"OR": true,
+								"OPT": true,
+								"C": [
+									{ "K": "_S_:KEY" },
+									{ "K": "_S_:INDEX" }
+								]
+							},
+							{
+								"OPT": true,
+								"K": "_N_"
+							},
+							{ "K": "_B_" },
+							{ "INCLUDE": "index_option" }
+						]
+					}
+				]
+			}
+		]
+	},
+	"table_options": {
+		"ID": 7000,
+		"LOOP": "always",
+		"NAME": "table_options",
+		"OPT": true,
+		"OR": true,
+		"C": [
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:AUTO_INCREMENT" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:AVG_ROW_LENGTH" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OPT": true,
+						"K": "_S_:DEFAULT"
+					},
+					{
+						"OR": true,
+						"C": [
+							{
+								"C": [
+									{
+										"OR": true,
+										"C": [
+											{ "K": "_S_:CHARACTER SET" },
+											{ "K": "_S_:CHARSET" }
+										]
+									},
+									{
+										"OPT": true,
+										"K": "_C_:="
+									},
+									{
+										"K": "_AS_",
+										"F": "tableCharset"
+									}
+								]
+							},
+							{
+								"C": [
+									{
+										"K": "_S_:COLLATE"
+									},
+									{
+										"OPT": true,
+										"K": "_C_:="
+									},
+									{
+										"K": "_AS_",
+										"F": "tableCollate"
+									}
+								]
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:CHECKSUM" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COMMENT" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COMPRESSION" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:CONNECTION" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{ "K": "_S_:DATA" },
+							{ "K": "_S_:INDEX" }
+						]
+					},
+					{ "K": "_S_:DIRECTORY" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:DELAY_KEY_WRITE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:ENCRYPTION" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:ENGINE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:INSERT_METHOD" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:KEY_BLOCK_SIZE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:MAX_ROWS" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:MIN_ROWS" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:PACK_KEYS" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:PASSWORD" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:ROW_FORMAT" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:STATS_AUTO_RECALC" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:STATS_PERSISTENT" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:STATS_SAMPLE_PAGES" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_A_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:TABLESPACE" },
+					{ "K": "_AS_" },
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:STORAGE" },
+							{ "K": "_AS_" }
+						]
+					},
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:UNION" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{ "K": "_B_" }
+				]
+			}
+		]
+	},
+	"partition_options": {
+		"ID": 8000,
+		"NAME": "partition_options",
+		"OPT": true,
+		"OR": true,
+		"C": [
+			{ "K": "_S_:PARTITION BY" },
+			{
+				"OR": true,
+				"C": [
+					{
+						"OPT": true,
+						"C": [
+							{
+								"OPT": true,
+								"K": "_S_:LINEAR"
+							},
+							{
+								"OR": true,
+								"C": [
+									{
+										"C": [
+											{ "K": "_S_:HASH" },
+											{ "K": "_B_" }
+										]
+									},
+									{
+										"C": [
+											{ "K": "_S_:KEY" },
+											{
+												"OPT": true,
+												"C": [
+													{ "K": "_S_:ALGORITHM" },
+													{ "K": "_C_:=" },
+													{ "K": "_AS_" }
+												]
+											},
+											{ "K": "_B_" }
+										]
+									}
+								]
+							}
+						]
+					},
+					{
+						"C": [
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:RANGE" },
+									{ "K": "_S_:LIST" }
+								]
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_B_" },
+									{
+										"C": [
+											{ "K": "_S_:COLUMNS" },
+											{ "K": "_B_" }
+										]
+									}
+								]
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:PARTITIONS" },
+					{ "K": "_AS_" }
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:SUBPARTITION BY" },
+					{
+						"OR": true,
+						"C": [
+							{
+								"OPT": true,
+								"C": [
+									{
+										"OPT": true,
+										"K": "_S_:LINEAR"
+									},
+									{
+										"OR": true,
+										"C": [
+											{
+												"C": [
+													{ "K": "_S_:HASH" },
+													{ "K": "_B_" }
+												]
+											},
+											{
+												"C": [
+													{ "K": "_S_:KEY" },
+													{
+														"OPT": true,
+														"C": [
+															{ "K": "_S_:ALGORITHM" },
+															{ "K": "_C_:=" },
+															{ "K": "_AS_" }
+														]
+													},
+													{ "K": "_B_" }
+												]
+											}
+										]
+									}
+								]
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:SUBPARTITIONS" },
+							{ "K": "_AS_" }
+						]
+					}
+				]
+			},
+			{ "K": "_B_" }
+		]
+	},
+	"CREATE_TABLE": {
+		"ID": 3000,
+		"END": true,
+		"HEAD": true,
+		"type": "CREATE_TABLE",
+		"C": [
+			{ "K": "_S_:CREATE" },
+			{
+				"OPT": true,
+				"K": "_S_:TEMPORARY"
+			},
+			{
+				"OR": true,
+				"C": [
+					{
+						"K": "_S_:TABLE",
+						"F": "newTable"
+					},
+					{
+						"K": "_S_:SEQUENCE",
+						"COMMENT": "in aliyun rds,CREATE SEQUENCE is just like CREATE TABLE",
+						"F": "newTable"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:IF NOT EXISTS"
+			},
+			{
+				"OR": true,
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{
+								"COMMENT": "create table dbName.tableName",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "NewTableDBName"
+									},
+									{ "K": "_C_:." },
+									{
+										"K": "_N_",
+										"F": "NewTableName"
+									}
+								]
+							},
+							{
+								"K": "_N_",
+								"COMMENT": "create table tableName",
+								"F": "NewTableName"
+							}
+						]
+					}
+				]
+			},
+			{
+				"OR": true,
+				"type": "CREATE_TABLE_LIKE",
+				"C": [
+					{
+						"C": [
+							{
+								"K": "_S_:LIKE",
+								"F": "createTableLike"
+							},
+							{
+								"OR": true,
+								"C": [
+									{
+										"C": [
+											{
+												"K": "_N_",
+												"F": "NewTableLikedDBName"
+											},
+											{ "K": "_C_:." },
+											{
+												"K": "_N_",
+												"F": "NewTableLikedTableName"
+											}
+										]
+									},
+									{
+										"K": "_N_",
+										"F": "NewTableLikedTableName"
+									}
+								]
+							}
+						]
+					},
+					{
+						"C": [
+							{ "K": "_C_:(" },
+							{ "INCLUDE": "create_definition" },
+							{ "K": "_C_:)" },
+							{ "INCLUDE": "table_options" }
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:;"
+			}
+		]
+	},
+	"alter_table_add_column": {
+		"ID": 10000,
+		"OPT": true,
+		"type": "ALTER_TABLE_ADD_COLUMN",
+		"C": [
+			{ "K": "_S_:ADD" },
+			{ "K": "_S_:COLUMN" },
+			{ "INCLUDE": "COLUMN_INFO" },
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{
+						"K": "_S_:FIRST",
+						"F": "AlterNewColumnAtFirst"
+					},
+					{
+						"C": [
+							{ "K": "_S_:AFTER" },
+							{
+								"K": "_N_",
+								"F": "AlterNewColumnAfter"
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"alter_table_add_columns": {
+		"ID": 10010,
+		"OPT": true,
+		"type": "ALTER_TABLE_ADD_COLUMNS",
+		"C": [
+			{ "K": "_S_:ADD" },
+			{ "K": "_S_:COLUMN" },
+			{ "K": "_C_:(" },
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{ "INCLUDE": "COLUMN_INFO" }
+				]
+			},
+			{ "K": "_C_:)" }
+		]
+	},
+	"alter_table_MODIFY_column": {
+		"ID": 10020,
+		"OPT": true,
+		"type": "ALTER_TABLE_MODIFY_COLUMN",
+		"C": [
+			{ "K": "_S_:MODIFY" },
+			{
+				"OPT": true,
+				"K": "_S_:COLUMN"
+			},
+			{ "INCLUDE": "COLUMN_INFO" },
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{
+						"K": "_S_:FIRST",
+						"F": "AlterNewColumnAtFirst"
+					},
+					{
+						"C": [
+							{ "K": "_S_:AFTER" },
+							{
+								"K": "_N_",
+								"F": "AlterNewColumnAfter"
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"alter_table_add_CONSTRAINT": {
+		"ID": 10030,
+		"OPT": true,
+		"type": "ALTER_TABLE_ADD_CONSTRAINT",
+		"C": [
+			{ "K": "_S_:ADD" },
+			{ "INCLUDE": "CONSTRAINT" }
+		]
+	},
+	"alter_table_add_key": {
+		"ID": 10040,
+		"OPT": true,
+		"type": "ALTER_TABLE_ADD_KEY",
+		"C": [
+			{ "K": "_S_:ADD" },
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{ "K": "_S_:FULLTEXT" },
+					{ "K": "_S_:SPATIAL" }
+				]
+			},
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:KEY" },
+					{ "K": "_S_:INDEX" }
+				]
+			},
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{
+						"OPT": true,
+						"K": "_N_"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:USING" },
+							{ "K": "_AS_" }
+						]
+					},
+					{ "K": "_B_" },
+					{ "INCLUDE": "index_option" }
+				]
+			}
+		]
+	},
+	"alter_table_drop_index": {
+		"ID": 10050,
+		"OPT": true,
+		"type": "ALTER_TABLE_DROP_INDEX",
+		"C": [
+			{ "K": "_S_:DROP" },
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:KEY" },
+					{ "K": "_S_:INDEX" }
+				]
+			},
+			{
+				"K": "_N_",
+				"F": "dropIndex"
+			}
+		]
+	},
+	"alter_table_change_column": {
+		"ID": 10060,
+		"OPT": true,
+		"type": "ALTER_TABLE_CHANGE_COLUMN",
+		"F": "alterChangeColumn",
+		"C": [
+			{ "K": "_S_:CHANGE" },
+			{
+				"OPT": true,
+				"K": "_S_:COLUMN"
+			},
+			{
+				"K": "_N_",
+				"F": "alterChangeColumnName"
+			},
+			{ "INCLUDE": "COLUMN_INFO" },
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{
+						"K": "_S_:FIRST",
+						"F": "AlterNewColumnAtFirst"
+					},
+					{
+						"C": [
+							{ "K": "_S_:AFTER" },
+							{
+								"K": "_N_",
+								"F": "AlterNewColumnAfter"
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"alter_table_change_default_charset": {
+		"OPT": true,
+		"C": [
+			{
+				"OPT": true,
+				"K": "_S_:DEFAULT"
+			},
+			{
+				"K": "_S_:CHARACTER",
+				"F": "changeTableCharset"
+			},
+			{ "K": "_S_:SET" },
+			{
+				"OPT": true,
+				"K": "_C_:="
+			},
+			{
+				"K": "_AS_",
+				"F": "tableCharset"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COLLATE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{
+						"K": "_AS_",
+						"F": "tableCollate"
+					}
+				]
+			}
+		]
+	},
+	"alter_table_convert_default_charset": {
+		"OPT": true,
+		"C": [
+			{
+				"K": "_S_:CONVERT",
+				"F": "converTableCharset"
+			},
+			{
+				"K": "_S_:TO"
+			},
+			{ "K": "_S_:CHARACTER" },
+			{ "K": "_S_:SET" },
+			{
+				"K": "_AS_",
+				"F": "tableCharset"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:COLLATE" },
+					{
+						"K": "_AS_",
+						"F": "tableCollate"
+					}
+				]
+			}
+		]
+	},
+	"alter_table_drop_column": {
+		"ID": 10070,
+		"OPT": true,
+		"type": "ALTER_TABLE_DROP_COLUMN",
+		"C": [
+			{ "K": "_S_:DROP" },
+			{
+				"OPT": true,
+				"K": "_S_:COLUMN"
+			},
+			{
+				"K": "_N_",
+				"F": "dropColumn"
+			}
+		]
+	},
+	"alter_table_drop_primary_key": {
+		"ID": 10080,
+		"OPT": true,
+		"type": "ALTER_TABLE_DROP_PRIMARY_KEY",
+		"C": [
+			{ "K": "_S_:DROP" },
+			{ "K": "_S_:PRIMARY" },
+			{
+				"K": "_S_:KEY",
+				"F": "dropPrimaryKey"
+			}
+		]
+	},
+	"alter_table_drop_foreign_key": {
+		"ID": 10090,
+		"OPT": true,
+		"type": "ALTER_TABLE_DROP_FOREIGN_KEY",
+		"C": [
+			{ "K": "_S_:DROP" },
+			{ "K": "_S_:FOREIGN " },
+			{ "K": "_S_:KEY" },
+			{
+				"K": "_N_",
+				"F": "dropForeignKey"
+			}
+		]
+	},
+	"alter_table_rename_column": {
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:RENAME" },
+			{ "K": "_S_:COLUMN" },
+			{
+				"K": "_N_",
+				"F": "renameOldColumn"
+			},
+			{ "K": "_S_:TO" },
+			{
+				"K": "_N_",
+				"F": "renameNewColumn"
+			}
+		]
+	},
+	"alter_table_rename_key": {
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:RENAME" },
+			{ "K": "_S_:KEY" },
+			{
+				"K": "_N_",
+				"F": "renameOldKey"
+			},
+			{ "K": "_S_:TO" },
+			{
+				"K": "_N_",
+				"F": "renameNewKey"
+			}
+		]
+	},
+	"alter_table_rename_index": {
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:RENAME" },
+			{ "K": "_S_:INDEX" },
+			{
+				"K": "_N_",
+				"F": "renameOldIndex"
+			},
+			{ "K": "_S_:TO" },
+			{
+				"K": "_N_",
+				"F": "renameNewIndex"
+			}
+		]
+	},
+	"alter_table_rename_table": {
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:RENAME" },
+			{ "K": "_S_:COLUMN" },
+			{
+				"K": "_N_",
+				"F": "renameOldColumn"
+			},
+			{ "K": "_S_:TO" },
+			{
+				"K": "_N_",
+				"F": "renameNewColumn"
+			}
+		]
+	},
+	"alter_table": {
+		"ID": 9000,
+		"OPT": true,
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:ALTER" },
+			{
+				"K": "_S_:TABLE",
+				"F": "alterTable"
+			},
+			{
+				"OR": true,
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{
+								"COMMENT": "alter table dbName.tableName",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "alterTableDbName"
+									},
+									{ "K": "_C_:." },
+									{
+										"K": "_N_",
+										"F": "alterTableTableName"
+									}
+								]
+							},
+							{
+								"K": "_N_",
+								"COMMENT": "alter table tableName",
+								"F": "alterTableTableName"
+							}
+						]
+					}
+				]
+			},
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{ "INCLUDE": "alter_table_add_column" },
+							{ "INCLUDE": "alter_table_add_columns" },
+							{ "INCLUDE": "alter_table_MODIFY_column" },
+							{ "INCLUDE": "alter_table_add_CONSTRAINT" },
+							{ "INCLUDE": "alter_table_add_key" },
+							{ "INCLUDE": "alter_table_drop_index" },
+							{ "INCLUDE": "alter_table_change_column" },
+							{ "INCLUDE": "alter_table_drop_column" },
+							{ "INCLUDE": "alter_table_drop_primary_key" },
+							{ "INCLUDE": "alter_table_drop_foreign_key" },
+							{ "INCLUDE": "alter_table_convert_default_charset" },
+							{ "INCLUDE": "alter_table_change_default_charset" },
+							{ "INCLUDE": "alter_table_rename_column" },
+							{ "INCLUDE": "alter_table_rename_key" },
+							{ "INCLUDE": "alter_table_rename_index" },
+							{
+								"C": [
+									{ "K": "_S_:COMMENT" },
+									{
+										"OPT": true,
+										"K": "_C_:="
+									},
+									{ "K": "_A_" }
+								]
+							}
+						]
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{ "K": "_S_:WITHOUT" },
+							{ "K": "_S_:WITH" }
+						]
+					},
+					{ "K": "_S_:VALIDATION" }
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:;"
+			}
+		]
+	},
+	"create_index": {
+		"ID": 12000,
+		"type": "CREATE_INDEX",
+		"OPT": true,
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:CREATE" },
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:ONINE" },
+					{ "K": "_S_:OFFLINE" }
+				]
+			},
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{
+						"K": "_S_:UNIQUE",
+						"F": "createUK"
+					},
+					{ "K": "_S_:FULLTEXT" },
+					{ "K": "_S_:SPATIAL" }
+				]
+			},
+			{ "K": "_S_:INDEX" },
+			{
+				"K": "_N_",
+				"F": "createUKName"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:USING" },
+					{ "K": "_AS_" }
+				]
+			},
+			{ "K": "_S_:ON" },
+			{
+				"OR": true,
+				"C": [
+					{
+						"COMMENT": "dbName.tableName",
+						"C": [
+							{
+								"K": "_N_",
+								"F": "createUKONDatabaseName"
+							},
+							{ "K": "_C_:." },
+							{
+								"K": "_N_",
+								"F": "createUKONTableName"
+							}
+						]
+					},
+					{
+						"K": "_N_",
+						"COMMENT": "tableName",
+						"F": "createUKONTableName"
+					}
+				]
+			},
+			{ "K": "_C_:(" },
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{
+						"K": "_N_",
+						"F": "createUkByColumn"
+					},
+					{
+						"OPT": true,
+						"K": "_B_"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:ASC" },
+							{ "K": "_S_:DESC" }
+						]
+					}
+				]
+			},
+			{ "K": "_C_:)" },
+			{ "INCLUDE": "index_option" },
+			{
+				"OR": true,
+				"OPT": true,
+				"C": [
+					{
+						"C": [
+							{ "K": "_S_:ALGORITHM" },
+							{
+								"OPT": true,
+								"K": "_C_:="
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:DEFAULT" },
+									{ "K": "_S_:INPLACE" },
+									{ "K": "_S_:COPY" }
+								]
+							}
+						]
+					},
+					{
+						"C": [
+							{ "K": "_S_:LOCK" },
+							{
+								"OPT": true,
+								"K": "_C_:="
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:DEFAULT" },
+									{ "K": "_S_:NONE" },
+									{ "K": "_S_:EXCLUSIVE" },
+									{ "K": "_S_:SHARED" }
+								]
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"drop_index": {
+		"ID": 13000,
+		"type": "DROP_INDEX",
+		"OPT": true,
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:DROP" },
+			{ "K": "_S_:INDEX" },
+			{
+				"OPT": true,
+				"C": [
+					{ "K": "_S_:ONINE" },
+					{ "K": "_S_:OFFLINE" }
+				]
+			},
+			{
+				"K": "_N_",
+				"F": "dropIndexName"
+			},
+			{ "K": "_S_:ON" },
+			{
+				"OR": true,
+				"C": [
+					{
+						"COMMENT": "dbName.tableName",
+						"C": [
+							{
+								"K": "_N_",
+								"F": "dropIndexOnDataBaseName"
+							},
+							{ "K": "_C_:." },
+							{
+								"K": "_N_",
+								"F": "dropIndexOnTableName"
+							}
+						]
+					},
+					{
+						"K": "_N_",
+						"COMMENT": "tableName",
+						"F": "dropIndexOnTableName"
+					}
+				]
+			},
+			{
+				"OR": true,
+				"OPT": true,
+				"C": [
+					{
+						"C": [
+							{ "K": "_S_:ALGORITHM" },
+							{
+								"OPT": true,
+								"K": "_C_:="
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:DEFAULT" },
+									{ "K": "_S_:INPLACE" },
+									{ "K": "_S_:COPY" }
+								]
+							}
+						]
+					},
+					{
+						"C": [
+							{ "K": "_S_:LOCK" },
+							{
+								"OPT": true,
+								"K": "_C_:="
+							},
+							{
+								"OR": true,
+								"C": [
+									{ "K": "_S_:DEFAULT" },
+									{ "K": "_S_:NONE" },
+									{ "K": "_S_:EXCLUSIVE" },
+									{ "K": "_S_:SHARED" }
+								]
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"DROP_TABLE": {
+		"ID": 14000,
+		"type": "DROP_TABLE",
+		"OPT": true,
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:DROP" },
+			{
+				"OPT": true,
+				"K": "_S_:TEMPORARY"
+			},
+			{
+				"K": "_S_:TABLE",
+				"F": "dropTable"
+			},
+			{
+				"OPT": true,
+				"K": "_S_:IF EXISTS"
+			},
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{
+								"COMMENT": "dbName.tableName",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "dropTableDatabaseName"
+									},
+									{
+										"K": "_C_:.",
+										"F": "dropTableTableName"
+									},
+									{ "K": "_N_" }
+								]
+							},
+							{
+								"K": "_N_",
+								"COMMENT": "tableName",
+								"F": "dropTableTableName"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_C_:,"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"OR": true,
+				"C": [
+					{ "K": "_S_:RESTRICT" },
+					{ "K": "_S_:CASCADE" }
+				]
+			}
+		]
+	},
+	"RENAME_TABLE": {
+		"ID": 15000,
+		"type": "RENAME_TABLE",
+		"OPT": true,
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:RENAME" },
+			{ "K": "_S_:TABLE" },
+			{
+				"LOOP": "_C_:,",
+				"C": [
+					{
+						"OR": true,
+						"C": [
+							{
+								"COMMENT": "dbName.tableName",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "renameTableDatabaseName"
+									},
+									{ "K": "_C_:." },
+									{
+										"K": "_N_",
+										"F": "renameTableTableName"
+									}
+								]
+							},
+							{
+								"K": "_N_",
+								"COMMENT": "tableName",
+								"F": "renameTableTableName"
+							}
+						]
+					},
+					{
+						"K": "_S_:TO",
+						"F": "renameNewTable"
+					},
+					{
+						"OR": true,
+						"C": [
+							{
+								"COMMENT": "dbName.tableName",
+								"C": [
+									{
+										"K": "_N_",
+										"F": "renameTableToDatabaseName"
+									},
+									{ "K": "_C_:." },
+									{
+										"K": "_N_",
+										"F": "renameTableToTableName"
+									}
+								]
+							},
+							{
+								"K": "_N_",
+								"COMMENT": "tableName",
+								"F": "renameTableToTableName"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_C_:,"
+					}
+				]
+			}
+		]
+	},
+	"create_database": {
+		"ID": 30000,
+		"type": "CREATE_DATABASE",
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:CREATE" },
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:DATABASE" },
+					{ "K": "_S_:SCHEMA" }
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:IF NOT EXISTS"
+			},
+			{
+				"K": "_N_",
+				"F": "createDatabase"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OPT": true,
+						"K": "_S_:DEFAULT"
+					},
+					{ "K": "_S_:CHARACTER" },
+					{ "K": "_S_:SET" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{
+						"K": "_AS_",
+						"F": "databaseCharset"
+					}
+				]
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"OPT": true,
+						"K": "_S_:DEFAULT"
+					},
+					{ "K": "_S_:COLLATE" },
+					{
+						"OPT": true,
+						"K": "_C_:="
+					},
+					{
+						"K": "_AS_",
+						"F": "databaseCollate"
+					}
+				]
+			}
+		]
+	},
+	"drop_database": {
+		"ID": 31000,
+		"type": "DROP_DATABASE",
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:DROP" },
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:DATABASE" },
+					{ "K": "_S_:SCHEMA" }
+				]
+			},
+			{
+				"OPT": true,
+				"K": "_S_:IF EXISTS"
+			},
+			{
+				"K": "_N_",
+				"F": "dropDatabase"
+			}
+		]
+	},
+	"alter_database": {
+		"type": "ALTER_DATABASE",
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:ALTER" },
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:DATABASE" },
+					{ "K": "_S_:SCHEMA" }
+				]
+			},
+			{
+				"K": "_N_",
+				"F": "alterDatabase"
+			},
+			{
+				"OPT": true,
+				"C": [
+					{
+						"C": [
+							{ "K": "_S_:UPGRADE DATA DIRECTORY" },
+							{ "K": "_AS_" }
+						]
+					},
+					{
+						"C": [
+							{
+								"OPT": true,
+								"C": [
+									{
+										"OPT": true,
+										"K": "_S_:DEFAULT"
+									},
+									{ "K": "_S_:CHARACTER" },
+									{ "K": "_S_:SET" },
+									{
+										"OPT": true,
+										"K": "_C_:="
+									},
+									{
+										"K": "_AS_",
+										"F": "databaseCharset"
+									}
+								]
+							},
+							{
+								"OPT": true,
+								"C": [
+									{
+										"OPT": true,
+										"K": "_S_:DEFAULT"
+									},
+									{ "K": "_S_:COLLATE" },
+									{
+										"OPT": true,
+										"K": "_C_:="
+									},
+									{
+										"K": "_AS_",
+										"F": "databaseCollate"
+									}
+								]
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"use_database": {
+		"ID": 23000,
+		"type": "USE_DATABASE",
+		"HEAD": true,
+		"C": [
+			{ "K": "_S_:USE" },
+			{
+				"K": "_N_",
+				"F": "useDatabase"
+			}
+		]
+	},
+	"select_column": {
+		"ID": 240001,
+		"name": "select_column",
+		"OR": true,
+		"C": [
+			{ "K": "_S_:*" },
+			{
+				"C": [
+					{ "K": "_S_:count" },
+					{ "K": "_S_:(" },
+					{ "K": "_AS_" },
+					{ "K": "_S_:)" }
+				]
+			},
+			{
+				"C": [
+					{ "K": "_S_:sum" },
+					{ "K": "_S_:(" },
+					{ "K": "_AS_" },
+					{ "K": "_S_:)" }
+				]
+			},
+			{ "K": "_AS_" }
+		]
+	},
+	"BEGIN": {
+		"ID": 250000,
+		"HEAD": true,
+		"type": "BEGIN",
+		"C": [
+			{ "K": "_S_:begin" }
+		]
+	},
+	"COMMIT": {
+		"ID": 260000,
+		"HEAD": true,
+		"type": "COMMIT",
+		"C": [
+			{ "K": "_S_:commit" }
+		]
+	},
+	"ROLLBACK": {
+		"ID": 270000,
+		"HEAD": true,
+		"type": "ROLLBACK",
+		"C": [
+			{ "K": "_S_:rollback" }
+		]
+	}
 }

@@ -375,6 +375,12 @@ namespace SQL_PARSER {
 		t->newColumns.push_back(c);
 		return OK;
 	}
+	extern "C" DLL_EXPORT  parseValue  columnCollate(handle* h, SQLValue* value)
+	{
+		newColumnInfo* c = getLastColumn(h);
+		c->collate = static_cast<SQLStringValue*>(value)->value;
+		return OK;
+	}
 	extern "C" DLL_EXPORT  parseValue generatedColumn(handle* h, SQLValue * value)
 	{
 		newColumnInfo* c = getLastColumn(h);
@@ -472,6 +478,24 @@ namespace SQL_PARSER {
 	{
 		newTableInfo* t = getLastTable(h);
 		t->defaultCharset = getCharset(static_cast<SQLStringValue*>(value)->value.c_str());
+		return OK;
+	}
+	extern "C" DLL_EXPORT  parseValue changeTableCharset(handle* h, SQLValue* value)
+	{
+		newTableInfo* t = getLastTable(h);
+		t->changeOrConvertCharset = true;
+		return OK;
+	}
+	extern "C" DLL_EXPORT  parseValue converTableCharset(handle* h, SQLValue* value)
+	{
+		newTableInfo* t = getLastTable(h);
+		t->changeOrConvertCharset = false;
+		return OK;
+	}
+	extern "C" DLL_EXPORT  parseValue tableCollate(handle* h, SQLValue* value)
+	{
+		newTableInfo* t = getLastTable(h);
+		t->collate =static_cast<SQLStringValue*>(value)->value;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue newTable(handle* h, SQLValue * value)
@@ -728,6 +752,11 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  databaseCharset(handle* h, SQLValue * value)
 	{
 		getMeta(h)->database.charset = getCharset(static_cast<SQLStringValue*>(value)->value.c_str());
+		return OK;
+	}
+	extern "C" DLL_EXPORT  parseValue  databaseCollate(handle* h, SQLValue* value)
+	{
+		getMeta(h)->database.collate = static_cast<SQLStringValue*>(value)->value;
 		return OK;
 	}
 }
