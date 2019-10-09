@@ -263,23 +263,56 @@ namespace META {
 		}
 		else
 		{
-			int pos = 0;
-			if (addAfter != nullptr)
+			if (dropColumn(column->m_columnName.c_str()) != 0)
 			{
-				const columnMeta* after = getColumn(addAfter);
-				if (after == nullptr)
-				{
-					LOG(ERROR) << "modify column " << column->m_columnName << " failed for after column not exist";
-					return -1;
-				}
-				pos = after->m_columnIndex + 1;
+				LOG(ERROR) << "modify column " << column->m_columnName << " failed for drop column failed";
+				return -1;
 			}
-			columnMeta* newColumns = new columnMeta[m_columnsCount];
+			if (addColumn(column, addAfter, first) != 0)
+			{
+				LOG(ERROR) << "modify column " << column->m_columnName << " failed for add column failed";
+				return -1;
+			}
+		}
+		return 0;
+	}
+	int tableMeta::changeColumn(const columnMeta* newColumn, const char* columnName, bool first, const char* addAfter)
+	{
+		const columnMeta* old = getColumn(columnName);
+		if (old == nullptr)
+		{
+			LOG(ERROR) << "change column " << columnName << " failed for column not exist";
+			return -1;
+		}
+		if (strncasecmp(columnName, newColumn->m_columnName.c_str(), newColumn->m_columnName.size()) != 0)
+		{
 
 		}
-
+		int idx = old->m_columnIndex;
+		if (!first && addAfter == nullptr)
+		{
+			m_columns[idx] = *newColumn;
+			m_columns[idx].m_columnIndex = idx;
+			if (columnInfos[m_columns[idx].m_columnType].stringType && m_columns[idx].m_charset == nullptr)
+				m_columns[idx].m_charset = m_charset;
+			buildColumnOffsetList();
+		}
+		else
+		{
+			if (dropColumn(columnName) != 0)
+			{
+				LOG(ERROR) << "modify column " << columnName << " failed for drop column failed";
+				return -1;
+			}
+			if (addColumn(newColumn, addAfter, first) != 0)
+			{
+				LOG(ERROR) << "modify column " << newColumn->m_columnName << " failed for add column failed";
+				return -1;
+			}
+		}
+		return 0;
 	}
-	int tableMeta::addColumn(const columnMeta* column, const char * addAfter)
+	int tableMeta::addColumn(const columnMeta* column,const char * addAfter, bool first)
 	{
 		if (getColumn(column->m_columnName.c_str()) != nullptr)
 		{
@@ -327,6 +360,31 @@ namespace META {
 						m_primaryKey.keyIndexs[i]++;
 				}
 			}
+		}
+		else if (first)
+		{
+			columnMeta* columns = new columnMeta[m_columnsCount + 1];
+			for (uint32_t idx = 1; idx <= m_columnsCount; idx++)
+				columns[idx] = m_columns[idx-1];
+			columns[0] = *column;
+			columns[0].m_columnIndex = 0;
+			if (columnInfos[column->m_columnType].stringType && column->m_charset == nullptr)
+				columns[m_columnsCount].m_charset = m_charset;
+			if (m_uniqueKeys != nullptr)
+			{
+				for (uint16_t idx = 0; idx < m_uniqueKeysCount; idx++)
+				{
+					for (uint16_t i = 0; i < m_uniqueKeys[idx].count; i++)
+						m_uniqueKeys[idx].keyIndexs[i]++;
+				}
+			}
+			if (m_primaryKey.count > 0)
+			{
+				for (uint16_t i = 0; i < m_primaryKey.count; i++)
+					m_primaryKey.keyIndexs[i]++;
+			}
+			delete[]m_columns;
+			m_columns = columns;
 		}
 		else
 		{

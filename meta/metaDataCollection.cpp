@@ -53,7 +53,7 @@ namespace META {
 			collate = db.collate;
 		}
 	};
-	metaDataCollection::metaDataCollection(const char * defaultCharset,STORE::client *client) :m_dbs(),m_sqlParser(nullptr),m_client(client),
+	metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,STORE::client *client) :m_nameCompare(caseSensitive),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
 		 m_maxTableId(1),m_maxDatabaseId(0)
 	{
 		m_defaultCharset = getCharset(defaultCharset);
@@ -1016,14 +1016,14 @@ namespace META {
 			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->srcColumnName << " not exist";
 			return -1;
 		}
-		if (table->getColumn(columnDdl->destColumnName.c_str()) != nullptr)
+		if (table->getColumn(columnDdl->srcColumnName.c_str()) != nullptr)
 		{
-			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->destColumnName << " exist";
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->srcColumnName << " exist";
 			return -1;
 		}
 		tableMeta* newTable = new tableMeta();
 		*newTable = *table;
-		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->destColumnName;
+		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->srcColumnName;
 		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
 		return 0;
 	}

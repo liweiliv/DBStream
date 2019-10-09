@@ -408,7 +408,8 @@ namespace META {
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
 		int dropColumn(const char *column);
 		int modifyColumn(const columnMeta* column, bool first, const char* addAfter);
-		int addColumn(const columnMeta* column, const char * addAfter = NULL);
+		int changeColumn(const columnMeta* newColumn,const char * columnName, bool first, const char* addAfter);
+		int addColumn(const columnMeta* column, const char * addAfter = nullptr,bool first = false);
 		int dropPrimaryKey();
 		int createPrimaryKey(const std::list<std::string> &columns);
 		int dropUniqueKey(const char *ukName);

@@ -15,6 +15,7 @@
 #include "tableIdTree.h"
 #include "util/winDll.h"
 #include "metaTimeline.h"
+#include "nameCompare.h"
 struct charsetInfo;
 namespace STORE{
 class client;
@@ -24,22 +25,21 @@ namespace SQL_PARSER
 class sqlParser;
 struct handle;
 };
-
 typedef std::unordered_map<const char *,const  charsetInfo*,StrHash,StrCompare> CharsetTree ;
 namespace META {
 	struct tableMeta;
 	struct columnMeta;
-
 	struct dbInfo;
+	typedef spp::sparse_hash_map<const char*,MetaTimeline<dbInfo>*, nameCompare, nameCompare> dbTree;
 	class newColumnInfo;
 	class newTableInfo;
 	struct Table;
 	struct ddl;
 	struct databaseInfo;
-	typedef spp::sparse_hash_map<const char*, MetaTimeline<dbInfo>*, StrHash, StrCompare> dbTree;
 	class DLL_EXPORT metaDataCollection
 	{
 	private:
+		nameCompare m_nameCompare;
 		dbTree m_dbs;
 		CharsetTree m_charsetSizeList;
 		const charsetInfo * m_defaultCharset;
@@ -49,7 +49,7 @@ namespace META {
 		uint64_t m_maxTableId;
 		uint64_t m_maxDatabaseId;
 	public:
-		metaDataCollection(const char * defaultCharset,STORE::client *client = nullptr);
+		metaDataCollection(const char * defaultCharset,bool caseSensitive = true,STORE::client *client = nullptr);
 		~metaDataCollection();
 		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
 		tableMeta * get(uint64_t tableID);
