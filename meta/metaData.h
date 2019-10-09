@@ -16,6 +16,7 @@
 #include "mysqlTypes.h"
 #include "charset.h"
 #include "util/winDll.h"
+#include "nameCompare.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }
@@ -361,6 +362,7 @@ namespace META {
 		keyInfo * m_uniqueKeys;
 		uint16_t m_indexCount;
 		keyInfo * m_indexs;
+		nameCompare m_nameCompare;
 		void * userData;
 		static inline uint16_t tableVersion(uint64_t tableIDInfo)
 		{
@@ -374,7 +376,7 @@ namespace META {
 		{
 			return (tableid<<16)|version;
 		}
-		tableMeta();
+		tableMeta(bool caseSensitive);
 		tableMeta(DATABASE_INCREASE::TableMetaMessage * msg);
 		const char * createTableMetaRecord();
 		void clean();

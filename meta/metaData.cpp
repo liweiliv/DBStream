@@ -2,14 +2,14 @@
 #include "message/record.h"
 #include "glog/logging.h"
 namespace META {
-	tableMeta::tableMeta() :m_charset(nullptr), m_columns(nullptr),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
-		m_columnsCount(0), m_id(0),  m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr),userData(nullptr)
+	tableMeta::tableMeta(bool caseSensitive) :m_charset(nullptr), m_columns(nullptr),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
+		m_columnsCount(0), m_id(0),  m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_indexCount(0), m_indexs(nullptr), m_nameCompare(caseSensitive),userData(nullptr)
 	{
 	}
 	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage * msg) :m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""),
 			m_charset(&charsets[msg->metaHead.charsetId]), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
 			 m_columnsCount(msg->metaHead.columnCount),
-		m_id(msg->metaHead.tableMetaID),m_uniqueKeysCount(msg->metaHead.uniqueKeyCount)
+		m_id(msg->metaHead.tableMetaID),m_uniqueKeysCount(msg->metaHead.uniqueKeyCount),m_nameCompare(msg->metaHead.caseSensitive>0)
 	{
 		m_columns = new columnMeta[m_columnsCount];
 		for (uint32_t i = 0; i < m_columnsCount; i++)
@@ -116,6 +116,7 @@ namespace META {
 		m_tableName = t.m_tableName;
 		m_dbName = t.m_dbName;
 		m_charset = t.m_charset;
+		m_nameCompare = t.m_nameCompare;
 		if ((m_columnsCount = t.m_columnsCount) > 0)
 		{
 			m_columns = new columnMeta[m_columnsCount];

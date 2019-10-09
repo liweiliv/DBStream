@@ -21,7 +21,7 @@
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
-	typedef spp::sparse_hash_map<const char*, MetaTimeline<tableMeta>*, StrHash, StrCompare> tbTree;
+	typedef spp::sparse_hash_map<const char*, MetaTimeline<tableMeta>*, nameCompare, nameCompare> tbTree;
 #define getDbInfo(database,di) do{		\
 	dbTree::iterator DBIter = m_dbs.find(database);\
 	if (unlikely(DBIter == m_dbs.end()))\
@@ -43,10 +43,11 @@ namespace META {
 		std::string name;
 		const charsetInfo* charset;
 		std::string collate;
+		dbInfo(nameCompare& comp) :tables(0, comp, comp), m_id(0), charset(nullptr){}
 		dbInfo& operator = (const dbInfo& db)
 		{
 			for (tbTree::iterator iter = db.tables.begin(); iter != db.tables.end(); iter++)
-				tables.insert(iter);
+				tables.insert(std::pair<const char*, MetaTimeline<tableMeta>*>(iter->first,iter->second));
 			m_id = db.m_id;
 			name = db.name;
 			charset = db.charset;
@@ -158,7 +159,7 @@ namespace META {
 		if (metaRecord == nullptr)
 			return nullptr;
 		DATABASE_INCREASE::DatabaseMetaMessage msg(metaRecord);
-		dbInfo * meta = new dbInfo();
+		dbInfo * meta = new dbInfo(m_nameCompare);
 		meta->charset = &charsets[msg.charsetID];
 		meta->name = msg.dbName;
 		meta->m_id = msg.id;
@@ -178,7 +179,7 @@ namespace META {
 		if (metaRecord == nullptr)
 			return nullptr;
 		DATABASE_INCREASE::DatabaseMetaMessage msg(metaRecord);
-		dbInfo * meta = new dbInfo();
+		dbInfo * meta = new dbInfo(m_nameCompare);
 		meta->charset = &charsets[msg.charsetID];
 		meta->name = msg.dbName;
 		meta->m_id = msg.id;
@@ -268,7 +269,7 @@ namespace META {
 	}
 	int metaDataCollection::put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint)
 	{
-		dbInfo* db = new dbInfo();
+		dbInfo* db = new dbInfo(m_nameCompare);
 		db->charset = charset;
 		db->name = database;
 		if (0 != put(database, originCheckPoint, db))
@@ -369,7 +370,7 @@ namespace META {
 			return -1;
 		}
 
-		tableMeta * meta = new tableMeta;
+		tableMeta * meta = new tableMeta(m_nameCompare.caseSensitive);
 		meta->m_columns = new columnMeta[t->newColumns.size()];
 		meta->m_tableName = newTable.table;
 		meta->m_dbName = currentDb->name;
@@ -481,7 +482,7 @@ namespace META {
 				likedTable.database.c_str(), likedTable.table.c_str());
 			return -1;
 		}
-		tableMeta * meta = new tableMeta;
+		tableMeta * meta = new tableMeta(m_nameCompare.caseSensitive);
 		*meta = *likedMeta;
 		meta->m_tableName = newTable.table;
 		if (0
@@ -514,7 +515,7 @@ namespace META {
 				newTable.table.c_str());
 			return -1;
 		}
-		tableMeta * newMeta = new tableMeta;
+		tableMeta * newMeta = new tableMeta(m_nameCompare.caseSensitive);
 		*newMeta = *meta;
 		/*update charset*/
 		if (t->defaultCharset != nullptr)
@@ -695,7 +696,7 @@ namespace META {
 		}
 		else
 		{
-			dbInfo* current = new dbInfo;
+			dbInfo* current = new dbInfo(m_nameCompare);
 			current->name = static_cast<const dataBaseDDL*>(database)->name;
 			current->charset = static_cast<const dataBaseDDL*>(database)->charset;
 			if (current->charset == nullptr)
@@ -739,7 +740,7 @@ namespace META {
 		uint64_t originCheckPoint)
 	{
 		const createTableDDL* table = static_cast<const createTableDDL*>(tableDDL);
-		tableMeta* meta = new tableMeta();
+		tableMeta* meta = new tableMeta(m_nameCompare.caseSensitive);
 		*meta = table->table;
 		MetaTimeline<dbInfo>* db;
 		if (meta->m_dbName.empty())
@@ -869,7 +870,7 @@ namespace META {
 				destDb = dd->c_str();
 			else if (!tables->usedDb.empty())
 				destDb = tables->usedDb.c_str();
-			tableMeta* newTable = new tableMeta();
+			tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 			*newTable = *get(db, st->c_str());
 			newTable->m_tableName = dt->c_str();
 			newTable->m_dbName = destDb;
@@ -905,7 +906,7 @@ namespace META {
 			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
 			return -1;
 		}
-		tableMeta* newTable = new tableMeta();
+		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table;
 		if (newTable->addColumn(&columnDdl->column, columnDdl->afterColumnName.empty() ? nullptr : columnDdl->afterColumnName.c_str())
 			!=0)
@@ -937,7 +938,7 @@ namespace META {
 			LOG(ERROR) << "unknown table :" << db << "." << columnDdl->table;
 			return -1;
 		}
-		tableMeta* newTable = new tableMeta();
+		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table;
 		for (std::list<columnMeta*>::const_iterator iter = columnDdl->columns.begin(); iter != columnDdl->columns.end(); iter++)
 		{
@@ -983,7 +984,7 @@ namespace META {
 			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->destColumnName << " exist";
 			return -1;
 		}
-		tableMeta* newTable = new tableMeta();
+		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table; 
 		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->destColumnName;
 		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
@@ -1021,7 +1022,7 @@ namespace META {
 			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed for " << columnDdl->srcColumnName << " exist";
 			return -1;
 		}
-		tableMeta* newTable = new tableMeta();
+		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table;
 		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->srcColumnName;
 		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
@@ -1037,7 +1038,7 @@ namespace META {
 		{
 			if (database->type == databaseInfo::CREATE_DATABASE)
 			{
-				current = new dbInfo;
+				current = new dbInfo(m_nameCompare);
 				current->name = database->name;
 				current->charset = database->charset;
 				if (current->charset == nullptr)
@@ -1061,7 +1062,7 @@ namespace META {
 		{
 			if (database->type == databaseInfo::CREATE_DATABASE)
 			{
-				current = new dbInfo;
+				current = new dbInfo(m_nameCompare);
 				current->name = database->name;
 				current->charset = database->charset;
 				if (current->charset == nullptr)
@@ -1163,15 +1164,14 @@ namespace META {
 		for (dbTree::iterator iter = m_dbs.begin(); iter != m_dbs.end(); iter++)
 		{
 			MetaTimeline<dbInfo>* db = iter->second;
-			dbInfo* currentDB = db->get(0xffffffffffffffffUL);
+			dbInfo* currentDB = db->get(0xffffffffffffffffULL);
 			for (tbTree::iterator titer = currentDB->tables.begin(); titer != currentDB->tables.begin(); titer++)
 			{
 				MetaTimeline<tableMeta>* metas = titer->second;
-				tableMeta* currentTable = metas->get(0xffffffffffffffffUL);
+				tableMeta* currentTable = metas->get(0xffffffffffffffffULL);
 				printf("%s\n", currentTable->toString().c_str());
 			}
 		}
 	}
-
 }
 

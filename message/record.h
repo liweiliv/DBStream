@@ -141,6 +141,7 @@ namespace DATABASE_INCREASE
 			uint16_t columnCount;
 			uint16_t primaryKeyColumnCount;
 			uint16_t uniqueKeyCount;
+			uint8_t caseSensitive;
 		};
 		tableMetaHead metaHead;
 		const char* database;
