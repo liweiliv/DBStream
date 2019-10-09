@@ -7,7 +7,7 @@
 #include <assert.h>
 #include "meta/metaChangeInfo.h"
 #include "meta/charset.h"
-#include "sqlparser/sqlParserHandle.h"
+#include "sqlParser/sqlParserHandle.h"
 #include  "util/winDll.h"
 using namespace META;
 namespace SQL_PARSER {

@@ -307,13 +307,19 @@ namespace REPLICATOR {
 	{
 		va_list ap;
 		va_start(ap, _sql);
+#ifdef OS_WIN
 		int len = _vscprintf_p(_sql, ap);
-		char* sql = new char[len + 1];
+		char* sql =  (char*)malloc(len + 1);
 		sprintf(sql, ap);
+#endif
+#ifdef OS_LINUX
+		char * sql = nullptr;
+		asprintf(&sql,_sql,ap);
+#endif
 		va_end(ap);
 		MYSQL_RES* rs = nullptr;
 		realQuery(sql, rs);
-		delete[]sql;
+		free(sql);
 		return rs;
 	}
 
@@ -491,7 +497,7 @@ namespace REPLICATOR {
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
 
-			META::tableMeta* meta = new META::tableMeta();
+			META::tableMeta* meta = new META::tableMeta(true);//todo
 			meta->m_dbName = row[0];
 			meta->m_tableName = row[1];
 			if (row[4] != nullptr && strlen(row[4]) > 0)
@@ -582,7 +588,7 @@ namespace REPLICATOR {
 			return nullptr;
 		}
 		MYSQL_ROW row;
-		META::tableMeta* meta = new META::tableMeta();
+		META::tableMeta* meta = new META::tableMeta(true);//todo
 		meta->m_columns = new META::columnMeta[rs->row_count];
 		int columnCount = 0;
 		while (nullptr != (row = mysql_fetch_row(rs)))
