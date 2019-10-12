@@ -19,7 +19,7 @@ namespace META {
 		std::string m_name;
 	public:
 		MetaTimeline(uint64_t id,const char *name) :
-			m_current(NULL), m_id(id), m_version(0),m_name(name)
+			m_current(nullptr), m_id(id), m_version(0),m_name(name)
 		{
 		}
 		~MetaTimeline()
@@ -54,14 +54,14 @@ namespace META {
 			else
 			{
 				MetaInfo* m = current->prev;
-				while (m != NULL)
+				while (m != nullptr)
 				{
 					if (m->startPos < originCheckPoint)
 						return m->meta;
 					else
 						m = m->prev;
 				}
-				return NULL;
+				return nullptr;
 			}
 		}
 		/*must be serial*/
@@ -72,7 +72,7 @@ namespace META {
 			m->meta = meta;
 			if(meta!=nullptr)
 				meta->m_id = tableMeta::genTableId(m_id, m_version++);
-			if (m_current == NULL)
+			if (m_current == nullptr)
 			{
 				barrier;
 				m_current = m;
@@ -82,6 +82,7 @@ namespace META {
 			{
 				if (m_current->startPos >= m->startPos)
 				{
+					LOG(ERROR) << "put meta failed for new pos:" << m->startPos << " less than current :" << m_current->startPos;
 					delete m;
 					return -1;
 				}
@@ -98,19 +99,19 @@ namespace META {
 		void purge(uint64_t originCheckPoint)
 		{
 			MetaInfo* m = m_current;
-			while (m != NULL)
+			while (m != nullptr)
 			{
 				if (originCheckPoint < m->startPos)
 					m = m->prev;
 				else
 					break;
 			}
-			if (m == NULL)
+			if (m == nullptr)
 				return;
-			while (m != NULL)
+			while (m != nullptr)
 			{
 				MetaInfo* tmp = m->prev;
-				if (m->meta != NULL)
+				if (m->meta != nullptr)
 					delete m->meta;
 				delete m;
 				m = tmp;

@@ -80,7 +80,7 @@ namespace META {
 	}
 	metaDataCollection::~metaDataCollection()
 	{
-		if (m_sqlParser != NULL)
+		if (m_sqlParser != nullptr)
 			delete m_sqlParser;
 	}
 	tableMeta * metaDataCollection::get(const char * database, const char * table,
@@ -88,15 +88,15 @@ namespace META {
 	{
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
-		if (db == NULL)
-			return NULL;
+		if (db == nullptr)
+			return nullptr;
 		dbInfo * currentDB = db->get(originCheckPoint);
-		if (currentDB == NULL)
-			return NULL;
+		if (currentDB == nullptr)
+			return nullptr;
 		MetaTimeline<tableMeta>* metas;
 		getTableInfo(table, metas, currentDB);
-		if (metas == NULL)
-			return NULL;
+		if (metas == nullptr)
+			return nullptr;
 		return metas->get(originCheckPoint);
 	}
 	const charsetInfo* metaDataCollection::getDataBaseCharset(const char* database, uint64_t originCheckPoint)
@@ -104,11 +104,11 @@ namespace META {
 
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
-		if (db == NULL)
-			return NULL;
+		if (db == nullptr)
+			return nullptr;
 		dbInfo* currentDB = db->get(originCheckPoint);
-		if (currentDB == NULL)
-			return NULL;
+		if (currentDB == nullptr)
+			return nullptr;
 		return currentDB->charset;
 	}
 
@@ -246,7 +246,7 @@ namespace META {
 	{
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
-		if (db == NULL)
+		if (db == nullptr)
 		{
 			db = new MetaTimeline<dbInfo>(offset,database);
 			db->put(dbmeta,offset);
@@ -292,9 +292,16 @@ namespace META {
 			if (m_client)
 			{
 				if (nullptr == (currentDB = this->getDatabaseMetaFromRemote(database, originCheckPoint)))
+				{
+					LOG(ERROR) << "can not get database meta from reomte server";
 					return -1;
+				}
 			}
-			return -1;
+			else
+			{
+				LOG(ERROR) << "unknown database:"<< database;
+				return -1;
+			}
 		}
 		else
 			currentDB = db->get(originCheckPoint);
@@ -305,8 +312,13 @@ namespace META {
 			newMeta = true;
 			metas = new MetaTimeline<tableMeta>(m_maxTableId++,table);
 		}
-		metas->put(meta, originCheckPoint);//here meta id will be set
-
+		if (0 != metas->put(meta, originCheckPoint))//here meta id will be set
+		{
+			if (newMeta)
+				delete metas;
+			LOG(ERROR) << "put new table meta to MetaTimeline failed";
+			return -1;
+		}
 		if (newMeta)
 		{
 			barrier;
@@ -315,378 +327,6 @@ namespace META {
 		m_allTables.put(meta);
 		return 0;
 	}
-	static void copyColumn(columnMeta & column, const newColumnInfo* src)
-	{
-		column.m_srcColumnType = src->rawType;//todo
-		column.m_columnType = src->type;
-		column.m_columnIndex = src->index;
-		column.m_columnName = src->name;
-		column.m_decimals = src->decimals;
-		column.m_generated = src->generated;
-		column.m_isPrimary = src->isPrimary;
-		column.m_isUnique = src->isUnique;
-		column.m_precision = src->precision;
-		column.m_setAndEnumValueList.m_Count = 0;
-		column.m_setAndEnumValueList.m_array = (char**)malloc(
-			sizeof(char*) * src->setAndEnumValueList.size());
-		for (std::list<std::string>::const_iterator iter = src->setAndEnumValueList.begin();
-			iter != src->setAndEnumValueList.end(); iter++)
-		{
-			column.m_setAndEnumValueList.m_array[column.m_setAndEnumValueList.m_Count] =
-				(char*)malloc((*iter).size() + 1);
-			memcpy(
-				column.m_setAndEnumValueList.m_array[column.m_setAndEnumValueList.m_Count],
-				(*iter).c_str(), (*iter).size());
-			column.m_setAndEnumValueList.m_array[column.m_setAndEnumValueList.m_Count][(*iter).size()] =
-				'\0';
-			column.m_setAndEnumValueList.m_Count++;
-		}
-		column.m_signed = src->isSigned;
-		column.m_size = src->size;
-	}
-	int metaDataCollection::createTable(handle * h, const newTableInfo *t,
-		uint64_t originCheckPoint)
-	{
-		Table newTable = t->table;
-		if (!h->dbName.empty())
-			newTable.database = h->dbName;
-		if (newTable.database.empty())
-		{
-			printf("no database\n");
-			return -1;
-		}
-		MetaTimeline<dbInfo>* db;
-		getDbInfo(newTable.database.c_str(), db);
-		if (db == NULL)
-		{
-			printf("unknown database :%s\n", newTable.database.c_str());
-			return -1;
-		}
-
-		dbInfo * currentDb = db->get(originCheckPoint);
-		if (currentDb == NULL)
-		{
-			printf("unknown database :%s\n", newTable.database.c_str());
-			return -1;
-		}
-
-		tableMeta * meta = new tableMeta(m_nameCompare.caseSensitive);
-		meta->m_columns = new columnMeta[t->newColumns.size()];
-		meta->m_tableName = newTable.table;
-		meta->m_dbName = currentDb->name;
-		meta->m_charset = t->defaultCharset;
-		if (meta->m_charset == nullptr)
-			meta->m_charset = currentDb->charset;
-
-		for (std::list<newColumnInfo*>::const_iterator iter = t->newColumns.begin();
-			iter != t->newColumns.end(); iter++)
-		{
-			newColumnInfo * c = *iter;
-			columnMeta & column = meta->m_columns[meta->m_columnsCount];
-			copyColumn(column, c);
-			if (columnInfos[c->type].stringType)
-			{
-				if (c->charset == nullptr)
-					column.m_charset = meta->m_charset;
-				column.m_size *= column.m_charset->byteSizePerChar;
-			}
-			column.m_columnIndex = meta->m_columnsCount++;
-		}
-		uint32_t ukCount = 0;
-		for (list<newKeyInfo*>::const_iterator iter = t->newKeys.begin();
-			iter != t->newKeys.end(); iter++)
-			if ((*iter)->type == newKeyInfo::UNIQUE_KEY)
-				ukCount++;
-		if (ukCount > 0)
-			meta->m_uniqueKeys = new keyInfo[ukCount];
-		for (auto k : t->newKeys)
-		{
-			keyInfo * key = nullptr;
-			if (k->type == newKeyInfo::PRIMARY_KEY)
-			{
-				meta->m_primaryKey.name = "primary key";
-				key = &meta->m_primaryKey;
-			}
-			else if (k->type == newKeyInfo::UNIQUE_KEY)
-			{
-				key = &meta->m_uniqueKeys[meta->m_uniqueKeysCount++];
-				key->name = k->name;
-			}
-			else if (k->type == newKeyInfo::KEY)
-				continue;//todo
-			if(k->columns.size()>0)
-				key->keyIndexs = new uint16_t[k->columns.size()];
-			for (auto name : k->columns)
-			{
-				columnMeta * _c = (columnMeta*)meta->getColumn(
-					name.c_str());
-				if (_c == NULL)
-				{
-					printf("can not find column %s in columns\n",
-						name.c_str());
-					delete meta;
-					return -1;
-				}
-				if (k->type == newKeyInfo::PRIMARY_KEY)
-					_c->m_isPrimary = true;
-				else if (k->type == newKeyInfo::UNIQUE_KEY)
-					_c->m_isUnique = true;
-				else if (k->type == newKeyInfo::KEY)
-					continue;//todo
-				key->keyIndexs[key->count++] = _c->m_columnIndex;
-			}
-		}
-		meta->buildColumnOffsetList();
-		if (0
-			!= put(newTable.database.c_str(), newTable.table.c_str(), meta, originCheckPoint))
-		{
-			printf("insert new meta of table %s.%s failed",
-				newTable.database.c_str(), newTable.table.c_str());
-			delete meta;
-			return -1;
-		}
-		printf("%s\n",meta->toString().c_str());
-		return 0;
-	}
-	int metaDataCollection::createTableLike(handle * h, const newTableInfo *t,
-		uint64_t originCheckPoint)
-	{
-		Table newTable = t->table;
-		if (!h->dbName.empty())
-			newTable.database = h->dbName;
-		if (newTable.database.empty())
-		{
-			printf("no database\n");
-			return -1;
-		}
-		MetaTimeline<dbInfo>* db;
-		getDbInfo(newTable.database.c_str(), db);
-		if (db == NULL)
-		{
-			printf("unknown database :%s\n", newTable.database.c_str());
-			return -1;
-		}
-		Table likedTable = t->likedTable;
-		if (!h->dbName.empty())
-			likedTable.database = h->dbName;
-		if (likedTable.database.empty())
-		{
-			printf("no database\n");
-			return -1;
-		}
-		tableMeta * likedMeta = get(likedTable.database.c_str(),
-			likedTable.table.c_str(), originCheckPoint);
-		if (likedMeta == NULL)
-		{
-			printf("create liked table %s.%s is not exist",
-				likedTable.database.c_str(), likedTable.table.c_str());
-			return -1;
-		}
-		tableMeta * meta = new tableMeta(m_nameCompare.caseSensitive);
-		*meta = *likedMeta;
-		meta->m_tableName = newTable.table;
-		if (0
-			!= put(newTable.database.c_str(), newTable.table.c_str(), meta,
-				originCheckPoint))
-		{
-			printf("insert new meta of table %s.%s failed",
-				newTable.database.c_str(), newTable.table.c_str());
-			delete meta;
-			return -1;
-		}
-		return 0;
-	}
-	int metaDataCollection::alterTable(handle * h, const newTableInfo *t,
-		uint64_t originCheckPoint)
-	{
-		Table newTable = t->table;
-		if (!h->dbName.empty())
-			newTable.database = h->dbName;
-		if (newTable.database.empty())
-		{
-			printf("no database\n");
-			return -1;
-		}
-		tableMeta * meta = get(newTable.database.c_str(), newTable.table.c_str(),
-				originCheckPoint);
-		if (meta == NULL)
-		{
-			printf("unknown table %s.%s\n", newTable.database.c_str(),
-				newTable.table.c_str());
-			return -1;
-		}
-		tableMeta * newMeta = new tableMeta(m_nameCompare.caseSensitive);
-		*newMeta = *meta;
-		/*update charset*/
-		if (t->defaultCharset != nullptr)
-			newMeta->m_charset = t->defaultCharset;
-		/*update new column*/
-		for (list<newColumnInfo*>::const_iterator iter = t->newColumns.begin();
-			iter != t->newColumns.end(); iter++)
-		{
-			newColumnInfo * c = *iter;
-			columnMeta column;
-			copyColumn(column, c);
-			/*update default charset and string size*/
-			if (columnInfos[c->type].stringType)
-			{
-				if (c->charset == nullptr)
-					column.m_charset = meta->m_charset;
-				column.m_size *= column.m_charset->byteSizePerChar;
-			}
-			columnMeta * modifiedColumn = (columnMeta*)meta->getColumn(c->name.c_str());
-			if (c->after)
-			{
-				/*不能alter table modify column_a after column_a，先执行drop是安全的*/
-				if (modifiedColumn != NULL)
-				{
-					if (0 != newMeta->dropColumn(modifiedColumn->m_columnIndex))
-					{
-						printf("drop column %s in %s.%s failed\n",
-							column.m_columnName.c_str(),
-							newTable.database.c_str(), newTable.table.c_str());
-						delete newMeta;
-						return -1;
-					}
-				}
-				if (0 != newMeta->addColumn(&column, c->afterColumnName.c_str()))
-				{
-					printf("add column %s after %s in %s.%s failed\n",
-						column.m_columnName.c_str(), c->afterColumnName.c_str(),
-						newTable.database.c_str(), newTable.table.c_str());
-					delete newMeta;
-					return -1;
-				}
-
-			}
-			else
-			{
-				if (modifiedColumn != NULL) //modify column,only update column
-				{
-					column.m_columnIndex = modifiedColumn->m_columnIndex;
-					*modifiedColumn = column;
-				}
-				else
-				{
-					if (0 != newMeta->addColumn(&column))
-					{
-						printf("add column %s in %s.%s failed\n",
-							column.m_columnName.c_str(),
-							newTable.database.c_str(), newTable.table.c_str());
-						delete newMeta;
-						return -1;
-					}
-				}
-			}
-		}
-		/*drop old column*/
-		for (list<string>::const_iterator iter = t->oldColumns.begin();
-			iter != t->oldColumns.end(); iter++)
-		{
-			if (0 != newMeta->dropColumn((*iter).c_str()))
-			{
-				printf("alter table drop column %s ,but it is not exist in %s.%s\n",
-					(*iter).c_str(), newTable.database.c_str(),
-					newTable.table.c_str());
-				delete newMeta;
-				return -1;
-			}
-		}
-		/*update new key*/
-		for (list<newKeyInfo*>::const_iterator iter = t->newKeys.begin();
-			iter != t->newKeys.end(); iter++)
-		{
-			const newKeyInfo * key = *iter;
-			if (key->type == newKeyInfo::PRIMARY_KEY)
-			{
-				if (newMeta->createPrimaryKey(key->columns) != 0)
-				{
-					printf("primary key is exits in %s.%s\n",
-						newTable.database.c_str(), newTable.table.c_str());
-					delete newMeta;
-					return -1;
-				}
-			}
-			else if (key->type == newKeyInfo::UNIQUE_KEY)
-			{
-				if (newMeta->addUniqueKey(key->name.c_str(), key->columns) != 0)
-				{
-					printf("unique key %s is exits in %s.%s\n", key->name.c_str(),
-						newTable.database.c_str(), newTable.table.c_str());
-					delete newMeta;
-					return -1;
-				}
-			}
-			else
-				continue;
-		}
-		/*drop old key*/
-		for (list<string>::const_iterator iter = t->oldKeys.begin();
-			iter != t->oldKeys.end(); iter++)
-		{
-			if ((*iter) == "PRIMARY")
-			{
-				newMeta->dropPrimaryKey();
-			}
-			else
-			{
-				newMeta->dropUniqueKey((*iter).c_str());
-			}
-		}
-		if (0
-			!= put(newTable.database.c_str(), newTable.table.c_str(), newMeta,
-				originCheckPoint))
-		{
-			printf("insert new meta of table %s.%s failed",
-				newTable.database.c_str(), newTable.table.c_str());
-			delete meta;
-			return -1;
-		}
-		return 0;
-	}
-
-	int metaDataCollection::processNewTable(handle * h, const newTableInfo *t,
-		uint64_t originCheckPoint)
-	{
-		if (t->type == newTableInfo::CREATE_TABLE)
-		{
-			if (t->createLike)
-			{
-				return createTableLike(h, t, originCheckPoint);
-			}
-			else
-			{
-				return createTable(h, t, originCheckPoint);
-			}
-		}
-		else if (t->type == newTableInfo::ALTER_TABLE)
-		{
-			return alterTable(h, t, originCheckPoint);
-		}
-		else
-			return -1;
-	}
-	int metaDataCollection::processOldTable(handle * h, const Table *table,
-		uint64_t originCheckPoint)
-	{
-		MetaTimeline<dbInfo> * db = NULL;
-		if (table->database.empty())
-			return -1;
-		getDbInfo(table->database.c_str(), db);
-		if (db == NULL)
-			return -1;
-		dbInfo * currentDB = db->get(originCheckPoint);
-		if (currentDB == NULL)
-			return -1;
-
-		MetaTimeline<tableMeta>* metas;
-		getTableInfo(table->table.c_str(), metas, currentDB);
-
-		if (metas == NULL)
-			return -1;
-		return metas->disableCurrent(originCheckPoint);
-	}
-
 	int metaDataCollection::createDatabase(const ddl* database,uint64_t originCheckPoint)
 	{
 		if (getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint) != nullptr)
@@ -754,7 +394,7 @@ namespace META {
 			meta->m_dbName = table->usedDb;
 		}
 		dbInfo* currentDb = getDatabase(meta->m_dbName.c_str(),originCheckPoint);
-		if (currentDb == NULL)
+		if (currentDb == nullptr)
 		{
 			LOG(ERROR) << "unknown database :" << meta->m_dbName;
 			delete meta;
@@ -764,8 +404,68 @@ namespace META {
 			meta->m_charset = currentDb->charset;
 		for (int idx = 0; idx < meta->m_columnsCount; idx++)
 		{
+			if (meta->m_columns[idx].m_isPrimary)
+			{
+				std::list<std::string> pk;
+				pk.push_back(meta->m_columns[idx].m_columnName);
+				if (0 != meta->createPrimaryKey(pk))
+				{
+					delete meta;
+					LOG(ERROR) << "create table failed for create primary key failed";
+					return -1;
+				}
+			}
+			if (meta->m_columns[idx].m_isUnique)
+			{
+				std::list<std::string> uk;
+				uk.push_back(meta->m_columns[idx].m_columnName);
+				if (0 != meta->addUniqueKey(meta->m_columns[idx].m_columnName.c_str(),uk))
+				{
+					delete meta;
+					LOG(ERROR) << "create table failed for add unique key failed";
+					return -1;
+				}
+			}
+			if (meta->m_columns[idx].m_isIndex)
+			{
+				std::list<std::string> index;
+				index.push_back(meta->m_columns[idx].m_columnName);
+				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), index))
+				{
+					delete meta;
+					LOG(ERROR) << "create table failed for add index failed";
+					return -1;
+				}
+			}
 			if (columnInfos[meta->m_columns[idx].m_columnType].stringType && meta->m_columns[idx].m_charset == nullptr)
 				meta->m_columns[idx].m_charset = meta->m_charset;
+		}
+		if (!table->primaryKey.columnNames.empty())
+		{
+			if (0 != meta->createPrimaryKey(table->primaryKey.columnNames))
+			{
+				delete meta;
+				LOG(ERROR) << "create table failed for create primary key failed";
+				return -1;
+			}
+		}
+		for (std::list<addKey>::const_iterator iter = table->uniqueKeys.begin(); iter != table->uniqueKeys.end(); iter++)
+		{
+			if (0 != meta->addUniqueKey((*iter).name.c_str(),(*iter).columnNames))
+			{
+				delete meta;
+				LOG(ERROR) << "create table failed for add unique key failed";
+				return -1;
+			}
+		}
+		for (std::list<addKey>::const_iterator iter = table->indexs.begin(); iter != table->indexs.end(); iter++)
+		{
+			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames))
+			{
+				delete meta;
+				LOG(ERROR) << "create table failed for add index failed";
+				return -1;
+			}
 		}
 		meta->buildColumnOffsetList();
 		if (0
@@ -773,6 +473,54 @@ namespace META {
 		{
 			LOG(ERROR) << "insert new meta of table " << meta->m_dbName << "." << meta->m_tableName << " failed";
 			delete meta;
+			return -1;
+		}
+		return 0;
+	}
+	int metaDataCollection::createTableLike(const ddl* tableDDL, uint64_t originCheckPoint)
+	{
+		const struct createTableLike* table = static_cast<const struct createTableLike*>(tableDDL);
+		const char* db = nullptr;
+		if (!table->likedDatabase.empty())
+			db = table->likedDatabase.c_str();
+		else if(!table->usedDb.empty())
+			db = table->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+			return -1;
+		}
+
+		const tableMeta* srcTable = get(db, table->likedTable.c_str(), originCheckPoint);
+		if (srcTable == nullptr)
+		{
+			LOG(ERROR) << "create table like " << db << "." << table->likedTable << " failed for liked table not exist";
+			return -1;
+		}
+
+		if (!table->database.empty())
+			db = table->database.c_str();
+		else if (!table->usedDb.empty())
+			db = table->usedDb.c_str();
+		else
+		{
+			LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+			return -1;
+		}
+		if (nullptr != get(db, table->table.c_str(), originCheckPoint))
+		{
+			LOG(ERROR) << "create table " << db << "." << table->table << " failed for table exist";
+			return -1;
+		}
+
+		tableMeta *meta = new tableMeta(srcTable->m_nameCompare.caseSensitive);
+		*meta = *srcTable;
+		meta->m_dbName.assign(db);
+		meta->m_tableName.assign(table->table);
+		if (put(db, table->table.c_str(), meta, originCheckPoint) != 0)
+		{
+			delete meta;
+			LOG(ERROR) << "create table " << db << "." << table->table << " failed";
 			return -1;
 		}
 		return 0;
@@ -886,6 +634,104 @@ namespace META {
 		}
 		return 0;
 	}
+	int metaDataCollection::alterTable(const ddl* tableDDL, uint64_t originCheckPoint)
+	{
+		const struct alterTable* table = static_cast<const struct alterTable*>(tableDDL);
+		const tableMeta* meta;
+		const char* database;
+		if (table->database.empty())
+		{
+			if (table->usedDb.empty())
+			{
+				LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
+				return -1;
+			}
+			database = table->usedDb.c_str();
+		}
+		else
+		{
+			database = table->database.c_str();
+		}
+		if ((meta = get(database, table->table.c_str(), originCheckPoint)) == nullptr)
+		{
+			LOG(ERROR) << "unknown table :" << table->table;
+			return -1;
+		}
+		tableMeta* newVersion = new tableMeta(meta->m_nameCompare.caseSensitive);
+		*newVersion = *meta;
+		int ret = 0;
+		switch (tableDDL->m_type)
+		{
+		case ALTER_TABLE_ADD_COLUMN:
+			 ret = newVersion->addColumn(&static_cast<const struct addColumn*>(table)->column, static_cast<const struct addColumn*>(table)->afterColumnName.empty() ? nullptr : static_cast<const struct addColumn*>(table)->afterColumnName.c_str());
+			 break;
+		case ALTER_TABLE_ADD_COLUMNS:
+		{
+			for (std::list<columnMeta>::const_iterator iter = static_cast<const struct addColumns*>(table)->columns.begin(); iter != static_cast<const struct addColumns*>(table)->columns.end(); iter++)
+			{
+				if (0 != (ret = newVersion->addColumn(&(*iter))))
+					break;
+			}
+			break;
+		}
+		case ALTER_TABLE_RENAME_COLUMN:
+			ret = newVersion->renameColumn(static_cast<const struct renameColumn*>(table)->srcColumnName.c_str(), static_cast<const struct renameColumn*>(table)->destColumnName.c_str());
+			break;
+		case ALTER_TABLE_MODIFY_COLUMN:
+			ret = newVersion->modifyColumn(&static_cast<const struct modifyColumn*>(table)->column, static_cast<const struct modifyColumn*>(table)->first, static_cast<const struct modifyColumn*>(table)->afterColumnName.empty() ? nullptr : static_cast<const struct modifyColumn*>(table)->afterColumnName.c_str());
+			break;
+		case ALTER_TABLE_CHANGE_COLUMN:
+			ret = newVersion->changeColumn(&static_cast<const struct changeColumn*>(table)->newColumn, static_cast<const struct changeColumn*>(table)->srcColumnName.c_str(), static_cast<const struct changeColumn*>(table)->first,
+				static_cast<const struct changeColumn*>(table)->afterColumnName.empty() ? nullptr : static_cast<const struct changeColumn*>(table)->afterColumnName.c_str());
+			break;
+		case ALTER_TABLE_DROP_COLUMN:
+			ret = newVersion->dropColumn(static_cast<const struct dropColumn*>(table)->columnName.c_str());
+			break;
+		case ALTER_TABLE_ADD_INDEX:
+			ret = newVersion->addIndex(static_cast<const struct addKey*>(table)->name.c_str(), static_cast<const struct addKey*>(table)->columnNames);
+			break;
+		case ALTER_TABLE_DROP_INDEX:
+			ret = newVersion->dropIndex(static_cast<const struct dropKey*>(table)->name.c_str());
+			break;
+		case ALTER_TABLE_RENAME_INDEX:
+			ret = newVersion->renameIndex(static_cast<const struct renameKey*>(table)->srcKeyName.c_str(), static_cast<const struct renameKey*>(table)->destKeyName.c_str());
+			break;
+		case ALTER_TABLE_ADD_UNIQUE_KEY:
+			ret = newVersion->addUniqueKey(static_cast<const struct addKey*>(table)->name.c_str(), static_cast<const struct addKey*>(table)->columnNames);
+			break;
+		case ALTER_TABLE_DROP_UNIQUE_KEY:
+			ret = newVersion->dropUniqueKey(static_cast<const struct dropKey*>(table)->name.c_str());
+			break;
+		case ALTER_TABLE_ADD_PRIMARY_KEY:
+			ret = newVersion->createPrimaryKey(static_cast<const struct addKey*>(table)->columnNames);
+			break;
+		case ALTER_TABLE_DROP_PRIMARY_KEY:
+			ret = newVersion->dropPrimaryKey();
+			break;
+		case ALTER_TABLE_DEFAULT_CHARSET:
+			ret = newVersion->defaultCharset(static_cast<const struct defaultCharset*>(table)->charset, static_cast<const struct defaultCharset*>(table)->collate.empty()?nullptr: static_cast<const struct defaultCharset*>(table)->collate.c_str());
+			break;
+		case ALTER_TABLE_CONVERT_DEFAULT_CHARSET:
+			ret = newVersion->convertDefaultCharset(static_cast<const struct defaultCharset*>(table)->charset, static_cast<const struct defaultCharset*>(table)->collate.empty() ? nullptr : static_cast<const struct defaultCharset*>(table)->collate.c_str());
+			break;
+		default:
+			ret = 0;
+			break;
+		}
+		if (ret == 0)
+		{
+			if (0 != put(database, table->table.c_str(), newVersion, originCheckPoint))
+			{
+				delete newVersion;
+				LOG(ERROR) << "process alter table ddl failed for put new meta to collection failed";
+				return -1;
+			}
+			return 0;
+		}
+		else
+			return ret;
+	}
+
 	int metaDataCollection::alterTableAddColumn(const struct ddl* ddl,
 		uint64_t originCheckPoint)
 	{
@@ -915,7 +761,12 @@ namespace META {
 			delete newTable;
 			return -1;
 		}
-		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		if (0 != put(db, columnDdl->table.c_str(), newTable, originCheckPoint))
+		{
+			LOG(ERROR) << "add column in table :" << db << "." << columnDdl->table << " failed";
+			delete newTable;
+			return -1;
+		}
 		return 0;
 	}
 	int metaDataCollection::alterTableAddColumns(const struct ddl* ddl,
@@ -940,9 +791,9 @@ namespace META {
 		}
 		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table;
-		for (std::list<columnMeta*>::const_iterator iter = columnDdl->columns.begin(); iter != columnDdl->columns.end(); iter++)
+		for (std::list<columnMeta>::const_iterator iter = columnDdl->columns.begin(); iter != columnDdl->columns.end(); iter++)
 		{
-			if (newTable->addColumn(*iter, nullptr)
+			if (newTable->addColumn(&(*iter), nullptr)
 				!= 0)
 			{
 				LOG(ERROR) << "add column in table :" << db << "." << columnDdl->table << " failed";
@@ -950,7 +801,12 @@ namespace META {
 				return -1;
 			}
 		}
-		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		if (0 != put(db, columnDdl->table.c_str(), newTable, originCheckPoint))
+		{
+			LOG(ERROR) << "add column in table :" << db << "." << columnDdl->table << " failed";
+			delete newTable;
+			return -1;
+		}
 		return 0;
 	}
 	int metaDataCollection::alterTableRenameColumn(const struct ddl* ddl,
@@ -987,7 +843,12 @@ namespace META {
 		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table; 
 		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->destColumnName;
-		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		if (0 != put(db, columnDdl->table.c_str(), newTable, originCheckPoint))
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed";
+			delete newTable;
+			return -1;
+		}
 		return 0;
 	}
 
@@ -1025,105 +886,87 @@ namespace META {
 		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *table;
 		newTable->m_columns[column->m_columnIndex].m_columnName = columnDdl->srcColumnName;
-		put(db, columnDdl->table.c_str(), newTable, originCheckPoint);
+		if (0 != put(db, columnDdl->table.c_str(), newTable, originCheckPoint))
+		{
+			LOG(ERROR) << "rename column of table :" << db << "." << columnDdl->table << " failed";
+			delete newTable;
+			return -1;
+		}
 		return 0;
 	}
-	int metaDataCollection::processDatabase(const databaseInfo * database,
-		uint64_t originCheckPoint)
+	int metaDataCollection::processDDL(const struct ddl* ddl, uint64_t originCheckPoint)
 	{
-		MetaTimeline<dbInfo>* db;
-		getDbInfo(database->name.c_str(), db);
-		dbInfo * current = NULL;
-		if (db == NULL)
+		switch (ddl->m_type)
 		{
-			if (database->type == databaseInfo::CREATE_DATABASE)
-			{
-				current = new dbInfo(m_nameCompare);
-				current->name = database->name;
-				current->charset = database->charset;
-				if (current->charset == nullptr)
-					current->charset = m_defaultCharset;
-				db = new MetaTimeline<dbInfo>(m_maxDatabaseId++,database->name.c_str());
-				db->put(current,originCheckPoint);
-				barrier;
-				if (!m_dbs.insert(std::pair<const char *, MetaTimeline<dbInfo>*>(database->name.c_str(), db)).second)
-				{
-					delete db;
-					return -1;
-				}
-				else
-					return 0;
-			}
-			else
-				return -1;
-		}
-
-		if (NULL == (current = db->get(originCheckPoint)))
+		case CREATE_DATABASE:
+			return createDatabase(ddl, originCheckPoint);
+		case DROP_DATABASE:
+			return dropDatabase(ddl, originCheckPoint);
+		case ALTER_DATABASE:
+			return alterDatabase(ddl, originCheckPoint);
+		case CREATE_TABLE:
+			return createTable(ddl, originCheckPoint);
+		case CREATE_TABLE_LIKE:
+			return createTableLike(ddl, originCheckPoint);
+		case CREATE_TABLE_FROM_SELECT:
 		{
-			if (database->type == databaseInfo::CREATE_DATABASE)
-			{
-				current = new dbInfo(m_nameCompare);
-				current->name = database->name;
-				current->charset = database->charset;
-				if (current->charset == nullptr)
-					current->charset = m_defaultCharset;
-				barrier;
-				if (0 != db->put(current, originCheckPoint))
-				{
-					delete current;
-					return -1;
-				}
-				else
-					return 0;
-			}
-			else
-				return -1;
-		}
-
-		if (database->type == databaseInfo::CREATE_DATABASE)
+			LOG(ERROR) << "not support create table from select now";
 			return -1;
-		else if (database->type == databaseInfo::ALTER_DATABASE)
-		{
-			if (database->charset != nullptr)
-				current->charset = database->charset;
-			return 0;
 		}
-		else if (database->type == databaseInfo::DROP_DATABASE)
+		case DROP_TABLE:
+			return dropTable(ddl, originCheckPoint);
+		case RENAME_TABLE:
+			return renameTable(ddl, originCheckPoint);
+		case ALTER_TABLE_ADD_COLUMN:
+		case ALTER_TABLE_ADD_COLUMNS:
+		case ALTER_TABLE_RENAME_COLUMN:
+		case ALTER_TABLE_MODIFY_COLUMN:
+		case ALTER_TABLE_CHANGE_COLUMN:
+		case ALTER_TABLE_DROP_COLUMN:
+		case ALTER_TABLE_ADD_INDEX:
+		case ALTER_TABLE_DROP_INDEX:
+		case ALTER_TABLE_RENAME_INDEX:
+		case ALTER_TABLE_ADD_FOREIGN_KEY:
+		case ALTER_TABLE_DROP_FOREIGN_KEY:
+		case ALTER_TABLE_ADD_PRIMARY_KEY:
+		case ALTER_TABLE_DROP_PRIMARY_KEY:
+		case ALTER_TABLE_ADD_UNIQUE_KEY:
+		case ALTER_TABLE_DROP_UNIQUE_KEY:
+		case ALTER_TABLE_DEFAULT_CHARSET:
+		case ALTER_TABLE_CONVERT_DEFAULT_CHARSET:
+			return alterTable(ddl, originCheckPoint);
+		case CREATE_VIEW:
 		{
-			return db->disableCurrent(originCheckPoint);
-		}
-		else
+			LOG(ERROR) << "not support create view now,but we do not need it here,ignore";
 			return -1;
+		}
+		case CREATE_TRIGGER:
+		{
+			LOG(ERROR) << "not support create trigger now,but we do not need it here,ignore";
+			return -1;
+		}
+		default:
+		{
+			LOG(ERROR) << "unknown ddl type:"<<ddl->m_type<<",query is:"<<ddl->rawDdl;
+			return -1;
+		}
+		}
 	}
+
 	int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
 	{
-		handle * h = NULL;
+		handle * h = nullptr;
 		if (OK != m_sqlParser->parse(h, database,ddl))
 		{
 			LOG(ERROR)<<"parse ddl :"<<ddl<<" failed";
 			return -1;
 		}
 		handle * currentHandle = h;
-		while (currentHandle != NULL)
+		while (currentHandle != nullptr)
 		{
-			metaChangeInfo * meta = static_cast<metaChangeInfo*>(currentHandle->userData);
-			meta->print();
-			if (meta->database.type
-				!= databaseInfo::MAX_DATABASEDDL_TYPE)
-			{
-				processDatabase(&meta->database, originCheckPoint);
-			}
-			for (list<newTableInfo*>::const_iterator iter =
-				meta->newTables.begin();
-				iter != meta->newTables.end(); iter++)
-			{
-				processNewTable(currentHandle, *iter, originCheckPoint);
-			}
-			for (list<Table>::const_iterator iter = meta->oldTables.begin();
-				iter != meta->oldTables.end(); iter++)
-			{
-				processOldTable(currentHandle, &(*iter), originCheckPoint);
-			}
+			const struct ddl* ddlInfo = static_cast<const struct ddl*>(currentHandle->userData);
+			if(ddlInfo!=nullptr)
+				processDDL(ddlInfo, originCheckPoint);
 			currentHandle = currentHandle->next;
 		}
 		delete h;
@@ -1134,16 +977,16 @@ namespace META {
 		for (dbTree::iterator iter = m_dbs.begin(); iter!=m_dbs.end(); iter++)
 		{
 			MetaTimeline<dbInfo>* db = iter->second;
-			if (db == NULL)
+			if (db == nullptr)
 				continue;
 			db->purge(originCheckPoint);
 			dbInfo * dbMeta = db->get(0xffffffffffffffffULL);
-			if (dbMeta == NULL)
+			if (dbMeta == nullptr)
 				continue;
 			for (tbTree::iterator titer = dbMeta->tables.begin(); titer!=dbMeta->tables.begin(); titer++)
 			{
 				MetaTimeline<tableMeta>* table = titer->second;
-				if (table == NULL)
+				if (table == nullptr)
 					continue;
 				table->purge(originCheckPoint);
 			}

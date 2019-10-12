@@ -587,12 +587,12 @@ namespace DATA_SOURCE {
 		const char*& data, bool newOrOld)
 	{
 		uint8_t bitmapSize = 0;
-		if (colMeta->m_setAndEnumValueList.m_Count > 0)
+		if (colMeta->m_setAndEnumValueList.m_count > 0)
 		{
-			if (colMeta->m_setAndEnumValueList.m_Count > 32)
+			if (colMeta->m_setAndEnumValueList.m_count > 32)
 				bitmapSize = 8;
 			else
-				bitmapSize = ((colMeta->m_setAndEnumValueList.m_Count + 7) >> 3);
+				bitmapSize = ((colMeta->m_setAndEnumValueList.m_count + 7) >> 3);
 			uint64_t value = 0;
 			memcpy(&value, data, bitmapSize);
 			record->setFixedColumn(colMeta->m_columnIndex, value);

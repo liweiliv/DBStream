@@ -63,26 +63,24 @@ namespace META {
 		int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
 		int purge(uint64_t originCheckPoint);
 		int processDDL(const char * ddl, const char * database,uint64_t originCheckPoint);
+		int processDDL(const struct ddl* ddl, uint64_t originCheckPoint);
 		int setDefaultCharset(const charsetInfo* defaultCharset);
 		const charsetInfo* getDefaultCharset();
 	private:
 		int put(const char* database, uint64_t offset, dbInfo* db);
 		dbInfo * getDatabaseMetaFromRemote(uint64_t databaseID);
 		dbInfo * getDatabaseMetaFromRemote(const char * databaseName, uint64_t offset);
-		int createTable(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);
-		int createTableLike(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);
-		int alterTable(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);
-		int processNewTable(SQL_PARSER::handle * h, const newTableInfo *t, uint64_t originCheckPoint);
-		int processOldTable(SQL_PARSER::handle * h, const Table *table, uint64_t originCheckPoint);
-		int processDatabase(const databaseInfo * database, uint64_t originCheckPoint);
 		dbInfo* getDatabase(const char* database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
 
 		int createDatabase(const ddl* database, uint64_t originCheckPoint);
 		int alterDatabase(const ddl* database, uint64_t originCheckPoint);
 		int dropDatabase(const ddl* database,uint64_t originCheckPoint);
 		int createTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int createTableLike(const ddl* tableDDL, uint64_t originCheckPoint);
 		int dropTable(const ddl* tableDDL, uint64_t originCheckPoint);
 		int renameTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int alterTable(const ddl* tableDDL, uint64_t originCheckPoint);
+
 		int alterTableAddColumn(const struct ddl* columnDdl,uint64_t originCheckPoint);
 		int alterTableAddColumns(const struct ddl* columnDdl, uint64_t originCheckPoint);
 		int alterTableRenameColumn(const struct ddl* columnDdl, uint64_t originCheckPoint);

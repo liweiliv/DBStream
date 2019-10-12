@@ -32,7 +32,7 @@ namespace META {
 				const char * base;
 				uint16_t *valueList, valueListSize;
 				msg->setOrEnumValues(i, base, valueList, valueListSize);
-				m_columns[i].m_setAndEnumValueList.m_Count = valueListSize;
+				m_columns[i].m_setAndEnumValueList.m_count = valueListSize;
 				m_columns[i].m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*)*valueListSize);
 				for (uint16_t j = 0; j < valueListSize; j++)
 				{
@@ -242,8 +242,27 @@ namespace META {
 	{
 		const columnMeta * d = getColumn(column);
 		if (d == nullptr)
+		{
+			LOG(ERROR) << "drop column " << column << " failed for column not exist";
 			return -1;
+		}
 		return dropColumn(d->m_columnIndex);
+	}
+	int tableMeta::renameColumn(const char* oldName, const char* newName)
+	{
+		const columnMeta* c = getColumn(oldName);
+		if (c == nullptr)
+		{
+			LOG(ERROR) << "rename column " << oldName << " failed for column not exist";
+			return -1;
+		}
+		if (m_nameCompare.compare(oldName, newName) != 0&& getColumn(newName) != nullptr)
+		{
+			LOG(ERROR) << "rename column " << oldName << " failed for new column name " << newName << " exist";
+			return -1;
+		}
+		m_columns[c->m_columnIndex].m_columnName.assign(newName);
+		return 0;
 	}
 	int tableMeta::modifyColumn(const columnMeta* column,bool first, const char* addAfter)
 	{
@@ -285,9 +304,10 @@ namespace META {
 			LOG(ERROR) << "change column " << columnName << " failed for column not exist";
 			return -1;
 		}
-		if (strncasecmp(columnName, newColumn->m_columnName.c_str(), newColumn->m_columnName.size()) != 0)
+		if (m_nameCompare.compare(columnName, newColumn->m_columnName.c_str()) != 0&& getColumn(newColumn->m_columnName.c_str()) != nullptr)
 		{
-
+			LOG(ERROR) << "change column " << columnName << " failed for new column name " << newColumn->m_columnName << " exist";
+			return -1;
 		}
 		int idx = old->m_columnIndex;
 		if (!first && addAfter == nullptr)
@@ -413,7 +433,10 @@ namespace META {
 	int tableMeta::createPrimaryKey(const std::list<std::string> &columns)
 	{
 		if (m_primaryKey.count != 0)
+		{
+			LOG(ERROR) << "create primary key failed for primary key exist";
 			return -1;
+		}
 		m_primaryKey.clean();
 		m_primaryKey.name = "primary key";
 		uint32_t keySize = 0;
@@ -422,13 +445,19 @@ namespace META {
 		{
 			columnMeta * c = (columnMeta*)getColumn((*iter).c_str());
 			if (c == nullptr)
+			{
+				LOG(ERROR) << "create primary key failed for column "<< (*iter) <<" not exist";
 				goto ROLL_BACK;
+			}
 			if (columnInfos[c->m_columnType].fixed)
 				keySize += columnInfos[c->m_columnType].columnTypeSize;
 			else
 				keySize += c->m_size;
 			if (keySize > MAX_KEY_SIZE)
+			{
+				LOG(ERROR) << "create primary key failed for column count " << keySize << " greater than " << MAX_KEY_SIZE;
 				goto ROLL_BACK;
+			}
 			c->m_isPrimary = true;
 			m_primaryKey.keyIndexs[m_primaryKey.count++] = c->m_columnIndex;
 		}
@@ -449,9 +478,10 @@ namespace META {
 		int idx = 0;
 		for (; idx < m_uniqueKeysCount; idx++)
 		{
-			if (strcmp(m_uniqueKeys[idx].name.c_str(), ukName) == 0)
+			if (m_nameCompare.compare(m_uniqueKeys[idx].name.c_str(), ukName) == 0)
 				goto DROP;
 		}
+		LOG(ERROR) << "drop unique key " << ukName << " failed for unique key not exist";
 		return -1;
 	DROP:
 		keyInfo * newUks = new keyInfo[m_uniqueKeysCount - 1];
@@ -472,7 +502,7 @@ namespace META {
 				}
 			}
 			((columnMeta*)getColumn(m_uniqueKeys[idx].keyIndexs[i]))->m_isUnique = false;
-		COLUMN_IS_STILL_UK:
+COLUMN_IS_STILL_UK:
 			continue;
 		}
 		delete[]m_uniqueKeys;
@@ -483,7 +513,10 @@ namespace META {
 	int tableMeta::addUniqueKey(const char *ukName, const std::list<std::string> &columns)
 	{
 		if (getUniqueKey(ukName) != nullptr)
+		{
+			LOG(ERROR) << "add unique key " << ukName << " failed for unique key exist";
 			return -1;
+		}
 		/*check*/
 		uint32_t keySize = 0;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
@@ -496,10 +529,13 @@ namespace META {
 			else
 				keySize += column->m_size;
 			if (keySize > MAX_KEY_SIZE)
+			{
+				LOG(ERROR) << "add unique key " << ukName << " failed for column count "<< keySize<<" greater than "<< MAX_KEY_SIZE;
 				return -1;
+			}
 		}
 		/*copy data*/
-		keyInfo * newUks = new keyInfo[m_uniqueKeysCount - 1];
+		keyInfo * newUks = new keyInfo[m_uniqueKeysCount + 1];
 		newUks[m_uniqueKeysCount].keyIndexs = new uint16_t[columns.size()];
 		newUks[m_uniqueKeysCount].name = ukName;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
@@ -514,6 +550,129 @@ namespace META {
 		delete[]m_uniqueKeys;
 		m_uniqueKeys = newUks;
 		m_uniqueKeysCount++;
+		return 0;
+	}
+	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns)
+	{
+		if (getIndex(indexName) != nullptr)
+		{
+			LOG(ERROR) << "add index " << indexName << " failed for index exist";
+			return -1;
+		}
+		/*check*/
+		uint32_t keySize = 0;
+		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
+		{
+			const columnMeta* column = getColumn((*iter).c_str());
+			if (column == nullptr)
+				return -1;
+			if (columnInfos[column->m_columnType].fixed)
+				keySize += columnInfos[column->m_columnType].columnTypeSize;
+			else
+				keySize += column->m_size;
+			if (keySize > MAX_KEY_SIZE)
+			{
+				LOG(ERROR) << "add index " << indexName << " failed for column count " << keySize << " greater than " << MAX_KEY_SIZE;
+				return -1;
+			}
+		}
+		/*copy data*/
+		keyInfo* newIndexs = new keyInfo[m_indexCount + 1];
+		newIndexs[m_indexCount].keyIndexs = new uint16_t[columns.size()];
+		newIndexs[m_indexCount].name = indexName;
+		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
+		{
+			columnMeta* column = (columnMeta*)getColumn((*iter).c_str());
+			newIndexs[m_indexCount].keyIndexs[newIndexs[m_indexCount].count++] = column->m_columnIndex;
+			if (!column->m_isIndex)
+				column->m_isIndex = true;
+		}
+		for (int i = 0; i < m_indexCount; i++)
+			newIndexs[i] = m_indexs[i];
+		delete[]m_indexs;
+		m_indexs = newIndexs;
+		m_indexCount++;
+		return 0;
+	}
+	int tableMeta::renameIndex(const char* oldName, const char* newName)
+	{
+		keyInfo* k = getIndex(oldName);
+		if (k == nullptr)
+		{
+			LOG(ERROR) << "rename index " << oldName << " failed for index not exist";
+			return -1;
+		}
+		if (m_nameCompare.compare(oldName, newName) != 0)
+		{
+			if (nullptr != getIndex(newName))
+			{
+				LOG(ERROR) << "rename index " << oldName << " failed for new name "<< newName <<" exist";
+				return -1;
+			}
+			k->name.assign(newName);
+		}
+		return 0;
+	}
+	int tableMeta::dropIndex(const char* indexName)
+	{
+		int idx = 0;
+		for (; idx < m_indexCount; idx++)
+		{
+			if (m_nameCompare.compare(m_indexs[idx].name.c_str(), indexName) == 0)
+				goto DROP;
+		}
+		LOG(ERROR) << "drop index " << indexName << " failed for index not exist";
+		return -1;
+	DROP:
+		keyInfo* newIndexs = new keyInfo[m_indexCount - 1];
+		for (int i = 0; i < idx; i++)
+			newIndexs[i] = m_indexs[i];
+		for (int i = idx + 1; i < m_indexCount - 1; i++)
+			newIndexs[i - 1] = m_indexs[i];
+
+		/*update columns */
+		for (uint16_t i = 0; i < m_indexs[idx].count; i++)
+		{
+			for (uint16_t j = 0; j < m_indexCount - 1; j++)
+			{
+				for (uint32_t k = 0; k < newIndexs[j].count; k++)
+				{
+					if (m_indexs[idx].keyIndexs[i] == newIndexs[j].keyIndexs[k])
+						goto COLUMN_IS_STILL_INDEX;
+				}
+			}
+			((columnMeta*)getColumn(m_indexs[idx].keyIndexs[i]))->m_isIndex = false;
+COLUMN_IS_STILL_INDEX:
+			continue;
+		}
+		delete[]m_indexs;
+		m_indexs = newIndexs;
+		m_indexCount--;
+		return 0;
+	}
+	int tableMeta::defaultCharset(const charsetInfo* charset, const char* collationName)
+	{
+		if (charset == nullptr)
+		{
+			LOG(ERROR) << "change default charset failed for new charset is null ";
+			return -1;
+		}
+		m_charset = charset;
+		return 0;
+	}
+	int tableMeta::convertDefaultCharset(const charsetInfo* charset, const char* collationName)
+	{
+		if (charset == nullptr)
+		{
+			LOG(ERROR) << "convert default charset failed for new charset is null ";
+			return -1;
+		}
+		m_charset = charset;
+		for (int idx = 0; idx < m_columnsCount; idx++)
+		{
+			if (columnInfos[m_columns[idx].m_columnType].stringType)
+				m_columns[idx].m_charset = m_charset;
+		}
 		return 0;
 	}
 	std::string tableMeta::toString()

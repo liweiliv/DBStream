@@ -65,6 +65,7 @@ namespace DATABASE_INCREASE
 		uint32_t precision;
 		uint32_t decimals;
 		uint32_t nameOffset;
+		uint32_t collateOffset;
 		uint32_t setOrEnumInfoOffset;
 	};
 	struct record
@@ -206,6 +207,12 @@ namespace DATABASE_INCREASE
 		inline const char* columnName(uint16_t columnIndex)
 		{
 			return data + columns[columnIndex].nameOffset;
+		}
+		inline const char* collateName(uint16_t columnIndex)
+		{
+			if (columns[columnIndex].collateOffset == 0)
+				return nullptr;
+			return data + columns[columnIndex].collateOffset;
 		}
 		inline bool setOrEnumValues(uint16_t columnIndex, const char*& base, uint16_t*& valueList, uint16_t& valueListSize)
 		{
@@ -574,7 +581,7 @@ namespace DATABASE_INCREASE
 			break;
 			case META::T_SET:
 			{
-				for (uint8_t idx = 0; idx < column->m_setAndEnumValueList.m_Count; idx++)
+				for (uint8_t idx = 0; idx < column->m_setAndEnumValueList.m_count; idx++)
 				{
 					if (TEST_BITMAP(value, idx))
 					{
@@ -587,7 +594,7 @@ namespace DATABASE_INCREASE
 			case META::T_ENUM:
 			{
 				uint16_t idx = *(const uint16_t*)value;
-				assert(idx < column->m_setAndEnumValueList.m_Count);
+				assert(idx < column->m_setAndEnumValueList.m_count);
 				str.append(column->m_setAndEnumValueList.m_array[idx]).append("\n");
 			}
 			break;

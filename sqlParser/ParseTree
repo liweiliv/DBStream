@@ -975,8 +975,7 @@
 					{ "K": "_S_:CONSTRAINT" },
 					{
 						"OPT": true,
-						"K": "_AS_",
-						"F": "constraintName"
+						"K": "_AS_"
 					}
 				]
 			},
@@ -1002,7 +1001,7 @@
 								"C": [
 									{
 										"K": "_N_",
-										"F": "keyColumn"
+										"F": "primaryKeyColumn"
 									},
 									{
 										"OPT": true,
@@ -1029,8 +1028,7 @@
 					{
 						"C": [
 							{
-								"K": "_S_:UNIQUE",
-								"F": "uniqueKeys"
+								"K": "_S_:UNIQUE"
 							},
 							{
 								"OR": true,
@@ -1057,7 +1055,7 @@
 								"C": [
 									{
 										"K": "_N_",
-										"F": "keyColumn"
+										"F": "uniqueKeyColumn"
 									},
 									{
 										"OPT": true,
@@ -2055,6 +2053,20 @@
 			}
 		]
 	},
+	"alter_index_visible": {
+		"OPT": true,
+		"C": [
+			{ "K": "_S_:INDEX" },
+			{ "K": "_AS_" },
+			{
+				"OR": true,
+				"C": [
+					{ "K": "_S_:VISIBLE" },
+					{ "K": "_S_:INVISIBLE" }
+				]
+			}
+		]
+	},
 	"alter_table": {
 		"ID": 9000,
 		"OPT": true,
@@ -2115,6 +2127,7 @@
 							{ "INCLUDE": "alter_table_rename_column" },
 							{ "INCLUDE": "alter_table_rename_key" },
 							{ "INCLUDE": "alter_table_rename_index" },
+							{ "INCLUDE": "alter_index_visible" },
 							{
 								"C": [
 									{ "K": "_S_:COMMENT" },

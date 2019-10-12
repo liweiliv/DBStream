@@ -26,32 +26,43 @@ namespace META {
 	struct stringArray
 	{
 		char ** m_array;
-		uint32_t m_Count;
-		stringArray() :m_array(NULL), m_Count(0) {}
+		uint32_t m_count;
+		stringArray() :m_array(nullptr), m_count(0) {}
 		~stringArray()
 		{
 			clean();
 		}
+		void add(const char* str)
+		{
+			char** array = (char**)malloc(sizeof(char*) * (m_count + 1));
+			memcpy(array, m_array, sizeof(char*) * m_count);
+			array[m_count] = (char*)malloc(sizeof(str) + 1);
+			strcpy(array[m_count], str);
+			if (nullptr != m_array)
+				free(m_array);
+			m_array = array;
+			m_count++;
+		}
 		void clean()
 		{
-			if (m_Count > 0)
+			if (m_count > 0)
 			{
-				for (uint32_t i = 0; i < m_Count; i++)
+				for (uint32_t i = 0; i < m_count; i++)
 					free(m_array[i]);
 				free(m_array);
 			}
-			m_Count = 0;
-			m_array = NULL;
+			m_count = 0;
+			m_array = nullptr;
 
 		}
 		stringArray &operator =(const stringArray &c)
 		{
 			clean();
-			m_Count = c.m_Count;
-			if (m_Count > 0)
+			m_count = c.m_count;
+			if (m_count > 0)
 			{
-				m_array = (char**)malloc(sizeof(char*) * m_Count);
-				for (uint32_t i = 0; i < m_Count; i++)
+				m_array = (char**)malloc(sizeof(char*) * m_count);
+				for (uint32_t i = 0; i < m_count; i++)
 				{
 					int32_t size = (int)strlen(c.m_array[i]);
 					m_array[i] = (char*)malloc(size + 1);
@@ -67,9 +78,9 @@ namespace META {
 			m_array = (char**)malloc(sizeof(char*)*l.size());
 			for (std::list<std::string>::const_iterator iter = l.begin(); iter != l.end(); iter++)
 			{
-				m_array[m_Count] = (char*)malloc((*iter).size() + 1);
-				memcpy(m_array[m_Count], (*iter).c_str(), (*iter).size());
-				m_array[m_Count][(*iter).size()] = '\0';
+				m_array[m_count] = (char*)malloc((*iter).size() + 1);
+				memcpy(m_array[m_count], (*iter).c_str(), (*iter).size());
+				m_array[m_count][(*iter).size()] = '\0';
 			}
 			return *this;
 		}
@@ -81,6 +92,7 @@ namespace META {
 		uint8_t m_srcColumnType;// type in database
 		uint16_t m_columnIndex;  //column id in table
 		std::string m_columnName;
+		std::string m_collate;
 		const charsetInfo* m_charset;
 		uint32_t m_size;
 		uint32_t m_precision;
@@ -89,9 +101,10 @@ namespace META {
 		bool m_signed;
 		bool m_isPrimary;
 		bool m_isUnique;
+		bool m_isIndex;
 		bool m_generated;
 		columnMeta() :m_columnType(0), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr),m_size(0), m_precision(0), m_decimals(0),
-			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_generated(false)
+			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
 		{}
 		columnMeta &operator =(const columnMeta &c)
 		{
@@ -100,6 +113,7 @@ namespace META {
 			m_columnIndex = c.m_columnIndex;
 			m_columnName = c.m_columnName;
 			m_charset = c.m_charset;
+			m_collate = c.m_collate;
 			m_size = c.m_size;
 			m_precision = c.m_precision;
 			m_decimals = c.m_decimals;
@@ -107,6 +121,7 @@ namespace META {
 			m_signed = c.m_signed;
 			m_isPrimary = c.m_isPrimary;
 			m_isUnique = c.m_isUnique;
+			m_isIndex = c.m_isIndex;
 			m_generated = c.m_generated;
 			return *this;
 		}
@@ -259,7 +274,7 @@ namespace META {
 			case MYSQL_TYPE_ENUM:
 			{
 				sql.append("ENUM (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_Count; idx++)
+				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
 				{
 					if (idx > 0)
 						sql.append(",");
@@ -271,7 +286,7 @@ namespace META {
 			case MYSQL_TYPE_SET:
 			{
 				sql.append("SET (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_Count; idx++)
+				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
 				{
 					if (idx > 0)
 						sql.append(",");
@@ -350,6 +365,7 @@ namespace META {
 		std::string  m_dbName;
 		std::string  m_tableName;
 		const charsetInfo *m_charset;
+		std::string m_collate;
 		columnMeta * m_columns;
 		uint16_t * m_realIndexInRowFormat;
 		uint16_t * m_fixedColumnOffsetsInRecord;
@@ -392,10 +408,10 @@ namespace META {
 		{
 			for (uint32_t i = 0; i < m_columnsCount; i++)
 			{
-				if (strcmp(m_columns[i].m_columnName.c_str(), columnName) == 0)
+				if (m_nameCompare.compare(m_columns[i].m_columnName.c_str(), columnName) == 0)
 					return &m_columns[i];
 			}
-			return NULL;
+			return nullptr;
 		}
 		inline keyInfo *getUniqueKey(const char *UniqueKeyname)
 		{
@@ -404,11 +420,21 @@ namespace META {
 				if (strcmp(m_uniqueKeys[i].name.c_str(), UniqueKeyname) == 0)
 					return &m_uniqueKeys[i];
 			}
-			return NULL;
+			return nullptr;
+		}
+		inline keyInfo* getIndex(const char* indexName)
+		{
+			for (uint16_t i = 0; i < m_indexCount; i++)
+			{
+				if (strcmp(m_indexs[i].name.c_str(), indexName) == 0)
+					return &m_indexs[i];
+			}
+			return nullptr;
 		}
 		void buildColumnOffsetList();
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
 		int dropColumn(const char *column);
+		int renameColumn(const char* oldName, const char* newName);
 		int modifyColumn(const columnMeta* column, bool first, const char* addAfter);
 		int changeColumn(const columnMeta* newColumn,const char * columnName, bool first, const char* addAfter);
 		int addColumn(const columnMeta* column, const char * addAfter = nullptr,bool first = false);
@@ -416,6 +442,12 @@ namespace META {
 		int createPrimaryKey(const std::list<std::string> &columns);
 		int dropUniqueKey(const char *ukName);
 		int addUniqueKey(const char *ukName, const std::list<std::string> &columns);
+		int addIndex(const char* indexName, const std::list<std::string>& columns);
+		int dropIndex(const char* indexName);
+		int renameIndex(const char* oldName, const char* newName);
+		int defaultCharset(const charsetInfo* charset, const char* collationName);
+		int convertDefaultCharset(const charsetInfo* charset, const char* collationName);
+
 		std::string toString();
 	};
 }

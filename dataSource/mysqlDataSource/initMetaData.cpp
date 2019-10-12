@@ -93,14 +93,14 @@ namespace DATA_SOURCE {
 			}
 			pos++;
 		}
-		column->m_setAndEnumValueList.m_Count = 0;
+		column->m_setAndEnumValueList.m_count = 0;
 		column->m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*)* valueList.size());
 		for (std::vector<std::string>::const_iterator iter = valueList.begin(); iter != valueList.end(); iter++)
 		{
-			column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_Count] = (char*)malloc((*iter).size() + 1);
-			memcpy(column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_Count], (*iter).c_str(), (*iter).size());
-			column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_Count][(*iter).size()] = '\0';
-			column->m_setAndEnumValueList.m_Count++;
+			column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_count] = (char*)malloc((*iter).size() + 1);
+			memcpy(column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_count], (*iter).c_str(), (*iter).size());
+			column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_count][(*iter).size()] = '\0';
+			column->m_setAndEnumValueList.m_count++;
 		}
 		return 0;
 	}

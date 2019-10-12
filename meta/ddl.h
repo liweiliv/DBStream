@@ -2,6 +2,7 @@
 #include "metaDataCollection.h"
 namespace META {
 	enum DDL_TYPE {
+		UNKNOW_DDL_TYPE,
 		CREATE_DATABASE,
 		DROP_DATABASE,
 		ALTER_DATABASE,
@@ -18,8 +19,6 @@ namespace META {
 		ALTER_TABLE_DROP_COLUMN,
 		ALTER_TABLE_ADD_INDEX,
 		ALTER_TABLE_DROP_INDEX,
-		ALTER_TABLE_ADD_KEY,
-		ALTER_TABLE_DROP_KEY,
 		ALTER_TABLE_RENAME_INDEX,
 		ALTER_TABLE_ADD_FOREIGN_KEY,
 		ALTER_TABLE_DROP_FOREIGN_KEY,
@@ -27,20 +26,39 @@ namespace META {
 		ALTER_TABLE_DROP_PRIMARY_KEY,
 		ALTER_TABLE_ADD_UNIQUE_KEY,
 		ALTER_TABLE_DROP_UNIQUE_KEY,
+		ALTER_TABLE_DEFAULT_CHARSET,
+		ALTER_TABLE_CONVERT_DEFAULT_CHARSET,
+		CREATE_VIEW,
+		CREATE_TRIGGER
 	};
 	struct ddl {
 		DDL_TYPE m_type;
 		const char* rawDdl;
 		std::string usedDb;
+		ddl():m_type(UNKNOW_DDL_TYPE), rawDdl(nullptr){}
+		ddl& operator=(const ddl& cp) 
+		{
+			m_type = cp.m_type;
+			rawDdl = cp.rawDdl;
+			usedDb = cp.usedDb;
+			return *this;
+		}
+		ddl(const ddl& cp) :m_type(cp.m_type), rawDdl(cp.rawDdl), usedDb(cp.usedDb) {}
+		virtual ~ddl() {}
 	};
 	struct dataBaseDDL :public ddl {
 		std::string name;
 		const charsetInfo* charset;
 		std::string collate;
 	};
+	struct addKey;
 	struct createTableDDL:public ddl
 	{
 		tableMeta table;
+		addKey primaryKey;
+		std::list<addKey> uniqueKeys;
+		std::list<addKey> indexs;
+		createTableDDL() :table(true){}
 	};
 	struct createTableLike :public ddl
 	{
@@ -66,48 +84,71 @@ namespace META {
 		std::list<std::string> destDatabases;
 		std::list<std::string> destTables;
 	};
-	struct addColumn :public ddl
-	{
+	struct alterTable :public ddl {
 		std::string database;
 		std::string table;
+	};
+	struct addColumn :public alterTable
+	{
 		columnMeta column;
 		std::string afterColumnName;
 	};
-	struct addColumns :public ddl
+	struct addColumns :public alterTable
 	{
-		std::string database;
-		std::string table;
-		std::list<columnMeta*> columns;
+		std::list<columnMeta> columns;
 	};
-	struct renameColumn :public ddl
+	struct renameColumn :public alterTable
 	{
-		std::string database;
-		std::string table;
 		std::string srcColumnName;
 		std::string destColumnName;
 	};
-	struct modifyColumn :public ddl
+	struct modifyColumn :public alterTable
 	{
-		std::string database;
-		std::string table;
 		std::string srcColumnName;
 		columnMeta column;
 		bool first;
 		std::string afterColumnName;
 	};
-	struct changeColumn :public ddl
+	struct changeColumn :public alterTable
 	{
-		std::string database;
-		std::string table;
 		std::string srcColumnName;
 		columnMeta newColumn;
 		bool first;
 		std::string afterColumnName;
 	};
-	struct dropColumn :public ddl
+	struct dropColumn :public alterTable
 	{
-		std::string database;
-		std::string table;
 		std::string columnName;
+	};
+	struct renameKey :public alterTable
+	{
+		std::string srcKeyName;
+		std::string destKeyName;
+	};
+	struct addKey :public alterTable
+	{
+		std::string name;
+		std::list<std::string> columnNames;
+		addKey() {}
+		addKey(const struct addKey& key)
+		{
+			name = key.name;
+			std::copy(key.columnNames.begin(), key.columnNames.end(), std::back_inserter(columnNames));
+		}
+		struct addKey& operator=(const struct addKey& key)
+		{
+			name = key.name;
+			std::copy(key.columnNames.begin(), key.columnNames.end(), std::back_inserter(columnNames));
+			return *this;
+		}
+	};
+	struct dropKey :public alterTable
+	{
+		std::string name;
+	};
+	struct defaultCharset :public alterTable
+	{
+		const charsetInfo* charset;
+		std::string collate;
 	};
 }

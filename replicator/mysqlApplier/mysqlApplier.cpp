@@ -348,7 +348,7 @@ RESET:
 		case META::T_ENUM:
 		{
 			uint16_t idx = *(const uint16_t*)value;
-			if (idx >= column->m_setAndEnumValueList.m_Count)
+			if (idx >= column->m_setAndEnumValueList.m_count)
 			{
 				m_errno = -1;
 				m_error = "invalid enum type value,enum size is less then index";
