@@ -11,9 +11,10 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 		SET(LIBRARY_OUTPUT_PATH bin)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 include (GenerateExportHeader) 
-
+STRING( REGEX REPLACE ".*/(.*)" "\\1" CURRENT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR} ) 
+SET(BASE_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "pwd: ${BASE_INCLUDE_PATH}")
 SET(EXECUTABLE_OUTPUT_PATH bin)
-SET(BASE_INCLUDE_PATH "./")
 #lz4
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	find_library(LZ4 lz4 lz4/lib)
@@ -95,6 +96,8 @@ target_include_directories(sqlParser PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_
 
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
 TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG} ${GLFAGS})
+target_include_directories(mysqlParserFuncs PUBLIC ${MYSQL_INCLUDE_PATH})
+
 #memory
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
@@ -164,6 +167,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #unit test
 ADD_EXECUTABLE(testMysqlSql  sqlParser/mysqlParseFunc/unittest/testMysqlSql.cpp)
 TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser)
+target_include_directories(testMysqlSql PUBLIC ${BASE_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMysqlSql dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

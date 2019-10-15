@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <float.h>
+#include <mysql.h>
 #include "columnParser.h"
 #include "mysql/decimal.h"
 #include "util/itoaSse.h"

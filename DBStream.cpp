@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 	}
 	initKeyWords();
 	STORE::store store(&conf);
-	META::metaDataCollection collection("utf8",nullptr);
+	META::metaDataCollection collection("utf8",true,nullptr);
         if(0!=collection.initSqlParser(mysqlParserTree,mysqlFuncLib))
 	{
 		LOG(ERROR)<<"init sqlparser failed";

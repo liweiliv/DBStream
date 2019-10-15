@@ -4,8 +4,8 @@
  *  Created on: 2019年4月27日
  *      Author: liwei
  */
-#include "sqlparser/sqlParser.h"
-#include "sqlparser/sqlParserUtil.h"
+#include "sqlParser/sqlParser.h"
+#include "sqlParser/sqlParserUtil.h"
 #include "meta/metaChangeInfo.h"
 #include "stdio.h"
 #include "util/stackLog.h"

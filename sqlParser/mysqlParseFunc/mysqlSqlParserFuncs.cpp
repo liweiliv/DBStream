@@ -11,6 +11,7 @@
 #include  "util/winDll.h"
 #include "meta/ddl.h"
 #include "util/threadLocal.h"
+#include "mysql.h"
 using namespace META;
 namespace SQL_PARSER {
 #define  NOT_FIXED_DEC 31

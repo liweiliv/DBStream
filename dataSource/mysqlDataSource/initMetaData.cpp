@@ -459,7 +459,7 @@ namespace DATA_SOURCE {
 		MYSQL_ROW row;
 		while (nullptr!=(row = mysql_fetch_row(rs)))
 		{
-			META::tableMeta* meta = new META::tableMeta();
+			META::tableMeta* meta = new META::tableMeta(true);//todo
 			meta->m_dbName = row[0];
 			meta->m_tableName = row[1];
 			if (row[4] != nullptr && strlen(row[4]) > 0)

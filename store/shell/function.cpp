@@ -7,6 +7,9 @@
 #ifdef OS_WIN
 #include "util/winTime.h"
 #endif
+#ifdef OS_LINUX
+#include <stdarg.h>
+#endif
 namespace STORE {
 	namespace SHELL {
 		typedef spp::sparse_hash_map<const char*, rowFunction*, StrHash, StrCompare> ROW_FUNC_ARGV_MAP;
