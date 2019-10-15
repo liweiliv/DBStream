@@ -127,6 +127,11 @@ namespace META {
 		}
 		std::string toString()
 		{
+			return "";
+		}
+#if 0
+		std::string toString()
+		{
 			std::string sql("`");
 			sql.append(m_columnName).append("` ");
 			char numBuf[40] = { 0 };
@@ -306,6 +311,7 @@ namespace META {
 			}
 			return sql;
 		}
+#endif
 	};
 	struct keyInfo
 	{
