@@ -80,6 +80,7 @@ namespace STORE
 
 		struct columnFiled :public Field {
 			const char* name;
+			const char* alias;
 			uint64_t tableId;
 			uint8_t tableJoinId;			
 			const META::columnMeta* column;

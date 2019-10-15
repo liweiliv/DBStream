@@ -41,9 +41,11 @@ namespace STORE
 
 		struct selectSqlInfo :public sqlBasicInfo {
 			const META::tableMeta * table;
+			const char* alias;
 			uint64_t selectTableId;
 			const char* tableAlias;
 			sqlList<const META::tableMeta*> joinedTables;
+			sqlList<const char *> joinedTablesAlias;
 			sqlList<Field*> selectFields;
 			sqlList<const char*> selectFieldAlias;
 			uint64_t* joinedTableIds;
@@ -94,7 +96,7 @@ namespace STORE
 				}
 				return false;
 			}
-			bool addGroupColumn(selectColumnInfo* column)
+			bool addGroupColumn(columnFiled* column)
 			{
 				if (isGroupColumn(column->name, column->tableId))
 					return false;

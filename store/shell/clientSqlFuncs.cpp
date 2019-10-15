@@ -9,7 +9,7 @@
 #include "expressionOperator.h"
 namespace STORE {
 	namespace SHELL {
-		extern META::metaDataCollection* shellMetaCenter;
+		META::metaDataCollection* shellMetaCenter;
 		threadLocal<uint8_t> typeListBuffer;
 		static inline uint8_t* getTypeListBuf()
 		{
@@ -17,6 +17,13 @@ namespace STORE {
 			if (unlikely(buffer == nullptr))
 				typeListBuffer.set(buffer = new uint8_t[1024]);
 			return buffer;
+		}
+		static inline const META::tableMeta* getMeta(SQL_PARSER::handle* h, const SQL_PARSER::SQLTableNameValue* table)
+		{
+			const char* database = table->database.empty() ? (h->dbName.empty() ? nullptr : h->dbName.c_str()) : table->database.c_str();
+			if (database == nullptr)
+				return nullptr;
+			return shellMetaCenter->get(database, table->table.c_str());
 		}
 #define GET_SELECT_TABLE static_
 		inline void createSelectSqlInfo(SQL_PARSER::handle* h)
@@ -35,7 +42,11 @@ namespace STORE {
 		{
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 			assert(value->type == SQL_PARSER::TABLE_NAME_TYPE);
-			sql->table = static_cast<SQL_PARSER::SQLTableNameValue*>(value);
+			const char* database = static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.empty() ? (h->dbName.empty() ? nullptr : h->dbName.c_str()) : static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.c_str();
+			if (database == nullptr)
+				return SQL_PARSER::INVALID;
+			if(nullptr==(sql->table = shellMetaCenter->get(database, static_cast<SQL_PARSER::SQLTableNameValue*>(value)->table.c_str())))
+				return SQL_PARSER::INVALID;
 			return SQL_PARSER::OK;
 		}
 		static inline rawField* SQLValue2String(SQL_PARSER::SQLValue* value)
@@ -94,7 +105,10 @@ namespace STORE {
 			}
 			return nullptr;//todo
 		}
-		static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value);
+		static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value)//todo
+		{
+			return nullptr;
+		}
 		static inline Field* SQLValue2FunctionField(SQL_PARSER::SQLValue* value)
 		{
 			SQL_PARSER::SQLFunctionValue* funcValue = static_cast<SQL_PARSER::SQLFunctionValue*>(value);
@@ -199,7 +213,7 @@ namespace STORE {
 			exp->init(fields, expValue->count, false, group, typeBuffer[0]);
 			return exp;
 		}
-		static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value)
+		static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value, selectSqlInfo * select)
 		{
 			switch (value->type)
 			{
@@ -208,7 +222,7 @@ namespace STORE {
 			case SQL_PARSER::STRING_TYPE:
 				return SQLValue2String(value);
 			case SQL_PARSER::COLUMN_NAME_TYPE:
-				return SQLValue2Column(value);
+				return SQLValue2Column(value, select);
 			case SQL_PARSER::FUNCTION_TYPE:
 				return SQLValue2FunctionField(value);
 			case SQL_PARSER::EXPRESSION_TYPE:
@@ -264,7 +278,7 @@ namespace STORE {
 		{
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 			assert(value->type == SQL_PARSER::COLUMN_NAME_TYPE);
-			Field* field = SQLValue2Column(value);
+			Field* field = SQLValue2Column(value,static_cast<selectSqlInfo*>(h->userData));
 			if (field == nullptr)
 				return SQL_PARSER::INVALID;
 			sql->selectFields.add(field);
@@ -323,7 +337,12 @@ namespace STORE {
 		{
 			selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 			assert(value->type == SQL_PARSER::TABLE_NAME_TYPE);
-			sql->joinedTables.add(static_cast<SQL_PARSER::SQLTableNameValue*>(value));
+			const META::tableMeta * meta = getMeta(h, static_cast<SQL_PARSER::SQLTableNameValue*>(value));
+			if (meta == nullptr)
+			{
+				return SQL_PARSER::INVALID;
+			}
+			sql->joinedTables.add(meta);
 			return SQL_PARSER::OK;
 		}
 		extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectLeftJoin(SQL_PARSER::handle* h, SQL_PARSER::SQLValue* value)
@@ -466,14 +485,14 @@ namespace STORE {
 					}
 					else
 					{
-						if(strcmp(sql->table->table.c_str(),column->table.c_str())==0 || strcmp(sql->table->alias.c_str(), column->table.c_str()) == 0)
+						if(strcmp(sql->table->m_tableName.c_str(),column->table.c_str())==0 || (sql->alias!=nullptr&&strcmp(sql->alias, column->table.c_str()) == 0))
 							tableId = sql->selectTableId;
 						else
 						{
 							for (int idx = 0; idx < sql->joinedTables.size; idx++)
 							{
 								tableJoinId++;
-								if (strcmp(sql->joinedTables.list[idx]->table.c_str(), column->table.c_str()) == 0 || strcmp(sql->joinedTables.list[idx]->alias.c_str(), column->table.c_str()) == 0)
+								if (strcmp(sql->joinedTables.list[idx]->m_tableName.c_str(), column->table.c_str()) == 0 || (sql->joinedTablesAlias.list[idx]!=nullptr&&strcmp(sql->joinedTablesAlias.list[idx], column->table.c_str())) == 0)
 								{
 									tableId = sql->joinedTableIds[idx];
 									break;
