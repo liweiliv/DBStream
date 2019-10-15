@@ -77,14 +77,15 @@ namespace META {
 		int dropDatabase(const ddl* database,uint64_t originCheckPoint);
 		int createTable(const ddl* tableDDL, uint64_t originCheckPoint);
 		int createTableLike(const ddl* tableDDL, uint64_t originCheckPoint);
-		int dropTable(const ddl* tableDDL, uint64_t originCheckPoint);
-		int renameTable(const ddl* tableDDL, uint64_t originCheckPoint);
-		int alterTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int createIndex(const ddl* tableDDL, uint64_t originCheckPoint);
+		int dropIndex(const ddl* tableDDL, uint64_t originCheckPoint);
 
-		int alterTableAddColumn(const struct ddl* columnDdl,uint64_t originCheckPoint);
-		int alterTableAddColumns(const struct ddl* columnDdl, uint64_t originCheckPoint);
-		int alterTableRenameColumn(const struct ddl* columnDdl, uint64_t originCheckPoint);
-		int alterTableModifyColumn(const struct ddl* columnDdl, uint64_t originCheckPoint);
+		int dropTable(const ddl* tableDDL, uint64_t originCheckPoint);
+
+		int dropTable(const char * database,const char * table, uint64_t originCheckPoint);
+		int renameTable(const ddl* tableDDL, uint64_t originCheckPoint);
+		int renameTable(const char * srcDatabase,const char * srcTable,const char * destDatabase,const char * destTable, uint64_t originCheckPoint);
+		int alterTable(const ddl* tableDDL, uint64_t originCheckPoint);
 	public:
 		void print();
 	};

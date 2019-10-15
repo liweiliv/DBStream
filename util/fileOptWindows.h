@@ -15,6 +15,7 @@ static fileHandle openFile(const char *file,bool read,bool write,bool create)
 	if (fd == INVALID_HANDLE_VALUE)
 	{
 		uint64_t errCode = GetLastError();
+		errno = errCode;
 		if (errCode == ERROR_FILE_NOT_FOUND)//no such file
 		{
 			if (create)

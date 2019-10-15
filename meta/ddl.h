@@ -10,7 +10,11 @@ namespace META {
 		CREATE_TABLE_LIKE,
 		CREATE_TABLE_FROM_SELECT,
 		DROP_TABLE,
+		CREATE_INDEX,
+		DROP_INDEX,
 		RENAME_TABLE,
+		ALTER_TABLE,
+		ALTER_TABLE_RENAME,
 		ALTER_TABLE_ADD_COLUMN,
 		ALTER_TABLE_ADD_COLUMNS,
 		ALTER_TABLE_RENAME_COLUMN,
@@ -31,11 +35,23 @@ namespace META {
 		CREATE_VIEW,
 		CREATE_TRIGGER
 	};
+	struct tableName {
+		std::string database;
+		std::string table;
+		tableName() {}
+		tableName(const tableName& cp):database(cp.database),table(cp.table){}
+		tableName& operator=(const tableName& cp)
+		{
+			database = cp.database;
+			table = cp.table;
+			return *this;
+		}
+	};
 	struct ddl {
 		DDL_TYPE m_type;
 		const char* rawDdl;
 		std::string usedDb;
-		ddl():m_type(UNKNOW_DDL_TYPE), rawDdl(nullptr){}
+		ddl(DDL_TYPE type= UNKNOW_DDL_TYPE):m_type(type), rawDdl(nullptr){}
 		ddl& operator=(const ddl& cp) 
 		{
 			m_type = cp.m_type;
@@ -51,85 +67,33 @@ namespace META {
 		const charsetInfo* charset;
 		std::string collate;
 	};
-	struct addKey;
-	struct createTableDDL:public ddl
-	{
-		tableMeta table;
-		addKey primaryKey;
-		std::list<addKey> uniqueKeys;
-		std::list<addKey> indexs;
-		createTableDDL() :table(true){}
-	};
-	struct createTableLike :public ddl
-	{
-		std::string database;
-		std::string table;
-		std::string likedDatabase;
-		std::string likedTable;
-	};
-	struct createTableFromSelect :public ddl //todo
-	{
-		std::string database;
-		std::string table;
-	};
 	struct dropTable :public ddl
 	{
-		std::string database;
-		std::string table;
+		std::list<tableName> tables;
+		dropTable() :ddl(DROP_TABLE) {}
 	};
-	struct renameTable :public ddl
-	{
-		std::list<std::string> databases;
-		std::list<std::string> tables;
-		std::list<std::string> destDatabases;
-		std::list<std::string> destTables;
+	struct tableDdl :public ddl {
+		tableName table;
+		tableDdl(DDL_TYPE type = UNKNOW_DDL_TYPE) :ddl(type) {}
+		const char* getDatabase()const
+		{
+			if (!table.database.empty())
+				return table.database.c_str();
+			else if (!usedDb.empty())
+				return usedDb.c_str();
+			else
+				return nullptr;
+		}
 	};
-	struct alterTable :public ddl {
-		std::string database;
-		std::string table;
+	struct alterTableHead {
+		DDL_TYPE type;
+		alterTableHead(DDL_TYPE type = UNKNOW_DDL_TYPE) :type(type) {}
 	};
-	struct addColumn :public alterTable
-	{
-		columnMeta column;
-		std::string afterColumnName;
-	};
-	struct addColumns :public alterTable
-	{
-		std::list<columnMeta> columns;
-	};
-	struct renameColumn :public alterTable
-	{
-		std::string srcColumnName;
-		std::string destColumnName;
-	};
-	struct modifyColumn :public alterTable
-	{
-		std::string srcColumnName;
-		columnMeta column;
-		bool first;
-		std::string afterColumnName;
-	};
-	struct changeColumn :public alterTable
-	{
-		std::string srcColumnName;
-		columnMeta newColumn;
-		bool first;
-		std::string afterColumnName;
-	};
-	struct dropColumn :public alterTable
-	{
-		std::string columnName;
-	};
-	struct renameKey :public alterTable
-	{
-		std::string srcKeyName;
-		std::string destKeyName;
-	};
-	struct addKey :public alterTable
+	struct addKey :public alterTableHead
 	{
 		std::string name;
 		std::list<std::string> columnNames;
-		addKey() {}
+		addKey() :alterTableHead(ALTER_TABLE_ADD_INDEX) {}
 		addKey(const struct addKey& key)
 		{
 			name = key.name;
@@ -141,14 +105,110 @@ namespace META {
 			std::copy(key.columnNames.begin(), key.columnNames.end(), std::back_inserter(columnNames));
 			return *this;
 		}
+	};	
+	struct createTableDDL:public tableDdl
+	{
+		tableMeta table;
+		addKey primaryKey;
+		std::list<addKey> uniqueKeys;
+		std::list<addKey> indexs;
+		createTableDDL() :table(true){}
 	};
-	struct dropKey :public alterTable
+	struct createTableLike :public tableDdl
+	{
+		tableName likedTable;
+	};
+	struct renameTable :public ddl
+	{
+		std::list<tableName> src;
+		std::list<tableName> dest;
+	};
+
+	struct createIndex :public tableDdl 
+	{
+		addKey index;
+		createIndex() :tableDdl(CREATE_INDEX) {}
+	};
+	struct dropIndex :public tableDdl
 	{
 		std::string name;
+		dropIndex() :tableDdl(DROP_INDEX) {}
 	};
-	struct defaultCharset :public alterTable
+	struct alterTable :public tableDdl
+	{
+		std::list<alterTableHead*> detail;
+		alterTable() :tableDdl(ALTER_TABLE) {}
+		~alterTable()
+		{
+			for (std::list<alterTableHead*>::iterator iter = detail.begin(); iter != detail.end(); iter++)
+				delete* iter;
+		}
+	};
+	struct addColumn :public alterTableHead
+	{
+		columnMeta column;
+		bool first;
+		std::string afterColumnName;
+		addColumn() :alterTableHead(ALTER_TABLE_ADD_COLUMN),first(false) {}
+	};
+	struct addColumns :public alterTableHead
+	{
+		std::list<columnMeta> columns;
+		addColumns() :alterTableHead(ALTER_TABLE_ADD_COLUMNS) {}
+	};
+	struct renameColumn :public alterTableHead
+	{
+		std::string srcColumnName;
+		std::string destColumnName;
+		renameColumn() :alterTableHead(ALTER_TABLE_RENAME_COLUMN) {}
+
+	};
+	struct modifyColumn :public alterTableHead
+	{
+		std::string srcColumnName;
+		columnMeta column;
+		bool first;
+		std::string afterColumnName;
+		modifyColumn() :alterTableHead(ALTER_TABLE_MODIFY_COLUMN), first(false){}
+
+	};
+	struct changeColumn :public alterTableHead
+	{
+		std::string srcColumnName;
+		columnMeta newColumn;
+		bool first;
+		std::string afterColumnName;
+		changeColumn() :alterTableHead(ALTER_TABLE_CHANGE_COLUMN), first(false) {}
+
+	};
+	struct alterRenameTable :public alterTableHead
+	{
+		tableName destTable;
+		alterRenameTable() :alterTableHead(ALTER_TABLE_RENAME) {}
+	};
+	struct dropColumn :public alterTableHead
+	{
+		std::string columnName;
+		dropColumn() :alterTableHead(ALTER_TABLE_DROP_COLUMN) {}
+
+	};
+	struct renameKey :public alterTableHead
+	{
+		std::string srcKeyName;
+		std::string destKeyName;
+		renameKey() :alterTableHead(ALTER_TABLE_RENAME_INDEX) {}
+	};
+
+	struct dropKey :public alterTableHead
+	{
+		std::string name;
+		dropKey() :alterTableHead(ALTER_TABLE_DROP_INDEX) {}
+
+	};
+	struct defaultCharset :public alterTableHead
 	{
 		const charsetInfo* charset;
 		std::string collate;
+		defaultCharset() :alterTableHead(ALTER_TABLE_DEFAULT_CHARSET), charset(nullptr){}
 	};
 }

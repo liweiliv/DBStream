@@ -1,6 +1,7 @@
 #pragma once
 #include "util/likely.h"
 #include <string>
+#include "glog/logging.h"
 namespace META {
 	template<typename T>
 	class MetaTimeline
