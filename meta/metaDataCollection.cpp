@@ -454,7 +454,7 @@ namespace META {
 					return -1;
 				}
 			}
-			if (columnInfos[meta->m_columns[idx].m_columnType].stringType && meta->m_columns[idx].m_charset == nullptr)
+			if (columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].stringType && meta->m_columns[idx].m_charset == nullptr)
 				meta->m_columns[idx].m_charset = meta->m_charset;
 		}
 		if (!table->primaryKey.columnNames.empty())

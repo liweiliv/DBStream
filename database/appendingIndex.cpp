@@ -402,7 +402,7 @@ namespace DATABASE {
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();
-			memcpy(indexPos, iter.key().key, keySize);
+			memcpy(indexPos, static_cast<const unionKey*>(iter.key())->key, keySize);
 			if (k->count == 1)
 			{
 				*(uint32_t*)(indexPos + keySize) = k->subArray[0];
@@ -436,8 +436,8 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = m_ukMeta.m_size + *(const uint16_t*)(iter.key().key + m_ukMeta.m_size);
-			memcpy(externCurretPos + sizeof(uint16_t), &iter.key(), *(uint16_t*)externCurretPos);
+			*(uint16_t*)externCurretPos = m_ukMeta.m_size + *(const uint16_t*)(static_cast<const unionKey*>(iter.key())->key + m_ukMeta.m_size);
+			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const unionKey*>(iter.key())->key, *(uint16_t*)externCurretPos);
 			externCurretPos += sizeof(uint16_t) + *(uint16_t*)externCurretPos;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
@@ -455,9 +455,9 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = iter.key().size;
-			memcpy(externCurretPos + sizeof(uint16_t), iter.key().data, *(uint16_t*)externCurretPos);
-			externCurretPos += iter.key().size;
+			*(uint16_t*)externCurretPos = static_cast<const binaryType*>(iter.key())->size;
+			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const binaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
+			externCurretPos += static_cast<const binaryType*>(iter.key())->size;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;

@@ -22,6 +22,14 @@ namespace DATABASE {
 		{
 			return  compare(dest) < 0;
 		}
+		inline bool operator==(const binaryType & dest) const
+		{
+			return compare(dest) == 0;
+		}
+		inline bool operator!=(const binaryType & dest) const
+		{
+			return compare(dest) != 0;
+		}
 		int compare(const binaryType & dest) const;
 		inline bool operator> (const binaryType & dest) const
 		{
@@ -57,7 +65,14 @@ namespace DATABASE {
 		{
 			return compare(dest)< 0;
 		}
-
+		inline bool operator== (const unionKey & dest) const
+		{
+			return compare(dest)== 0;
+		}
+		inline bool operator!= (const unionKey & dest) const
+		{
+			return compare(dest)!= 0;
+		}
 		static const char* initKey(leveldb::Arena * arena, unionKeyMeta * keyMeta, uint16_t *columnIdxs, uint16_t columnCount, const DATABASE_INCREASE::DMLRecord * r, bool keyUpdated = false);
 	};
 }

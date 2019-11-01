@@ -200,7 +200,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testMetaDataCollection meta/unittest/testMetaDataCollection.cpp)
-TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta)
+TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta metaCollection)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMetaDataCollection dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

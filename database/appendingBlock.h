@@ -13,7 +13,6 @@
 #include "message/record.h"
 #include "filter.h"
 #include "iterator.h"
-#include "schedule.h"
 #include "block.h"
 #include <string.h>
 #include <map>
@@ -900,6 +899,7 @@ namespace DATABASE
 		appendingBlock* m_block;
 		appendingBlock::tableData* m_table;
 		appendingIndex::iterator<T> indexIter;
+	public:
 		appendingBlockIndexIterator(appendingBlock* block, appendingIndex* index) :iterator(0,nullptr), m_index(index),m_block(block), indexIter(index)
 		{
 			m_table = m_block->getTableData(index->getMeta()->m_id);
@@ -913,6 +913,22 @@ namespace DATABASE
 			if (m_table == nullptr|| m_index==nullptr)
 				return false;
 			return true;//todo
+		}
+		virtual bool valid()
+		{
+			return indexIter.valid();
+		};
+		virtual status next()
+		{
+			return indexIter.next()?OK:ENDED;
+		}
+		virtual const void* value() const
+		{
+			return nullptr;
+		}
+		virtual bool end()
+		{
+			return false;
 		}
 	};
 #pragma pack()

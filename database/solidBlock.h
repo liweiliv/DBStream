@@ -14,7 +14,7 @@
 #include "glog/logging.h"
 #include "lz4/lib/lz4.h"
 #include "meta/metaData.h"
-#include "meta/metadataBaseCollection.h"
+#include "meta/metaDataBaseCollection.h"
 #include "util/barrier.h"
 #include "blockManager.h"
 #include "block.h"

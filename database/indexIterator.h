@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <assert.h>
 #include "meta/columnType.h"
 namespace DATABASE
 {
@@ -19,7 +20,7 @@ namespace DATABASE
 			if (type == META::COLUMN_TYPE::T_UNION)
 				assert(ukMeta != nullptr);
 		}
-		indexIterator(const indexIterator& iter) :recordIds(iter.recordIds), idChildCount(iter.idChildCount), index(iter.index), innerIndexId(iter.innerIndexId) {}
+		indexIterator(const indexIterator& iter) :index(iter.index), type(iter.type), ukMeta(iter.ukMeta),recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}
 		indexIterator& operator=(const indexIterator& iter)
 		{
 			key = iter.key;
@@ -30,7 +31,7 @@ namespace DATABASE
 		virtual ~indexIterator() {}
 		virtual bool begin() = 0;
 		virtual bool rbegin() = 0;
-		virtual bool seek(void * key, bool equalOrGreater) = 0;
+		virtual bool seek(const void * key, bool equalOrGreater) = 0;
 		virtual inline bool valid()const
 		{
 			return recordIds != nullptr && innerIndexId < idChildCount;

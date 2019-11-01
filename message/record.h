@@ -12,7 +12,7 @@
 #include <assert.h>
 #include "util/String.h"
 #include "meta/metaData.h"
-#include "meta/metadataBaseCollection.h"
+#include "meta/metaDataBaseCollection.h"
 #include "util/likely.h"
 namespace DATABASE_INCREASE
 {

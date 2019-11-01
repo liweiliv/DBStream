@@ -154,7 +154,7 @@ namespace DATABASE {
 		private:
 			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator m_iter;
 		public:
-			iterator(appendingIndex* index) :indexIterator<appendingIndex,T>(index, index->m_type, &index->m_ukMeta), m_iter(nullptr)
+			iterator(appendingIndex* index) :indexIterator<appendingIndex>(index, index->m_type, &index->m_ukMeta), m_iter(nullptr)
 			{
 			}
 			inline bool begin()
@@ -192,7 +192,8 @@ namespace DATABASE {
 					return false;
 				if (0 == m_iter.key()->child.count)
 					return false;
-				m_childIdx = 0;
+				idChildCount = m_iter.key()->child.count;
+				innerIndexId = idChildCount - 1;
 				return true;
 			}
 			inline bool nextKey()
@@ -239,7 +240,7 @@ namespace DATABASE {
 			do
 			{
 				const keyChildInfo * k = iter.keyDetail();
-				memcpy(indexPos, &iter.key(), keySize);
+				memcpy(indexPos, iter.key(), keySize);
 				if (k->count == 1)
 				{
 					*(uint32_t*)(indexPos + keySize) = k->subArray[0];

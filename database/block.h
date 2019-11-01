@@ -79,7 +79,7 @@ namespace DATABASE {
 	class block {
 	public:
 		std::atomic_uchar m_loading;
-		ref m_ref;
+		::ref m_ref;
 		blockManager* m_blockManager;
 		META::metaDataBaseCollection* m_metaDataCollection;
 		uint32_t m_version;

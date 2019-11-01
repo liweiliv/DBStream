@@ -9,7 +9,7 @@ namespace DATABASE {
 		uint64_t pageUsedSize;
 		uint64_t pageSize;
 		uint32_t crc;
-		ref _ref;
+		::ref _ref;
 		dualLinkListNode lruNode;
 		char *pageData;
 	};
