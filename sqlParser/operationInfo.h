@@ -69,8 +69,8 @@ namespace SQL_PARSER {
 	constexpr static operationInfo operationInfos[] = {
 		{LEFT_BRACKET,1,POSITION,false,false,"("},
 		{RIGHT_BRACKET,1,POSITION,false,false,")"},
-		{LEFT_SQUARE_BRACKET,1,POSITION,false,"["},
-		{RIGHT_SQUARE_BRACKET,1,POSITION,false,"]"},
+		{LEFT_SQUARE_BRACKET,1,POSITION,false,false,"["},
+		{RIGHT_SQUARE_BRACKET,1,POSITION,false,false,"]"},
 		{LEFT_BRACE,1,POSITION,false,false,"{"},
 		{RIGHT_BRACE,1,POSITION,false ,false,"}"},
 		{DIVISION_EQUAL,14,CHANGE_VALUE,true,true,"/="},
@@ -150,6 +150,7 @@ namespace SQL_PARSER {
 				{
 					if (*dest != ' ' && *dest != '\t')
 						break;
+					dest = nextWord(dest);
 				}
 				src = nextWord(wordEnd);
 				wordEnd = endOfWord(src);

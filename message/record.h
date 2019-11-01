@@ -12,7 +12,7 @@
 #include <assert.h>
 #include "util/String.h"
 #include "meta/metaData.h"
-#include "meta/metaDataCollection.h"
+#include "meta/metadataBaseCollection.h"
 #include "util/likely.h"
 namespace DATABASE_INCREASE
 {
@@ -48,9 +48,16 @@ namespace DATABASE_INCREASE
 		R_ROLLBACK,
 		R_DDL,
 		R_TABLE_META,
+		M_TABLE_META_REQ,
 		R_DATABASE_META,
+		M_DATABASE_META_REQ,
 		R_HEARTBEAT,
-		R_MAX_RECORD_TYPE
+		M_LOGIN_REQ,
+		M_LOGIN_ACK,
+		M_LOGIN,
+		M_LOGIN_RESULT,
+		M_SQL,
+		MAX_RECORD_TYPE
 	};
 #define COLUMN_FLAG_VIRTUAL 0x01
 #define COLUMN_FLAG_SIGNED 0x02
@@ -121,7 +128,7 @@ namespace DATABASE_INCREASE
 	struct TableMetaMessage :public record
 	{
 		/*--------------version 0----------------*/
-		/*[64 bit tableMetaID][16 bit charsetID][16 bit column count][16 bit pk columns count][16 bit uk count]
+		/*[64 bit tableMetaID][16 bit charsetID][16 bit column count][16 bit pk columns count][16 bit uk count][8 bit caseSensitive]
 		 *[8 bit database size][database string+ 1 byte '\0'][8 bit table size][table string+ 1 byte '\0']
 		 * [columnDef 1]...[columnDef n]
 		 * [16 bit pk column id 1]...[16 bit pk column id n]
@@ -357,7 +364,7 @@ namespace DATABASE_INCREASE
 				head->minHead.size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
 		}
 		/*----------------------------------------------*/
-		DMLRecord(const char* data, META::metaDataCollection* mc) ://for read
+		DMLRecord(const char* data, META::metaDataBaseCollection* mc) ://for read
 			record(data)
 		{
 			const char* ptr = data + head->minHead.headSize;
@@ -402,7 +409,7 @@ namespace DATABASE_INCREASE
 		{
 			if (!TEST_BITMAP(nullBitmap, index))
 				return nullptr;
-			if (META::columnInfos[meta->m_columns[index].m_columnType].fixed)
+			if (META::columnInfos[static_cast<int>(meta->m_columns[index].m_columnType)].fixed)
 				return columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[index]];
 			else
 				return columns + varLengthColumns[meta->m_realIndexInRowFormat[index]];
@@ -428,12 +435,12 @@ namespace DATABASE_INCREASE
 				{
 					if (!TEST_BITMAP(updatedBitmap, index)|| TEST_BITMAP(updatedNullBitmap, i))
 						continue;
-					if (META::columnInfos[meta->m_columns[i].m_columnType].fixed)
-						pos += META::columnInfos[meta->m_columns[i].m_columnType].columnTypeSize;
+					if (META::columnInfos[static_cast<int>(meta->m_columns[i].m_columnType)].fixed)
+						pos += META::columnInfos[static_cast<int>(meta->m_columns[i].m_columnType)].columnTypeSize;
 					else
 						pos += sizeof(uint32_t) + *(uint32_t*)pos;
 				}
-				if (META::columnInfos[meta->m_columns[index].m_columnType].fixed)
+				if (META::columnInfos[static_cast<int>(meta->m_columns[index].m_columnType)].fixed)
 					return pos;
 				else
 					return pos + sizeof(uint32_t);
@@ -480,46 +487,46 @@ namespace DATABASE_INCREASE
 				return "null\n";
 			switch (column->m_columnType)
 			{
-			case META::T_UINT8:
+			case META::COLUMN_TYPE::T_UINT8:
 				str = str << *(const uint8_t*)value << "\n";
 				break;
-			case META::T_INT8:
+			case META::COLUMN_TYPE::T_INT8:
 				str = str << *value << "\n";
 				break;
-			case META::T_INT16:
+			case META::COLUMN_TYPE::T_INT16:
 				str = str << *(const int16_t*)value << "\n";
 				break;
-			case META::T_UINT16:
-			case META::T_YEAR:
+			case META::COLUMN_TYPE::T_UINT16:
+			case META::COLUMN_TYPE::T_YEAR:
 				str = str << *(const uint16_t*)value << "\n";
 				break;
-			case META::T_INT32:
+			case META::COLUMN_TYPE::T_INT32:
 				str = str << *(const int32_t*)value << "\n";
 				break;
-			case META::T_UINT32:
+			case META::COLUMN_TYPE::T_UINT32:
 				str = str << *(const uint32_t*)value << "\n";
 				break;
-			case META::T_INT64:
+			case META::COLUMN_TYPE::T_INT64:
 				str = str << *(const int64_t*)value << "\n";
 				break;
-			case META::T_UINT64:
+			case META::COLUMN_TYPE::T_UINT64:
 				str = str << *(const uint64_t*)value << "\n";
 				break;
-			case META::T_STRING:
-			case META::T_DECIMAL:
-			case META::T_BIG_NUMBER:
-			case META::T_TEXT:
-			case META::T_JSON:
-			case META::T_XML:
+			case META::COLUMN_TYPE::T_STRING:
+			case META::COLUMN_TYPE::T_DECIMAL:
+			case META::COLUMN_TYPE::T_BIG_NUMBER:
+			case META::COLUMN_TYPE::T_TEXT:
+			case META::COLUMN_TYPE::T_JSON:
+			case META::COLUMN_TYPE::T_XML:
 				str.append(value, length).append("\n");
 				break;
-			case META::T_FLOAT:
+			case META::COLUMN_TYPE::T_FLOAT:
 				str = str << *(float*)value << "\n";
 				break;
-			case META::T_DOUBLE:
+			case META::COLUMN_TYPE::T_DOUBLE:
 				str = str << *(double*)value << "\n";
 				break;
-			case META::T_TIMESTAMP:
+			case META::COLUMN_TYPE::T_TIMESTAMP:
 			{
 				META::timestamp t;
 				t.time = *(const uint64_t*)value;
@@ -528,7 +535,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case META::T_DATETIME:
+			case META::COLUMN_TYPE::T_DATETIME:
 			{
 				META::dateTime d;
 				d.time = *(const uint64_t*)value;
@@ -537,7 +544,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case META::T_DATE:
+			case META::COLUMN_TYPE::T_DATE:
 			{
 				META::Date d;
 				d.time = *(const uint32_t*)value;
@@ -546,7 +553,7 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case META::T_TIME:
+			case META::COLUMN_TYPE::T_TIME:
 			{
 				META::Time t;
 				t.time = *(const uint64_t*)value;
@@ -555,9 +562,9 @@ namespace DATABASE_INCREASE
 				str.append(s).append("\n");
 			}
 			break;
-			case META::T_BINARY:
-			case META::T_BLOB:
-			case META::T_GEOMETRY:
+			case META::COLUMN_TYPE::T_BINARY:
+			case META::COLUMN_TYPE::T_BLOB:
+			case META::COLUMN_TYPE::T_GEOMETRY:
 			{
 				char* buf = new char[length * 2 + 2];
 				for (uint32_t off = 0; off < length; off++)
@@ -579,7 +586,7 @@ namespace DATABASE_INCREASE
 				delete[]buf;
 			}
 			break;
-			case META::T_SET:
+			case META::COLUMN_TYPE::T_SET:
 			{
 				for (uint8_t idx = 0; idx < column->m_setAndEnumValueList.m_count; idx++)
 				{
@@ -591,7 +598,7 @@ namespace DATABASE_INCREASE
 				str.append("\n");
 			}
 			break;
-			case META::T_ENUM:
+			case META::COLUMN_TYPE::T_ENUM:
 			{
 				uint16_t idx = *(const uint16_t*)value;
 				assert(idx < column->m_setAndEnumValueList.m_count);
@@ -599,7 +606,7 @@ namespace DATABASE_INCREASE
 			}
 			break;
 			default:
-				str = std::String("unknown type:") << column->m_columnType << "\n";
+				str = std::String("unknown type:") << static_cast<int>(column->m_columnType) << "\n";
 				break;
 			}
 			return str;
@@ -613,13 +620,13 @@ namespace DATABASE_INCREASE
 				const META::columnMeta* c = meta->getColumn(idx);
 				str.append(c->m_columnName).append(":\n");
 				const char * value = column(idx);
-				uint32_t valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : varColumnSize(idx);
+				uint32_t valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : varColumnSize(idx);
 				std::String cv = columnValue(value, valueLength, c);
 				str.append(cv.c_str());
 				if (head->minHead.type == R_UPDATE || head->minHead.type == R_REPLACE)
 				{
 					value = oldColumnOfUpdateType(idx);
-					valueLength = META::columnInfos[c->m_columnType].fixed ? META::columnInfos[c->m_columnType].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
+					valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
 					str.append(columnValue(value, valueLength, c));
 				}
 			}
@@ -715,7 +722,7 @@ namespace DATABASE_INCREASE
 			return str;
 		}
 	};
-	static record* createRecord(const char* data, META::metaDataCollection* mc)
+	static record* createRecord(const char* data, META::metaDataBaseCollection* mc)
 	{
 		recordHead* head = (recordHead*)data;
 		switch (head->minHead.type)
@@ -762,6 +769,26 @@ namespace DATABASE_INCREASE
 			return r->toString();
 		}
 	}
+	struct loginReq:public minRecordHead
+	{
+	};
+	struct loginAck :public minRecordHead
+	{
+		uint8_t scramble[128];
+		uint32_t crc;
+	};
+	struct loginMessage :public minRecordHead
+	{
+		uint8_t user[32];
+		uint8_t password[64];
+		uint32_t crc;
+	};
+	struct loginResult :public minRecordHead
+	{
+		uint8_t success;
+		uint32_t userId;
+	};
+
 #pragma pack()
 }
 #endif /* RECORD_H_ */

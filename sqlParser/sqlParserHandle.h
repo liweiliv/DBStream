@@ -7,39 +7,7 @@ namespace SQL_PARSER
 	{
 		OK, NOT_MATCH, INVALID, COMMENT, NOT_SUPPORT
 	};
-	enum SQL_TYPE
-	{
-		BEGIN,
-		COMMIT,
-		ROLLBACK,
-		INSERT_INTO,
-		DELETE_FROM,
-		UPDATE_SET,
-		REPLACE,
-		SELECT,
-		USE_DATABASE,
-		CREATE_DATABASE,
-		DROP_DATABASE,
-		ALTER_DATABASE,
-		CREATE_TABLE,
-		CREATE_TABLE_LIKE,
-		RENAME_TABLE,
-		DROP_TABLE,
-		CREATE_INDEX,
-		DROP_INDEX,
-		ALTER_TABLE_DROP_FOREIGN_KEY,
-		ALTER_TABLE_DROP_PRIMARY_KEY,
-		ALTER_TABLE_DROP_INDEX,
-		ALTER_TABLE_DROP_COLUMN,
-		ALTER_TABLE_ADD_KEY,
-		ALTER_TABLE_ADD_CONSTRAINT,
-		ALTER_TABLE_ADD_COLUMN,
-		ALTER_TABLE_ADD_COLUMNS,
-		ALTER_TABLE_CHANGE_COLUMN,
-		ALTER_TABLE_MODIFY_COLUMN,
-		MAX_SUPPORT,
-		UNSUPPORT = 255
-	};
+	
 	struct handle;
 	typedef parseValue(*parserFuncType)(handle*, SQLValue*);
 	struct statusInfo
@@ -64,14 +32,14 @@ namespace SQL_PARSER
 	struct handle
 	{
 		uint8_t charset;
-		SQL_TYPE type;
 		std::string dbName;
+		const char* sql;
 		void * userData;
 		statusInfo * head;
 		statusInfo * end;
 		handle * next;
 		void(*destroyUserDataFunc)(handle *h);
-		handle(void *_userData = nullptr) :charset(0), type(UNSUPPORT),
+		handle(void *_userData = nullptr) :charset(0),sql(nullptr),
 			userData(_userData), head(nullptr), end(nullptr), next(nullptr), destroyUserDataFunc(nullptr)
 		{
 		}

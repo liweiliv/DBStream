@@ -84,11 +84,26 @@ namespace META {
 			}
 			return *this;
 		}
+		bool operator==(const stringArray& dest)const
+		{
+			if (m_count != dest.m_count)
+				return false;
+			for (int idx = 0; idx < m_count; idx++)
+			{
+				if (strcmp(m_array[idx], dest.m_array[idx]) != 0)
+					return false;
+			}
+			return true;
+		}
+		bool operator!=(const stringArray& dest)const
+		{
+			return !(*this==(dest));
+		}
 
 	};
 	struct columnMeta
 	{
-		uint8_t m_columnType; //type in DBStream
+		COLUMN_TYPE m_columnType; //type in DBStream
 		uint8_t m_srcColumnType;// type in database
 		uint16_t m_columnIndex;  //column id in table
 		std::string m_columnName;
@@ -103,7 +118,7 @@ namespace META {
 		bool m_isUnique;
 		bool m_isIndex;
 		bool m_generated;
-		columnMeta() :m_columnType(0), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr),m_size(0), m_precision(0), m_decimals(0),
+		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr),m_size(0), m_precision(0), m_decimals(0),
 			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
 		{}
 		columnMeta &operator =(const columnMeta &c)
@@ -125,9 +140,34 @@ namespace META {
 			m_generated = c.m_generated;
 			return *this;
 		}
+		bool operator==(const columnMeta& c)const
+		{
+			if (m_columnType != c.m_columnType ||
+				m_srcColumnType != c.m_srcColumnType ||
+				m_columnIndex != c.m_columnIndex ||
+				m_columnName != c.m_columnName ||
+				m_collate != c.m_collate ||
+				m_charset != c.m_charset ||
+				m_size != c.m_size ||
+				m_precision != c.m_precision ||
+				m_decimals != c.m_decimals ||
+				m_setAndEnumValueList != c.m_setAndEnumValueList ||
+				m_signed != c.m_signed ||
+				m_isPrimary != c.m_isPrimary ||
+				m_isUnique != c.m_isUnique ||
+				m_isIndex != c.m_isIndex ||
+				m_generated != c.m_generated
+				)
+				return false;
+			return true;
+		}
+		bool operator!=(const columnMeta& c)const
+		{
+			return !(*this == c);
+		}
 		std::string toString()
 		{
-			return "";
+			return m_columnName;
 		}
 #if 0
 		std::string toString()
@@ -313,21 +353,29 @@ namespace META {
 		}
 #endif
 	};
+	enum class KEY_TYPE {
+		PRIMARY_KEY,
+		UNIQUE_KEY,
+		INDEX
+	};
 	struct keyInfo
 	{
+		KEY_TYPE type;
 		std::string name;
 		uint16_t count;
 		uint16_t *keyIndexs;
 		keyInfo() :count(0), keyIndexs(nullptr) {}
-		keyInfo(const keyInfo & key) :name(key.name), count(key.count), keyIndexs(nullptr) {
+		keyInfo(const keyInfo & key) :type(key.type),name(key.name), count(key.count), keyIndexs(nullptr)
+		{
 			if (count > 0)
 			{
 				keyIndexs = new uint16_t[count];
 				memcpy(keyIndexs, key.keyIndexs, sizeof(uint16_t)*count);
 			}
 		}
-		void init(const char* name, uint16_t count, const uint16_t *keyIndexs)
+		void init(KEY_TYPE type,const char* name, uint16_t count, const uint16_t *keyIndexs)
 		{
+			this->type = type;
 			this->count = count;
 			this->name = name;
 			if (count > 0)
@@ -340,6 +388,7 @@ namespace META {
 		}
 		keyInfo& operator =(const keyInfo &key)
 		{
+			type = key.type;
 			name = key.name;
 			count = key.count;
 			if (count > 0)
@@ -363,6 +412,21 @@ namespace META {
 		~keyInfo()
 		{
 			clean();
+		}
+		bool operator==(const keyInfo& k)const
+		{
+			if (type!=k.type||
+				name != k.name ||
+				count != k.count)
+				return false;
+			if (count > 0)
+				return memcmp(keyIndexs, k.keyIndexs, sizeof(uint16_t) * count) == 0;
+			else
+				return true;
+		}
+		bool operator!=(const keyInfo& k)const
+		{
+			return !(*this == k);
 		}
 	};
 
@@ -400,7 +464,7 @@ namespace META {
 		}
 		tableMeta(bool caseSensitive);
 		tableMeta(DATABASE_INCREASE::TableMetaMessage * msg);
-		const char * createTableMetaRecord();
+		const char * createTableMetaRecord()const;
 		void clean();
 		~tableMeta();
 		tableMeta &operator =(const tableMeta &t);
@@ -419,23 +483,43 @@ namespace META {
 			}
 			return nullptr;
 		}
-		inline keyInfo *getUniqueKey(const char *UniqueKeyname)
+		inline int getUniqueKeyId(const char* UniqueKeyname)const
 		{
 			for (uint16_t i = 0; i < m_uniqueKeysCount; i++)
 			{
-				if (strcmp(m_uniqueKeys[i].name.c_str(), UniqueKeyname) == 0)
-					return &m_uniqueKeys[i];
+				if (m_nameCompare.compare(m_uniqueKeys[i].name.c_str(), UniqueKeyname) == 0)
+					return i;
 			}
-			return nullptr;
+			return -1;
 		}
-		inline keyInfo* getIndex(const char* indexName)
+		inline keyInfo *getUniqueKey(const char *UniqueKeyname)const 
+		{
+			int id = getUniqueKeyId(UniqueKeyname);
+			if (id > 0)
+				return &m_uniqueKeys[id];
+			else
+				return nullptr;
+		}
+		inline int getIndexId(const char* indexName)const
 		{
 			for (uint16_t i = 0; i < m_indexCount; i++)
 			{
-				if (strcmp(m_indexs[i].name.c_str(), indexName) == 0)
-					return &m_indexs[i];
+				if (m_nameCompare.compare(m_indexs[i].name.c_str(), indexName) == 0)
+					return i;
 			}
-			return nullptr;
+			return -1;
+		}
+		inline keyInfo* getIndex(const char* indexName)const
+		{
+			int id = getIndexId(indexName);
+			if (id > 0)
+				return &m_indexs[id];
+			else
+				return nullptr;
+		}
+		inline bool isMe(const char* database, const char* table) const
+		{
+			return m_nameCompare.compare(database, m_dbName.c_str()) == 0 && m_nameCompare.compare(table, m_tableName.c_str()) == 0;
 		}
 		void buildColumnOffsetList();
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
@@ -453,7 +537,8 @@ namespace META {
 		int renameIndex(const char* oldName, const char* newName);
 		int defaultCharset(const charsetInfo* charset, const char* collationName);
 		int convertDefaultCharset(const charsetInfo* charset, const char* collationName);
-
+		bool operator==(const tableMeta& dest)const;
+		bool operator!=(const tableMeta& dest)const;
 		std::string toString();
 	};
 }

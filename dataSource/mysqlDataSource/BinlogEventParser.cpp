@@ -14,6 +14,7 @@
 #include "util/file.h"
 #include "util/winString.h"
 #include "sqlParser/sqlParser.h"
+#include "meta/ddl.h"
 #define ROWS_MAPID_OFFSET    0
 #define ROWS_FLAGS_OFFSET    6
 #define ROWS_VHLEN_OFFSET    8
@@ -212,21 +213,25 @@ namespace DATA_SOURCE {
 			return rtv;//now ignore ddl parse failed 
 		}
 		((char*)sql)[sqlSize] = end;
-		switch (handle->type)
+		if (handle->userData != nullptr)
 		{
-		case SQL_PARSER::BEGIN:
-			rtv = begin(logEvent, size);
-			break;
-		case SQL_PARSER::COMMIT:
-			rtv = commit(logEvent, size);
-			break;
-		case SQL_PARSER::ROLLBACK:
-			rtv = rollback(logEvent, size);
-			break;
-		default:
-			rtv = ddl(logEvent, size);
-			break;
+			switch (static_cast<META::ddl*>(handle->userData)->m_type)
+			{
+			case META::BEGIN:
+				rtv = begin(logEvent, size);
+				break;
+			case META::COMMIT:
+				rtv = commit(logEvent, size);
+				break;
+			case META::ROLLBACK:
+				rtv = rollback(logEvent, size);
+				break;
+			default:
+				rtv = ddl(logEvent, size);
+				break;
+			}
 		}
+		delete handle;
 		return rtv;
 	}
 	BinlogEventParser::ParseStatus BinlogEventParser::parseQuery(const char* logEvent, size_t size)

@@ -26,7 +26,7 @@ DLL_EXPORT basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _
 {
 	if (basicBlockSize <= 4096)
 	{
-		blockSize = 1024;
+		blockSize = 4096;
 		basicBlockCount = blockSize / basicBlockSize;
 	}
 	else if (basicBlockSize <= 64 * 1024)

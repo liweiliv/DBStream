@@ -10,14 +10,17 @@
 #include "metaData.h"
 #include "glog/logging.h"
 #include "sqlParser/sqlParser.h"
-#include "store/client/client.h"
+#include "client/client.h"
 #include "charset.h"
 #include "metaTimeline.h"
 #include "message/record.h"
 #include "metaChangeInfo.h"
 #include "util/barrier.h"
 #include "util/likely.h"
+#include "util/config.h"
+#include "memory/bufferPool.h"
 #include "ddl.h"
+#include "database/blockManager.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
@@ -54,10 +57,20 @@ namespace META {
 			collate = db.collate;
 		}
 	};
-	metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,STORE::client *client) :m_nameCompare(caseSensitive),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
-		 m_maxTableId(1),m_maxDatabaseId(0)
+	void initVirtualConf(config * conf)
 	{
-		m_defaultCharset = getCharset(defaultCharset);
+
+	}
+	metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,CLIENT::client *client,const char * savePath) :metaDataBaseCollection(caseSensitive, getCharset(defaultCharset)),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
+		 m_maxTableId(1),m_maxDatabaseId(0), m_metaFile(nullptr), m_bufferPool(nullptr)
+	{
+		if (savePath != nullptr)
+		{
+			m_virtualConf = new config(nullptr);
+			initVirtualConf(m_virtualConf);
+			m_bufferPool = new bufferPool();
+			m_metaFile = new DATABASE::blockManager("meta",m_virtualConf, m_bufferPool,);
+		}
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
 			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));
 	}
@@ -116,9 +129,9 @@ namespace META {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableID)); i++)
 		{
-			if (m_client->getStatus() == STORE::client::IDLE)
+			if (m_client->getStatus() ==CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() == STORE::client::DISCONNECTED)
+			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
@@ -133,9 +146,9 @@ namespace META {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database, table,originCheckPoint)); i++)
 		{
-			if (m_client->getStatus() == STORE::client::IDLE)
+			if (m_client->getStatus() ==CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() == STORE::client::DISCONNECTED)
+			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
@@ -150,9 +163,9 @@ namespace META {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askDatabaseMeta(databaseID)); i++)
 		{
-			if (m_client->getStatus() == STORE::client::IDLE)
+			if (m_client->getStatus() ==CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() == STORE::client::DISCONNECTED)
+			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
@@ -170,9 +183,9 @@ namespace META {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askDatabaseMeta(dbName, offset)); i++)
 		{
-			if (m_client->getStatus() == STORE::client::IDLE)
+			if (m_client->getStatus() ==CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() == STORE::client::DISCONNECTED)
+			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
@@ -185,6 +198,10 @@ namespace META {
 		meta->m_id = msg.id;
 		put(meta->name.c_str(), msg.head->logOffset, meta);
 		return meta;
+	}
+	bool metaDataCollection::isDataBaseExist(const char* database, uint64_t originCheckPoint)
+	{
+		return getDatabase(database, originCheckPoint) != nullptr;
 	}
 	dbInfo* metaDataCollection::getDatabase(const char* database, uint64_t originCheckPoint)
 	{
@@ -381,7 +398,7 @@ namespace META {
 	{
 		const createTableDDL* table = static_cast<const createTableDDL*>(tableDDL);
 		tableMeta* meta = new tableMeta(m_nameCompare.caseSensitive);
-		*meta = table->table;
+		*meta = table->tableDef;
 		MetaTimeline<dbInfo>* db;
 		if (meta->m_dbName.empty())
 		{
@@ -539,20 +556,16 @@ namespace META {
 			LOG(ERROR) << "drop table failed for no database selected:";
 			return -1;
 		}
-		dbInfo* currentDB = getDatabase(database, originCheckPoint); ;
-		if (currentDB == nullptr)
-		{
-			LOG(ERROR) << "unknown database :" << database;
-			return -1;
-		}
-		MetaTimeline<tableMeta>* metas;
-		getTableInfo(table, metas, currentDB);
-		if (metas == nullptr)
+		if (get(database, table, originCheckPoint) == nullptr)
 		{
 			LOG(ERROR) << "unknown table :" << database << "." << table;
 			return -1;
 		}
-		return metas->disableCurrent(originCheckPoint);
+		if (put(database, table, nullptr, originCheckPoint) != 0)
+		{
+			LOG(ERROR) << "drop table " << database << "." << table<< " failed";
+			return -1;
+		}
 	}
 	int metaDataCollection::renameTable(const char* srcDatabase, const char* srcTable, const char* destDatabase, const char* destTable, uint64_t originCheckPoint)
 	{
@@ -562,13 +575,12 @@ namespace META {
 			LOG(ERROR) << "rename table failed for src table not exist";
 			return -1;
 		}
-		if (m_nameCompare.compare(srcDatabase, destDatabase) == 0 && m_nameCompare.compare(srcTable, destTable) != 0)
+		if (m_nameCompare.compare(srcDatabase, destDatabase) == 0 &&
+			m_nameCompare.compare(srcTable, destTable) != 0&&
+			get(destDatabase, destTable) != nullptr)
 		{
-			if (get(destDatabase, destTable) != nullptr)
-			{
-				LOG(ERROR) << "rename table failed for dest table exist";
-				return -1;
-			}
+			LOG(ERROR) << "rename table failed for dest table exist";
+			return -1;
 		}
 		tableMeta* newTable = new tableMeta(m_nameCompare.caseSensitive);
 		*newTable = *get(srcDatabase, srcTable);
@@ -581,10 +593,7 @@ namespace META {
 			delete newTable;
 			return -1;
 		}
-		dbInfo* srcDbInfo = getDatabase(srcDatabase, originCheckPoint);
-		MetaTimeline<tableMeta>* metas;
-		getTableInfo(srcTable, metas, srcDbInfo);
-		metas->disableCurrent(originCheckPoint);
+		put(srcDatabase, srcTable, nullptr, originCheckPoint);
 		return 0;
 	}
 	int metaDataCollection::renameTable(const ddl* tableDDL, uint64_t originCheckPoint)

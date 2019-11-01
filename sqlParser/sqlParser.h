@@ -24,19 +24,18 @@ class SQLWordArray;
 class SQLSingleWord;
 namespace SQL_PARSER
 {
-	typedef std::unordered_map<const char*, SQL_TYPE, StrHash, StrCompare> SQL_TYPE_TREE;
 	class SQLWord;
 	class sqlParser
 	{
 	private:
 		std::map<std::string, SQLWordArray*> m_parseTree;
 		std::map<std::string, SQLWordArray*> m_parseTreeHead;
-		SQL_TYPE_TREE m_sqlTypes;
 #ifdef OS_WIN
 		HINSTANCE m_funcsHandle;
 #else
 		void* m_funcsHandle;
 #endif
+		char m_quote;
 		bool getLoopCondition(const jsonValue* loop, SQLWord*& condition);
 		bool checkWords();
 		parserFuncType getFunc(const jsonString* json);
@@ -53,7 +52,7 @@ namespace SQL_PARSER
 		DLL_EXPORT int LoadFuncs(const char* fileName);
 		DLL_EXPORT int LoadParseTree(const char* config);
 		DLL_EXPORT int LoadParseTreeFromFile(const char* file);
-	public:
+		DLL_EXPORT void setNameQuote(char quote);
 		DLL_EXPORT parseValue parse(handle*& h, const char * database,const char* sql);
 	};
 };

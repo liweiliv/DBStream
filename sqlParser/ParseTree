@@ -1639,7 +1639,10 @@
 					},
 					{
 						"C": [
-							{ "K": "_C_:(","F": "createTable" },
+							{
+								"K": "_C_:(",
+								"F": "createTable"
+							},
 							{ "INCLUDE": "create_definition" },
 							{ "K": "_C_:)" },
 							{ "INCLUDE": "table_options" }
@@ -1946,7 +1949,10 @@
 		"OPT": true,
 		"C": [
 			{ "K": "_S_:RENAME" },
-			{ "K": "_S_:COLUMN" },
+			{
+				"K": "_S_:COLUMN",
+				"F": "alterRenameColumn"
+			},
 			{
 				"K": "_N_",
 				"F": "renameOldColumn"
@@ -1962,15 +1968,18 @@
 		"OPT": true,
 		"C": [
 			{ "K": "_S_:RENAME" },
-			{ "K": "_S_:KEY" },
+			{
+				"K": "_S_:KEY",
+				"F": "alterRenameKey"
+			},
 			{
 				"K": "_N_",
-				"F": "renameOldKey"
+				"F": "renameOldKeyName"
 			},
 			{ "K": "_S_:TO" },
 			{
 				"K": "_N_",
-				"F": "renameNewKey"
+				"F": "renameNewKeyName"
 			}
 		]
 	},
@@ -1978,15 +1987,18 @@
 		"OPT": true,
 		"C": [
 			{ "K": "_S_:RENAME" },
-			{ "K": "_S_:INDEX" },
+			{
+				"K": "_S_:INDEX",
+				"F": "alterRenameKey"
+			},
 			{
 				"K": "_N_",
-				"F": "renameOldIndex"
+				"F": "renameOldKeyName"
 			},
 			{ "K": "_S_:TO" },
 			{
 				"K": "_N_",
-				"F": "renameNewIndex"
+				"F": "renameNewKeyName"
 			}
 		]
 	},
@@ -2118,7 +2130,10 @@
 					{ "K": "_S_:SPATIAL" }
 				]
 			},
-			{ "K": "_S_:INDEX","F": "createIndexName" },
+			{
+				"K": "_S_:INDEX",
+				"F": "createIndexName"
+			},
 			{
 				"K": "_N_",
 				"F": "createIndexName"
@@ -2131,7 +2146,10 @@
 				]
 			},
 			{ "K": "_S_:ON" },
-			{"K": "_TABLE_","F": "ddlTableName"},
+			{
+				"K": "_TABLE_",
+				"F": "ddlTableName"
+			},
 			{ "K": "_C_:(" },
 			{
 				"LOOP": "_C_:,",
@@ -2290,7 +2308,10 @@
 			{
 				"LOOP": "_C_:,",
 				"C": [
-					{ "K": "_TABLE_","F": "dropTableName"}
+					{
+						"K": "_TABLE_",
+						"F": "dropTableName"
+					}
 				]
 			},
 			{
@@ -2317,7 +2338,7 @@
 						"K": "_TABLE_",
 						"F": "renameSrcTable"
 					},
-					{"K": "_S_:TO"},
+					{ "K": "_S_:TO" },
 					{
 						"K": "_TABLE_",
 						"F": "renameDestTable"
@@ -2354,8 +2375,18 @@
 						"OPT": true,
 						"K": "_S_:DEFAULT"
 					},
-					{ "K": "_S_:CHARACTER" },
-					{ "K": "_S_:SET" },
+					{
+						"OR": true,
+						"C": [
+							{
+								"C": [
+									{ "K": "_S_:CHARACTER" },
+									{ "K": "_S_:SET" }
+								]
+							},
+							{ "K": "_S_:CHARSET" }
+						]
+					},
 					{
 						"OPT": true,
 						"K": "_C_:="

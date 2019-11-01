@@ -190,7 +190,6 @@ namespace META {
 					abort();//not support now
 				}
 			}
-
 		}
 		inline tableMeta *get(uint64_t tableId)
 		{

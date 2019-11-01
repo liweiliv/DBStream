@@ -2,8 +2,8 @@
 #include "memory/bufferPool.h"
 #include "message/record.h"
 #include "meta/metaDataCollection.h"
-#include "blockManager.h"
-#include "block.h"
+#include "database/blockManager.h"
+#include "database/block.h"
 #include "schedule.h"
 namespace STORE {
 	DLL_EXPORT store::store(config* conf) : m_conf(conf)
@@ -11,8 +11,8 @@ namespace STORE {
 		m_bufferPool = new bufferPool();
 		m_schedule = new schedule(conf);
 		m_metaDataCollection = new META::metaDataCollection("utf8");
-		m_genratedStreamBlockManager = new blockManager(GENERATED_STREAM, conf,m_bufferPool,m_metaDataCollection);
-		m_mainStreamblockManager = new blockManager(MAIN_STREAM, conf,m_bufferPool,m_metaDataCollection);
+		m_genratedStreamBlockManager = new DATABASE::blockManager(GENERATED_STREAM, conf,m_bufferPool,m_metaDataCollection);
+		m_mainStreamblockManager = new DATABASE::blockManager(MAIN_STREAM, conf,m_bufferPool,m_metaDataCollection);
 	}
 	DLL_EXPORT int store::start()
 	{

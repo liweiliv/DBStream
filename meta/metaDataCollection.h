@@ -15,9 +15,8 @@
 #include "tableIdTree.h"
 #include "util/winDll.h"
 #include "metaTimeline.h"
-#include "nameCompare.h"
-struct charsetInfo;
-namespace STORE{
+#include "metadataBaseCollection.h"
+namespace CLIENT{
 class client;
 }
 namespace SQL_PARSER
@@ -25,6 +24,11 @@ namespace SQL_PARSER
 class sqlParser;
 struct handle;
 };
+namespace DATABASE{
+	class blockManager;
+}
+class bufferPool;
+class config;
 typedef std::unordered_map<const char *,const  charsetInfo*,StrHash,StrCompare> CharsetTree ;
 namespace META {
 	struct tableMeta;
@@ -36,26 +40,28 @@ namespace META {
 	struct Table;
 	struct ddl;
 	struct databaseInfo;
-	class DLL_EXPORT metaDataCollection
+	class DLL_EXPORT metaDataCollection :public metaDataBaseCollection
 	{
 	private:
-		nameCompare m_nameCompare;
 		dbTree m_dbs;
 		CharsetTree m_charsetSizeList;
-		const charsetInfo * m_defaultCharset;
 		tableIdTree m_allTables;
 		SQL_PARSER::sqlParser * m_sqlParser;
-		STORE::client * m_client;
+		CLIENT::client * m_client;
 		uint64_t m_maxTableId;
 		uint64_t m_maxDatabaseId;
+
+		DATABASE::blockManager* m_metaFile;
+		bufferPool* m_bufferPool;
+		config* m_virtualConf;
 	public:
-		metaDataCollection(const char * defaultCharset,bool caseSensitive = true,STORE::client *client = nullptr);
+		metaDataCollection(const char * defaultCharset,bool caseSensitive = true,CLIENT::client *client = nullptr, const char* savePath=nullptr);
 		~metaDataCollection();
 		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
 		tableMeta * get(uint64_t tableID);
 		tableMeta * getPrevVersion(uint64_t tableID);
 		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint = 0xffffffffffffffffULL);
-
+		bool isDataBaseExist(const char * database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
 		tableMeta * getTableMetaFromRemote(uint64_t tableID);
 		tableMeta * getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint);
 		const charsetInfo* getDataBaseCharset(const char* database, uint64_t originCheckPoint);

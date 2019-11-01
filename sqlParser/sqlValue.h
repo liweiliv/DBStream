@@ -10,6 +10,7 @@ namespace SQL_PARSER {
 		INT_NUMBER_TYPE,
 		FLOAT_NUMBER_TYPE,
 		STRING_TYPE,
+		CHAR_TYPE,
 		LIST_TYPE,
 		NAME_TYPE,
 		TABLE_NAME_TYPE,
@@ -36,7 +37,7 @@ namespace SQL_PARSER {
 	{
 	public:
 		double number;
-		SQLFloatNumberValue(double number) :SQLValue(INT_NUMBER_TYPE), number(number) {}
+		SQLFloatNumberValue(double number) :SQLValue(FLOAT_NUMBER_TYPE), number(number) {}
 	};
 	class SQLOperatorValue :public SQLValue {
 	public:
@@ -58,10 +59,42 @@ namespace SQL_PARSER {
 				delete* iter;
 		}
 	};
+	class SQLCharValue :public SQLValue {
+	public:
+		char value;
+		SQLCharValue() :SQLValue(CHAR_TYPE), value(0) {}
+	};
 	class SQLStringValue :public SQLValue {
 	public:
-		std::string value;
-		SQLStringValue(SQLValueType type) :SQLValue(type) {}
+		char* value;
+		uint32_t size;
+		uint32_t volumn;
+		bool quote;
+		SQLStringValue(SQLValueType type) :SQLValue(type), value(nullptr),size(0), volumn(0), quote(false){}
+		inline const char* assign(const char* src, int size)
+		{
+			if (!quote && volumn > size)
+			{
+				memcpy(value, src, size);
+				value[size] = '\0';
+			}
+			else
+			{
+				quote = false;
+				if (value != nullptr)
+					free(value);
+				value = (char*)malloc(size + 1);
+				memcpy(value, src, size);
+				value[size] = '\0';
+				volumn = this->size = size;
+			}
+			return value;
+		}
+		~SQLStringValue()
+		{
+			if (!quote && value != nullptr)
+				free(value);
+		}
 	};
 	class SQLNameValue :public SQLValue {
 	public:

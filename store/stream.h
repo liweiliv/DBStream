@@ -1,9 +1,9 @@
 #pragma once
 #include <stdint.h>
-#include "iterator.h"
+#include "database/iterator.h"
 #include "filter.h"
 #include "job.h"
-#include "blockManager.h"
+#include "database/blockManager.h"
 namespace DATABASE_INCREASE {
 	struct  record;
 }
@@ -19,7 +19,7 @@ private:
 		DATABASE_INCREASE::record * m_currentData;
 		META::tableMeta * m_meta;
 		uint32_t m_flag;
-		blockManager * m_blocks;
+		DATABASE::blockManager * m_blocks;
 		void(*m_workFunc)(DBStream * s);
 		void(*m_destroy)(DBStream * s);
 		void(*m_finish)(DBStream * );

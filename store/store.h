@@ -17,16 +17,18 @@ class metaDataCollection;
 namespace DATABASE_INCREASE {
 	struct record;
 }
+namespace DATABASE {
+	class blockManager;
+}
 namespace STORE{
 #define MAIN_STREAM "mainStream"
 #define GENERATED_STREAM "generatedStream"
-class blockManager;
 class schedule;
 DLL_EXPORT class store{
 private:
 	schedule *m_schedule;
-	blockManager *m_mainStreamblockManager;
-	blockManager *m_genratedStreamBlockManager;
+	DATABASE::blockManager *m_mainStreamblockManager;
+	DATABASE::blockManager *m_genratedStreamBlockManager;
 	META::metaDataCollection* m_metaDataCollection;
 	config * m_conf;
 	bufferPool* m_bufferPool;

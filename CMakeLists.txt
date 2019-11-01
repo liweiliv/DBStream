@@ -83,10 +83,22 @@ target_include_directories(util PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH}
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(util pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+#util
+aux_source_directory(thread threadDir)
+add_library(thread SHARED ${threadDir})
+TARGET_LINK_LIBRARIES(thread ${GLOG} ${GFLAGS})
+target_include_directories(thread PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(thread pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 #meta
-aux_source_directory(meta metaDir)
-add_library(meta SHARED ${metaDir})
-TARGET_LINK_LIBRARIES(meta util sqlParser ${GLOG})
+#aux_source_directory(meta metaDir)
+#add_library(meta SHARED ${metaDir})
+add_library(meta SHARED meta/metaData.cpp meta/charset.cpp)
+TARGET_LINK_LIBRARIES(meta util thread sqlParser ${GLOG})
 
 #sql parser
 aux_source_directory(sqlParser sqlparserDir)
@@ -101,17 +113,25 @@ target_include_directories(mysqlParserFuncs PUBLIC ${MYSQL_INCLUDE_PATH})
 #memory
 aux_source_directory(memory memoryDir)
 add_library(memory SHARED ${memoryDir})
-TARGET_LINK_LIBRARIES(memory util ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(memory util thread ${GLOG} ${GFLAGS})
 target_include_directories(memory PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
+#database
+aux_source_directory(database databaseDir)
+add_library(database SHARED ${databaseDir})
+TARGET_LINK_LIBRARIES(database  util thread memory meta ${LZ4} ${GLOG} ${GFLAGS})
+target_include_directories(database PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+#metaCollection
+add_library(metaCollection SHARED meta/metaDataCollection.cpp)
+TARGET_LINK_LIBRARIES(metaCollection meta database util thread sqlParser ${GLOG})
 #store
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util memory meta ${LZ4} ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(store  util thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(store PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 #shell
-aux_source_directory(store/shell shellDir)
+aux_source_directory(shell shellDir)
 add_library(shell SHARED ${shellDir})
 TARGET_LINK_LIBRARIES(shell store util memory meta ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(shell PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
@@ -170,6 +190,13 @@ TARGET_LINK_LIBRARIES(testMysqlSql util sqlParser)
 target_include_directories(testMysqlSql PUBLIC ${BASE_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMysqlSql dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testSqlWord  sqlParser/unittest/testSqlWord.cpp)
+TARGET_LINK_LIBRARIES(testSqlWord util sqlParser)
+target_include_directories(testSqlWord PUBLIC ${BASE_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testSqlWord dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testMetaDataCollection meta/unittest/testMetaDataCollection.cpp)

@@ -3,6 +3,9 @@
 namespace META {
 	enum DDL_TYPE {
 		UNKNOW_DDL_TYPE,
+		BEGIN,
+		COMMIT,
+		ROLLBACK,
 		CREATE_DATABASE,
 		DROP_DATABASE,
 		ALTER_DATABASE,
@@ -108,20 +111,22 @@ namespace META {
 	};	
 	struct createTableDDL:public tableDdl
 	{
-		tableMeta table;
+		tableMeta tableDef;
 		addKey primaryKey;
 		std::list<addKey> uniqueKeys;
 		std::list<addKey> indexs;
-		createTableDDL() :table(true){}
+		createTableDDL() :tableDdl(CREATE_TABLE),tableDef(true){}
 	};
 	struct createTableLike :public tableDdl
 	{
 		tableName likedTable;
+		createTableLike() :tableDdl(CREATE_TABLE_LIKE) {}
 	};
 	struct renameTable :public ddl
 	{
 		std::list<tableName> src;
 		std::list<tableName> dest;
+		renameTable() :ddl(RENAME_TABLE) {}
 	};
 
 	struct createIndex :public tableDdl 

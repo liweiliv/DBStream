@@ -6,7 +6,7 @@
 #include "util/spinlock.h"
 #include "util/dualLinkList.h"
 #include "util/linkList.h"
-#include "util/threadLocal.h"
+#include "thread/threadLocal.h"
 #include "util/winDll.h"
 #define getCache(c,tc) if(unlikely(nullptr==(((c)=(tc).get())))){(tc).set((c)=new cache(this));}
 #define getCacheWithDeclare(c,tc) cache *c ;getCache(c,tc)
@@ -139,10 +139,20 @@ public:
 				cleanCache(m_cache1.get());
 		}
 	}
+	static inline void* allocDirect(size_t size)
+	{
+		void* mem = malloc(size + offsetof(basicBlock, mem));
+		if (likely(mem != nullptr))
+			memset(mem, 0, offsetof(basicBlock, mem));
+		return mem;
+	}
 	static inline void free(void * _block)
 	{
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
-		basic->_block->pool->freeMem(_block);
+		if (unlikely(basic->_block == nullptr))//mem is not alloced by buffer pool
+			free(basic);
+		else
+			basic->_block->pool->freeMem(_block);
 	}
 };
 

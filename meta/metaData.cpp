@@ -20,7 +20,7 @@ namespace META {
 				m_columns[i].m_charset = &charsets[msg->columns[i].charsetID];
 			else
 				m_columns[i].m_charset = nullptr;
-			m_columns[i].m_columnType = msg->columns[i].type;
+			m_columns[i].m_columnType = static_cast<COLUMN_TYPE>(msg->columns[i].type);
 			m_columns[i].m_srcColumnType = msg->columns[i].srcType;
 			m_columns[i].m_decimals = msg->columns[i].decimals;
 			m_columns[i].m_precision = msg->columns[i].precision;
@@ -47,7 +47,7 @@ namespace META {
 		buildColumnOffsetList();
 		if (msg->metaHead.primaryKeyColumnCount > 0)
 		{
-			m_primaryKey.init("primary key", msg->metaHead.primaryKeyColumnCount, msg->primaryKeys);
+			m_primaryKey.init(KEY_TYPE::PRIMARY_KEY,"primary key", msg->metaHead.primaryKeyColumnCount, msg->primaryKeys);
 			for (uint16_t i = 0; i < m_primaryKey.count; i++)
 				((columnMeta*)getColumn(m_primaryKey.keyIndexs[i]))->m_isPrimary = true;
 		}
@@ -56,15 +56,16 @@ namespace META {
 			m_uniqueKeys = new keyInfo[msg->metaHead.uniqueKeyCount];
 			for (uint16_t i = 0; i < msg->metaHead.uniqueKeyCount; i++)
 			{
-				m_uniqueKeys[i].init(msg->data + msg->uniqueKeyNameOffset[i], msg->uniqueKeyColumnCounts[i], msg->uniqueKeys[i]);
+				m_uniqueKeys[i].init(KEY_TYPE::UNIQUE_KEY,msg->data + msg->uniqueKeyNameOffset[i], msg->uniqueKeyColumnCounts[i], msg->uniqueKeys[i]);
 				for (uint16_t j = 0; j < m_uniqueKeys[i].count; j++)
 					((columnMeta*)getColumn(m_uniqueKeys[i].keyIndexs[j]))->m_isUnique = true;
 			}
 			m_uniqueKeysCount = msg->metaHead.uniqueKeyCount;
 		}
 	}
-	const char * tableMeta::createTableMetaRecord()
+	const char * tableMeta::createTableMetaRecord()const
 	{
+
 		return nullptr;//todo
 	}
 	void tableMeta::clean()
@@ -156,7 +157,7 @@ namespace META {
 		m_fixedColumnCount = m_varColumnCount = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
 		{
-			if (columnInfos[m_columns[i].m_columnType].fixed)
+			if (columnInfos[static_cast<int>(m_columns[i].m_columnType)].fixed)
 				m_fixedColumnCount++;
 			else
 				m_varColumnCount++;
@@ -171,10 +172,10 @@ namespace META {
 		uint32_t fixedOffset = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
 		{
-			if (columnInfos[m_columns[i].m_columnType].fixed)
+			if (columnInfos[static_cast<int>(m_columns[i].m_columnType)].fixed)
 			{
 				m_fixedColumnOffsetsInRecord[m_fixedColumnCount] = fixedOffset;
-				fixedOffset += columnInfos[m_columns[i].m_columnType].columnTypeSize;
+				fixedOffset += columnInfos[static_cast<int>(m_columns[i].m_columnType)].columnTypeSize;
 				m_realIndexInRowFormat[i] = m_fixedColumnCount++;
 			}
 			else
@@ -277,7 +278,7 @@ namespace META {
 		{
 			m_columns[idx] = *column;
 			m_columns[idx].m_columnIndex = idx;
-			if (columnInfos[m_columns[idx].m_columnType].stringType && m_columns[idx].m_charset == nullptr)
+			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType && m_columns[idx].m_charset == nullptr)
 				m_columns[idx].m_charset = m_charset;
 			buildColumnOffsetList();
 		}
@@ -314,7 +315,7 @@ namespace META {
 		{
 			m_columns[idx] = *newColumn;
 			m_columns[idx].m_columnIndex = idx;
-			if (columnInfos[m_columns[idx].m_columnType].stringType && m_columns[idx].m_charset == nullptr)
+			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType && m_columns[idx].m_charset == nullptr)
 				m_columns[idx].m_charset = m_charset;
 			buildColumnOffsetList();
 		}
@@ -354,7 +355,7 @@ namespace META {
 
 			columns[before->m_columnIndex] = *column;
 			columns[before->m_columnIndex].m_columnIndex = before->m_columnIndex + 1;
-			if (columnInfos[before->m_columnType].stringType && column->m_charset == nullptr)
+			if (columnInfos[static_cast<int>(before->m_columnType)].stringType && column->m_charset == nullptr)
 				columns[before->m_columnIndex].m_charset = m_charset;
 
 			for (uint32_t idx = before->m_columnIndex + 1; idx <= m_columnsCount; idx++)
@@ -389,7 +390,7 @@ namespace META {
 				columns[idx] = m_columns[idx-1];
 			columns[0] = *column;
 			columns[0].m_columnIndex = 0;
-			if (columnInfos[column->m_columnType].stringType && column->m_charset == nullptr)
+			if (columnInfos[static_cast<int>(column->m_columnType)].stringType && column->m_charset == nullptr)
 				columns[m_columnsCount].m_charset = m_charset;
 			if (m_uniqueKeys != nullptr)
 			{
@@ -414,7 +415,7 @@ namespace META {
 				columns[idx] = m_columns[idx];
 			columns[m_columnsCount] = *column;
 			columns[m_columnsCount].m_columnIndex = m_columnsCount;
-			if (columnInfos[column->m_columnType].stringType && column->m_charset == nullptr)
+			if (columnInfos[static_cast<int>(column->m_columnType)].stringType && column->m_charset == nullptr)
 				columns[m_columnsCount].m_charset = m_charset;
 			delete []m_columns;
 			m_columns = columns;
@@ -438,6 +439,7 @@ namespace META {
 			return -1;
 		}
 		m_primaryKey.clean();
+		m_primaryKey.type = KEY_TYPE::PRIMARY_KEY;
 		m_primaryKey.name = "primary key";
 		uint32_t keySize = 0;
 		m_primaryKey.keyIndexs = new uint16_t[columns.size()];
@@ -449,8 +451,8 @@ namespace META {
 				LOG(ERROR) << "create primary key failed for column "<< (*iter) <<" not exist";
 				goto ROLL_BACK;
 			}
-			if (columnInfos[c->m_columnType].fixed)
-				keySize += columnInfos[c->m_columnType].columnTypeSize;
+			if (columnInfos[static_cast<int>(c->m_columnType)].fixed)
+				keySize += columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize;
 			else
 				keySize += c->m_size;
 			if (keySize > MAX_KEY_SIZE)
@@ -524,8 +526,8 @@ COLUMN_IS_STILL_UK:
 			const columnMeta * column = getColumn((*iter).c_str());
 			if (column == nullptr)
 				return -1;
-			if (columnInfos[column->m_columnType].fixed)
-				keySize += columnInfos[column->m_columnType].columnTypeSize;
+			if (columnInfos[static_cast<int>(column->m_columnType)].fixed)
+				keySize += columnInfos[static_cast<int>(column->m_columnType)].columnTypeSize;
 			else
 				keySize += column->m_size;
 			if (keySize > MAX_KEY_SIZE)
@@ -538,6 +540,7 @@ COLUMN_IS_STILL_UK:
 		keyInfo * newUks = new keyInfo[m_uniqueKeysCount + 1];
 		newUks[m_uniqueKeysCount].keyIndexs = new uint16_t[columns.size()];
 		newUks[m_uniqueKeysCount].name = ukName;
+		newUks[m_uniqueKeysCount].type = KEY_TYPE::UNIQUE_KEY;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
 			columnMeta * column = (columnMeta*)getColumn((*iter).c_str());
@@ -566,8 +569,8 @@ COLUMN_IS_STILL_UK:
 			const columnMeta* column = getColumn((*iter).c_str());
 			if (column == nullptr)
 				return -1;
-			if (columnInfos[column->m_columnType].fixed)
-				keySize += columnInfos[column->m_columnType].columnTypeSize;
+			if (columnInfos[static_cast<int>(column->m_columnType)].fixed)
+				keySize += columnInfos[static_cast<int>(column->m_columnType)].columnTypeSize;
 			else
 				keySize += column->m_size;
 			if (keySize > MAX_KEY_SIZE)
@@ -580,6 +583,8 @@ COLUMN_IS_STILL_UK:
 		keyInfo* newIndexs = new keyInfo[m_indexCount + 1];
 		newIndexs[m_indexCount].keyIndexs = new uint16_t[columns.size()];
 		newIndexs[m_indexCount].name = indexName;
+		newIndexs[m_indexCount].type = KEY_TYPE::INDEX;
+
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
 		{
 			columnMeta* column = (columnMeta*)getColumn((*iter).c_str());
@@ -670,10 +675,47 @@ COLUMN_IS_STILL_INDEX:
 		m_charset = charset;
 		for (int idx = 0; idx < m_columnsCount; idx++)
 		{
-			if (columnInfos[m_columns[idx].m_columnType].stringType)
+			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType)
 				m_columns[idx].m_charset = m_charset;
 		}
 		return 0;
+	}
+	bool tableMeta::operator==(const tableMeta& dest)const
+	{
+		if (m_nameCompare.caseSensitive != dest.m_nameCompare.caseSensitive)
+			return false;
+		if (m_nameCompare.compare(m_dbName.c_str(), dest.m_dbName.c_str()) != 0 ||
+			m_nameCompare.compare(m_tableName.c_str(), dest.m_tableName.c_str()) != 0||
+			m_charset != dest.m_charset ||
+			m_collate != dest.m_collate ||
+			m_fixedColumnCount != dest.m_fixedColumnCount ||
+			m_indexCount != dest.m_indexCount ||
+			m_uniqueKeysCount != dest.m_uniqueKeysCount)
+			return false;
+		if (m_columnsCount != dest.m_columnsCount)
+			return false;
+		for (int idx = 0; idx < m_columnsCount; idx++)
+		{
+			if (m_columns[idx] != dest.m_columns[idx])
+				return false;
+		}
+		if (m_primaryKey != dest.m_primaryKey)
+			return false;
+		for (int idx = 0; idx < m_uniqueKeysCount; idx++)
+		{
+			if (m_uniqueKeys[idx] != dest.m_uniqueKeys[idx])
+				return false;
+		}
+		for (int idx = 0; idx < m_indexCount; idx++)
+		{
+			if (m_indexs[idx] != dest.m_indexs[idx])
+				return false;
+		}
+		return true;
+	}
+	bool tableMeta::operator!=(const tableMeta& dest)const
+	{
+		return !(*this == dest);
 	}
 	std::string tableMeta::toString()
 	{

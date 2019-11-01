@@ -11,7 +11,7 @@ private:
 public:
 	bufferPool():m_ref(0)
 	{
-		for (uint8_t i = 0; i < sizeof(pageSizeList) / sizeof(uint32_t); i++)
+		for (uint8_t i = 0; i < sizeof(m_pools) / sizeof(basicBufferPool*); i++)
 		{
 			if(pageSizeList[i]<4096)
 				m_pools[i] = new basicBufferPool(pageSizeList[i], pageSizeList[i] * 1024 * 64);
@@ -41,14 +41,16 @@ public:
 	}
 	inline void * allocByLevel(uint8_t level)
 	{
-		if (level >= sizeof(pageSizeList) / sizeof(uint32_t))
+		if (unlikely(level >= sizeof(pageSizeList) / sizeof(uint32_t)))
 			return nullptr;
 		return m_pools[level]->alloc();
 	}
 	inline void * alloc(uint64_t size)
 	{
 		uint8_t level = calculateLevel(size);
-		return allocByLevel(level);
+		if (unlikely(level >= sizeof(pageSizeList) / sizeof(uint32_t)))
+			return basicBufferPool::allocDirect(size);
+		return m_pools[level]->alloc();
 	}
 	static inline void free(void* data)
 	{

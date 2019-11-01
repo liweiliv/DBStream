@@ -43,7 +43,7 @@ namespace SQL_PARSER
 			}
 			else
 			{
-				condition = SQLSingleWord::create(false, static_cast<const jsonString*>(loop)->m_value);
+				condition = SQLSingleWord::create(false, static_cast<const jsonString*>(loop)->m_value,m_quote);
 				if (condition != nullptr)
 					return true;
 				else
@@ -155,7 +155,7 @@ namespace SQL_PARSER
 			LOG(ERROR) << "expect key value pair :\"K\":\"type info\" by string type in [" << json->toString() << "]";
 			return nullptr;
 		}
-		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<const jsonString*>(value)->m_value);
+		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<const jsonString*>(value)->m_value,m_quote);
 		if (v == nullptr)
 		{
 			LOG(ERROR) << "create SQLSingleWord failed in [" << json->toString() << "]";
@@ -173,18 +173,6 @@ namespace SQL_PARSER
 		bool loop = false;
 		SQLWord* loopCondition = nullptr;
 		SQLWordArray* array = nullptr;
-		SQL_TYPE sqlType = UNSUPPORT;
-		if ((value = static_cast<const jsonObject*>(json)->get("TYPE")) != NULL || (value = static_cast<const jsonObject*>(json)->get("type")) != NULL)
-		{
-			if (value->t != jsonObject::J_STRING)
-			{
-				LOG(ERROR) << "expect string type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
-				return nullptr;
-			}
-			SQL_TYPE_TREE::const_iterator iter = m_sqlTypes.find(static_cast<const jsonString*>(value)->m_value.c_str());
-			if (iter != m_sqlTypes.end())
-				sqlType = iter->second;
-		}
 		if ((value = json->get("OPT")) != nullptr)
 		{
 			if (value->t != jsonValue::J_BOOL)
@@ -227,7 +215,7 @@ namespace SQL_PARSER
 		}
 		if ((value = json->get("C")) == nullptr)
 		{
-			LOG(ERROR) << "expect \"C\":[child info] in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
+			LOG(ERROR) << "expect \"C\":[child info] in [" << json->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 			if (loopCondition)
 				delete loopCondition;
 			return nullptr;
@@ -250,7 +238,6 @@ namespace SQL_PARSER
 					LOG(ERROR) << "redefine "<<name<<" in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 					return nullptr;
 				}
-				array->m_sqlType = sqlType;
 				array->m_optional = optional;
 				array->m_or = OR ;
 				array->m_loop = loop;
@@ -262,7 +249,6 @@ namespace SQL_PARSER
 		if(array==nullptr)
 		{
 			array = new SQLWordArray(optional, OR, loop, loopCondition);
-			array->m_sqlType = sqlType;
 		}
 		if (top == nullptr)
 			top = array;
@@ -276,7 +262,7 @@ namespace SQL_PARSER
 				LOG(ERROR) << "expect object type in [" << (*iter)->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
 			}
-			SQLWord* child;
+			SQLWord* child = nullptr;
 			const jsonValue* inc;
 			if (static_cast<jsonObject*>(*iter)->get("K") != nullptr)
 			{
@@ -309,36 +295,8 @@ namespace SQL_PARSER
 	}
 	DLL_EXPORT sqlParser::sqlParser() :
 		m_funcsHandle(nullptr), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
-			nullptr)
+			nullptr),m_quote(0)
 	{
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("BEGIN", BEGIN));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("COMMIT", COMMIT));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ROLLBACK", ROLLBACK));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("INSERT_INTO", INSERT_INTO));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DELETE_FROM", DELETE_FROM));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("UPDATE_SET", UPDATE_SET));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("REPLACE", REPLACE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("SELECT", SELECT));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("USE_DATABASE", USE_DATABASE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_DATABASE", CREATE_DATABASE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_DATABASE", DROP_DATABASE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_DATABASE", ALTER_DATABASE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_TABLE", CREATE_TABLE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_TABLE_LIKE", CREATE_TABLE_LIKE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("RENAME_TABLE", RENAME_TABLE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_TABLE", DROP_TABLE));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("CREATE_INDEX", CREATE_INDEX));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("DROP_INDEX", DROP_INDEX));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_FOREIGN_KEY", ALTER_TABLE_DROP_FOREIGN_KEY));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_PRIMARY_KEY", ALTER_TABLE_DROP_PRIMARY_KEY));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_INDEX", ALTER_TABLE_DROP_INDEX));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_DROP_COLUMN", ALTER_TABLE_DROP_COLUMN));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_KEY", ALTER_TABLE_ADD_KEY));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_CONSTRAINT", ALTER_TABLE_ADD_CONSTRAINT));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_COLUMN", ALTER_TABLE_ADD_COLUMN));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_ADD_COLUMNS", ALTER_TABLE_ADD_COLUMNS));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_CHANGE_COLUMN", ALTER_TABLE_CHANGE_COLUMN));
-		m_sqlTypes.insert(std::pair<const char*, SQL_TYPE>("ALTER_TABLE_MODIFY_COLUMN", ALTER_TABLE_MODIFY_COLUMN));
 	}
 	DLL_EXPORT sqlParser::~sqlParser()
 	{
@@ -413,6 +371,7 @@ namespace SQL_PARSER
 		}
 		m_initUserDataFunc = (void(*)(handle*)) dlsym(m_funcsHandle, "createUserData");
 		m_destroyUserDataFunc = (void(*)(handle*)) dlsym(m_funcsHandle, "destroyUserData");
+		LOG(INFO) << "sqlParser load func success";
 		return 0;
 	}
 #endif
@@ -443,6 +402,7 @@ namespace SQL_PARSER
 			m_funcsHandle = nullptr;
 			return -3;
 		}
+		LOG(INFO) << "sqlParser load func success";
 		return 0;
 	}
 #endif
@@ -504,7 +464,7 @@ namespace SQL_PARSER
 				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t!= jsonValue::J_ARRAY)
 				{
 					delete segment;
-					LOG(ERROR) << "expect \"C\":[child info ] as array type in [" << value->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
+					LOG(ERROR) << "expect \"C\":[child info ] as array type in [" << static_cast<jsonObject*>(sentence)->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
 					return -1;
 				}
 				if ((value = static_cast<jsonObject*>(sentence)->get("HEAD")) != nullptr)
@@ -537,7 +497,12 @@ namespace SQL_PARSER
 		}
 		if (!checkWords())
 			return -1;
+		LOG(INFO) << "load parser tree success";
 		return 0;
+	}
+	DLL_EXPORT void sqlParser::setNameQuote(char quote)
+	{
+		m_quote = quote;
 	}
 	DLL_EXPORT int sqlParser::LoadParseTreeFromFile(const char* file)
 	{
@@ -550,6 +515,8 @@ namespace SQL_PARSER
 		long size = seekFile(fd, 0, SEEK_END);
 		seekFile(fd, 0, SEEK_SET);
 		char* buf = (char*)malloc(size + 1);
+		if (buf == nullptr)
+			return -1;
 		if (size != readFile(fd, buf, size))
 		{
 			closeFile(fd);
@@ -626,6 +593,7 @@ namespace SQL_PARSER
 				}
 				else
 				{
+					h->sql = sql;
 					sql = nextWord(tmp);
 					goto PARSE_SUCCESS;
 				}

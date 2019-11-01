@@ -3,8 +3,13 @@
 #include "sqlParserUtil.h"
 #include "util/winString.h"
 #include "glog/logging.h"
+#include "util/likely.h"
 namespace SQL_PARSER {
-	SQLSingleWord* SQLSingleWord::create(bool optional, const std::string& str)
+	static SQLWordFunction globalFunc(false, '`');//todo
+	static SQLWordExpressions globalMathExpression(false, false, '`');
+	static SQLWordExpressions globalLogicExpression(false, true, '`');
+
+	SQLSingleWord* SQLSingleWord::create(bool optional, const std::string& str, char qoute)
 	{
 		if (str == "_A_")
 			return new SQLArrayWord(optional);
@@ -13,9 +18,11 @@ namespace SQL_PARSER {
 		else if (str == "_N_")
 			return new SQLNameWord(optional);
 		else if (str == "_TABLE_")
-			return new SQLTableNameWord(optional);
+			return new SQLTableNameWord(optional, false);
+		else if (str == "_TABLE_A_")
+			return new SQLTableNameWord(optional, true, qoute);
 		else if (str == "_COLUMN_")
-			return new SQLColumnNameWord(optional);
+			return new SQLColumnNameWord(optional, qoute);
 		else if (str == "_B_")
 			return new SQLBracketsWord(optional);
 		else if (str == "_INT_")
@@ -29,23 +36,23 @@ namespace SQL_PARSER {
 		else if (strncmp(str.c_str(), "_E_:", 4) == 0)
 		{
 			if (strncasecmp(str.c_str() + 4, "LOGIC", 6) == 0)
-				return new SQLWordExpressions(optional, true);
+				return new SQLWordExpressions(optional, true, qoute);
 			else if (strncasecmp(str.c_str() + 4, "MATH", 5) == 0)
-				return new SQLWordExpressions(optional, false);
+				return new SQLWordExpressions(optional, false, qoute);
 			else
 				return nullptr;
 		}
 		else if (str == "_F_")
-			return new SQLWordFunction(optional);
+			return new SQLWordFunction(optional, qoute);
 		else if (str == "_VL_")
 			return new SQLValueListWord(optional);
 		else
 			return nullptr;
 	}
-	SQLValue* SQLCharWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLCharWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
-		SQLStringValue* value = MATCH;
+		SQLCharValue* value = MATCH;
 		char c = *p;
 		if (c >= 'A' && c <= 'Z')
 			c += 'a' - 'A';
@@ -56,8 +63,8 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(p, 1);
+			value = new SQLCharValue();
+			value->value = m_word;
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -73,7 +80,7 @@ namespace SQL_PARSER {
 		sql = p + 1;
 		return value;
 	}
-	SQLValue* SQLNameWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLNameWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		std::string matchedWord;
@@ -104,43 +111,46 @@ namespace SQL_PARSER {
 		sql = nameEnd;
 		return value;
 	}
-	SQLValue* SQLTableNameWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLTableNameWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		const char* nameStart[3] = { 0 };
 		const char* nameEnd;
 		uint16_t nameSize[3] = { 0 };
 		SQLTableNameValue* value = MATCH;
-		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
+		if (!getName(p, nameStart[0], nameSize[0], nameEnd, quote))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
 		}
-		if (*(nameEnd + 1) == '.')
+		if (*nameEnd == '.')
 		{
-			p = nameEnd + 2;
-			if (!getName(p, nameStart[1], nameSize[1], nameEnd))
+			p = nameEnd + 1;
+			if (!getName(p, nameStart[1], nameSize[1], nameEnd, quote))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
 				return NOT_MATCH_PTR;
 			}
 		}
-		p = nextWord(nameEnd);
-		if (strncasecmp(p, "AS", 2) == 0&& realEndOfWord(p)==p+2)
+		if (hasAlias)
 		{
-			p = nextWord(p + 2);
-			if(*p=='\0'|| !getName(p, nameStart[2], nameSize[2], nameEnd))
+			p = nextWord(nameEnd);
+			if (strncasecmp(p, "AS", 2) == 0 && realEndOfWord(p) == p + 2)
 			{
-				LOG(ERROR) << m_comment << " do not match for must have alias after AS in table name" << sql;
-				return NOT_MATCH_PTR;
+				p = nextWord(p + 2);
+				if (*p == '\0' || !getName(p, nameStart[2], nameSize[2], nameEnd, quote))
+				{
+					LOG(ERROR) << m_comment << " do not match for must have alias after AS in table name" << sql;
+					return NOT_MATCH_PTR;
+				}
 			}
+			else
+				getName(p, nameStart[2], nameSize[2], nameEnd, quote);
 		}
-		else
-			getName(p, nameStart[2], nameSize[2], nameEnd);
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLTableNameValue();
-			if(nameStart[2] != nullptr)
+			if (nameStart[2] != nullptr)
 				value->alias.assign(nameStart[2], nameSize[2]);
 			if (nameStart[1] != nullptr)
 			{
@@ -166,30 +176,30 @@ namespace SQL_PARSER {
 		sql = nameEnd;
 		return value;
 	}
-	SQLValue* SQLColumnNameWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLColumnNameWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		const char* nameStart[3] = { 0 };
 		const char* nameEnd;
 		uint16_t nameSize[3] = { 0 };
 		SQLColumnNameValue* value = MATCH;
-		if (!getName(p, nameStart[0], nameSize[0], nameEnd))
+		if (!getName(p, nameStart[0], nameSize[0], nameEnd,quote))
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
 		}
-		if (*(nameEnd + 1) == '.')
+		if (*nameEnd == '.')
 		{
-			p = nameEnd + 2;
-			if (!getName(p, nameStart[1], nameSize[1], nameEnd))
+			p = nameEnd + 1;
+			if (!getName(p, nameStart[1], nameSize[1], nameEnd, quote))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
 				return NOT_MATCH_PTR;
 			}
-			if (*(nameEnd + 1) == '.')
+			if (*nameEnd == '.')
 			{
-				p = nameEnd + 2;
-				if (!getName(p, nameStart[2], nameSize[2], nameEnd))
+				p = nameEnd + 1;
+				if (!getName(p, nameStart[2], nameSize[2], nameEnd, quote))
 				{
 					LOG(ERROR) << m_comment << " do not match " << sql;
 					return NOT_MATCH_PTR;
@@ -230,7 +240,7 @@ namespace SQL_PARSER {
 		sql = nameEnd;
 		return value;
 	}
-	SQLValue* SQLArrayWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLArrayWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		SQLStringValue* value = MATCH;
@@ -244,36 +254,84 @@ namespace SQL_PARSER {
 		while (true)
 		{
 			if (*end == '\0')
-				break;
+			{
+				LOG(ERROR) << m_comment << " do not match " << sql;
+				return NOT_MATCH_PTR;
+			}
 			if (*end == quote)
 			{
-				if (*(end - 1) != '\\')
-				{
-					if (quote == '\'' && *(end + 1) == '\'')
-					{
-						end += 2;
-						continue;
-					}
+				int escapeCount = 1;
+				for (; *(end - escapeCount) == '\\'; escapeCount++);
+				if (escapeCount & 0x01)
 					break;
-				}
-				else
-				{
-					end++;
-					continue;
-				}
 			}
-			else
-				end++;
+			end++;
 		}
-		if (*end == '\0')
-		{
-			LOG(ERROR) << m_comment << " do not match " << sql;
-			return NOT_MATCH_PTR;
-		}
+
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(p + 1, end - p - 1);
+			if (nullptr == (value->value = (char*)malloc(value->volumn = (end - p))))
+			{
+				LOG(ERROR) << m_comment << " do not match " << sql << " for alloc memory failed";
+				delete value;
+				return NOT_MATCH_PTR;
+			}
+			for (int soffset = 1; soffset < value->volumn; soffset++)
+			{
+				if (unlikely(p[soffset] == '\\'))
+				{
+					if (likely(soffset < value->volumn))
+					{
+						switch (p[soffset + 1])
+						{
+						case '\\':
+							value->value[value->size++] = '\\';
+							soffset++;
+							break;
+						case 't':
+							value->value[value->size++] = '\t';
+							soffset++;
+							break;
+						case '\'':
+							value->value[value->size++] = '\'';
+							soffset++;
+							break;
+						case '"':
+							value->value[value->size++] = '"';
+							soffset++;
+							break;
+						case 'r':
+							value->value[value->size++] = '\r';
+							soffset++;
+							break;
+						case 'n':
+							value->value[value->size++] = '\n';
+							soffset++;
+							break;
+						case '0':
+							value->value[value->size++] = '\0';
+							soffset++;
+							break;
+						default:
+							value->value[value->size++] = '\\';
+							soffset++;
+							break;
+						}
+					}
+					else
+					{
+						LOG(ERROR) << m_comment << " do not match " << sql;
+						delete value;
+						return NOT_MATCH_PTR;
+					}
+				}
+				else
+				{
+					value->value[value->size++] = p[soffset];
+				}
+			}
+			value->value[value->size] = '\0';
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -289,7 +347,7 @@ namespace SQL_PARSER {
 		sql = end + 1;
 		return value;
 	}
-	SQLValue* SQLStringWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLStringWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		SQLStringValue* value = MATCH;
@@ -305,7 +363,8 @@ namespace SQL_PARSER {
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(m_word);
+			value->value = (char*)m_word.c_str();
+			value->quote = true;
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -319,16 +378,16 @@ namespace SQL_PARSER {
 		}
 		return value;
 	}
-	SQLValue* SQLIntNumberWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLIntNumberWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		SQLIntNumberValue* value = MATCH;
 		const char* n = p;
 		bool sign = true;
 		int64_t v = 0;
-		if (*n == '-'||*n=='+')
+		if (*n == '-' || *n == '+')
 		{
-			if(*n=='-')
+			if (*n == '-')
 				sign = false;
 			n++;
 			while (*n == ' ')
@@ -338,24 +397,33 @@ namespace SQL_PARSER {
 		while (*n <= '9' && *n >= '0')
 		{
 			int64_t tmp = v * 10 + (*n) - '0';
-			if (v < tmp)//overflow
+			if (v > tmp)//overflow
 			{
 				LOG(ERROR) << m_comment << " do not match for int type overflow" << sql;
 				return NOT_MATCH_PTR;
 			}
 			v = tmp;
+			n++;
 		}
 		if (!sign)
 			v = -v;
-		if (isKeyChar(*n))
+		if (*n != '\0')
 		{
-			if (n == p||*n=='.')
+			if (isKeyChar(*n))
+			{
+				if (n == p || *n == '.')
+				{
+					LOG(ERROR) << m_comment << " do not match " << sql;
+					return NOT_MATCH_PTR;
+				}
+			}
+			else if (!isSpaceOrComment(n))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
 				return NOT_MATCH_PTR;
 			}
 		}
-		else if (!isSpaceOrComment(n))
+		else if (n == p)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
@@ -380,7 +448,7 @@ namespace SQL_PARSER {
 		return value;
 	}
 
-	SQLValue* SQLFloatNumberWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLFloatNumberWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		SQLFloatNumberValue* value = MATCH;
@@ -388,7 +456,7 @@ namespace SQL_PARSER {
 		bool sign = true;
 		int64_t intValue = 0, index = 0;
 		double decmValue = 0;
-		int8_t intValueSize = 0, decmSize = 0, indexSize = 0;
+		int8_t intValueSize = 0, decmSize = 0;
 		double v = 0;
 		if (*n == '-' || *n == '+')
 		{
@@ -403,11 +471,12 @@ namespace SQL_PARSER {
 		{
 			int64_t tmp = intValue * 10 + (*n) - '0';
 			intValueSize++;
-			if (intValue < tmp|| intValueSize>16)//overflow
+			if (intValue > tmp || intValueSize > 16)//overflow
 			{
 				LOG(ERROR) << m_comment << " do not match for int type overflow" << sql;
 				return NOT_MATCH_PTR;
 			}
+			n++;
 			intValue = tmp;
 		}
 		if (*n == '.')
@@ -419,11 +488,12 @@ namespace SQL_PARSER {
 				decmValue += pos * ((*n) - '0');
 				pos /= 10;
 				decmSize++;
-				if ((decmSize+ intValueSize)>16)//overflow
+				if ((decmSize + intValueSize) > 16)//overflow
 				{
 					LOG(ERROR) << m_comment << " do not match for decmValue overflow" << sql;
 					return NOT_MATCH_PTR;
 				}
+				n++;
 			}
 			if (*(n - 1) == '.')
 			{
@@ -446,36 +516,47 @@ namespace SQL_PARSER {
 			}
 			while (*n <= '9' && *n >= '0')
 			{
-				int64_t tmp = indexSize * 10 + (*n) - '0';
-				indexSize++;
-				if (indexSize < tmp||indexSize>4932)//overflow
+				index = index * 10 + (*n) - '0';
+				if (index > 4932)//overflow
 				{
-					LOG(ERROR) << m_comment << " do not match for index overflow" << sql;
+					LOG(ERROR) << m_comment << " do not match for index overflow " << sql;
 					return NOT_MATCH_PTR;
 				}
-				if (indexSign)
-					v *= 10;
-				else
-					v /= 10;
-				indexSize = tmp;
+				n++;
 			}
-			if (!indexSign)
-				index = -index;
+			if (indexSign)
+			{
+				for (int idx = 0; idx < index; idx++)
+					v *= 10;
+			}
+			else
+			{
+				for (int idx = 0; idx < index; idx++)
+					v /= 10;
+			}
 		}
-
-		if (isKeyChar(*n))
+		if (*n != '\0')
 		{
-			if (n == p)
+			if (isKeyChar(*n))
+			{
+				if (n == p)
+				{
+					LOG(ERROR) << m_comment << " do not match " << sql;
+					return NOT_MATCH_PTR;
+				}
+			}
+			else if (!isSpaceOrComment(n))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql;
 				return NOT_MATCH_PTR;
 			}
 		}
-		else if (!isSpaceOrComment(n))
+		else if (n == p)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
 		}
+
 
 		if (m_parser != nullptr || needValue)
 		{
@@ -492,17 +573,17 @@ namespace SQL_PARSER {
 				s->value = value;
 				h->addStatus(s);
 			}
-	}
+		}
 		LOG(ERROR) << m_comment << "match " << sql;
 		sql = n;
 		return value;
 	}
-	SQLValue* SQLAnyStringWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLAnyStringWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		const char* end = endOfWord(p);
 		SQLStringValue* value = MATCH;
-		if (end == nullptr)
+		if (end == nullptr || end == p)
 		{
 			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
@@ -515,7 +596,8 @@ namespace SQL_PARSER {
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(p, end - p);
+
+			value->assign(p, end - p);
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -531,14 +613,18 @@ namespace SQL_PARSER {
 		sql = end;
 		return value;
 	}
-	SQLValue* SQLOperatorWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLOperatorWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		OPERATOR op = parseOperation(sql);
 		if (op == NOT_OPERATION)
+		{
+			LOG(ERROR) << m_comment << " do not match " << sql;
 			return NOT_MATCH_PTR;
+		}
+		LOG(ERROR) << m_comment << "match " << operationInfos[op].signStr;
 		return new SQLOperatorValue(op);
 	}
-	SQLValue* SQLValueListWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLValueListWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* pos = nextWord(sql);
 		if (*pos != '(')
@@ -551,12 +637,12 @@ namespace SQL_PARSER {
 		SQLValueType valuesType = SQLValueType::MAX_TYPE;
 		while (*pos != '\0')
 		{
-			if (NOT_MATCH_PTR != (v = expressionWord.match(nullptr, pos, needValue)))
+			if (NOT_MATCH_PTR != (v = globalMathExpression.match(nullptr, pos, needValue)))
 			{
 				if (needValue)
 					vlist->values.push_back(v);
 			}
-			else if (NOT_MATCH_PTR != (v = funcWord.match(nullptr, pos, needValue)) ||
+			else if (NOT_MATCH_PTR != (v = globalFunc.match(nullptr, pos, needValue)) ||
 				NOT_MATCH_PTR != (v = strWord.match(nullptr, pos, needValue)) ||
 				NOT_MATCH_PTR != (v = intWord.match(nullptr, pos, needValue)) ||
 				NOT_MATCH_PTR != (v = floatWord.match(nullptr, pos, needValue)))
@@ -579,7 +665,7 @@ namespace SQL_PARSER {
 				return NOT_MATCH_PTR;
 			}
 			pos = nextWord(pos);
-			if(*pos==',')
+			if (*pos == ',')
 				pos = nextWord(pos + 1);
 			else if (*pos == ')')
 				break;
@@ -590,10 +676,10 @@ namespace SQL_PARSER {
 				return NOT_MATCH_PTR;
 			}
 		}
-		sql = pos+1;
+		sql = pos + 1;
 		return vlist;
 	}
-	SQLValue* SQLBracketsWord::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLBracketsWord::match(handle* h, const char*& sql, bool needValue)
 	{
 		const char* p = nextWord(sql);
 		SQLStringValue* value = MATCH;
@@ -624,7 +710,7 @@ namespace SQL_PARSER {
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(STRING_TYPE);
-			value->value.assign(p, end - p);
+			value->assign(p + 1, end - p - 1);
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -640,7 +726,7 @@ namespace SQL_PARSER {
 		sql = end + 1;
 		return value;
 	}
-	SQLValue* SQLWordArray::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLWordArray::match(handle* h, const char*& sql, bool needValue)
 	{
 		SQLValue* rtv = nullptr;
 		bool matched = false;
@@ -724,25 +810,21 @@ namespace SQL_PARSER {
 		else
 		{
 			LOG(ERROR) << m_comment << "  match " << savePoint;
-			if (m_sqlType != UNSUPPORT)
-				h->type = m_sqlType;
 		}
 		return rtv;
 	}
-	SQLWordExpressions::SQLWordExpressions(bool optional,bool logicOrMath) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), opWord(false), intWord(false),floatWord(false), strWord(false), nameWord(false), func(nullptr)
+	DLL_EXPORT SQLWordExpressions::SQLWordExpressions(bool optional, bool logicOrMath, char qoute) :SQLSingleWord(optional, S_EXPRESSION), logicOrMath(logicOrMath), opWord(false), intWord(false), floatWord(false), strWord(false), nameWord(false, qoute)
 	{
-		func = new SQLWordFunction(false);
 		valueList = new SQLValueListWord(false);
 	}
-	SQLWordExpressions::~SQLWordExpressions()
+	DLL_EXPORT SQLWordExpressions::~SQLWordExpressions()
 	{
-		delete func;
 		delete valueList;
 	}
 	SQLValue* SQLWordExpressions::matchValue(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
 	{
 		SQLValue* value;
-		if ((value = this->valueList->match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+		if (opStack.size()>0&& (opStack.top()->opera== IN_|| opStack.top()->opera == NOT_IN)&&(value = this->valueList->match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
 		{
 			if (opStack.empty() || (opStack.top()->opera != IN_ && opStack.top()->opera != NOT_IN))
 			{
@@ -756,7 +838,8 @@ namespace SQL_PARSER {
 				return value;
 			}
 		}
-		else if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+		/*search for string,number,function,column name*/
+		else if ((value = globalFunc.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 			(value = intWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 			(value = floatWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
 			(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
@@ -765,28 +848,34 @@ namespace SQL_PARSER {
 			valueList.push_back(value);
 			return value;
 		}
+		/*search operator whtch only have left value ,like !,~.those operator and value after it will be look as one field*/
 		else
 		{
 			SQLValue* opValue;
-			if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR &&
-				!operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
-				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
+			const char* savePoint = sql;
+			if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR)
 			{
-				if ((value = func->match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-					(value = intWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-					(value = floatWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-					(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
-					(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+				if (!operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
+					operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 				{
-					while (!opStack.empty() && operationInfos[opStack.top()->opera].priority < operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+					if ((value = globalFunc.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+						(value = intWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+						(value = floatWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+						(value = nameWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
+						(value = strWord.match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
 					{
-						valueList.push_back(opStack.top());
-						opStack.pop();
+						while (!opStack.empty() && operationInfos[opStack.top()->opera].priority < operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+						{
+							valueList.push_back(opStack.top());
+							opStack.pop();
+						}
+						opStack.push(static_cast<SQLOperatorValue*>(opValue));
+						valueList.push_back(value);
+						return value;
 					}
-					opStack.push(static_cast<SQLOperatorValue*>(opValue));
-					valueList.push_back(value);
-					return value;
 				}
+				sql = savePoint;
+				return NOT_MATCH_PTR;
 			}
 		}
 		return NOT_MATCH_PTR;
@@ -794,12 +883,13 @@ namespace SQL_PARSER {
 	SQLValue* SQLWordExpressions::matchOperation(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
 	{
 		SQLValue* opValue;
+		const char* savePoint = sql;
 		if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR)
 		{
 			if (operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
 				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 			{
-				while (!opStack.empty() && operationInfos[opStack.top()->opera].priority < operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+				while (!opStack.empty() && operationInfos[opStack.top()->opera].type != LEFT_BRACKET&&operationInfos[opStack.top()->opera].priority <= operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
 				{
 					valueList.push_back(opStack.top());
 					opStack.pop();
@@ -810,6 +900,7 @@ namespace SQL_PARSER {
 			else
 			{
 				delete opValue;
+				sql = savePoint;
 				return NOT_MATCH_PTR;
 			}
 		}
@@ -842,23 +933,27 @@ namespace SQL_PARSER {
 			}
 			if (op == nullptr || op->opera != LEFT_BRACKET)
 				return NOT_MATCH_PTR;
+			opStack.pop();
 			sql = ptr + 1;
 			return MATCH;
 		}
 		return NOT_MATCH_PTR;
 	}	/*trans mid-prefix to back-prefix*/
-	SQLValue* SQLWordExpressions::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLWordExpressions::match(handle* h, const char*& sql, bool needValue)
 	{
 		std::stack<SQLOperatorValue*> opStack;
 		std::list<SQLValue*> valueList;
 		SQLExpressionValue* value = nullptr;
 		const char* pos = nextWord(sql);
-		bool status = true;
+		bool status = true;//true :search left value,false:search operator and right value
+		int bracketCount = 0;
 		do {
 			if (status)
 			{
 				if (matchValue(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
 					status = false;
+				else if (matchLBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+					bracketCount++;
 				else
 					goto NOT_MATCH;
 			}
@@ -870,15 +965,26 @@ namespace SQL_PARSER {
 					if (matchValue(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
 					{
 						pos = nextWord(pos);
-						matchRBrac(pos, needValue, opStack, valueList);
-						break;
+						if (bracketCount > 0)
+						{
+							if (matchRBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+								bracketCount--;
+						}
+
 					}
 					else if (matchLBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
 					{
+						bracketCount++;
 						status = true;
-						break;
 					}
 					else
+						goto NOT_MATCH;
+				}
+				else if(*pos==')'&& bracketCount > 0)
+				{
+					if (matchRBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
+						bracketCount--;
+					else 
 						goto NOT_MATCH;
 				}
 				else
@@ -893,11 +999,9 @@ namespace SQL_PARSER {
 		} while (*pos != '\0');
 
 	CHECK:
-		while (!opStack.empty())
-		{
-			if (opStack.top()->opera == LEFT_BRACKET)
-				goto NOT_MATCH;
-		}
+		if (bracketCount != 0)
+			return NOT_MATCH_PTR;
+
 		value = new SQLExpressionValue();
 		value->valueStack = new SQLValue * [valueList.size() + opStack.size()];
 		value->count = 0;
@@ -905,11 +1009,12 @@ namespace SQL_PARSER {
 			value->valueStack[value->count++] = *iter;
 		while (!opStack.empty())
 		{
+
 			value->valueStack[value->count++] = opStack.top();
 			opStack.pop();
 		}
-		if(value->count == 0||value->valueStack[value->count-1]->type!= OPERATOR_TYPE||
-			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType==LOGIC)^logicOrMath)
+		if (value->count == 0 || value->valueStack[value->count - 1]->type != OPERATOR_TYPE ||
+			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType == LOGIC) ^ logicOrMath)
 			|| !value->check())
 		{
 			delete value;
@@ -931,11 +1036,11 @@ namespace SQL_PARSER {
 		return NOT_MATCH_PTR;
 	}
 
-	SQLValue* SQLWordFunction::match(handle* h, const char*& sql, bool needValue)
+	DLL_EXPORT SQLValue* SQLWordFunction::match(handle* h, const char*& sql, bool needValue)
 	{
 		SQLValue* name = nullptr;
 		const char* pos = nextWord(sql);
-		if ((name = asWord.match(nullptr, pos, needValue ||  m_parser != nullptr)) == NOT_MATCH_PTR)
+		if ((name = asWord.match(nullptr, pos, needValue || m_parser != nullptr)) == NOT_MATCH_PTR)
 			return NOT_MATCH_PTR;
 		pos = nextWord(pos);
 		if (*pos != '(')
@@ -970,7 +1075,8 @@ namespace SQL_PARSER {
 				return sfv;
 			}
 			SQLValue* value = MATCH;
-			if ((value = expressionWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+			if ((value = globalMathExpression.match(h, pos, needValue)) != NOT_MATCH_PTR ||
+				(value = match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = intWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = floatWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||
 				(value = nameWord.match(h, pos, needValue)) != NOT_MATCH_PTR ||

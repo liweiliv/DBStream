@@ -71,4 +71,12 @@ public:
 		} while (!end.compare_exchange_weak(e,(e+1)&mask));
 		return true;
 	}
+	inline uint32_t size()
+	{
+		int32_t e = end.load(std::memory_order_relaxed);
+		if (e > head)
+			return head + arraySize - e;
+		else
+			return e - head;
+	}
 };
