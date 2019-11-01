@@ -235,8 +235,9 @@ namespace DATABASE {
 		template<typename T>
 		void createFixedSolidIndex(char * data, iterator<T> &iter, uint16_t keySize)
 		{
-			char * indexPos = data + sizeof(uint32_t), *externCurretPos = data + keySize * m_keyCount;
+			char * indexPos = data + sizeof(uint32_t)*2, *externCurretPos = indexPos + keySize * m_keyCount;
 			*(uint32_t*)data = m_keyCount;
+			*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
 			do
 			{
 				const keyChildInfo * k = iter.keyDetail();
@@ -284,9 +285,9 @@ namespace DATABASE {
 				fixed = m_ukMeta.m_fixed;
 			}
 			if (fixed)
-				size = (keySize + sizeof(uint32_t))*m_keyCount + sizeof(uint32_t)*(m_allCount - m_keyCount) * 2;
+				size = 2 * sizeof(uint32_t) + (keySize + sizeof(uint32_t)) * m_keyCount + sizeof(uint32_t) * (m_allCount - m_keyCount) * 2;
 			else
-				size = (keySize + sizeof(uint32_t))*m_keyCount + sizeof(uint32_t)*(m_allCount - m_keyCount) * 2 + m_varSize;
+				size = 2 * sizeof(uint32_t) + (keySize + sizeof(uint32_t)) * m_keyCount + sizeof(uint32_t) * (m_allCount - m_keyCount) * 2 + m_varSize;
 			return size;
 		}
 		template<typename T>

@@ -14,7 +14,7 @@ namespace DATABASE
 class iterator
 {
 public:
-    enum status{
+    enum class status{
         OK,
         UNINIT,
         BLOCKED,
@@ -26,7 +26,7 @@ public:
 	unsigned int m_flag;
 	filter *m_filter;
 public:
-	iterator(uint32_t flag , filter * filter)/*STORE::DBStream * stream = nullptr,uint32_t flag = 0):m_stream(stream),*/:m_status(INVALID), m_flag(flag),m_filter(filter)
+	iterator(uint32_t flag , filter * filter)/*STORE::DBStream * stream = nullptr,uint32_t flag = 0):m_stream(stream),*/:m_status(status::INVALID), m_flag(flag),m_filter(filter)
 	{}
 	virtual ~iterator(){};
 	virtual bool valid() = 0;

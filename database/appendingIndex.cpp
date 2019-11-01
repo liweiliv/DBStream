@@ -397,8 +397,9 @@ namespace DATABASE {
 	template<>
 	void appendingIndex::createFixedSolidIndex<unionKey>(char* data, appendingIndex::iterator<unionKey>& iter, uint16_t keySize)
 	{
-		char* indexPos = data + sizeof(uint32_t), * externCurretPos = data + keySize * m_keyCount;
+		char* indexPos = data + sizeof(uint32_t) * 2, * externCurretPos = indexPos + keySize * m_keyCount;
 		*(uint32_t*)data = m_keyCount;
+		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();
@@ -427,8 +428,9 @@ namespace DATABASE {
 	template<>
 	void appendingIndex::createVarSolidIndex<unionKey>(char* data, appendingIndex::iterator<unionKey>& iter)
 	{
-		char* indexPos = data + sizeof(uint32_t), * externCurretPos = data + sizeof(uint32_t) * (m_keyCount + 1);
+		char* indexPos = data + sizeof(uint32_t) * 2, * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
 		*(uint32_t*)data = m_keyCount;
+		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
 		int kc = 0;
 		do
 		{
@@ -448,8 +450,9 @@ namespace DATABASE {
 	template<>
 	void appendingIndex::createVarSolidIndex<binaryType>(char* data, appendingIndex::iterator<binaryType>& iter)
 	{
-		char* indexPos = data + sizeof(uint32_t), * externCurretPos = data + sizeof(uint32_t) * (m_keyCount + 1);
+		char* indexPos = data + sizeof(uint32_t)*2, * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
 		*(uint32_t*)data = m_keyCount;
+		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();

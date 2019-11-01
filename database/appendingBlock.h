@@ -49,83 +49,14 @@ namespace DATABASE
 			page* current;
 			uint32_t pageSize;
 			tableData(uint64_t blockID, const META::tableMeta* meta,
-				leveldb::Arena* arena, uint32_t _pageSize = DEFAULT_PAGE_SIZE) :
-				blockID(blockID), meta(meta), primaryKey(nullptr), uniqueKeys(
-					nullptr), recordIds(arena), pages(arena), current(
-						nullptr), pageSize(_pageSize)
-			{
-				if (meta != nullptr)
-				{
-					if (meta->m_primaryKey.count > 0)
-						primaryKey = new appendingIndex(
-							meta->m_primaryKey.keyIndexs,
-							meta->m_primaryKey.count, meta, arena);
-					if (meta->m_uniqueKeysCount > 0)
-					{
-						uniqueKeys = new appendingIndex * [meta->m_uniqueKeysCount];
-						for (uint16_t i = 0; i < meta->m_uniqueKeysCount; i++)
-							uniqueKeys[i] = new appendingIndex(
-								meta->m_uniqueKeys[i].keyIndexs,
-								meta->m_uniqueKeys[i].count, meta, arena);
-					}
-				}
-			}
+				leveldb::Arena* arena, uint32_t _pageSize = DEFAULT_PAGE_SIZE);
 			~tableData()
 			{
 				clean();
 			}
-			void clean()
-			{
-				if (primaryKey != nullptr)
-				{
-					delete primaryKey;
-					primaryKey = nullptr;
-				}
-				if (uniqueKeys != nullptr)
-				{
-					for (uint16_t idx = 0; idx < meta->m_uniqueKeysCount; idx++)
-					{
-						if (uniqueKeys[idx] != nullptr)
-							delete uniqueKeys[idx];
-					}
-					delete uniqueKeys;
-					uniqueKeys = nullptr;
-				}
-			}
+			void clean();
 			void init(uint64_t blockID, const META::tableMeta* meta,
-				leveldb::Arena* arena, uint32_t _pageSize = 512 * 1024)
-			{
-				this->blockID = blockID;
-				this->meta = meta;
-				if (meta != nullptr)
-				{
-					if (meta->m_primaryKey.count > 0)
-						primaryKey = new appendingIndex(
-							meta->m_primaryKey.keyIndexs,
-							meta->m_primaryKey.count, meta, arena);
-					else
-						primaryKey = nullptr;
-					if (meta->m_uniqueKeysCount > 0)
-					{
-						uniqueKeys = new appendingIndex * [meta->m_uniqueKeysCount];
-						for (uint16_t i = 0; i < meta->m_uniqueKeysCount; i++)
-							uniqueKeys[i] = new appendingIndex(
-								meta->m_uniqueKeys[i].keyIndexs,
-								meta->m_uniqueKeys[i].count, meta, arena);
-					}
-					else
-						uniqueKeys = nullptr;
-				}
-				else
-				{
-					primaryKey = nullptr;
-					uniqueKeys = nullptr;
-				}
-				recordIds.init(arena);
-				pages.init(arena);
-				current = nullptr;
-				pageSize = _pageSize; //todo
-			}
+				leveldb::Arena* arena, uint32_t _pageSize = 512 * 1024);
 		};
 
 		uint32_t* m_recordIDs;
@@ -151,20 +82,21 @@ namespace DATABASE
 		cond m_cond;
 		friend class appendingBlockIterator;
 		friend class appendingBlockLineIterator;
+		friend class appendingBlockIndexIterator;
 	public:
 		appendingBlock(uint32_t flag,
 			uint32_t bufSize, int32_t redoFlushDataSize,
-			int32_t redoFlushPeriod, uint64_t startID, blockManager* manager, META::metaDataBaseCollection* metaDataCollection) :block(manager, metaDataCollection, flag),
+			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(db, metaDataCollection, flag),
 			m_size(0), m_maxSize(bufSize), m_status(B_OK), m_defaultData(
 				m_blockID, nullptr, &m_arena, 4096),
 			m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(
 				redoFlushDataSize), m_redoFlushPeriod(redoFlushPeriod), m_txnId(
 					0), m_lastFLushTime(0)
 		{
-			m_recordIDs = (uint32_t*)m_blockManager->allocMem(
+			m_recordIDs = (uint32_t*)m_database->allocMem(
 				sizeof(uint32_t) * maxRecordInBlock);
 			m_maxPageCount = m_maxSize / (32 * 1204);
-			m_pages = (page**)m_blockManager->allocMem(
+			m_pages = (page**)m_database->allocMem(
 				sizeof(page*) * m_maxPageCount);
 			m_minTime = m_maxTime = 0;
 			m_minLogOffset = m_maxLogOffset = 0;
@@ -189,41 +121,7 @@ namespace DATABASE
 				}
 			}
 		}
-		int openRedoFile(bool w)
-		{
-			char fileName[512];
-			m_blockManager->genBlockFileName(m_blockID, fileName);
-			strcat(fileName, ".redo");
-			m_redoFd = openFile(fileName, true, true,
-				true);
-			if (!fileHandleValid(m_redoFd))
-			{
-				LOG(ERROR) << "open redo file :" << fileName << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return -1;
-			}
-			if (w)
-			{
-				int64_t size = seekFile(m_redoFd, 0, SEEK_END);
-				if (size < 0)
-				{
-					LOG(ERROR) << "open redo file :" << fileName << "failed for errno:" << errno << ",error info:" << strerror(errno);
-					closeFile(m_redoFd);
-					m_redoFd = INVALID_HANDLE_VALUE;
-					return -1;
-				}
-				else if (size == 0)
-				{
-					if (sizeof(m_minLogOffset) != writeFile(m_redoFd, (char*)&m_minLogOffset, sizeof(m_minLogOffset)))
-					{
-						LOG(ERROR) << "open redo file :" << fileName << "failed for errno:" << errno << ",error info:" << strerror(errno);
-						closeFile(m_redoFd);
-						m_redoFd = INVALID_HANDLE_VALUE;
-						return -1;
-					}
-				}
-			}
-			return 0;
-		}
+		int openRedoFile(bool w);
 		inline bool isLegalRecordId(uint64_t recordId)
 		{
 			return (recordId >= m_minRecordId && recordId < m_minRecordId + m_recordCount);
@@ -268,147 +166,10 @@ namespace DATABASE
 	 * 			0: redo file ended,and  read success
 	 * 				-1:read redo file failed
 	 * 					*/
-		int recoveryFromRedo()
-		{
-			int ret = 1;
-			if (m_redoFd > 0)
-				closeFile(m_redoFd);
-			if (0 > openRedoFile(false))
-			{
-				LOG(ERROR) << "open redo file of block" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return -1;
-			}
-			int size = seekFile(m_redoFd, 0, SEEK_END); //get fileSize
-			if (size < 0)
-			{
-				LOG(ERROR) << "get size of  redo file of block :" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return -1;
-			}
-			if (size < (int)sizeof(uint64_t)) //empty file
-				return 0;
-			char* buf = (char*)malloc(size);
-			if (buf == NULL)
-			{
-				LOG(ERROR) << "alloc " << size << " byte memory failed";
-				return -1;
-			}
-			if (0 != seekFile(m_redoFd, 0, SEEK_SET)) //seek to begin of file
-			{
-				free(buf);
-				LOG(ERROR) << "leeek to begin of redo file :" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return -1;
-			}
-			if (size != readFile(m_redoFd, buf, size)) //read all data one time
-			{
-				free(buf);
-				LOG(ERROR) << "read redo file of block :" << m_blockID << ".redo failed for errno:" << errno << ",error info:" << strerror(errno);
-				return -1;
-			}
-			m_flag &= (~BLOCK_FLAG_HAS_REDO); //unset BLOCK_FLAG_HAS_REDO,so call [append] will not write redo file
-			m_minRecordId = *(uint64_t*)buf;
-			DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) (buf + sizeof(uint64_t));
-			while ((char*)head <= buf + size)
-			{
-				/*redo end normally*/
-				if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::minRecordHead::size) == (uint32_t)size) && head->minHead.size == ENDOF_REDO_NUM)
-				{
-					ret = 0;
-					break;
-				}
-
-				/*redo truncated*/
-				if (((char*)head) + sizeof(DATABASE_INCREASE::recordHead) > buf + size || ((char*)head) + head->minHead.size > buf + size) //unfinished write ,truncate
-				{
-					LOG(WARNING) << "get an incomplete redo data in redo file of block:" << m_blockID << ",offset is " << ((char*)head) - buf << ",truncate it";
-
-					if (((char*)head) - buf != seekFile(m_redoFd, ((char*)head) - buf, SEEK_SET) || truncateFile(m_redoFd, ((char*)head) - buf) != 0)
-					{
-						LOG(WARNING) << "truncate redo file of block:" << m_blockID << "failed for:errno" << errno << "," << strerror(errno);
-						free(buf);
-						return -1;
-					}
-					break;
-				}
-				if (append(DATABASE_INCREASE::createRecord((const char*)head, m_metaDataCollection)) != B_OK)
-				{
-					LOG(ERROR) << "recoveryFromRedo from redo file of block:" << m_blockID << " failed for append data failed";
-					free(buf);
-					m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
-					return -1;
-				}
-				head = (DATABASE_INCREASE::recordHead*)(((char*)head) + head->minHead.size);
-			}
-			m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
-			LOG(INFO) << "recoveryFromRedo from redo file :" << m_blockID << " success";
-			free(buf);
-			return ret;
-		}
-		appendingBlockStaus writeRedo(const char* data)
-		{
-			if (!fileHandleValid(m_redoFd) && 0 != openRedoFile(true))
-				return B_FAULT;
-			DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
-			int64_t writeSize;
-			if (head->minHead.size != (uint64_t)(writeSize = writeFile(m_redoFd, data, head->minHead.size)))
-			{
-				if (errno == EBADF) //maybe out time or other cause,reopen it
-				{
-					LOG(ERROR) << "write redo file of block:" << m_blockID << " failed for " << strerror(errno) << " reopen it";
-					return B_FAULT;
-				}
-				else
-				{
-					LOG(ERROR) << "write redo file of block :" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-					return B_FAULT;
-				}
-			}
-			clock_t now;
-			if (m_redoFlushDataSize == 0 || //m_redoFlushDataSize == 0 means flush immediately
-				m_redoFlushPeriod == 0 ||//m_redoFlushPeriod == 0 also means flush immediately
-				(m_redoFlushDataSize > 0 && (m_redoUnflushDataSize += head->minHead.size) >= m_redoFlushDataSize) ||//check if unflushed data big enough
-				(m_redoFlushPeriod > 0 &&//check if time from last flush is long enough
-				(now = clock(),
-					now<m_lastFLushTime || now - m_lastFLushTime > m_redoFlushPeriod * CLOCKS_PER_SEC / 1000)))
-			{
-				if (0 != fsync(m_redoFd))
-				{
-					LOG(ERROR) << "fsync redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-					return B_FAULT;
-				}
-				m_redoUnflushDataSize = 0;
-				m_lastFLushTime = clock();
-				return B_OK;
-			}
-			return B_OK;
-		}
-		int finishRedo()
-		{
-			if (!fileHandleValid(m_redoFd) && 0 != openRedoFile(true))
-				return -1;
-			uint64_t v = ENDOF_REDO_NUM;
-			if (sizeof(v) != writeFile(m_redoFd, (char*)&v, sizeof(v)))
-			{
-				LOG(ERROR) << "finish redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				closeFile(m_redoFd);
-				m_redoFd = INVALID_HANDLE_VALUE;
-				return -1;
-			}
-			return closeRedo();
-		}
-		int closeRedo()
-		{
-			if (m_flag & BLOCK_FLAG_HAS_REDO && fileHandleValid(m_redoFd))
-			{
-				if (0 != fsync(m_redoFd))
-				{
-					LOG(ERROR) << "fsync redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-					return -1;
-				}
-				closeFile(m_redoFd);
-				m_redoFd = INVALID_HANDLE_VALUE;
-			}
-			return 0;
-		}
+		int recoveryFromRedo();
+		appendingBlockStaus writeRedo(const char* data);
+		int finishRedo();
+		int closeRedo();
 		inline tableData* getCurrentVersion(uint64_t tableId)
 		{
 			std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.lower_bound(META::tableMeta::genTableId((META::tableMeta::tableID(tableId) + 1), 0));
@@ -453,7 +214,7 @@ namespace DATABASE
 			{
 				if (meta->userData == nullptr || m_blockID != static_cast<tableData*>(meta->userData)->blockID)
 				{
-					tableData* table = (tableData*)m_blockManager->allocMem(sizeof(tableData));// new tableData(m_blockID, meta, &m_arena);
+					tableData* table = (tableData*)m_database->allocMem(sizeof(tableData));// new tableData(m_blockID, meta, &m_arena);
 					table->init(m_blockID, meta, &m_arena);
 					meta->userData = table;
 					m_tableDatas.insert(std::pair<uint64_t, tableData*>(meta->m_id, table));
@@ -466,46 +227,7 @@ namespace DATABASE
 			else
 				return &m_defaultData;
 		}
-		inline appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem)
-		{
-			if (m_recordCount >= maxRecordInBlock)
-			{
-				m_flag |= BLOCK_FLAG_FINISHED;
-				m_cond.wakeUp();
-				return B_FULL;
-			}
-			if (unlikely(t->current == nullptr || t->current->pageUsedSize + size > t->current->pageSize))
-			{
-				size_t psize = size > t->pageSize ? size : t->pageSize;
-				if (t->current == nullptr)
-				{
-					if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : (t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageCount || m_size + psize >= m_maxSize)
-					{
-						m_flag |= BLOCK_FLAG_FINISHED;
-						m_cond.wakeUp();
-						return B_FULL;
-					}
-					m_pageCount += 1 + (t->meta == nullptr ? 0 : t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount);//every index look as a page
-				}
-				else
-				{
-					if (m_pageCount + 1 >= m_maxPageCount || m_size + psize >= m_maxSize)
-					{
-						m_flag |= BLOCK_FLAG_FINISHED;
-						m_cond.wakeUp();
-						return B_FULL;
-					}
-					m_pageCount++;
-				}
-				t->current = m_blockManager->allocPage(psize);
-				t->current->pageId = m_pageCount;
-				m_pages[m_pageCount] = t->current;
-				m_size += t->current->pageSize;
-				t->pages.append(t->current);
-			}
-			mem = t->current->pageData + t->current->pageUsedSize;
-			return B_OK;
-		}
+		inline appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem);
 		inline appendingBlockStaus allocMemForRecord(META::tableMeta* table, size_t size, void*& mem)
 		{
 			return allocMemForRecord(getTableData(table), size, mem);
@@ -528,186 +250,9 @@ namespace DATABASE
 			current->pageUsedSize += record->head->minHead.size;
 			return B_OK;
 		}
-		appendingBlockStaus append(const DATABASE_INCREASE::record* record)
-		{
-			if (m_maxLogOffset > record->head->logOffset)
-			{
-				LOG(ERROR) << "can not append record to block for record log offset " << record->head->logOffset << "is less than max log offset:" << m_maxLogOffset
-					<< "record type:" << record->head->minHead.type;
-				return B_ILLEGAL;
-			}
-			appendingBlockStaus s;
-			if ((s = copyRecord(record)) != B_OK)
-				return s;
-			if (m_flag & BLOCK_FLAG_HAS_REDO)
-			{
-				appendingBlockStaus rtv;
-				if (B_OK != (rtv = writeRedo(record->data)))
-				{
-					LOG(ERROR) << "write redo log failed";
-					return rtv;
-				}
-			}
-			if (record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE) //build index
-			{
-				const META::tableMeta* meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
-				tableData* table = static_cast<tableData*>(meta->userData);
-				table->recordIds.append(m_recordCount);
-				if (table->primaryKey)
-					table->primaryKey->append((const DATABASE_INCREASE::DMLRecord*)record, m_recordCount);
-				for (int i = 0; i < meta->m_uniqueKeysCount; i++)
-					table->uniqueKeys[i]->append((const DATABASE_INCREASE::DMLRecord*)record, m_recordCount);
-			}
-			barrier;
-			m_maxLogOffset = record->head->logOffset;
-			if (m_minLogOffset == 0)
-				m_minLogOffset = record->head->logOffset;
-			if (m_minTime == 0)
-				m_minTime = record->head->timestamp;
-			if (m_maxTime < record->head->timestamp)
-				m_maxTime = record->head->timestamp;
-			m_recordCount++;
-			if (record->head->txnId > m_txnId || record->head->minHead.type == DATABASE_INCREASE::R_DDL)
-				m_committedRecordID.store(m_recordCount, std::memory_order_release);
-			m_txnId = record->head->txnId;
-			m_cond.wakeUp();
-			return B_OK;
-		}
-		page* createSolidIndexPage(appendingIndex* index, uint16_t* columnIdxs, uint16_t columnCount, const META::tableMeta* meta)
-		{
-			page* p = m_blockManager->allocPage(index->toSolidIndexSize());
-			if (columnCount == 1)
-			{
-				switch (meta->m_columns[columnIdxs[0]].m_columnType)
-				{
-				case META::COLUMN_TYPE::T_INT8:
-					index->toString<int8_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_UINT8:
-					index->toString<uint8_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_INT16:
-					index->toString<int16_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_UINT16:
-					index->toString<uint16_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_INT32:
-					index->toString<int32_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_UINT32:
-					index->toString<uint32_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_INT64:
-					index->toString<int64_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_TIMESTAMP:
-				case META::COLUMN_TYPE::T_UINT64:
-					index->toString<uint64_t>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_FLOAT:
-					index->toString<float>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_DOUBLE:
-					index->toString<double>(p->pageData);
-					break;
-				case META::COLUMN_TYPE::T_BLOB:
-				case META::COLUMN_TYPE::T_STRING:
-					index->toString<binaryType>(p->pageData);
-					break;
-				default:
-					abort();
-				}
-			}
-			else
-			{
-				index->toString<unionKey>(p->pageData);
-			}
-			p->pageUsedSize = p->pageSize;
-			return p;
-		}
-		solidBlock* toSolidBlock()
-		{
-			if (!use())
-				return nullptr;
-			solidBlock* block = new solidBlock(m_blockManager, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED);
-			uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
-			block->firstPage = m_blockManager->allocPage(firstPageSize);
-			block->pages = (page**)m_blockManager->allocMem(sizeof(page*) * m_pageCount);
-			memcpy(&block->m_blockID, &m_blockID, offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_blockID));
-			char* pos = block->firstPage->pageData;
-			block->m_tableInfo = (tableDataInfo*)pos;
-			pos += sizeof(tableDataInfo) * m_tableCount;
-			block->m_recordInfos = (recordGeneralInfo*)pos;
-			pos += sizeof(recordGeneralInfo) * m_recordCount;
-			block->m_recordIdOrderyTable = (uint32_t*)pos;
-			pos += sizeof(uint32_t) * m_recordCount;
-			block->pageOffsets = (uint64_t*)pos;
-			pos += sizeof(uint64_t) * (m_pageCount + 1);
-			block->pages = (page**)m_blockManager->allocMem(sizeof(page*) * m_pageCount);
-			uint16_t pageId = 0;
-			uint16_t tableIdx = 0;
-			uint32_t recordIdsOffset = 0;
-			for (std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.begin(); iter != m_tableDatas.end(); iter++)
-			{
-				block->m_tableInfo[tableIdx].firstPageId = pageId;
-				tableData* t = iter->second;
-				uint16_t keyPageCount = 0;
-				if (t->meta != nullptr)
-				{
-					keyPageCount = t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount;
-					if (t->primaryKey != nullptr)
-					{
-						block->pages[pageId] = createSolidIndexPage(t->primaryKey, t->meta->m_primaryKey.keyIndexs, t->meta->m_primaryKey.count, t->meta);
-						block->pages[pageId]->pageId = pageId;
-						pageId++;
-					}
-					if (t->uniqueKeys != nullptr)
-					{
-						for (uint16_t idx = 0; idx < t->meta->m_uniqueKeysCount; idx++)
-						{
-							block->pages[pageId] = createSolidIndexPage(t->uniqueKeys[idx], t->meta->m_uniqueKeys[idx].keyIndexs, t->meta->m_uniqueKeys[idx].count, t->meta);
-							block->pages[pageId]->pageId = pageId;
-							pageId++;
-						}
-					}
-					block->m_tableInfo[tableIdx].tableId = t->meta->m_id;
-				}
-				else
-					block->m_tableInfo[tableIdx].tableId = 0;
-				if (!t->pages.empty())
-				{
-					arrayList<page*>::iterator piter;
-					t->pages.begin(piter);
-					do {
-						block->pages[pageId] = piter.value();
-						block->pages[pageId]->pageId = pageId;
-						pageId++;
-					} while (piter.next());
-				}
-				if (!t->recordIds.empty())
-				{
-					arrayList<uint32_t>::iterator riter;
-					t->recordIds.begin(riter);
-					block->m_tableInfo[tableIdx].recordCount = t->recordIds.size();
-					block->m_tableInfo[tableIdx].recordIdsOffset = recordIdsOffset;
-					do {
-						uint32_t rid = riter.value();
-						uint32_t& currentOffset = m_recordIDs[rid], & newOffset = block->m_recordInfos[rid].offset;
-						setRecordPosition(newOffset, pageId(currentOffset) + keyPageCount, offsetInPage(currentOffset));
-						block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
-						const DATABASE_INCREASE::recordHead* head = (const DATABASE_INCREASE::recordHead*)getRecordByIdx(rid);
-						block->m_recordInfos[rid].tableIndex = tableIdx;
-						block->m_recordInfos[rid].recordType = head->minHead.type;
-						block->m_recordInfos[rid].timestamp = head->timestamp;
-						block->m_recordInfos[rid].logOffset = head->logOffset;
-					} while (riter.next());
-				}
-				tableIdx++;
-			}
-			unuse();
-			return block;
-		}
+		appendingBlockStaus append(const DATABASE_INCREASE::record* record);
+		page* createSolidIndexPage(appendingIndex* index, uint16_t* columnIdxs, uint16_t columnCount, const META::tableMeta* meta);
+		solidBlock* toSolidBlock();
 		inline void commit()
 		{
 			if (likely(m_recordCount > 0))
@@ -752,12 +297,12 @@ namespace DATABASE
 	 * */
 		bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter)//timestamp not increase strictly
 		{
-			m_status = UNINIT;
+			m_status = status::UNINIT;
 			m_errInfo.clear();
 			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
 				return false;
 			m_recordId = -1;
-			while (next())
+			while (next()== status::OK)
 			{
 				if (!valid())
 					return false;
@@ -766,12 +311,12 @@ namespace DATABASE
 				{
 					if (!equalOrAfter)
 					{
-						m_status = OK;
+						m_status = status::OK;
 						return true;
 					}
 					else if (h->timestamp <= timestamp + interval)
 					{
-						m_status = OK;
+						m_status = status::OK;
 						return true;
 					}
 					else
@@ -781,13 +326,13 @@ namespace DATABASE
 					}
 				}
 			}
-			if (m_status != INVALID)
+			if (m_status != status::INVALID)
 				m_recordId = 0xfffffffeu;
 			return false;
 		}
 		bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter)
 		{
-			m_status = UNINIT;
+			m_status = status::UNINIT;
 			m_errInfo.clear();
 			if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
 				return false;
@@ -809,27 +354,27 @@ namespace DATABASE
 				m = 0;
 		FIND:
 			m_recordId = m - 1;
-			if (!next())
+			if (next()!= status::OK)
 			{
 				m_recordId = 0xfffffffeu;
 				return false;
 			}
-			m_status = OK;
+			m_status = status::OK;
 			return true;
 		}
 		bool seekByRecordId(uint64_t recordId)
 		{
-			m_status = UNINIT;
+			m_status = status::UNINIT;
 			m_errInfo.clear();
 			if (m_block == nullptr || m_block->m_minRecordId > recordId || m_block->m_minRecordId + m_block->m_recordCount < recordId)
 				return false;
 			m_recordId = recordId - m_block->m_minRecordId - 1;
-			if (!next())
+			if (next()!= status::OK)
 			{
 				m_recordId = 0xfffffffeu;
 				return false;
 			}
-			m_status = OK;
+			m_status = status::OK;
 			return true;
 		}
 		void resetBlock(appendingBlock* block, uint32_t id = 0)
@@ -839,18 +384,18 @@ namespace DATABASE
 			m_recordId = id;
 			if (m_recordId == 0 && block->m_recordCount == 0)
 			{
-				m_status = BLOCKED;
+				m_status = status::BLOCKED;
 				return;
 			}
 			if (!valid())
 			{
-				m_status = INVALID;
+				m_status = status::INVALID;
 				return;
 			}
 			if (!m_filter->filterByRecord(m_block->getRecord(id)))
 				next();
 			else
-				m_status = OK;
+				m_status = status::OK;
 		}
 		inline const void* value() const
 		{
@@ -863,11 +408,11 @@ namespace DATABASE
 				if (m_seekedId + 1 >= m_block->m_recordCount)
 				{
 					if (m_block->m_flag & BLOCK_FLAG_FINISHED)
-						return m_status = ENDED;
+						return m_status = status::ENDED;
 					if (m_flag & ITER_FLAG_SCHEDULE)
 					{
 						m_block->m_cond.wait();
-						return  m_status = BLOCKED;
+						return  m_status = status::BLOCKED;
 					}
 					if (m_flag & ITER_FLAG_WAIT)
 					{
@@ -878,7 +423,7 @@ namespace DATABASE
 				m_seekedId++;
 			} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
 			m_recordId = m_seekedId;
-			return  m_status = OK;
+			return  m_status = status::OK;
 		}
 		inline bool end()
 		{
@@ -891,40 +436,40 @@ namespace DATABASE
 			return m_block != nullptr && m_recordId < m_block->m_recordCount;
 		}
 	};
-	iterator* createAppendingBlockIndexIterator(appendingBlock* block, appendingIndex* index);
-	template<typename T>
 	class appendingBlockIndexIterator :public iterator
 	{
+	private:
 		appendingIndex* m_index;
 		appendingBlock* m_block;
 		appendingBlock::tableData* m_table;
-		appendingIndex::iterator<T> indexIter;
+		indexIterator<appendingIndex> * indexIter;
 	public:
-		appendingBlockIndexIterator(appendingBlock* block, appendingIndex* index) :iterator(0,nullptr), m_index(index),m_block(block), indexIter(index)
+		appendingBlockIndexIterator(appendingBlock* block, appendingIndex* index);
+		virtual ~appendingBlockIndexIterator()
 		{
-			m_table = m_block->getTableData(index->getMeta()->m_id);
+			if (indexIter != nullptr)
+				delete indexIter;
 		}
-		bool seek(void * key , bool afterOrbefore, bool equal)
+		bool seek(const void * key , bool equalOrGreater)
 		{
-			switch (m_index->getType())
-			{
-
-			}
-			if (m_table == nullptr|| m_index==nullptr)
-				return false;
-			return true;//todo
+			return indexIter->seek(key, equalOrGreater);
 		}
 		virtual bool valid()
 		{
-			return indexIter.valid();
+			return indexIter->valid();
 		};
 		virtual status next()
 		{
-			return indexIter.next()?OK:ENDED;
+			return indexIter->next()? status::OK: status::ENDED;
+		}
+		virtual const void* key() const
+		{
+			return indexIter->key();
 		}
 		virtual const void* value() const
 		{
-			return nullptr;
+			uint32_t recordId = indexIter->value();
+			return m_block->getRecord(recordId);
 		}
 		virtual bool end()
 		{

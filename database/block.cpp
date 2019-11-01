@@ -1,5 +1,5 @@
 #include "block.h"
-#include "blockManager.h"
+#include "database.h"
 #include "solidBlock.h"
 namespace DATABASE {
 	int block::loadBlockInfo(fileHandle h, uint32_t id)
@@ -46,17 +46,17 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	block* block::loadFromFile(uint32_t id, blockManager* blockManager, META::metaDataBaseCollection* metaDataCollection)
+	block* block::loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection)
 	{
 		char fileName[512];
-		blockManager->genBlockFileName(id, fileName);
+		db->genBlockFileName(id, fileName);
 		fileHandle h = openFile(fileName, true, false, false);
 		if (!fileHandleValid(h))
 		{
 			LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
 			return nullptr;
 		}
-		block* b = new block(blockManager, metaDataCollection,0);
+		block* b = new block(db, metaDataCollection,0);
 		if (0 != b->loadBlockInfo(h, id))
 		{
 			closeFile(h);

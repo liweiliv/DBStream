@@ -8,6 +8,7 @@ namespace DATABASE {
 	struct varSolidIndex {
 		const char * rawIndexData;
 		uint32_t m_keyCount;
+		META::COLUMN_TYPE m_type;
 		varSolidIndex(const char * data):rawIndexData(data),m_keyCount(*(uint32_t*)data) {}
 		template<class T>
 		int find(const T & d, bool equalOrGreater)
@@ -112,110 +113,19 @@ namespace DATABASE {
 		{
 			return m_keyCount;
 		}
-		class iterator :public indexIterator
+		inline const void* getKey(uint32_t id)
 		{
-		private:
-			const uint32_t* recordIds;
-			uint32_t idChildCount;
-			varSolidIndex* index;
-			uint32_t indexId;
-			uint32_t innerIndexId;
-			friend class varSolidIndex;
-		public:
-			iterator(varSolidIndex* index = nullptr) :recordIds(nullptr), idChildCount(0), key(nullptr), index(index), indexId(0), innerIndexId(0)
-			{
-				if (index != nullptr && index->begin(recordIds, idChildCount))
-					innerIndexId = idChildCount - 1;
-			}
-			iterator(const iterator& iter) :recordIds(iter.recordIds), idChildCount(iter.idChildCount), key(iter.key), index(iter.index), indexId(iter.indexId), innerIndexId(iter.innerIndexId) {}
-			iterator& operator=(const iterator& iter)
-			{
-				key = iter.key;
-				index = iter.index;
-				indexId = iter.indexId;
-				innerIndexId = iter.innerIndexId;
-				return *this
-			}
-			~iterator() {}
-			inline bool valid()
-			{
-				return recordIds != nullptr && innerIndexId < idChildCount;
-			}
-			inline uint32_t value()
-			{
-				return recordIds[innerIndexId];
-			}
-			inline const void* key()
-			{
-				return index->getKey(indexId);
-			}
-			inline uint32_t currentVersionValue()
-			{
-				return recordIds[idChildCount - 1];
-			}
-			inline bool next()
-			{
-				if (innerIndexId + 1 < idChildCount)
-				{
-					innerIndexId++;
-					return true;
-				}
-				else if (indexId + 1 < this->index->m_keyCount)
-				{
-					indexId++;
-					innerIndexId = 0;
-					index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-					return true;
-				}
-				else
-					return false;
-			}
-			inline bool nextKey()
-			{
-				if (indexId + 1 < this->index->m_keyCount)
-				{
-					indexId++;
-					index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-					innerIndexId = idChildCount - 1;
-					return true;
-				}
-				else
-					return false;
-			}
-			inline bool prev()
-			{
-				if (innerIndexId >= 1)
-				{
-					innerIndexId--;
-					return true;
-				}
-				else if (indexId >= 1)
-				{
-					indexId--;
-					index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-					innerIndexId = idChildCount - 1;
-					return true;
-				}
-				else
-					return false;
-			}
-			inline bool prevKey()
-			{
-				if (indexId >= 1)
-				{
-					indexId--;
-					index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-					innerIndexId = idChildCount - 1;
-					return true;
-				}
-				else
-					return false;
-			}
-		};
+			return rawIndexData + ((uint32_t*)(rawIndexData + sizeof(uint32_t)))[id];
+		}
+		inline META::COLUMN_TYPE getType()
+		{
+			return m_type;
+		}
 	};
 	struct fixedSolidIndex
 	{
 		const char * rawIndexData;
+		META::COLUMN_TYPE m_type;
 		uint16_t meta;
 		uint32_t m_keyCount;
 		fixedSolidIndex(const char * data) :rawIndexData(data), meta(*(uint16_t*)data), m_keyCount(*(uint32_t*)(data + sizeof(uint16_t)))
@@ -389,11 +299,16 @@ namespace DATABASE {
 		}
 		inline const void* getKey(uint32_t id)
 		{
-			return  rawIndexData + sizeof(uint16_t) + sizeof(uint32_t) + (meta + sizeof(uint32_t)) * m;
+			return  rawIndexData + sizeof(uint16_t) + sizeof(uint32_t) + (meta + sizeof(uint32_t)) * id;
 		}
+		inline META::COLUMN_TYPE getType()
+		{
+			return m_type;
+		}
+
 	};
 	template<class T,class INDEX_TYPE>
-	class solidIndexIterator:public indexIterator<T>
+	class solidIndexIterator:public indexIterator<INDEX_TYPE>
 	{
 	private:
 		uint32_t indexId;
@@ -419,17 +334,15 @@ namespace DATABASE {
 			innerIndexId = idChildCount - 1;
 			return true;
 		}
-		virtual bool seek(const void* key)
+		virtual bool seek(const void* key, bool equalOrGreater)
 		{
-			
-		}
-		virtual inline bool valid()const
-		{
-			return recordIds != nullptr && innerIndexId < idChildCount;
-		}
-		virtual inline uint32_t value() const
-		{
-			return recordIds[innerIndexId];
+			int _indexId = index->find(*static_cast<const T>(key), equalOrGreater);
+			if (_indexId < 0)
+				return fasle;
+			indexId = _indexId;
+			index->getRecordIdByIndex(indexId, recordIds, idChildCount);
+			toLastValueOfKey();
+			return true;
 		}
 		virtual inline const void* key()const
 		{

@@ -1,4 +1,4 @@
-#include "blockManager.h"
+#include "database.h"
 #include "appendingBlock.h"
 #include "solidBlock.h"
 #ifdef OS_WIN
@@ -17,7 +17,7 @@ namespace DATABASE {
 		F_JOIN_ABLE,
 		F_DO_JOIN
 	};
-	DLL_EXPORT std::string blockManager::updateConfig(const char* key, const char* value)
+	DLL_EXPORT std::string database::updateConfig(const char* key, const char* value)
 	{
 		if (strcmp(key, REAL_CONF_STRING(C_LOG_DIR)) == 0)
 			return "config :logDir is static,can not change";
@@ -113,17 +113,17 @@ namespace DATABASE {
 		m_config->set("store", key, value);
 		return std::string("update config:") + key + " success";
 	}
-	DLL_EXPORT void blockManager::commit()
+	DLL_EXPORT void database::commit()
 	{
 		if (likely(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING))
 			m_current->commit();
 	}
-	DLL_EXPORT blockManager::blockManager(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection) :m_status(BLOCK_MANAGER_STATUS::BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
-		, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &blockManager::flushThread, std::string("blockManagerFlush_").append(confPrefix).c_str())), m_firstBlockId(0), m_lastBlockId(0), m_currentFlushThreadCount(0), m_recordId(0), m_tnxId(0)
+	DLL_EXPORT database::database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection) :m_status(BLOCK_MANAGER_STATUS::BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
+		, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &database::flushThread, std::string("databaseFlush_").append(confPrefix).c_str())), m_firstBlockId(0), m_lastBlockId(0), m_currentFlushThreadCount(0), m_recordId(0), m_tnxId(0)
 	{
 		initConfig();
 	}
-	DLL_EXPORT int blockManager::insert(DATABASE_INCREASE::record* r)
+	DLL_EXPORT int database::insert(DATABASE_INCREASE::record* r)
 	{
 		if (unlikely(m_status != BLOCK_MANAGER_STATUS::BM_RUNNING))
 			return -1;
@@ -161,7 +161,7 @@ namespace DATABASE {
 			return -1;
 		}
 	}
-	bool blockManager::createNewBlock()
+	bool database::createNewBlock()
 	{
 		appendingBlock* newBlock = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
 			m_blockDefaultSize, m_redoFlushDataSize,
@@ -191,7 +191,7 @@ namespace DATABASE {
 		m_current = newBlock;
 		return true;
 	}
-	DLL_EXPORT void* blockManager::allocMemForRecord(META::tableMeta* table, size_t size)
+	DLL_EXPORT void* database::allocMemForRecord(META::tableMeta* table, size_t size)
 	{
 		void* mem;
 		appendingBlock::appendingBlockStaus status = m_current->allocMemForRecord(table, size, mem);
@@ -207,7 +207,7 @@ namespace DATABASE {
 		else
 			return nullptr;
 	}
-	DLL_EXPORT bool blockManager::checkpoint(uint64_t& timestamp, uint64_t &logOffset)
+	DLL_EXPORT bool database::checkpoint(uint64_t& timestamp, uint64_t &logOffset)
 	{
 		block* last = nullptr;
 		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
@@ -228,11 +228,11 @@ namespace DATABASE {
 		}
 		return false;
 	}
-	DLL_EXPORT int blockManager::compection(bool (*reduce)(const char*))//todo
+	DLL_EXPORT int database::compection(bool (*reduce)(const char*))//todo
 	{
 		return 0;
 	}
-	block* blockManager::updateBasicBlockToSolidBlock(block* b)
+	block* database::updateBasicBlockToSolidBlock(block* b)
 	{
 		while (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
 		{
@@ -257,7 +257,7 @@ namespace DATABASE {
 		}
 		return b;
 	}
-	block* blockManager::getBasciBlock(uint32_t blockId)
+	block* database::getBasciBlock(uint32_t blockId)
 	{
 		if (m_lastBlockId.load(std::memory_order_relaxed) < 1 || m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
 			return nullptr;
@@ -302,7 +302,7 @@ namespace DATABASE {
 		}
 	}
 
-	block* blockManager::getBlock(uint32_t blockId)
+	block* database::getBlock(uint32_t blockId)
 	{
 		if (m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
 			return nullptr;
@@ -364,7 +364,7 @@ namespace DATABASE {
 		}
 		return s;
 	}
-	int blockManager::flush(appendingBlock* block)
+	int database::flush(appendingBlock* block)
 	{
 		solidBlock* sb = block->toSolidBlock();
 		if (sb == nullptr)
@@ -390,7 +390,7 @@ namespace DATABASE {
 		block->unuse();
 		return 0;
 	}
-	void blockManager::flushThread()
+	void database::flushThread()
 	{
 		appendingBlock* block;
 		uint32_t idleRound = 0;
@@ -413,7 +413,7 @@ namespace DATABASE {
 			idleRound >>= 1;
 		}
 	}
-	int blockManager::purge()
+	int database::purge()
 	{
 		block* b;
 		/*end is < m_lastBlockId.load(std::memory_order_relaxed) - 1,so we keep at least two block in disk*/
@@ -446,7 +446,7 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	int blockManager::gc()//todo
+	int database::gc()//todo
 	{
 		for (block* b = static_cast<block*>(m_blocks.begin()); b != nullptr; b = static_cast<block*>(m_blocks.get(b->m_blockID + 1)))
 		{
@@ -454,11 +454,11 @@ namespace DATABASE {
 		return 0;
 	}
 
-	void blockManager::purgeThread(blockManager* m)
+	void database::purgeThread(database* db)
 	{
-		m->purge();
+		db->purge();
 	}
-	int blockManager::recoveryFromRedo(uint32_t from, uint32_t to)
+	int database::recoveryFromRedo(uint32_t from, uint32_t to)
 	{
 		LOG(WARNING) << "try recovery block " << from << " to " << to << " from redo";
 		for (uint32_t blockId = from; blockId <= to; blockId++)
@@ -511,7 +511,7 @@ namespace DATABASE {
 		return 0;
 	}
 
-	int blockManager::load()
+	int database::load()
 	{
 		int prefixSize = strlen(m_logPrefix);
 		std::set<uint64_t> ids;
@@ -655,7 +655,7 @@ namespace DATABASE {
 			m_firstBlockId.store(1, std::memory_order_relaxed);
 		return 0;
 	}
-	int blockManager::initConfig()
+	int database::initConfig()
 	{
 		strncpy(m_logDir, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(), 256);
 

@@ -127,7 +127,7 @@ TARGET_LINK_LIBRARIES(metaCollection meta database util thread sqlParser ${GLOG}
 #store
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(store  util thread memory meta database ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(store PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 #shell

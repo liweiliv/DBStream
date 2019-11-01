@@ -3,7 +3,7 @@
 #include "database/iterator.h"
 #include "filter.h"
 #include "job.h"
-#include "database/blockManager.h"
+#include "database/database.h"
 namespace DATABASE_INCREASE {
 	struct  record;
 }

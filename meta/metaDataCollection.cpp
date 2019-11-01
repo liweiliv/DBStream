@@ -20,7 +20,7 @@
 #include "util/config.h"
 #include "memory/bufferPool.h"
 #include "ddl.h"
-#include "database/blockManager.h"
+#include "database/database.h"
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
@@ -69,7 +69,7 @@ namespace META {
 			m_virtualConf = new config(nullptr);
 			initVirtualConf(m_virtualConf);
 			m_bufferPool = new bufferPool();
-			m_metaFile = new DATABASE::blockManager("meta",m_virtualConf, m_bufferPool,);
+			m_metaFile = new DATABASE::database("meta",m_virtualConf, m_bufferPool,);
 		}
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
 			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));

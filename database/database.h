@@ -12,9 +12,8 @@
 #include <string.h>
 #include <set>
 #include <condition_variable>
-#include "page.h"
-#include "block.h"
 #include "iterator.h"
+#include "page.h"
 #include "util/pageTable.h"
 #include "util/config.h"
 #include "glog/logging.h"
@@ -49,10 +48,10 @@ namespace DATABASE
 	class blockManagerIterator;
 	class appendingBlock;
 	class block;
-	class blockManager
+	class database
 	{
-		friend class blockManagerIterator;
-		friend class threadPool<blockManager, void>;
+		friend class databaseIterator;
+		friend class threadPool<database, void>;
 	public:
 		enum class BLOCK_MANAGER_STATUS {
 			BM_RUNNING,
@@ -86,14 +85,14 @@ namespace DATABASE
 		uint32_t m_maxUnflushedBlock;
 		uint32_t m_fileSysPageSize;
 		shared_mutex m_blockLock;//all read ,write thread use shared lock,purge thread use mutex lock,avoid the aba problem
-		threadPool<blockManager, void> m_threadPool;
+		threadPool<database, void> m_threadPool;
 		std::atomic<uint32_t> m_firstBlockId;
 		std::atomic<uint32_t> m_lastBlockId;
 		std::atomic_int m_currentFlushThreadCount;
 		uint64_t m_recordId;
 		uint64_t m_tnxId;
 	public:
-		DLL_EXPORT blockManager(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
+		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
 		DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 	private:
 		int recoveryFromRedo(uint32_t from, uint32_t to);
@@ -106,7 +105,7 @@ namespace DATABASE
 		void flushThread();
 		int purge();
 		int gc();
-		static void purgeThread(blockManager* m);
+		static void purgeThread(database* m);
 	public:
 		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
 		DLL_EXPORT inline void begin()
@@ -158,14 +157,13 @@ namespace DATABASE
 		DLL_EXPORT void* allocMemForRecord(META::tableMeta* table, size_t size);
 		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t &logOffset);
 		DLL_EXPORT int compection(bool (*reduce)(const char*));
-
 	};
-	class blockManagerIterator : public iterator
+	class databaseIterator : public iterator
 	{
 	private:
 		block* m_current;
 		iterator* m_blockIter;
-		blockManager* m_manager;
+		database* m_database;
 	public:
 		/*
 			find record by timestamp
@@ -176,11 +174,11 @@ namespace DATABASE
 		DLL_EXPORT bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter);//timestamp not increase strictly,so we have to check all block
 		DLL_EXPORT bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter);
 		DLL_EXPORT bool seekByRecordId(uint64_t recordId);
-		DLL_EXPORT blockManagerIterator(uint32_t flag, filter* filter, blockManager* m_manager);
-		DLL_EXPORT ~blockManagerIterator();
+		DLL_EXPORT databaseIterator(uint32_t flag, filter* filter, database* db);
+		DLL_EXPORT ~databaseIterator();
 		DLL_EXPORT inline bool valid()
 		{
-			return m_manager != nullptr && m_current != nullptr && m_blockIter != NULL;
+			return m_database != nullptr && m_current != nullptr && m_blockIter != nullptr;
 		}
 		DLL_EXPORT status next();
 		DLL_EXPORT inline const void* value() const
@@ -191,6 +189,19 @@ namespace DATABASE
 		{
 			return m_blockIter==nullptr?true:m_blockIter->end();
 		}
+	};
+	class databaseIndexIterator : public iterator
+	{
+	private:
+		database* m_database;
+	public:
+		DLL_EXPORT bool seek(const void* key, bool equalOrAfter);
+		DLL_EXPORT databaseIndexIterator(uint32_t flag, database* db);
+		DLL_EXPORT ~databaseIndexIterator();
+		DLL_EXPORT  bool valid()const;
+		DLL_EXPORT status next();
+		DLL_EXPORT  const void* value() const;
+		DLL_EXPORT  bool end() const;
 	};
 }
 #endif /* BLOCKMANAGER_H_ */

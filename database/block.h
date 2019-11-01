@@ -75,12 +75,12 @@ namespace DATABASE {
 		uint16_t firstIndexPageId;
 		META::tableMeta* meta;
 	};
-	class blockManager;
+	class database;
 	class block {
 	public:
 		std::atomic_uchar m_loading;
 		::ref m_ref;
-		blockManager* m_blockManager;
+		database* m_database;
 		META::metaDataBaseCollection* m_metaDataCollection;
 		uint32_t m_version;
 		uint32_t m_flag;
@@ -99,14 +99,14 @@ namespace DATABASE {
 		uint32_t m_solidBlockHeadPageRawSize;
 		uint32_t m_solidBlockHeadPageSize;
 		uint32_t m_crc;
-		block(blockManager* blockManager, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_blockManager(blockManager), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
+		block(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
 			m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
 			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
 		}
 		block(block* b)
 		{
-			memcpy(&m_blockManager, &b->m_blockManager, sizeof(block) - offsetof(block, m_blockManager));
+			memcpy(&m_database, &b->m_database, sizeof(block) - offsetof(block, m_database));
 			m_loading.store(b->m_loading.load(std::memory_order_relaxed), std::memory_order_relaxed);
 		}
 		virtual ~block() {}
@@ -125,7 +125,7 @@ namespace DATABASE {
 			return m_minRecordId + m_recordCount - 1;
 		}
 		int loadBlockInfo(fileHandle h,uint32_t id);
-		static block* loadFromFile(uint32_t id, blockManager* blockManager, META::metaDataBaseCollection* metaDataCollection=nullptr);
+		static block* loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection=nullptr);
 	};
 #pragma pack()
 }

@@ -18,7 +18,7 @@ namespace DATABASE_INCREASE {
 	struct record;
 }
 namespace DATABASE {
-	class blockManager;
+	class database;
 }
 namespace STORE{
 #define MAIN_STREAM "mainStream"
@@ -27,8 +27,8 @@ class schedule;
 DLL_EXPORT class store{
 private:
 	schedule *m_schedule;
-	DATABASE::blockManager *m_mainStreamblockManager;
-	DATABASE::blockManager *m_genratedStreamBlockManager;
+	DATABASE::database *m_mainStream;
+	DATABASE::database *m_genratedStream;
 	META::metaDataCollection* m_metaDataCollection;
 	config * m_conf;
 	bufferPool* m_bufferPool;
