@@ -1,6 +1,7 @@
 #include "database.h"
 #include "appendingBlock.h"
 #include "solidBlock.h"
+#include "kWaySortIterator.h"
 #ifdef OS_WIN
 #include <io.h>
 #endif
@@ -119,7 +120,7 @@ namespace DATABASE {
 			m_current->commit();
 	}
 	DLL_EXPORT database::database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection) :m_status(BLOCK_MANAGER_STATUS::BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
-		, m_config(conf), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &database::flushThread, std::string("databaseFlush_").append(confPrefix).c_str())), m_firstBlockId(0), m_lastBlockId(0), m_currentFlushThreadCount(0), m_recordId(0), m_tnxId(0)
+		, m_config(conf), m_last(nullptr), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &database::flushThread, std::string("databaseFlush_").append(confPrefix).c_str())), m_firstBlockId(0), m_lastBlockId(0), m_currentFlushThreadCount(0), m_recordId(0), m_tnxId(0)
 	{
 		initConfig();
 	}
@@ -132,22 +133,22 @@ namespace DATABASE {
 		appendingBlock::appendingBlockStaus status = m_current->append(r);
 		switch (status)
 		{
-		case appendingBlock::B_OK:
+		case appendingBlock::appendingBlockStaus::B_OK:
 			return 0;
-		case appendingBlock::B_FULL:
+		case appendingBlock::appendingBlockStaus::B_FULL:
 			if (!createNewBlock())
 			{
 				m_status = BLOCK_MANAGER_STATUS::BM_FAILED;
 				return -1;
 			}
 			return insert(r);
-		case appendingBlock::B_FAULT:
+		case appendingBlock::appendingBlockStaus::B_FAULT:
 			m_status = BLOCK_MANAGER_STATUS::BM_FAILED;
 			LOG(ERROR) << "Fatal Error: insert record to current  block failed;" << "record id :" <<
 				r->head->recordId << ",record offset:" << r->head->logOffset <<
 				"record LogID:" << r->head->logOffset;
 			return -1;
-		case appendingBlock::B_ILLEGAL:
+		case appendingBlock::appendingBlockStaus::B_ILLEGAL:
 			m_status = BLOCK_MANAGER_STATUS::BM_FAILED;
 			LOG(ERROR) << "Fatal Error: insert record to current  block failed,record is illegal;" << "record id :" <<
 				r->head->recordId << ",record offset:" << r->head->logOffset <<
@@ -188,6 +189,9 @@ namespace DATABASE {
 		}
 		m_blocks.set(newBlock->m_blockID, newBlock);
 		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_release);
+		newBlock->prev.store(m_current, std::memory_order_relaxed);
+		newBlock->m_prevBlockID = m_current->m_blockID;
+		m_current->next.store(newBlock, std::memory_order_release);
 		m_current = newBlock;
 		return true;
 	}
@@ -195,9 +199,9 @@ namespace DATABASE {
 	{
 		void* mem;
 		appendingBlock::appendingBlockStaus status = m_current->allocMemForRecord(table, size, mem);
-		if (likely(status == appendingBlock::B_OK))
+		if (likely(status == appendingBlock::appendingBlockStaus::B_OK))
 			return mem;
-		if (status == appendingBlock::B_FULL)
+		if (status == appendingBlock::appendingBlockStaus::B_FULL)
 		{
 			m_current->m_flag |= BLOCK_FLAG_FINISHED;
 			if (!createNewBlock())
@@ -207,7 +211,7 @@ namespace DATABASE {
 		else
 			return nullptr;
 	}
-	DLL_EXPORT bool database::checkpoint(uint64_t& timestamp, uint64_t &logOffset)
+	DLL_EXPORT bool database::checkpoint(uint64_t& timestamp, uint64_t& logOffset)
 	{
 		block* last = nullptr;
 		uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed);
@@ -232,31 +236,126 @@ namespace DATABASE {
 	{
 		return 0;
 	}
-	block* database::updateBasicBlockToSolidBlock(block* b)
+#define CREATE_KWEY_ITER(type,flag) do{\
+	if((flag)&ITER_FLAG_DESC){return new kWaySortIterator<type,decreaseCompare<type> >(iterArray,idx);}\
+	else {return new kWaySortIterator<type,increaseCompare<type> >(iterArray,idx);}\
+	}while(0);
+
+	DLL_EXPORT iterator* database::createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId)
 	{
-		while (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
+		int blockId;
+		block* from,*to;
+		while ((from = getBlock(blockId = m_firstBlockId.load(std::memory_order_relaxed))) == nullptr)
 		{
-			solidBlock* sb = new solidBlock(b);
-			sb->use();
-			if (unlikely(!m_blocks.updateCas(b->m_blockID, sb, b)))
+			if (blockId == m_firstBlockId.load(std::memory_order_relaxed))
+				return nullptr;
+		}
+		barrier;
+		to = m_current;
+		to->use();
+		std::list<blockIndexIterator*> iters;
+		block* b = from;
+		while (b->m_blockID <= to->m_blockID)
+		{
+			blockIndexIterator* iter = nullptr;
+			if (b->m_flag & BLOCK_FLAG_SOLID)
 			{
-				delete sb;
+				if (checkSolidBlock(b) != 0)
+				{
+					for (std::list<blockIndexIterator*>::iterator i = iters.begin(); i != iters.end(); iter++)
+						delete* i;
+					return nullptr;//todo
+				}
+				iter = static_cast<solidBlock*>(b)->createIndexIterator(flag,table, type, keyId);
+			}
+			else
+				iter = static_cast<appendingBlock*>(b)->createIndexIterator(flag,table, type, keyId);
+			if (iter != nullptr)
+				iters.push_back(iter);
+			else
+				b->unuse();
+			b = b->next.load(std::memory_order_acquire);
+			b->use();
+		}
+		if (iters.empty())
+			return nullptr;
+		blockIndexIterator** iterArray = new blockIndexIterator * [iters.size()];
+		int idx = 0;
+		for (std::list<blockIndexIterator*>::iterator i = iters.begin(); i != iters.end(); i++)
+			iterArray[idx++] = *i;
+		switch ((*iters.begin())->keyType())
+		{
+		case META::COLUMN_TYPE::T_UNION:
+			CREATE_KWEY_ITER(META::unionKey, flag);
+		case META::COLUMN_TYPE::T_INT8:
+			CREATE_KWEY_ITER(int8_t, flag);
+		case META::COLUMN_TYPE::T_UINT8:
+			CREATE_KWEY_ITER(uint8_t, flag);
+		case META::COLUMN_TYPE::T_INT16:
+			CREATE_KWEY_ITER(int16_t, flag);
+		case META::COLUMN_TYPE::T_UINT16:
+			CREATE_KWEY_ITER(uint16_t, flag);
+		case META::COLUMN_TYPE::T_INT32:
+			CREATE_KWEY_ITER(int32_t, flag);
+		case META::COLUMN_TYPE::T_UINT32:
+			CREATE_KWEY_ITER(uint32_t, flag);
+		case META::COLUMN_TYPE::T_INT64:
+			CREATE_KWEY_ITER(int64_t, flag);
+		case META::COLUMN_TYPE::T_TIMESTAMP:
+		case META::COLUMN_TYPE::T_UINT64:
+			CREATE_KWEY_ITER(uint64_t, flag);
+		case META::COLUMN_TYPE::T_FLOAT:
+			CREATE_KWEY_ITER(float, flag);
+		case META::COLUMN_TYPE::T_DOUBLE:
+			CREATE_KWEY_ITER(double, flag);
+		case META::COLUMN_TYPE::T_BLOB:
+		case META::COLUMN_TYPE::T_STRING:
+			CREATE_KWEY_ITER(META::binaryType, flag);
+		default:
+			abort();
+		}
+	}
+	DLL_EXPORT char* database::getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
+	{
+		char* record;
+		for (block* b = m_current,*prev = nullptr;b!=nullptr;)
+		{
+			if (!b->use())
+			{
+				if (prev == nullptr)
+					b = prev->prev.load(std::memory_order_relaxed);
+				else
+					b = m_current;
 				continue;
 			}
-			m_blockLock.unlock_shared();
-			if (unlikely(0 != sb->load(b->m_blockID)))
+			if (b->m_flag & BLOCK_FLAG_APPENDING)
 			{
-				LOG(ERROR) << "load block" << b->m_blockID << " failed";
-				m_blocks.update(b->m_blockID, b);
-				sb->unuse();
-				sb->unuse();
-				return nullptr;
+				if (nullptr != (record = static_cast<appendingBlock*>(b)->getRecord(table, type, keyId, key)))
+				{
+					b->unuse();
+					return record;
+				}
+			}
+			else
+			{
+				if (checkSolidBlock(b) != 0)
+				{
+					b->unuse();
+					return nullptr;//todo
+				}
+				if (nullptr != (record = static_cast<solidBlock*>(b)->getRecord(table, type, keyId, key)))
+				{
+					b->unuse();
+					return record;
+				}
 			}
 			b->unuse();
-			return sb;
+			prev = b;
+			b = b->prev.load(std::memory_order_relaxed);
 		}
-		return b;
+		return nullptr;
 	}
+
 	block* database::getBasciBlock(uint32_t blockId)
 	{
 		if (m_lastBlockId.load(std::memory_order_relaxed) < 1 || m_firstBlockId.load(std::memory_order_relaxed) > blockId || m_lastBlockId.load(std::memory_order_relaxed) < blockId)
@@ -272,7 +371,7 @@ namespace DATABASE {
 		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
 			return nullptr;
 		block* tmp;
-		b = block::loadFromFile(blockId, this,m_metaDataCollection);
+		b = block::loadFromFile(blockId, this, m_metaDataCollection);
 		if (b == nullptr)
 		{
 			LOG(ERROR) << "load block" << blockId << " failed";
@@ -301,6 +400,20 @@ namespace DATABASE {
 			return tmp;
 		}
 	}
+	int database::checkSolidBlock(block* b)
+	{
+		if (unlikely((b->m_flag & BLOCK_FLAG_SOLID) &&
+			static_cast<solidBlock*>(b)->m_loading.load(std::memory_order_relaxed) <= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE)))
+		{
+			if (0 != static_cast<solidBlock*>(b)->load())
+			{
+				m_blockLock.unlock_shared();
+				LOG(ERROR) << "lazy load solid block:" << b->m_blockID << " failed";
+				return -1;
+			}
+		}
+		return 0;
+	}
 
 	block* database::getBlock(uint32_t blockId)
 	{
@@ -310,59 +423,20 @@ namespace DATABASE {
 		block* b = static_cast<block*>(m_blocks.get(blockId));
 		if (likely(b != nullptr && b->use()))
 		{
-			if (unlikely(!(b->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))//it is a basic blcok
+			if (checkSolidBlock(b) != 0)
 			{
 				b->unuse();
-				return updateBasicBlockToSolidBlock(b);
+				m_blockLock.unlock_shared();
+				return nullptr;
 			}
 			m_blockLock.unlock_shared();
 			return b;
 		}
-		m_blockLock.unlock_shared();
-		if (m_firstBlockId.load(std::memory_order_acquire) > blockId)
-			return nullptr;
-		block* tmp;
-		solidBlock* s = new solidBlock(this, m_metaDataCollection,0);
-		s->m_blockID = blockId;
-		if (s->loadFromFile()!=0)
+		else
 		{
-			LOG(ERROR) << "load block" << blockId << " failed";
-			delete s;
+			LOG(WARNING) << "block :"<<blockId<<" not exist";
 			return nullptr;
 		}
-		s->use();
-		m_blockLock.lock_shared();
-	RESET:
-		tmp = m_blocks.set(blockId, s);
-		if ((tmp->m_flag & BLOCK_FLAG_APPENDING) || ((tmp->m_flag & BLOCK_FLAG_SOLID) && static_cast<solidBlock*>(tmp) != s))//has been setted,use this block
-		{
-			if (!tmp->use())//this block will been destroied
-			{
-				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
-				goto RESET;
-			}
-			else
-			{
-				m_blockLock.unlock_shared();
-				delete s;
-			}
-		}
-		else if (unlikely(!(tmp->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID))))
-		{
-			return updateBasicBlockToSolidBlock(b);
-		}
-
-		m_blockLock.unlock_shared();
-		if (0 != s->load(blockId))
-		{
-			m_blockLock.lock();
-			m_blocks.erase(blockId);
-			m_blockLock.unlock();
-			s->unuse();//this unuse to free use 
-			s->unuse();//this unuse will destroy the block
-			return nullptr;
-		}
-		return s;
 	}
 	int database::flush(appendingBlock* block)
 	{
@@ -453,60 +527,117 @@ namespace DATABASE {
 		}
 		return 0;
 	}
+	int database::removeBlock(block* b)
+	{
+		if (b->prev.load(std::memory_order_relaxed) != nullptr)
+			b->prev.load(std::memory_order_relaxed)->prev.store(b->next.load(std::memory_order_relaxed), std::memory_order_release);
+		if (b->next.load(std::memory_order_relaxed) != nullptr)
+			b->next.load(std::memory_order_relaxed)->prev.store(b->prev.load(std::memory_order_relaxed), std::memory_order_release);
+		m_blocks.erase(b->m_blockID);
+		int id = b->m_blockID;
+		b->unuse();
+		char fileName[512];
+		genBlockFileName(id, fileName);
+		remove(fileName);
+		return 0;
+	}
 
 	void database::purgeThread(database* db)
 	{
 		db->purge();
 	}
-	int database::recoveryFromRedo(uint32_t from, uint32_t to)
+
+	int database::recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t, struct block*>& recoveried)
 	{
-		LOG(WARNING) << "try recovery block " << from << " to " << to << " from redo";
-		for (uint32_t blockId = from; blockId <= to; blockId++)
+		uint32_t activeCount = 0, lastActiveId = 0;
+		for (std::set<uint64_t>::iterator iter = redos.begin(); iter != redos.end(); iter++)
 		{
 			char fileName[512];
-			genBlockFileName(blockId, fileName);
+			genBlockFileName(*iter, fileName);
+			if (checkFileExist(fileName, 0) < 0)
+			{
+				LOG(WARNING) << "file of block " << *iter << " exist,remove redo file ";
+				strcat(fileName, ".redo");
+				remove(fileName);
+				continue;
+			}
 			strcat(fileName, ".redo");
 			if (checkFileExist(fileName, 0) < 0)
 			{
-				LOG(WARNING) << "redo file of block " << blockId << " is not exist ";
+				LOG(WARNING) << "redo file of block " << *iter << " is not exist ";
 				return 1;
 			}
 			appendingBlock* block = new appendingBlock(BLOCK_FLAG_APPENDING,
 				m_blockDefaultSize, m_redoFlushDataSize,
 				m_redoFlushPeriod, 0, this, m_metaDataCollection);
-			block->m_blockID = blockId;
+			block->m_blockID = *iter;
 			int ret = block->recoveryFromRedo();
 			if (ret == -1)
 			{
-				LOG(ERROR) << "block :" << blockId << " recory from redo failed ";
+				LOG(ERROR) << "block :" << *iter << " recory from redo failed ";
 				delete block;
-				return 1;
+				continue;
 			}
 			else if (ret == 1)
 			{
-				LOG(ERROR) << "block :" << blockId << " recory from redo success ,but this redo has not finish";
-				m_blocks.set(block->m_blockID, block);
-				m_current = block;
-				m_lastBlockId.store(blockId, std::memory_order_relaxed);
+				LOG(ERROR) << "block :" << *iter << " recory from redo success ,but this redo has not finish";
+				recoveried.insert(std::pair<uint32_t, struct block*>(block->m_blockID, block));//todo ,avoid out of memory
 				return 1;
 			}
 			solidBlock* sb = block->toSolidBlock();
 			if (sb == nullptr)
 			{
-				LOG(ERROR) << "recory from redo failed fo trans block" << blockId << " to solid block failed";
-				return 1;
+				LOG(ERROR) << "recory from redo failed fo trans block" << *iter << " to solid block failed";
+				continue;
 			}
 			delete block;
 			if (0 != sb->writeToFile())
 			{
-				LOG(ERROR) << "recory from redo failed fo flush block" << blockId << " to solid block file failed";
+				LOG(ERROR) << "recory from redo failed fo flush block" << *iter << " to solid block file failed";
 				delete sb;
-				return 1;
+				continue;
 			}
 			remove(fileName);
-			m_blocks.set(sb->m_blockID, sb);//todo ,avoid out of memory
-			m_lastBlockId.store(blockId, std::memory_order_relaxed);
-			LOG(ERROR) << "block :" << blockId << " recory from redo success ";
+			recoveried.insert(std::pair<uint32_t, struct block*>(sb->m_blockID, sb));
+			if (lastActiveId == 0)//avoid out of memory
+				lastActiveId = sb->m_blockID;
+			if (++activeCount > 4)
+			{
+				std::map<uint32_t, struct block*>::iterator lastActive = recoveried.find(lastActiveId);
+				static_cast<solidBlock*>(lastActive->second)->gc();
+				lastActive++;
+				lastActiveId = lastActive->first;
+				activeCount--;
+			}
+			LOG(ERROR) << "block :" << *iter << " recory from redo success ";
+		}
+		return 0;
+	}
+	int database::pickRedo(std::map<uint32_t, block*>& recoveried, block* from, block* to)
+	{
+		std::map<uint32_t, block*>::iterator iter = recoveried.upper_bound(from->m_blockID);
+		if (iter == recoveried.end())
+		{
+			LOG(ERROR) << "pick redo from block:" << from->m_blockID << " failed for next block not exist in redo";
+			return -1;
+		}
+		while (iter != recoveried.end() && (to == nullptr || iter->first < to->m_blockID))
+		{
+			if (iter->second->m_prevBlockID != from->m_blockID)
+			{
+				LOG(ERROR) << "pick redo from block:" << from->m_blockID << " failed for prevBlockID of next block is " << iter->second->m_prevBlockID;
+				return -1;
+			}
+			from->next.store(iter->second, std::memory_order_relaxed);
+			iter->second->prev.store(from, std::memory_order_relaxed);
+			from = iter->second;
+			m_blocks.set(from->m_blockID, from);
+			recoveried.erase(iter++);
+		}
+		if (to != nullptr && to->m_prevBlockID != from->m_blockID)
+		{
+			LOG(ERROR) << "pick redo from block:" << from->m_blockID << " failed for prevBlockID of next block is " << to->m_prevBlockID;
+			return -1;
 		}
 		return 0;
 	}
@@ -570,40 +701,36 @@ namespace DATABASE {
 #ifdef OS_WIN
 			} while (FindNextFile(hFind, &findFileData));
 			FindClose(hFind);
-		}
+			}
 #endif
 #ifdef OS_LINUX
 		}
 		closedir(dir);
 #endif
+		std::map<uint32_t, block*> recovried;
+		block* prevBlock = nullptr;
+		int64_t prev = -1;
+		char fileName[512];
+		if (!redos.empty())
+		{
+			recoveryFromRedo(redos, recovried);
+			if (!recovried.empty() && (ids.empty() || *ids.begin() > recovried.begin()->first))
+			{
+				prevBlock = recovried.begin()->second;
+				recovried.erase(prevBlock->m_blockID);
+				m_last = prevBlock;
+				prev = prevBlock->m_blockID;
+				m_firstBlockId.store(prevBlock->m_blockID, std::memory_order_relaxed);
+				m_lastBlockId.store(prevBlock->m_blockID, std::memory_order_relaxed);
+				m_blocks.set(prevBlock->m_blockID, prevBlock);
+			}
+		}
 		if (ids.size() > 0 || redos.size() > 0)
 		{
-			int64_t prev = -1;
-			char fileName[512];
-
 			for (std::set<uint64_t>::iterator iter = ids.begin(); iter != ids.end(); iter++)
 			{
-				if (prev == -1)
-				{
-					m_firstBlockId.store(*iter, std::memory_order_relaxed);
-					m_lastBlockId.store(*iter, std::memory_order_relaxed);
-				}
-				if (prev != -1 && *iter != (uint64_t)(prev + 1))
-				{
-					LOG(ERROR) << "block index is not increase strictly,block from:" << prev + 1 << " to " << *iter - 1 << " are not exist";
-					int ret = recoveryFromRedo(prev + 1, *iter - 1);
-					if (ret == 1)
-					{
-						LOG(ERROR) << "stop load remind block,and move remind blocks to .bak file";
-						for (iter++; iter != ids.end(); iter++)
-						{
-							genBlockFileName(*iter, fileName);
-							rename(fileName, std::string(fileName).append(".bak").c_str());
-						}
-						break;
-					}
-				}
-				block* b = block::loadFromFile(*iter, this,m_metaDataCollection);
+
+				block* b = block::loadFromFile(*iter, this, m_metaDataCollection);
 				if (nullptr == b)
 				{
 					LOG(ERROR) << "load block basic info from block:" << (*iter) << " failed,stop load remind block,and move remind block to .bak file";
@@ -614,41 +741,99 @@ namespace DATABASE {
 					}
 					break;
 				}
+				if (prev == -1)
+				{
+					m_firstBlockId.store(*iter, std::memory_order_relaxed);
+					m_lastBlockId.store(*iter, std::memory_order_relaxed);
+					m_last = b;
+				}
+				else
+				{
+					if (b->m_prevBlockID != prev)
+					{
+						if (prev > b->m_prevBlockID)
+						{
+							block* tmp;
+							for (tmp = prevBlock; tmp->m_blockID > b->m_prevBlockID; tmp = tmp->prev.load(std::memory_order_relaxed));
+							if (tmp != nullptr && tmp->m_blockID != b->m_prevBlockID)
+							{
+
+								LOG(ERROR) << "database :" << m_logPrefix << " has lost some block file from block id:" << tmp->m_blockID << " to " << b->m_prevBlockID;
+								if (pickRedo(recovried, prevBlock, b) != 0)
+								{
+									delete b;
+									return -1;
+								}
+							}
+							for (; prevBlock->m_blockID > b->m_prevBlockID; )//maybe prev shutdown of database is doing compection,new file has created ,but old file has not erase
+							{
+								tmp = prevBlock->prev.load(std::memory_order_relaxed);
+								removeBlock(prevBlock);
+								prevBlock = tmp;
+							}
+						}
+						else
+						{
+							LOG(ERROR) << "block index is not increase strictly,block from:" << prev + 1 << " to " << *iter - 1 << " are not exist";
+							if (pickRedo(recovried, prevBlock, b) != 0)
+							{
+								delete b;
+								LOG(ERROR) << "stop load remind block,and move remind blocks to .bak file";
+								for (iter++; iter != ids.end(); iter++)
+								{
+									genBlockFileName(*iter, fileName);
+									rename(fileName, std::string(fileName).append(".bak").c_str());
+								}
+								break;
+							}
+						}
+					}
+					prevBlock->next.store(b, std::memory_order_relaxed);
+				}
+				b->prev.store(prevBlock, std::memory_order_relaxed);
 				m_blocks.set(*iter, b);
 				prev = *iter;
+				prevBlock = b;
 				m_lastBlockId.store(*iter, std::memory_order_relaxed);
 			}
-			if (!redos.empty() && *redos.rbegin() > m_lastBlockId.load(std::memory_order_relaxed))
+		}
+		if (!recovried.empty() && *redos.rbegin() > m_lastBlockId.load(std::memory_order_relaxed))
+		{
+			pickRedo(recovried, prevBlock, nullptr);
+			for (std::map<uint32_t, block*>::iterator iter = recovried.begin(); iter != recovried.end(); iter++)
 			{
-				recoveryFromRedo(m_lastBlockId.load(std::memory_order_relaxed), *redos.rbegin());
-				for (std::set<uint64_t>::iterator iter = redos.begin(); iter != redos.end(); iter++)
-				{
-					if (m_current == nullptr || m_current->m_blockID != *iter)
-					{
-						genBlockFileName(*iter, fileName);
-						rename(std::string(fileName).append(".redo").c_str(), std::string(fileName).append(".redo.bak").c_str());
-					}
-				}
+				genBlockFileName(iter->first, fileName);
+				rename(std::string(fileName).append(".redo").c_str(), std::string(fileName).append(".redo.bak").c_str());
+				delete iter->second;
 			}
-			block* last = m_blocks.end();
-			if (likely(last != nullptr))
-			{
-				m_tnxId = last->m_maxTxnId + 1;
-				m_recordId = last->m_minRecordId + last->m_recordCount;
-			}
-			if (m_current == nullptr)
-				goto CREATE_CURRENT;
-			return 0;
+		}
+		block* last = m_blocks.end();
+		if (likely(last != nullptr))
+		{
+			m_tnxId = last->m_maxTxnId + 1;
+			m_recordId = last->m_minRecordId + last->m_recordCount;
+			if (m_current != nullptr)
+				return 0;
 		}
 		else //empty block dir
 		{
-			m_firstBlockId.store(0, std::memory_order_relaxed);
-			m_lastBlockId.store(0, std::memory_order_relaxed);
+			m_tnxId = 1;
+			m_recordId = 1;
+			m_firstBlockId.store(1, std::memory_order_relaxed);
+			m_lastBlockId.store(1, std::memory_order_relaxed);
 		}
-	CREATE_CURRENT:
+
 		m_current = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
 			m_redoFlushDataSize, m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 		m_current->m_blockID = m_lastBlockId.load(std::memory_order_relaxed) + 1;
+		if (m_blocks.end() != nullptr)
+		{
+			m_blocks.end()->next.store(m_current, std::memory_order_relaxed);
+			m_current->prev.store(m_blocks.end(), std::memory_order_relaxed);
+			m_current->m_prevBlockID = m_blocks.end()->m_blockID;
+		}
+		else
+			m_last = m_current;
 		m_blocks.set(m_lastBlockId.load(std::memory_order_relaxed) + 1, m_current);
 		m_lastBlockId.fetch_add(1, std::memory_order_relaxed);
 		if (m_firstBlockId.load(std::memory_order_relaxed) == 0)

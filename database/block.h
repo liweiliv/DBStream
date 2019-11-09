@@ -13,6 +13,7 @@
 #include "util/file.h"
 #include "glog/logging.h"
 #include "util/crcBySSE.h"
+#include "iterator.h"
 namespace META {
 	class metaDataBaseCollection;
 	class tableMeta;
@@ -81,9 +82,12 @@ namespace DATABASE {
 		std::atomic_uchar m_loading;
 		::ref m_ref;
 		database* m_database;
+		std::atomic<block*> next;
+		std::atomic<block*> prev;
 		META::metaDataBaseCollection* m_metaDataCollection;
 		uint32_t m_version;
 		uint32_t m_flag;
+		uint32_t m_prevBlockID;
 		uint32_t m_blockID;
 		uint64_t m_tableID;// if !(flag&BLOCK_FLAG_MULTI_TABLE)
 		uint64_t m_minTime;
@@ -99,7 +103,7 @@ namespace DATABASE {
 		uint32_t m_solidBlockHeadPageRawSize;
 		uint32_t m_solidBlockHeadPageSize;
 		uint32_t m_crc;
-		block(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
+		block(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :next(nullptr),prev(nullptr),m_database(db), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
 			m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
 			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
@@ -128,6 +132,14 @@ namespace DATABASE {
 		static block* loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection=nullptr);
 	};
 #pragma pack()
+	class blockIndexIterator :public iterator {
+	public:
+		blockIndexIterator(uint32_t flag, filter* filter,uint32_t blockId) :iterator(flag, filter),m_blockId(m_blockId) {}
+		virtual ~blockIndexIterator() {}
+		uint32_t getBlockId()const { return m_blockId; }
+	protected:
+		uint32_t m_blockId;
+	};
 }
 
 

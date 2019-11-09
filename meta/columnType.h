@@ -1,6 +1,11 @@
 #pragma once
 #include "util/itoaSse.h"
+#include "util/winDll.h"
 #include <string.h>
+#include <stdlib.h>
+namespace DATABASE_INCREASE {
+	struct DMLRecord;
+}
 namespace META {
 	static constexpr uint16_t numToStrMap[] = { 0x3030,0x3130,0x3230,0x3330,0x3430,0x3530,0x3630,0x3730,0x3830,0x3930,
 												0x3031,0x3131,0x3231,0x3331,0x3431,0x3531,0x3631,0x3731,0x3831,0x3931,
@@ -81,6 +86,149 @@ namespace META {
 	{COLUMN_TYPE::T_TEXT,4,true,false,true}
 	};
 #pragma pack(1)
+	enum class KEY_TYPE {
+		PRIMARY_KEY,
+		UNIQUE_KEY,
+		INDEX
+	};
+	struct uniqueKeyTypePair
+	{
+		uint8_t type;
+		uint16_t columnId;
+	};
+#ifndef max
+#define max(a,b)            (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
+
+	struct unionKeyMeta
+	{
+		uint16_t columnCount;
+		uint16_t size;
+		uint8_t fixed;
+		uint8_t keyType;
+		uint8_t keyId;
+		uint8_t varColumnCount;
+		uniqueKeyTypePair columnInfo[1];
+		static inline uint32_t memSize(uint16_t keyCount)
+		{
+			return sizeof(unionKeyMeta) + sizeof(uniqueKeyTypePair) * (keyCount - 1);
+		}
+		unionKeyMeta() {}
+		unionKeyMeta(const unionKeyMeta& dest)
+		{
+			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
+		}
+		unionKeyMeta &operator=(const unionKeyMeta& dest)
+		{
+			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
+			return *this;
+		}
+		void columnUpdate(uint16_t from, uint16_t to, COLUMN_TYPE newType)
+		{
+			for (int i = 0; i < columnCount; i++)
+			{
+				if (columnInfo[i].columnId<min(from, to) || columnInfo[i].columnId > min(from, to))
+					continue;
+				else if (columnInfo[i].columnId == from)
+				{
+					if (columnInfos[columnInfo[i].type].fixed && !columnInfos[static_cast<int>(newType)].fixed)
+						varColumnCount++;
+					else if (!columnInfos[columnInfo[i].type].fixed && columnInfos[static_cast<int>(newType)].fixed)
+						varColumnCount--;
+					columnInfo[i].columnId = to;
+					columnInfo[i].type = static_cast<int>(newType);
+				}
+				else
+				{
+					if (from > to)
+						columnInfo[i].columnId--;
+					else
+						columnInfo[i].columnId++;
+				}
+			}
+		}
+	};
+	struct binaryType {
+		uint16_t size;
+		const char* data;
+		DLL_EXPORT binaryType();
+		DLL_EXPORT binaryType(const char* _data, uint16_t _size);
+		DLL_EXPORT binaryType(const binaryType& dest);
+		DLL_EXPORT binaryType operator=(const binaryType& dest);
+		inline bool operator< (const binaryType& dest) const
+		{
+			return  compare(dest) < 0;
+		}
+		inline bool operator==(const binaryType& dest) const
+		{
+			return compare(dest) == 0;
+		}
+		inline bool operator!=(const binaryType& dest) const
+		{
+			return compare(dest) != 0;
+		}
+		DLL_EXPORT int compare(const binaryType& dest) const;
+		inline bool operator> (const binaryType& dest) const
+		{
+			return  compare(dest) > 0;
+		}
+	};
+	struct unionKey {
+		const char* key;
+		const META::unionKeyMeta* meta;
+		DLL_EXPORT unionKey();
+		DLL_EXPORT unionKey(const char* key, const META::unionKeyMeta* meta) :key(key), meta(meta) {};
+		DLL_EXPORT unionKey(const unionKey& dest);
+		DLL_EXPORT int compare(const unionKey& dest) const;
+		inline bool operator> (const unionKey& dest) const
+		{
+			return compare(dest) > 0;
+		}
+		inline bool operator< (const unionKey& dest) const
+		{
+			return compare(dest) < 0;
+		}
+		inline bool operator== (const unionKey& dest) const
+		{
+			return compare(dest) == 0;
+		}
+		inline bool operator!= (const unionKey& dest) const
+		{
+			return compare(dest) != 0;
+		}
+		static inline int externSize(const META::unionKeyMeta* meta)
+		{
+			return meta->varColumnCount * sizeof(uint16_t);
+		}
+		inline uint16_t startOffset()
+		{
+			return meta->fixed ? 0 : sizeof(uint16_t);
+		}
+		inline uint16_t appendValue(const void * value,uint16_t length,uint16_t columnId,uint16_t offset)
+		{
+			if (columnInfos[meta->columnInfo[columnId].type].fixed)
+			{
+				memcpy((char*)key + offset, value, columnInfos[meta->columnInfo[columnId].columnId].columnTypeSize);
+				return offset + columnInfos[meta->columnInfo[columnId].columnId].columnTypeSize;
+			}
+			else
+			{
+				*(uint16_t*)(key + offset) = length;
+				memcpy((char*)key + offset + sizeof(uint16_t), value, length);
+				return offset + sizeof(uint16_t) + length;
+			}
+		}
+		inline void setVarSize(uint16_t size)
+		{
+			*(uint16_t*)(key) = size;
+		}
+		DLL_EXPORT static uint16_t memSize(const DATABASE_INCREASE::DMLRecord* r, const META::unionKeyMeta* meta, bool keyUpdated);
+		DLL_EXPORT static void initKey(char* key, uint16_t size, const META::unionKeyMeta* keyMeta, const DATABASE_INCREASE::DMLRecord* r, bool keyUpdated = false);
+	};
 	struct timestamp
 	{
 		union

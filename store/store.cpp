@@ -1,7 +1,7 @@
 #include "store.h"
 #include "memory/bufferPool.h"
 #include "message/record.h"
-#include "meta/metaDataBaseCollection.h"
+#include "meta/metaDataCollection.h"
 #include "database/database.h"
 #include "database/block.h"
 #include "schedule.h"

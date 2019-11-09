@@ -33,7 +33,7 @@ namespace DATABASE
 	class appendingBlock : public block
 	{
 	public:
-		enum appendingBlockStaus
+		enum class appendingBlockStaus
 		{
 			B_OK, B_FULL, B_ILLEGAL, B_FAULT
 		};
@@ -83,11 +83,38 @@ namespace DATABASE
 		friend class appendingBlockIterator;
 		friend class appendingBlockLineIterator;
 		friend class appendingBlockIndexIterator;
+	private:
+		inline const tableData* getTableInfo(uint64_t tableId)
+		{
+			if (tableId == 0)
+				return &m_defaultData;
+			std::map<uint64_t, tableData*>::const_iterator iter = m_tableDatas.find(tableId);
+			if (unlikely(iter == m_tableDatas.end()))
+				return nullptr;
+			return iter->second;
+		}
+		appendingIndex* getTableIndex(const tableData* tableInfo, const META::tableMeta* table, META::KEY_TYPE type, int keyId)
+		{
+			switch (type)
+			{
+			case META::KEY_TYPE::PRIMARY_KEY:
+				return table->m_primaryKey!=nullptr ? tableInfo->primaryKey : nullptr;
+			case META::KEY_TYPE::UNIQUE_KEY:
+				return table->m_uniqueKeysCount > 0 ? (table->m_uniqueKeysCount > keyId ? (tableInfo->uniqueKeys[keyId]) : nullptr) : nullptr;
+			default:
+				return nullptr;
+			}
+		}
+		inline const char* getRecordByInnerId(uint32_t recordId)
+		{
+			uint32_t offset = m_recordIDs[recordId];
+			return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
+		}
 	public:
 		appendingBlock(uint32_t flag,
 			uint32_t bufSize, int32_t redoFlushDataSize,
 			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(db, metaDataCollection, flag),
-			m_size(0), m_maxSize(bufSize), m_status(B_OK), m_defaultData(
+			m_size(0), m_maxSize(bufSize), m_status(appendingBlockStaus::B_OK), m_defaultData(
 				m_blockID, nullptr, &m_arena, 4096),
 			m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(
 				redoFlushDataSize), m_redoFlushPeriod(redoFlushPeriod), m_txnId(
@@ -136,6 +163,7 @@ namespace DATABASE
 			uint32_t offset = m_recordIDs[recordId - m_minRecordId];
 			return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
 		}
+
 		inline uint64_t findRecordIDByOffset(uint64_t offset)
 		{
 			uint32_t endID = m_recordCount - 1;
@@ -227,6 +255,77 @@ namespace DATABASE
 			else
 				return &m_defaultData;
 		}
+		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId,const void * key)
+		{
+			if (!use())
+				return nullptr;
+			tableData* tableInfo = getTableData(table->m_id);
+			if (tableInfo == nullptr)
+			{
+				unuse();
+				return nullptr;
+			}
+			appendingIndex* index = getTableIndex(tableInfo, table, type, keyId);
+			if (index == nullptr)
+			{
+				unuse();
+				return nullptr;
+			}
+			int32_t recordId = -1;
+			switch (index->getType())
+			{
+			case META::COLUMN_TYPE::T_UNION:
+				recordId =  index->find<META::unionKey>(key);
+				break;
+			case META::COLUMN_TYPE::T_INT8:
+				recordId =  index->find<int8_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_UINT8:
+				recordId =  index->find<uint8_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_INT16:
+				recordId =  index->find<int16_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_UINT16:
+				recordId =  index->find<uint16_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_INT32:
+				recordId =  index->find<int32_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_UINT32:
+				recordId =  index->find<uint32_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_INT64:
+				recordId =  index->find<int64_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_TIMESTAMP:
+			case META::COLUMN_TYPE::T_UINT64:
+				recordId =  index->find<uint64_t>(key);
+				break;
+			case META::COLUMN_TYPE::T_FLOAT:
+				recordId =  index->find<float>(key);
+				break;
+			case META::COLUMN_TYPE::T_DOUBLE:
+				recordId =  index->find<double>(key);
+				break;
+			case META::COLUMN_TYPE::T_BLOB:
+			case META::COLUMN_TYPE::T_STRING:
+				recordId =  index->find<META::binaryType>(key);
+				break;
+			default:
+				abort();
+			}
+			if (recordId < 0)
+			{
+				unuse();
+				return nullptr;
+			}
+			const char* r = getRecordByInnerId(recordId);
+			char* newRecord = (char*)m_database->allocMem(((const DATABASE_INCREASE::minRecordHead*)r)->size);
+			memcpy(newRecord, r, ((const DATABASE_INCREASE::minRecordHead*)r)->size);
+			unuse();
+			return newRecord;
+		}
 		inline appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem);
 		inline appendingBlockStaus allocMemForRecord(META::tableMeta* table, size_t size, void*& mem)
 		{
@@ -240,7 +339,7 @@ namespace DATABASE
 			{
 				appendingBlockStaus s;
 				void* mem;
-				if (B_OK != (s = allocMemForRecord(t, record->head->minHead.size, mem)))
+				if (appendingBlockStaus::B_OK != (s = allocMemForRecord(t, record->head->minHead.size, mem)))
 					return s;
 				memcpy(mem, record->data, record->head->minHead.size);
 				current = t->current;
@@ -248,10 +347,10 @@ namespace DATABASE
 			((DATABASE_INCREASE::recordHead*)(current->pageData + current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
 			setRecordPosition(m_recordIDs[m_recordCount], current->pageId, current->pageUsedSize);
 			current->pageUsedSize += record->head->minHead.size;
-			return B_OK;
+			return appendingBlockStaus::B_OK;
 		}
 		appendingBlockStaus append(const DATABASE_INCREASE::record* record);
-		page* createSolidIndexPage(appendingIndex* index, uint16_t* columnIdxs, uint16_t columnCount, const META::tableMeta* meta);
+		page* createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta);
 		solidBlock* toSolidBlock();
 		inline void commit()
 		{
@@ -267,141 +366,75 @@ namespace DATABASE
 		{
 
 		}
+		blockIndexIterator* createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 	};
 
 	class appendingBlockIterator : public iterator
 	{
-	private:
+	protected:
 		appendingBlock* m_block;
 		filter* m_filter;
 		uint32_t m_recordId;
+		uint64_t m_realRecordId;
 		uint32_t m_seekedId;
 	public:
-		appendingBlockIterator(appendingBlock* block, filter* filter,
-			uint32_t recordId = 0, uint32_t flag = 0) :
+		appendingBlockIterator(appendingBlock* block, filter* filter,uint32_t flag = 0) :
 			iterator(flag, filter), m_block(block), m_filter(filter), m_recordId(
-				recordId), m_seekedId(recordId)
+				0), m_realRecordId(0),m_seekedId(0)
 		{
-			seekByRecordId(block->m_minRecordId);
+			m_keyType = META::COLUMN_TYPE::T_UINT64;
+			begin();
 		}
-		~appendingBlockIterator()
+		virtual ~appendingBlockIterator()
 		{
 			if (m_block != nullptr)
 				m_block->unuse();
 		}
-		/*
-	 * find record by timestamp
-	 * [IN]timestamp ,start time by micro second
-	 * [IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
-	 * [IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
-	 * */
-		bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter)//timestamp not increase strictly
+		void begin()
 		{
-			m_status = status::UNINIT;
-			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
-				return false;
-			m_recordId = -1;
-			while (next()== status::OK)
+			if (m_block != nullptr)
 			{
-				if (!valid())
-					return false;
-				const DATABASE_INCREASE::recordHead* h = static_cast<const DATABASE_INCREASE::recordHead*>(value());
-				if (h->timestamp >= timestamp)
+				if (!(m_flag & ITER_FLAG_DESC))
 				{
-					if (!equalOrAfter)
-					{
-						m_status = status::OK;
-						return true;
-					}
-					else if (h->timestamp <= timestamp + interval)
-					{
-						m_status = status::OK;
-						return true;
-					}
-					else
-					{
-						m_recordId = 0xfffffffeu;
-						return false;
-					}
+					m_recordId = 0;
+					m_seekedId = 0;
+					m_realRecordId = m_block->m_minRecordId;
 				}
-			}
-			if (m_status != status::INVALID)
-				m_recordId = 0xfffffffeu;
-			return false;
-		}
-		bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter)
-		{
-			m_status = status::UNINIT;
-			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
-				return false;
-			int s = 0, e = m_block->m_recordCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) >> 1;
-				uint64_t offset = ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset;
-				if (logOffset > offset)
-					s = m + 1;
-				else if (logOffset < offset)
-					e = m - 1;
 				else
-					goto FIND;
+				{
+					m_recordId = m_block->m_recordCount;
+					m_seekedId = m_recordId;
+					m_realRecordId = m_block->m_minRecordId + m_recordId;
+				}
+				if (m_filter != nullptr && !m_filter->filterByRecord(m_block->getRecord(m_recordId)))
+					m_status = next();
+				else
+					m_status = status::OK;
 			}
-			if (equalOrAfter)
-				return false;
-			if (e < 0)
-				m = 0;
-		FIND:
-			m_recordId = m - 1;
-			if (next()!= status::OK)
-			{
-				m_recordId = 0xfffffffeu;
-				return false;
-			}
-			m_status = status::OK;
-			return true;
 		}
-		bool seekByRecordId(uint64_t recordId)
-		{
-			m_status = status::UNINIT;
-			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_minRecordId > recordId || m_block->m_minRecordId + m_block->m_recordCount < recordId)
-				return false;
-			m_recordId = recordId - m_block->m_minRecordId - 1;
-			if (next()!= status::OK)
-			{
-				m_recordId = 0xfffffffeu;
-				return false;
-			}
-			m_status = status::OK;
-			return true;
-		}
-		void resetBlock(appendingBlock* block, uint32_t id = 0)
+		void resetBlock(appendingBlock* block)
 		{
 			if (m_block != nullptr)
 				m_block->unuse();
-			m_recordId = id;
-			if (m_recordId == 0 && block->m_recordCount == 0)
-			{
-				m_status = status::BLOCKED;
-				return;
-			}
-			if (!valid())
-			{
-				m_status = status::INVALID;
-				return;
-			}
-			if (!m_filter->filterByRecord(m_block->getRecord(id)))
-				next();
-			else
-				m_status = status::OK;
+			m_block = block;
+			begin();
 		}
-		inline const void* value() const
+		inline const void* key() const
 		{
-			return m_block->getRecord(m_recordId);
+			return &m_realRecordId;
+		}
+		inline const void* value()
+		{
+			return m_block->getRecordByInnerId(m_recordId);
 		}
 		inline status next()
+		{
+			if (likely(!(m_flag & ITER_FLAG_DESC)))
+				return realNext();
+			else
+				return realPrev();
+		}
+		inline status realNext()
 		{
 			do
 			{
@@ -423,55 +456,234 @@ namespace DATABASE
 				m_seekedId++;
 			} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
 			m_recordId = m_seekedId;
+			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			return  m_status = status::OK;
+		}
+		inline status realPrev()
+		{
+			do
+			{
+				if (m_seekedId == 0)
+					return m_status = status::ENDED;
+				m_seekedId--;
+			} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
+			m_recordId = m_seekedId;
+			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
 			return  m_status = status::OK;
 		}
 		inline bool end()
 		{
-			if (m_seekedId + 1 >= m_block->m_recordCount && m_block->m_flag & BLOCK_FLAG_FINISHED)
-				return true;
-			return false;
+			return m_status == status::ENDED;
 		}
 		inline bool valid()
 		{
 			return m_block != nullptr && m_recordId < m_block->m_recordCount;
 		}
 	};
-	class appendingBlockIndexIterator :public iterator
+	class appendingBlockTimestampIterator :public appendingBlockIterator
+	{
+	private:
+		bool seekIncrease(uint64_t timestamp)
+		{
+			m_status = status::UNINIT;
+			m_errInfo.clear();
+			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+				return false;
+			m_recordId = -1;
+			m_seekedId = -1;
+			while (next() == status::OK)
+			{
+				if (!valid())
+					return false;
+				const DATABASE_INCREASE::recordHead* h = static_cast<const DATABASE_INCREASE::recordHead*>(value());
+				if (h->timestamp >= timestamp)
+				{
+					m_status = status::OK;
+					return true;
+				}
+			}
+			if (m_status != status::INVALID)
+				m_recordId = 0xfffffffeu;
+			return false;
+		}
+		bool seekDecrease(uint64_t timestamp)
+		{
+			m_status = status::UNINIT;
+			m_errInfo.clear();
+			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+				return false;
+			m_recordId = m_block->m_recordCount;
+			m_seekedId = m_recordId;
+			while (next() == status::OK)
+			{
+				if (!valid())
+					return false;
+				const DATABASE_INCREASE::recordHead* h = static_cast<const DATABASE_INCREASE::recordHead*>(value());
+				if (h->timestamp <= timestamp)
+				{
+					m_status = status::OK;
+					return true;
+				}
+			}
+			if (m_status != status::INVALID)
+				m_recordId = 0xfffffffeu;
+			return false;
+		}
+	public:
+		appendingBlockTimestampIterator(appendingBlock* block, filter* filter, uint32_t flag = 0) :appendingBlockIterator(block, filter, flag)
+		{
+			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
+		}
+		bool seek(const void* key)//timestamp not increase strictly
+		{
+			uint64_t timestamp = *(const uint64_t*)(key);
+			if (likely(!(m_flag & ITER_FLAG_DESC)))
+				return seekIncrease(timestamp);
+			else
+				return seekDecrease(timestamp);
+		}
+		const void* key() const
+		{
+			return &((const DATABASE_INCREASE::recordHead*)(m_block->getRecordByIdx(m_recordId)))->timestamp;
+		}
+
+	};
+	class appendingBlockCheckpointIterator :public appendingBlockIterator
+	{
+	public:
+		appendingBlockCheckpointIterator(appendingBlock* block, filter* filter, uint32_t flag = 0) :appendingBlockIterator(block, filter, flag)
+		{
+			m_keyType = META::COLUMN_TYPE::T_UINT64;
+		}
+		bool seek(const void* key)//timestamp not increase strictly
+		{
+			uint64_t logOffset = *(const uint64_t*)(key);
+			m_status = status::UNINIT;
+			m_errInfo.clear();
+			if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
+				return false;
+			int _e = m_block->m_recordCount - 1;
+			int s = 0, e = _e, m;
+			while (s <= e)
+			{
+				m = (s + e) >> 1;
+				uint64_t offset = ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset;
+				if (logOffset > offset)
+					s = m + 1;
+				else if (logOffset < offset)
+					e = m - 1;
+				else
+					goto FIND;
+			}
+			if (e < 0)
+				m = 0;
+			if (s >_e)
+				m = _e;
+			if (likely(!(m_flag & ITER_FLAG_DESC)))
+			{
+				if(((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset>= logOffset)
+					goto FIND;
+				if(m!=_e&& ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(++m))->logOffset >= logOffset)
+					goto FIND;
+			}
+			else
+			{
+				if (((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset <= logOffset)
+					goto FIND;
+				if (m != 0 && ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(--m))->logOffset <= logOffset)
+					goto FIND;
+			}
+			return false;
+		FIND:
+			if (likely(!(m_flag & ITER_FLAG_DESC)))
+				m_recordId = m - 1;
+			else
+				m_recordId = m + 1;
+			m_seekedId = m_recordId;
+			if (next() != status::OK)
+			{
+				m_recordId = 0xfffffffeu;
+				return false;
+			}
+			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			m_status = status::OK;
+			return true;
+		}
+		inline const void* key() const
+		{
+			return &((const DATABASE_INCREASE::recordHead*)(m_block->getRecordByIdx(m_recordId)))->logOffset;
+		}
+	};
+	class appendingBlockRecordIdIterator :public appendingBlockIterator
+	{
+	public:
+		appendingBlockRecordIdIterator(appendingBlock* block, filter* filter, uint32_t flag = 0) :appendingBlockIterator(block, filter, flag)
+		{
+			m_keyType = META::COLUMN_TYPE::T_UINT64;
+		}
+		bool seek(const void* key)//timestamp not increase strictly
+		{
+			uint64_t recordId = *(const uint64_t*)(key);
+			m_status = status::UNINIT;
+			m_errInfo.clear();
+			if (m_block == nullptr || m_block->m_minRecordId > recordId || m_block->m_minRecordId + m_block->m_recordCount < recordId)
+				return false;
+			m_recordId = recordId - m_block->m_minRecordId - 1;
+			m_realRecordId = recordId;
+			m_seekedId = m_recordId;
+			if (next() != status::OK)
+			{
+				m_recordId = 0xfffffffeu;
+				return false;
+			}
+			m_status = status::OK;
+			return true;
+		}
+		inline const void* key() const
+		{
+			return &((const DATABASE_INCREASE::recordHead*)(m_block->getRecordByIdx(m_recordId)))->recordId;
+		}
+	};
+	class appendingBlockIndexIterator :public blockIndexIterator
 	{
 	private:
 		appendingIndex* m_index;
 		appendingBlock* m_block;
 		appendingBlock::tableData* m_table;
-		indexIterator<appendingIndex> * indexIter;
+		indexIterator<appendingIndex*> * indexIter;
 	public:
-		appendingBlockIndexIterator(appendingBlock* block, appendingIndex* index);
+		appendingBlockIndexIterator(uint32_t flag,appendingBlock* block, appendingIndex* index);
 		virtual ~appendingBlockIndexIterator()
 		{
 			if (indexIter != nullptr)
 				delete indexIter;
+			m_block->unuse();
 		}
-		bool seek(const void * key , bool equalOrGreater)
+		bool seek(const void * key)
 		{
-			return indexIter->seek(key, equalOrGreater);
+			return indexIter->seek(key);
 		}
 		virtual bool valid()
 		{
-			return indexIter->valid();
+			return indexIter->valid();//todo
 		};
 		virtual status next()
 		{
-			return indexIter->next()? status::OK: status::ENDED;
+			if (m_flag & ITER_FLAG_DESC)
+				return indexIter->prevKey()? status::OK: status::ENDED;
+			else
+				return indexIter->nextKey() ? status::OK : status::ENDED;
 		}
 		virtual const void* key() const
 		{
 			return indexIter->key();
 		}
-		virtual const void* value() const
+		virtual const void* value()
 		{
 			uint32_t recordId = indexIter->value();
 			return m_block->getRecord(recordId);
 		}
-		virtual bool end()
+		virtual bool end()//todo
 		{
 			return false;
 		}

@@ -88,7 +88,7 @@ namespace META {
 		{
 			if (m_count != dest.m_count)
 				return false;
-			for (int idx = 0; idx < m_count; idx++)
+			for (uint32_t idx = 0; idx < m_count; idx++)
 			{
 				if (strcmp(m_array[idx], dest.m_array[idx]) != 0)
 					return false;
@@ -353,11 +353,7 @@ namespace META {
 		}
 #endif
 	};
-	enum class KEY_TYPE {
-		PRIMARY_KEY,
-		UNIQUE_KEY,
-		INDEX
-	};
+
 	struct keyInfo
 	{
 		KEY_TYPE type;
@@ -443,11 +439,13 @@ namespace META {
 		uint16_t m_varColumnCount;
 		uint16_t m_columnsCount;
 		uint64_t m_id;
-		keyInfo m_primaryKey;
+		unionKeyMeta* m_primaryKey;
 		uint16_t m_uniqueKeysCount;
-		keyInfo * m_uniqueKeys;
+		unionKeyMeta** m_uniqueKeys;
+		std::string* m_uniqueKeyNames;
 		uint16_t m_indexCount;
-		keyInfo * m_indexs;
+		unionKeyMeta** m_indexs;
+		std::string* m_indexNames;
 		nameCompare m_nameCompare;
 		void * userData;
 		static inline uint16_t tableVersion(uint64_t tableIDInfo)
@@ -474,6 +472,7 @@ namespace META {
 				return nullptr;
 			return &m_columns[idx];
 		}
+
 		inline const columnMeta * getColumn(const char * columnName) const
 		{
 			for (uint32_t i = 0; i < m_columnsCount; i++)
@@ -487,16 +486,16 @@ namespace META {
 		{
 			for (uint16_t i = 0; i < m_uniqueKeysCount; i++)
 			{
-				if (m_nameCompare.compare(m_uniqueKeys[i].name.c_str(), UniqueKeyname) == 0)
+				if (m_nameCompare.compare(m_uniqueKeyNames[i].c_str(), UniqueKeyname) == 0)
 					return i;
 			}
 			return -1;
 		}
-		inline keyInfo *getUniqueKey(const char *UniqueKeyname)const 
+		inline unionKeyMeta *getUniqueKey(const char *UniqueKeyname)const 
 		{
 			int id = getUniqueKeyId(UniqueKeyname);
 			if (id > 0)
-				return &m_uniqueKeys[id];
+				return m_uniqueKeys[id];
 			else
 				return nullptr;
 		}
@@ -504,16 +503,16 @@ namespace META {
 		{
 			for (uint16_t i = 0; i < m_indexCount; i++)
 			{
-				if (m_nameCompare.compare(m_indexs[i].name.c_str(), indexName) == 0)
+				if (m_nameCompare.compare(m_indexNames[i].c_str(), indexName) == 0)
 					return i;
 			}
 			return -1;
 		}
-		inline keyInfo* getIndex(const char* indexName)const
+		inline unionKeyMeta* getIndex(const char* indexName)const
 		{
 			int id = getIndexId(indexName);
 			if (id > 0)
-				return &m_indexs[id];
+				return m_indexs[id];
 			else
 				return nullptr;
 		}
@@ -521,7 +520,9 @@ namespace META {
 		{
 			return m_nameCompare.compare(database, m_dbName.c_str()) == 0 && m_nameCompare.compare(table, m_tableName.c_str()) == 0;
 		}
+		unionKeyMeta* createUnionKey(uint16_t keyId, KEY_TYPE keyType, const uint16_t* columnIds, uint16_t columnCount);
 		void buildColumnOffsetList();
+		void updateKeysWhenColumnUpdate(int from, int to, COLUMN_TYPE newType);
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
 		int dropColumn(const char *column);
 		int renameColumn(const char* oldName, const char* newName);

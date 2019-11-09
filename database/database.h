@@ -45,12 +45,14 @@ namespace DATABASE
 #endif
 #define REAL_CONF_STRING(c) std::string(m_confPrefix).append(c).c_str()
 #define MAX_FLUSH_THREAD 32
-	class blockManagerIterator;
 	class appendingBlock;
 	class block;
 	class database
 	{
 		friend class databaseIterator;
+		friend class databaseTimestampIterator;
+		friend class databaseCheckpointIterator;
+		friend class databaseRecordIdIterator;
 		friend class threadPool<database, void>;
 	public:
 		enum class BLOCK_MANAGER_STATUS {
@@ -66,6 +68,7 @@ namespace DATABASE
 		std::atomic<int> m_lastFlushedFileID;
 		uint64_t m_maxBlockID;
 		config* m_config;
+		block* m_last;
 		appendingBlock* m_current;
 
 		bufferPool* m_pool;
@@ -95,9 +98,10 @@ namespace DATABASE
 		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
 		DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 	private:
-		int recoveryFromRedo(uint32_t from, uint32_t to);
-		block* updateBasicBlockToSolidBlock(block* b);
+		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t,block*> &recoveried);
+		int pickRedo(std::map<uint32_t, block*>& recoveried, block* from, block* to);
 		block* getBlock(uint32_t blockId);
+		int checkSolidBlock(block* b);
 		block* getBasciBlock(uint32_t blockId);
 		int initConfig();
 		bool createNewBlock();
@@ -105,6 +109,7 @@ namespace DATABASE
 		void flushThread();
 		int purge();
 		int gc();
+		int removeBlock(block* b);
 		static void purgeThread(database* m);
 	public:
 		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
@@ -157,25 +162,24 @@ namespace DATABASE
 		DLL_EXPORT void* allocMemForRecord(META::tableMeta* table, size_t size);
 		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t &logOffset);
 		DLL_EXPORT int compection(bool (*reduce)(const char*));
+		DLL_EXPORT iterator* createIndexIterator(uint32_t flag,const META::tableMeta * table,META::KEY_TYPE type,int keyId );
+		DLL_EXPORT char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};
 	class databaseIterator : public iterator
 	{
-	private:
+	protected:
+		enum class DB_ITER_TYPE {
+			TIMESTAMP_TYPE,
+			CHECKPOINT_TYPE,
+			RECORD_ID_TYPE,
+		};
 		block* m_current;
 		iterator* m_blockIter;
 		database* m_database;
+		DB_ITER_TYPE m_iterType;
 	public:
-		/*
-			find record by timestamp
-			[IN]timestamp ,start time by micro second
-			[IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
-			[IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
-		*/
-		DLL_EXPORT bool seekByTimestamp(uint64_t timestamp, uint32_t interval, bool equalOrAfter);//timestamp not increase strictly,so we have to check all block
-		DLL_EXPORT bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter);
-		DLL_EXPORT bool seekByRecordId(uint64_t recordId);
-		DLL_EXPORT databaseIterator(uint32_t flag, filter* filter, database* db);
-		DLL_EXPORT ~databaseIterator();
+		DLL_EXPORT databaseIterator(uint32_t flag, DB_ITER_TYPE type,filter* filter, database* db);
+		DLL_EXPORT virtual ~databaseIterator();
 		DLL_EXPORT inline bool valid()
 		{
 			return m_database != nullptr && m_current != nullptr && m_blockIter != nullptr;
@@ -185,23 +189,41 @@ namespace DATABASE
 		{
 			return m_blockIter->value();
 		}
+		DLL_EXPORT inline const void* key() const
+		{
+			return m_blockIter->key();
+		}
 		DLL_EXPORT inline bool end()
 		{
 			return m_blockIter==nullptr?true:m_blockIter->end();
 		}
 	};
-	class databaseIndexIterator : public iterator
+	class databaseTimestampIterator :public databaseIterator
 	{
-	private:
-		database* m_database;
-	public:
-		DLL_EXPORT bool seek(const void* key, bool equalOrAfter);
-		DLL_EXPORT databaseIndexIterator(uint32_t flag, database* db);
-		DLL_EXPORT ~databaseIndexIterator();
-		DLL_EXPORT  bool valid()const;
-		DLL_EXPORT status next();
-		DLL_EXPORT  const void* value() const;
-		DLL_EXPORT  bool end() const;
+		databaseTimestampIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::TIMESTAMP_TYPE, filter, db)
+		{
+			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
+		}
+		~databaseTimestampIterator() {}
+		DLL_EXPORT bool seek(const void* key);
+	};
+	class databaseCheckpointIterator :public databaseIterator
+	{
+		databaseCheckpointIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::CHECKPOINT_TYPE, filter, db)
+		{
+			m_keyType = META::COLUMN_TYPE::T_UINT64;
+		}
+		~databaseCheckpointIterator() {}
+		DLL_EXPORT bool seek(const void* key);
+	};
+	class databaseRecordIdIterator :public databaseIterator
+	{
+		databaseRecordIdIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::RECORD_ID_TYPE, filter, db)
+		{
+			m_keyType = META::COLUMN_TYPE::T_UINT64;
+		}
+		~databaseRecordIdIterator() {}
+		DLL_EXPORT bool seek(const void* key);
 	};
 }
 #endif /* BLOCKMANAGER_H_ */

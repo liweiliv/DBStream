@@ -4,6 +4,10 @@ struct ref {
 	std::atomic<int> m_ref;
 	ref():m_ref(0) {
 	}
+	inline void reset()
+	{
+		m_ref.store(0, std::memory_order_release);
+	}
 	inline bool use()
 	{
 		int ref = m_ref.load(std::memory_order_relaxed);

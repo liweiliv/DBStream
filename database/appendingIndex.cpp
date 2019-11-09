@@ -1,10 +1,11 @@
 /*
  * appendingIndex.cpp
  *
- *  Created on: 2019年3月12日
+ *  Created on: 2019年3月12日m_ukMeta.m_size
  *      Author: liwei
  */
 #include "appendingIndex.h"
+#include "solidIndex.h"
 namespace DATABASE {
 
 	void appendingIndex::appendUint8Index(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
@@ -12,16 +13,16 @@ namespace DATABASE {
 		KeyTemplate<uint8_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(uint8_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint8_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(uint8_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint8_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(uint8_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(uint8_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -34,16 +35,17 @@ namespace DATABASE {
 		KeyTemplate<int8_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(int8_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int8_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(int8_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int8_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(int8_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				
+				c.key = *(int8_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -55,16 +57,16 @@ namespace DATABASE {
 		KeyTemplate<uint16_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(uint16_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint16_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(uint16_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint16_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(uint16_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(uint16_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -76,16 +78,16 @@ namespace DATABASE {
 		KeyTemplate<int16_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(int16_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int16_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(int16_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int16_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(int16_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(int16_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -97,16 +99,17 @@ namespace DATABASE {
 		KeyTemplate<uint32_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(uint32_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint32_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(uint32_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint32_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(uint32_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(uint32_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -118,16 +121,16 @@ namespace DATABASE {
 		KeyTemplate<int32_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(int32_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int32_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(int32_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int32_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(int32_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(int32_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -139,16 +142,16 @@ namespace DATABASE {
 		KeyTemplate<uint64_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(uint64_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint64_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(uint64_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(uint64_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(uint64_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(uint64_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -160,16 +163,16 @@ namespace DATABASE {
 		KeyTemplate<int64_t> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(int64_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int64_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(int64_t*)r->column(index->m_columnIdxs[0]);
+			c.key = *(int64_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(int64_t*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(int64_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -181,16 +184,16 @@ namespace DATABASE {
 		KeyTemplate<float> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(float*)r->column(index->m_columnIdxs[0]);
+			c.key = *(float*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(float*)r->column(index->m_columnIdxs[0]);
+			c.key = *(float*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(float*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(float*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -202,16 +205,16 @@ namespace DATABASE {
 		KeyTemplate<double> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key = *(double*)r->column(index->m_columnIdxs[0]);
+			c.key = *(double*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key = *(double*)r->column(index->m_columnIdxs[0]);
+			c.key = *(double*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key = *(double*)r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
+				c.key = *(double*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -220,22 +223,22 @@ namespace DATABASE {
 	}
 	void appendingIndex::appendBinaryIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
 	{
-		KeyTemplate<binaryType> c;
+		KeyTemplate<META::binaryType> c;
 		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE)
 		{
-			c.key.data = r->column(index->m_columnIdxs[0]);
-			c.key.size = r->varColumnSize(index->m_columnIdxs[0]);
+			c.key.data = r->column(index->m_ukMeta->columnInfo[0].columnId);
+			c.key.size = r->varColumnSize(index->m_ukMeta->columnInfo[0].columnId);
 			index->m_varSize += c.key.size + sizeof(uint16_t);
 			appendIndex(index, r, &c, id, false);
 		}
 		else if (r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE)
 		{
-			c.key.data = r->column(index->m_columnIdxs[0]);
+			c.key.data = r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			if (r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				c.key.data = r->oldColumnOfUpdateType(index->m_columnIdxs[0]);
-				c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_columnIdxs[0], c.key.data);
+				c.key.data = r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
+				c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_ukMeta->columnInfo[0].columnId, c.key.data);
 				appendIndex(index, r, &c, id, true);
 			}
 		}
@@ -244,36 +247,31 @@ namespace DATABASE {
 	}
 	void appendingIndex::appendUnionIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
 	{
-		KeyTemplate<unionKey> c;
-		c.key.key = unionKey::initKey(index->m_arena, &index->m_ukMeta, index->m_columnIdxs, index->m_columnCount, r, false);
-		if (!index->m_ukMeta.m_fixed)
-			index->m_varSize += *(uint16_t*)(c.key.key + index->m_ukMeta.m_size + sizeof(uint16_t));
-		c.key.meta = &index->m_ukMeta;
+		KeyTemplate<META::unionKey> c;
+		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
+		c.key.key = index->m_arena->Allocate(size);
+		META::unionKey::initKey((char*)c.key.key,size, index->m_ukMeta, r, false);
+		if (!index->m_ukMeta->fixed)
+			index->m_varSize += *(uint16_t*)(c.key.key + index->m_ukMeta->size + sizeof(uint16_t));
+		c.key.meta = index->m_ukMeta;
 		appendIndex(index, r, &c, id, false);
-		if ((r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE) && r->isKeyUpdated(index->m_columnIdxs, index->m_columnCount))
+		if ((r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE) && r->isKeyUpdated(index->m_ukMeta))
 		{
-			c.key.key = unionKey::initKey(index->m_arena, &index->m_ukMeta, index->m_columnIdxs, index->m_columnCount, r, true);
+			size = META::unionKey::memSize(r, index->m_ukMeta, true);
+			c.key.key = index->m_arena->Allocate(size);
+			META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, true);
 			appendIndex(index, r, &c, id, true);
 		}
 	}
-	appendingIndex::appendingIndex(uint16_t* columnIdxs, uint16_t columnCount, const META::tableMeta* meta, leveldb::Arena* arena) :
-		m_columnIdxs(columnIdxs), m_columnCount(columnCount), m_meta(meta), m_arena(arena), m_localArena(arena == nullptr), m_allCount(0), m_keyCount(0), m_varSize(0)
+	appendingIndex::appendingIndex(const META::unionKeyMeta * ukMeta, const META::tableMeta* meta, leveldb::Arena* arena) :
+		 m_meta(meta), m_arena(arena), m_ukMeta(ukMeta), m_localArena(arena == nullptr), m_allCount(0), m_keyCount(0), m_varSize(0)
 	{
 		if (m_arena == nullptr)
 			m_arena = new leveldb::Arena();
-		if (columnCount > 0)
-		{
-			if (!m_ukMeta.init(columnIdxs, columnCount, meta))
-			{
-				m_type = META::COLUMN_TYPE::T_MAX_TYPE;
-				return;
-			}
+		if(ukMeta->columnCount>1)
 			m_type = META::COLUMN_TYPE::T_UNION;
-		}
 		else
-		{
-			m_type = meta->m_columns[columnIdxs[0]].m_columnType;
-		}
+			m_type = static_cast<META::COLUMN_TYPE>(ukMeta->columnInfo[0].type);
 		switch (m_type)
 		{
 		case META::COLUMN_TYPE::T_INT8:
@@ -319,12 +317,12 @@ namespace DATABASE {
 			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
-			m_comp = new keyComparator<binaryType>;
-			m_index = new leveldb::SkipList< KeyTemplate<binaryType>*, keyComparator<binaryType> >(*static_cast<keyComparator<binaryType>*>(m_comp), m_arena);
+			m_comp = new keyComparator<META::binaryType>;
+			m_index = new leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >(*static_cast<keyComparator<META::binaryType>*>(m_comp), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UNION:
-			m_comp = new keyComparator<unionKey>;
-			m_index = new leveldb::SkipList< KeyTemplate<unionKey>*, keyComparator<unionKey> >(*static_cast<keyComparator<unionKey>*>(m_comp), m_arena);
+			m_comp = new keyComparator<META::unionKey>;
+			m_index = new leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >(*static_cast<keyComparator<META::unionKey>*>(m_comp), m_arena);
 			break;
 		default:
 			abort();
@@ -370,10 +368,10 @@ namespace DATABASE {
 				break;
 			case META::COLUMN_TYPE::T_STRING:
 			case META::COLUMN_TYPE::T_BLOB:
-				delete static_cast<leveldb::SkipList< KeyTemplate<binaryType>*, keyComparator<binaryType> >*>(m_index);
+				delete static_cast<leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_UNION:
-				delete static_cast<leveldb::SkipList< KeyTemplate<unionKey>*, keyComparator<unionKey> >*>(m_index);
+				delete static_cast<leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >*>(m_index);
 				break;
 			default:
 				abort();
@@ -381,7 +379,6 @@ namespace DATABASE {
 		}
 		if (m_localArena && m_arena != nullptr)
 			delete m_arena;
-
 	}
 	typename appendingIndex::appendIndexFunc appendingIndex::m_appendIndexFuncs[] = {
 		appendUnionIndex,
@@ -395,15 +392,17 @@ namespace DATABASE {
 		m_allCount++;
 	}
 	template<>
-	void appendingIndex::createFixedSolidIndex<unionKey>(char* data, appendingIndex::iterator<unionKey>& iter, uint16_t keySize)
+	void appendingIndex::createFixedSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter, uint16_t keySize)
 	{
-		char* indexPos = data + sizeof(uint32_t) * 2, * externCurretPos = indexPos + keySize * m_keyCount;
-		*(uint32_t*)data = m_keyCount;
-		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
+		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + keySize * m_keyCount;
+		((solidIndexHead*)(data))->flag = SOLID_INDEX_FLAG_FIXED;
+		((solidIndexHead*)(data))->length = keySize;
+		((solidIndexHead*)(data))->keyCount = m_keyCount;
+		((solidIndexHead*)(data))->type = static_cast<int8_t>(META::COLUMN_TYPE::T_UNION);
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();
-			memcpy(indexPos, static_cast<const unionKey*>(iter.key())->key, keySize);
+			memcpy(indexPos, static_cast<const META::unionKey*>(iter.key())->key, keySize);
 			if (k->count == 1)
 			{
 				*(uint32_t*)(indexPos + keySize) = k->subArray[0];
@@ -426,11 +425,13 @@ namespace DATABASE {
 		} while (iter.nextKey());
 	}
 	template<>
-	void appendingIndex::createVarSolidIndex<unionKey>(char* data, appendingIndex::iterator<unionKey>& iter)
+	void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
 	{
-		char* indexPos = data + sizeof(uint32_t) * 2, * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
-		*(uint32_t*)data = m_keyCount;
-		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
+		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
+		((solidIndexHead*)(data))->flag = 0;
+		((solidIndexHead*)(data))->length = sizeof(uint32_t);
+		((solidIndexHead*)(data))->keyCount = m_keyCount;
+		((solidIndexHead*)(data))->type = static_cast<int8_t>(META::COLUMN_TYPE::T_UNION);
 		int kc = 0;
 		do
 		{
@@ -438,8 +439,8 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = m_ukMeta.m_size + *(const uint16_t*)(static_cast<const unionKey*>(iter.key())->key + m_ukMeta.m_size);
-			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const unionKey*>(iter.key())->key, *(uint16_t*)externCurretPos);
+			*(uint16_t*)externCurretPos = m_ukMeta->size + *(const uint16_t*)(static_cast<const META::unionKey*>(iter.key())->key + m_ukMeta->size);
+			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::unionKey*>(iter.key())->key, *(uint16_t*)externCurretPos);
 			externCurretPos += sizeof(uint16_t) + *(uint16_t*)externCurretPos;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
@@ -448,19 +449,21 @@ namespace DATABASE {
 		*(uint32_t*)indexPos = externCurretPos - data;
 	}
 	template<>
-	void appendingIndex::createVarSolidIndex<binaryType>(char* data, appendingIndex::iterator<binaryType>& iter)
+	void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
 	{
-		char* indexPos = data + sizeof(uint32_t)*2, * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
-		*(uint32_t*)data = m_keyCount;
-		*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
+		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
+		((solidIndexHead*)(data))->flag = 0;
+		((solidIndexHead*)(data))->length = sizeof(uint32_t);
+		((solidIndexHead*)(data))->keyCount = m_keyCount;
+		((solidIndexHead*)(data))->type = static_cast<int8_t>(META::COLUMN_TYPE::T_BINARY);
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = static_cast<const binaryType*>(iter.key())->size;
-			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const binaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
-			externCurretPos += static_cast<const binaryType*>(iter.key())->size;
+			*(uint16_t*)externCurretPos = static_cast<const META::binaryType*>(iter.key())->size;
+			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::binaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
+			externCurretPos += static_cast<const META::binaryType*>(iter.key())->size;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;

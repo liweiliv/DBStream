@@ -8,17 +8,15 @@ namespace DATABASE {
 	{
 		if (meta != nullptr)
 		{
-			if (meta->m_primaryKey.count > 0)
+			if (meta->m_primaryKey!=nullptr)
 				primaryKey = new appendingIndex(
-					meta->m_primaryKey.keyIndexs,
-					meta->m_primaryKey.count, meta, arena);
+					meta->m_primaryKey, meta, arena);
 			if (meta->m_uniqueKeysCount > 0)
 			{
 				uniqueKeys = new appendingIndex * [meta->m_uniqueKeysCount];
 				for (uint16_t i = 0; i < meta->m_uniqueKeysCount; i++)
 					uniqueKeys[i] = new appendingIndex(
-						meta->m_uniqueKeys[i].keyIndexs,
-						meta->m_uniqueKeys[i].count, meta, arena);
+						meta->m_uniqueKeys[i], meta, arena);
 			}
 		}
 	}
@@ -47,10 +45,9 @@ namespace DATABASE {
 		this->meta = meta;
 		if (meta != nullptr)
 		{
-			if (meta->m_primaryKey.count > 0)
+			if (meta->m_primaryKey!=nullptr)
 				primaryKey = new appendingIndex(
-					meta->m_primaryKey.keyIndexs,
-					meta->m_primaryKey.count, meta, arena);
+					meta->m_primaryKey, meta, arena);
 			else
 				primaryKey = nullptr;
 			if (meta->m_uniqueKeysCount > 0)
@@ -58,8 +55,7 @@ namespace DATABASE {
 				uniqueKeys = new appendingIndex * [meta->m_uniqueKeysCount];
 				for (uint16_t i = 0; i < meta->m_uniqueKeysCount; i++)
 					uniqueKeys[i] = new appendingIndex(
-						meta->m_uniqueKeys[i].keyIndexs,
-						meta->m_uniqueKeys[i].count, meta, arena);
+						meta->m_uniqueKeys[i], meta, arena);
 			}
 			else
 				uniqueKeys = nullptr;
@@ -176,7 +172,7 @@ namespace DATABASE {
 				}
 				break;
 			}
-			if (append(DATABASE_INCREASE::createRecord((const char*)head, m_metaDataCollection)) != B_OK)
+			if (append(DATABASE_INCREASE::createRecord((const char*)head, m_metaDataCollection)) != appendingBlockStaus::B_OK)
 			{
 				LOG(ERROR) << "recoveryFromRedo from redo file of block:" << m_blockID << " failed for append data failed";
 				free(buf);
@@ -193,7 +189,7 @@ namespace DATABASE {
 	appendingBlock::appendingBlockStaus appendingBlock::writeRedo(const char* data)
 	{
 		if (!fileHandleValid(m_redoFd) && 0 != openRedoFile(true))
-			return B_FAULT;
+			return appendingBlockStaus::B_FAULT;
 		DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
 		int64_t writeSize;
 		if (head->minHead.size != (uint64_t)(writeSize = writeFile(m_redoFd, data, head->minHead.size)))
@@ -201,12 +197,12 @@ namespace DATABASE {
 			if (errno == EBADF) //maybe out time or other cause,reopen it
 			{
 				LOG(ERROR) << "write redo file of block:" << m_blockID << " failed for " << strerror(errno) << " reopen it";
-				return B_FAULT;
+				return appendingBlockStaus::B_FAULT;
 			}
 			else
 			{
 				LOG(ERROR) << "write redo file of block :" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return B_FAULT;
+				return appendingBlockStaus::B_FAULT;
 			}
 		}
 		clock_t now;
@@ -220,13 +216,13 @@ namespace DATABASE {
 			if (0 != fsync(m_redoFd))
 			{
 				LOG(ERROR) << "fsync redo file of block:" << m_blockID << " failed for errno:" << errno << ",error info:" << strerror(errno);
-				return B_FAULT;
+				return appendingBlockStaus::B_FAULT;
 			}
 			m_redoUnflushDataSize = 0;
 			m_lastFLushTime = clock();
-			return B_OK;
+			return appendingBlockStaus::B_OK;
 		}
-		return B_OK;
+		return appendingBlockStaus::B_OK;
 	}
 	int appendingBlock::finishRedo()
 	{
@@ -262,20 +258,20 @@ namespace DATABASE {
 		{
 			m_flag |= BLOCK_FLAG_FINISHED;
 			m_cond.wakeUp();
-			return B_FULL;
+			return appendingBlockStaus::B_FULL;
 		}
 		if (unlikely(t->current == nullptr || t->current->pageUsedSize + size > t->current->pageSize))
 		{
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if (t->current == nullptr)
 			{
-				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : (t->meta->m_primaryKey.count > 0 ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageCount || m_size + psize >= m_maxSize)
+				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : (t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageCount || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
-					return B_FULL;
+					return appendingBlockStaus::B_FULL;
 				}
-				m_pageCount += 1 + (t->meta == nullptr ? 0 : t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount);//every index look as a page
+				m_pageCount += 1 + (t->meta == nullptr ? 0 : t->meta->m_primaryKey!=nullptr ? 1 : 0 + t->meta->m_uniqueKeysCount);//every index look as a page
 			}
 			else
 			{
@@ -283,7 +279,7 @@ namespace DATABASE {
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
-					return B_FULL;
+					return appendingBlockStaus::B_FULL;
 				}
 				m_pageCount++;
 			}
@@ -294,7 +290,7 @@ namespace DATABASE {
 			t->pages.append(t->current);
 		}
 		mem = t->current->pageData + t->current->pageUsedSize;
-		return B_OK;
+		return appendingBlockStaus::B_OK;
 	}
 	appendingBlock::appendingBlockStaus appendingBlock::append(const DATABASE_INCREASE::record* record)
 	{
@@ -302,15 +298,15 @@ namespace DATABASE {
 		{
 			LOG(ERROR) << "can not append record to block for record log offset " << record->head->logOffset << "is less than max log offset:" << m_maxLogOffset
 				<< "record type:" << record->head->minHead.type;
-			return B_ILLEGAL;
+			return appendingBlockStaus::B_ILLEGAL;
 		}
 		appendingBlockStaus s;
-		if ((s = copyRecord(record)) != B_OK)
+		if ((s = copyRecord(record)) != appendingBlockStaus::B_OK)
 			return s;
 		if (m_flag & BLOCK_FLAG_HAS_REDO)
 		{
 			appendingBlockStaus rtv;
-			if (B_OK != (rtv = writeRedo(record->data)))
+			if (appendingBlockStaus::B_OK != (rtv = writeRedo(record->data)))
 			{
 				LOG(ERROR) << "write redo log failed";
 				return rtv;
@@ -339,14 +335,14 @@ namespace DATABASE {
 			m_committedRecordID.store(m_recordCount, std::memory_order_release);
 		m_txnId = record->head->txnId;
 		m_cond.wakeUp();
-		return B_OK;
+		return appendingBlockStaus::B_OK;
 	}
-	page* appendingBlock::createSolidIndexPage(appendingIndex* index, uint16_t* columnIdxs, uint16_t columnCount, const META::tableMeta* meta)
+	page* appendingBlock::createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta)
 	{
 		page* p = m_database->allocPage(index->toSolidIndexSize());
-		if (columnCount == 1)
+		if (ukMeta->columnCount == 1)
 		{
-			switch (meta->m_columns[columnIdxs[0]].m_columnType)
+			switch (static_cast<META::COLUMN_TYPE>(ukMeta->columnInfo[0].type))
 			{
 			case META::COLUMN_TYPE::T_INT8:
 				index->toString<int8_t>(p->pageData);
@@ -381,7 +377,7 @@ namespace DATABASE {
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				index->toString<binaryType>(p->pageData);
+				index->toString<META::binaryType>(p->pageData);
 				break;
 			default:
 				abort();
@@ -389,7 +385,7 @@ namespace DATABASE {
 		}
 		else
 		{
-			index->toString<unionKey>(p->pageData);
+			index->toString<META::unionKey>(p->pageData);
 		}
 		p->pageUsedSize = p->pageSize;
 		return p;
@@ -423,10 +419,10 @@ namespace DATABASE {
 			uint16_t keyPageCount = 0;
 			if (t->meta != nullptr)
 			{
-				keyPageCount = t->meta->m_primaryKey.count > 0 ? 1 : 0 + t->meta->m_uniqueKeysCount;
+				keyPageCount = t->meta->m_primaryKey!=nullptr ? 1 : 0 + t->meta->m_uniqueKeysCount;
 				if (t->primaryKey != nullptr)
 				{
-					block->pages[pageId] = createSolidIndexPage(t->primaryKey, t->meta->m_primaryKey.keyIndexs, t->meta->m_primaryKey.count, t->meta);
+					block->pages[pageId] = createSolidIndexPage(t->primaryKey, t->meta->m_primaryKey, t->meta);
 					block->pages[pageId]->pageId = pageId;
 					pageId++;
 				}
@@ -434,7 +430,7 @@ namespace DATABASE {
 				{
 					for (uint16_t idx = 0; idx < t->meta->m_uniqueKeysCount; idx++)
 					{
-						block->pages[pageId] = createSolidIndexPage(t->uniqueKeys[idx], t->meta->m_uniqueKeys[idx].keyIndexs, t->meta->m_uniqueKeys[idx].count, t->meta);
+						block->pages[pageId] = createSolidIndexPage(t->uniqueKeys[idx], t->meta->m_uniqueKeys[idx], t->meta);
 						block->pages[pageId]->pageId = pageId;
 						pageId++;
 					}
@@ -476,37 +472,55 @@ namespace DATABASE {
 		unuse();
 		return block;
 	}
-	appendingBlockIndexIterator::appendingBlockIndexIterator(appendingBlock* block, appendingIndex* index) :iterator(0, nullptr), m_index(index), m_block(block), indexIter(nullptr)
+	blockIndexIterator* appendingBlock::createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId)
+	{
+		if (!use())
+			return nullptr;
+		tableData* tableInfo = getTableData(table->m_id);
+		if (tableInfo == nullptr)
+		{
+			unuse();
+			return nullptr;
+		}
+		appendingIndex* index = getTableIndex(tableInfo, table, type, keyId);
+		if (index == nullptr)
+		{
+			unuse();
+			return nullptr;
+		}
+		return new appendingBlockIndexIterator(flag,this, index);
+	}
+	appendingBlockIndexIterator::appendingBlockIndexIterator(uint32_t flag,appendingBlock* block, appendingIndex* index) :blockIndexIterator(0, nullptr,block->m_blockID), m_index(index), m_block(block), indexIter(nullptr)
 	{
 		m_table = m_block->getTableData(index->getMeta()->m_id);
 		switch (index->getType())
 		{
 		case META::COLUMN_TYPE::T_UNION:
-			indexIter =  new appendingIndex::iterator<unionKey>(index);
+			indexIter =  new appendingIndex::iterator<META::unionKey>(flag,index);
 		case META::COLUMN_TYPE::T_INT8:
-			indexIter =  new appendingIndex::iterator<int8_t>(index);
+			indexIter =  new appendingIndex::iterator<int8_t>(flag,index);
 		case META::COLUMN_TYPE::T_UINT8:
-			indexIter =  new appendingIndex::iterator<uint8_t>(index);
+			indexIter =  new appendingIndex::iterator<uint8_t>(flag,index);
 		case META::COLUMN_TYPE::T_INT16:
-			indexIter =  new appendingIndex::iterator<int16_t>(index);
+			indexIter =  new appendingIndex::iterator<int16_t>(flag,index);
 		case META::COLUMN_TYPE::T_UINT16:
-			indexIter =  new appendingIndex::iterator<uint16_t>(index);
+			indexIter =  new appendingIndex::iterator<uint16_t>(flag,index);
 		case META::COLUMN_TYPE::T_INT32:
-			indexIter =  new appendingIndex::iterator<int32_t>(index);
+			indexIter =  new appendingIndex::iterator<int32_t>(flag,index);
 		case META::COLUMN_TYPE::T_UINT32:
-			indexIter =  new appendingIndex::iterator<uint32_t>(index);
+			indexIter =  new appendingIndex::iterator<uint32_t>(flag,index);
 		case META::COLUMN_TYPE::T_INT64:
-			indexIter =  new appendingIndex::iterator<int64_t>(index);
+			indexIter =  new appendingIndex::iterator<int64_t>(flag,index);
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
-			indexIter =  new appendingIndex::iterator<uint64_t>(index);
+			indexIter =  new appendingIndex::iterator<uint64_t>(flag,index);
 		case META::COLUMN_TYPE::T_FLOAT:
-			indexIter =  new appendingIndex::iterator<float>(index);
+			indexIter =  new appendingIndex::iterator<float>(flag,index);
 		case META::COLUMN_TYPE::T_DOUBLE:
-			indexIter =  new appendingIndex::iterator<double>(index);
+			indexIter =  new appendingIndex::iterator<double>(flag,index);
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
-			indexIter =  new appendingIndex::iterator<binaryType>(index);
+			indexIter =  new appendingIndex::iterator<META::binaryType>(flag,index);
 		default:
 			abort();
 		}

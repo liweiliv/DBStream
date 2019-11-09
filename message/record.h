@@ -470,11 +470,11 @@ namespace DATABASE_INCREASE
 				return !TEST_BITMAP(nullBitmap, index);
 			}
 		}
-		inline bool isKeyUpdated(const uint16_t* key, uint16_t keyColumnCount) const
+		inline bool isKeyUpdated(const META::unionKeyMeta *key) const
 		{
-			for (uint16_t idx = 0; idx < keyColumnCount; idx++)
+			for (uint16_t idx = 0; idx < key->columnCount; idx++)
 			{
-				if (TEST_BITMAP(updatedBitmap, key[idx]))
+				if (TEST_BITMAP(updatedBitmap, key->columnInfo[idx].columnId))
 					return true;
 			}
 			return false;

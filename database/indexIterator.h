@@ -8,19 +8,17 @@ namespace DATABASE
 	class indexIterator
 	{
 	protected:
-		INDEX_TYPE* index;
+		uint32_t flag;
+		INDEX_TYPE index;
 		META::COLUMN_TYPE type;
-		const unionKeyMeta* ukMeta;
 		const uint32_t* recordIds;
 		uint32_t idChildCount;
 		uint32_t innerIndexId;
 	public:
-		indexIterator(INDEX_TYPE* index ,META::COLUMN_TYPE type, const unionKeyMeta* ukMeta = nullptr) :index(index), type(type), ukMeta(ukMeta),recordIds(nullptr), idChildCount(0), innerIndexId(0)
+		indexIterator(uint32_t flag,INDEX_TYPE index ,META::COLUMN_TYPE type) :flag(flag),index(index), type(type),recordIds(nullptr), idChildCount(0), innerIndexId(0)
 		{
-			if (type == META::COLUMN_TYPE::T_UNION)
-				assert(ukMeta != nullptr);
 		}
-		indexIterator(const indexIterator& iter) :index(iter.index), type(iter.type), ukMeta(iter.ukMeta),recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}
+		indexIterator(const indexIterator& iter) :flag(iter.flag),index(iter.index), type(iter.type),recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}
 		indexIterator& operator=(const indexIterator& iter)
 		{
 			key = iter.key;
@@ -31,7 +29,7 @@ namespace DATABASE
 		virtual ~indexIterator() {}
 		virtual bool begin() = 0;
 		virtual bool rbegin() = 0;
-		virtual bool seek(const void * key, bool equalOrGreater) = 0;
+		virtual bool seek(const void * key) = 0;
 		virtual inline bool valid()const
 		{
 			return recordIds != nullptr && innerIndexId < idChildCount;

@@ -97,7 +97,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #meta
 #aux_source_directory(meta metaDir)
 #add_library(meta SHARED ${metaDir})
-add_library(meta SHARED meta/metaData.cpp meta/charset.cpp)
+add_library(meta SHARED meta/metaData.cpp meta/charset.cpp meta/columnType.cpp)
 TARGET_LINK_LIBRARIES(meta util thread sqlParser ${GLOG})
 
 #sql parser
@@ -250,6 +250,8 @@ ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 ADD_EXECUTABLE(testString util/unittest/testString.cpp)
 TARGET_LINK_LIBRARIES(testString util)
 
+ADD_EXECUTABLE(testHeap util/unittest/testHeap.cpp)
+TARGET_LINK_LIBRARIES(testHeap util)
 
 ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
 TARGET_LINK_LIBRARIES(testRingFixedQueue util)

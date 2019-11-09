@@ -9,13 +9,13 @@
 #define APPENDINGINDEX_H_
 #include <stdint.h>
 #include <string.h>
-#include "indexInfo.h"
 #include "util/skiplist.h"
 #include "meta/metaData.h"
 #include "message/record.h"
 #include "iterator.h"
 #include "meta/columnType.h"
 #include "indexIterator.h"
+#include "solidIndex.h"
 namespace DATABASE {
 	/*every key may have multi record in one block,use keyChildInfo to save those records*/
 	struct keyChildInfo {
@@ -75,10 +75,8 @@ namespace DATABASE {
 	private:
 		META::COLUMN_TYPE m_type;
 		void * m_index;
-		uint16_t *m_columnIdxs;
-		uint16_t m_columnCount;
 		const META::tableMeta* m_meta;
-		unionKeyMeta  m_ukMeta;
+		const META::unionKeyMeta *m_ukMeta;
 		leveldb::Arena *m_arena;
 		bool m_localArena;
 		void* m_comp;
@@ -131,7 +129,7 @@ namespace DATABASE {
 	public:
 		static appendIndexFunc m_appendIndexFuncs[];
 	public:
-		appendingIndex(uint16_t *columnIdxs, uint16_t columnCount, const META::tableMeta * meta, leveldb::Arena *arena = nullptr);
+		appendingIndex(const META::unionKeyMeta * ukMeta, const META::tableMeta * meta, leveldb::Arena *arena = nullptr);
 		~appendingIndex();
 		inline uint32_t getKeyCount()
 		{
@@ -141,20 +139,33 @@ namespace DATABASE {
 		{
 			return m_type;
 		}
-		inline const unionKeyMeta* getUkMeta() {
-			return &m_ukMeta;
+		inline  const META::unionKeyMeta* getUkMeta() {
+			return m_ukMeta;
 		}
 		inline const META::tableMeta* getMeta() {
 			return m_meta;
 		}
-
+		template<typename T>
+		inline int32_t find(const void * key)
+		{
+			KeyTemplate<T> k;
+			k.key = *static_cast<const T*>(key);
+			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator iter(static_cast<leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >*>(m_index));
+			iter.Seek(&k);
+			if (!iter.Valid() || iter.key()->key > * static_cast<const T*>(key))
+				return -1;
+			else
+				k = *(KeyTemplate<T>*)iter.key();
+			int count = k.child.count;
+			return k.child.subArray[count-1];
+		}
 		void append(const DATABASE_INCREASE::DMLRecord  * r, uint32_t id);
 		template <typename T>
-		class iterator:public indexIterator<appendingIndex> {
+		class iterator:public indexIterator<appendingIndex*> {
 		private:
 			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator m_iter;
 		public:
-			iterator(appendingIndex* index) :indexIterator<appendingIndex>(index, index->m_type, &index->m_ukMeta), m_iter(nullptr)
+			iterator(uint32_t flag,appendingIndex* index) :indexIterator<appendingIndex*>(flag,index, index->m_type), m_iter(nullptr)
 			{
 			}
 			inline bool begin()
@@ -181,20 +192,50 @@ namespace DATABASE {
 			{
 				return m_iter.Valid();
 			}
-			inline bool seek(const void* key, bool equalOrGreater)
+			inline bool seekIncrease(KeyTemplate<T>& k)
 			{
-				KeyTemplate<T> k;
-				k.key = *static_cast<const T*>(key);
 				m_iter.Seek(&k);
-				if (!m_iter.Valid() || m_iter.key()->key > *static_cast<const T*>(key))
-					return false;
-				if (equalOrGreater && m_iter.key()->key != *static_cast<const T*>(key))
+				if (!m_iter.Valid())
 					return false;
 				if (0 == m_iter.key()->child.count)
 					return false;
 				idChildCount = m_iter.key()->child.count;
 				innerIndexId = idChildCount - 1;
 				return true;
+			}
+			inline bool seekDecrease(KeyTemplate<T>& k)
+			{
+				m_iter.Seek(&k);
+				if (!m_iter.Valid() )
+				{
+					m_iter.SeekToLast();
+					if (!m_iter.Valid())
+						return false;
+					if (m_iter.key()->key > k.key)
+						return false;
+				}
+				else if (m_iter.key()->key > k.key)
+				{
+					m_iter.Prev();
+					if (!m_iter.Valid())
+						return false;
+					if (m_iter.key()->key > k.key)
+						return false;
+				}
+				if (0 == m_iter.key()->child.count)
+					return false;
+				idChildCount = m_iter.key()->child.count;
+				innerIndexId = idChildCount - 1;
+				return true;
+			}
+			inline bool seek(const void* key)
+			{
+				KeyTemplate<T> k;
+				k.key = *static_cast<const T*>(key);
+				if (likely(!(flag & ITER_FLAG_DESC)))
+					return seekIncrease(k);
+				else
+					return seekDecrease(k);
 			}
 			inline bool nextKey()
 			{
@@ -235,9 +276,11 @@ namespace DATABASE {
 		template<typename T>
 		void createFixedSolidIndex(char * data, iterator<T> &iter, uint16_t keySize)
 		{
-			char * indexPos = data + sizeof(uint32_t)*2, *externCurretPos = indexPos + keySize * m_keyCount;
-			*(uint32_t*)data = m_keyCount;
-			*(uint32_t*)(data + sizeof(uint32_t)) = static_cast<int>(m_type);
+			char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + keySize * m_keyCount;
+			((solidIndexHead*)(data))->flag = SOLID_INDEX_FLAG_FIXED;
+			((solidIndexHead*)(data))->length = keySize;
+			((solidIndexHead*)(data))->keyCount = m_keyCount;
+			((solidIndexHead*)(data))->type = static_cast<int8_t>(m_type);
 			do
 			{
 				const keyChildInfo * k = iter.keyDetail();
@@ -274,15 +317,15 @@ namespace DATABASE {
 			uint32_t size = 0;
 			uint16_t keySize = 0;
 			bool fixed = false;
-			if (m_columnCount == 1)
+			if (m_ukMeta->columnCount == 1)
 			{
-				keySize = META::columnInfos[static_cast<int>(m_meta->m_columns[m_columnIdxs[0]].m_columnType)].columnTypeSize;
-				fixed = META::columnInfos[static_cast<int>(m_meta->m_columns[m_columnIdxs[0]].m_columnType)].fixed;
+				keySize = META::columnInfos[m_ukMeta->columnInfo[0].type].columnTypeSize;
+				fixed = META::columnInfos[m_ukMeta->columnInfo[0].type].fixed;
 			}
 			else
 			{
-				keySize = m_ukMeta.m_size;
-				fixed = m_ukMeta.m_fixed;
+				keySize = m_ukMeta->size;
+				fixed = m_ukMeta->fixed;
 			}
 			if (fixed)
 				size = 2 * sizeof(uint32_t) + (keySize + sizeof(uint32_t)) * m_keyCount + sizeof(uint32_t) * (m_allCount - m_keyCount) * 2;
@@ -295,17 +338,17 @@ namespace DATABASE {
 		{
 			uint16_t keySize = 0;
 			bool fixed = false;
-			if (m_columnCount == 1)
+			if (m_ukMeta->columnCount == 1)
 			{
-				keySize = META::columnInfos[static_cast<int>(m_meta->m_columns[m_columnIdxs[0]].m_columnType)].columnTypeSize;
-				fixed = META::columnInfos[static_cast<int>(m_meta->m_columns[m_columnIdxs[0]].m_columnType)].fixed;
+				keySize = META::columnInfos[m_ukMeta->columnInfo[0].type].columnTypeSize;
+				fixed = META::columnInfos[m_ukMeta->columnInfo[0].type].fixed;
 			}
 			else
 			{
-				keySize = m_ukMeta.m_size;
-				fixed = m_ukMeta.m_fixed;
+				keySize = m_ukMeta->size;
+				fixed = m_ukMeta->fixed;
 			}
-			iterator<T> iter(this);
+			iterator<T> iter(0,this);
 			if (!iter.begin() || !iter.valid())
 				return nullptr;//no data
 			if (data == nullptr)
@@ -318,11 +361,11 @@ namespace DATABASE {
 		}
 	};
 	template<>
-	void appendingIndex::createFixedSolidIndex<unionKey>(char * data, appendingIndex::iterator<unionKey> &iter, uint16_t keySize);
+	void appendingIndex::createFixedSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter, uint16_t keySize);
 	template<>
-	void appendingIndex::createVarSolidIndex<unionKey>(char * data, appendingIndex::iterator<unionKey> &iter);
+	void appendingIndex::createVarSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter);
 	template<>
-	void appendingIndex::createVarSolidIndex<binaryType>(char * data, appendingIndex::iterator<binaryType> &iter);
+	void appendingIndex::createVarSolidIndex<META::binaryType>(char * data, appendingIndex::iterator<META::binaryType> &iter);
 }
 #endif /* APPENDINGINDEX_H_ */
 
