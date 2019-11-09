@@ -3,6 +3,7 @@
 #include "util/winDll.h"
 #include <string.h>
 #include <stdlib.h>
+#include <algorithm>
 namespace DATABASE_INCREASE {
 	struct DMLRecord;
 }
@@ -96,14 +97,6 @@ namespace META {
 		uint8_t type;
 		uint16_t columnId;
 	};
-#ifndef max
-#define max(a,b)            (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef min
-#define min(a,b)            (((a) < (b)) ? (a) : (b))
-#endif
-
 	struct unionKeyMeta
 	{
 		uint16_t columnCount;
@@ -131,7 +124,7 @@ namespace META {
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
-				if (columnInfo[i].columnId<min(from, to) || columnInfo[i].columnId > min(from, to))
+				if (columnInfo[i].columnId<std::min(from, to) || columnInfo[i].columnId > std::min(from, to))
 					continue;
 				else if (columnInfo[i].columnId == from)
 				{

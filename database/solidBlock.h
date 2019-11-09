@@ -46,8 +46,8 @@ namespace DATABASE
 		friend class solidBlockIterator;
 		friend class solidBlockTimestampIterator;
 		friend class solidBlockCheckpointIterator;
-		friend class solidBlockIndexIterator<fixedSolidIndex>;
-		friend class solidBlockIndexIterator<varSolidIndex>;
+		//friend class solidBlockIndexIterator<fixedSolidIndex>;
+		//friend class solidBlockIndexIterator<varSolidIndex>;
 	public:
 		solidBlock(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
@@ -241,7 +241,7 @@ public:
 			return &m_realRecordId;
 		}
 	};
-	template<typename INDEX_TYPE>
+	template<class INDEX_TYPE>
 	class solidBlockIndexIterator :public blockIndexIterator
 	{
 	private:
@@ -250,49 +250,49 @@ public:
 		indexIterator<INDEX_TYPE>* indexIter;
 		uint32_t currentPageId;
 	public:
-		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), currentPageId(0)
+		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), currentPageId(0)
 		{
 			switch (index.getType())
 			{
 			case META::COLUMN_TYPE::T_UNION:
 			{
-				indexIter = new solidIndexIterator<META::unionKey, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<META::unionKey, INDEX_TYPE>(flag,&m_index);
 				break;
 			}
 			case META::COLUMN_TYPE::T_INT8:
-				indexIter = new solidIndexIterator<int8_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<int8_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT8:
-				indexIter = new solidIndexIterator<uint8_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<uint8_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT16:
-				indexIter = new solidIndexIterator<int16_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<int16_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
-				indexIter = new solidIndexIterator<uint16_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<uint16_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT32:
-				indexIter = new solidIndexIterator<int32_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<int32_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT32:
-				indexIter = new solidIndexIterator<uint32_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<uint32_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT64:
-				indexIter = new solidIndexIterator<int64_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<int64_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			case META::COLUMN_TYPE::T_UINT64:
-				indexIter = new solidIndexIterator<uint64_t, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<uint64_t, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_FLOAT:
-				indexIter = new solidIndexIterator<float, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<float, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_DOUBLE:
-				indexIter = new solidIndexIterator<double, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<double, INDEX_TYPE>(flag,&m_index);
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				indexIter = new solidIndexIterator<META::binaryType, INDEX_TYPE>(flag,index);
+				indexIter = new solidIndexIterator<META::binaryType, INDEX_TYPE>(flag,&m_index);
 				break;
 			default:
 				abort();

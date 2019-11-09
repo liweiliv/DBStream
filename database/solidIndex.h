@@ -23,67 +23,7 @@ namespace DATABASE {
 		{
 			abort();//not use this
 		}
-		template<>
-		int find(const META::binaryType& d, bool equalOrGreater)const
-		{
-			int32_t s = 0, e = head->keyCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) > 1;
-				const char* idx = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
-				META::binaryType _m(idx + sizeof(uint16_t), *(uint16_t*)idx);
-				int c = d.compare(_m);
-				if (c > 0)
-				{
-					s = m + 1;
-				}
-				else if (c < 0)
-				{
-					e = m - 1;
-				}
-				else
-				{
-					return m;
-				}
-			}
-			if (equalOrGreater)
-				return -1;
-			if (e < 0)
-				return 0;
-			if (s < head->keyCount)
-				return s;
-		}
-		template<>
-		int find(const META::unionKey& d, bool equalOrGreater)const
-		{
-			int32_t s = 0, e = head->keyCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) > 1;
-				META::unionKey _m;
-				_m.key = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
-				_m.meta = d.meta;//todo 
-				int c = d.compare(_m);
-				if (c > 0)
-				{
-					s = m + 1;
-				}
-				else if (c < 0)
-				{
-					e = m - 1;
-				}
-				else
-				{
-					return m;
-				}
-			}
-			if (equalOrGreater)
-				return -1;
-			if (e < 0)
-				return 0;
-			if (s < head->keyCount)
-				return s;
-		}
+
 		inline const void* key(uint32_t idx)const
 		{
 			return ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(uint32_t)))[idx];
@@ -130,6 +70,67 @@ namespace DATABASE {
 			return static_cast<META::COLUMN_TYPE>(head->type);
 		}
 	};
+	template<>
+			int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const
+			{
+				int32_t s = 0, e = head->keyCount - 1, m;
+				while (s <= e)
+				{
+					m = (s + e) > 1;
+					const char* idx = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
+					META::binaryType _m(idx + sizeof(uint16_t), *(uint16_t*)idx);
+					int c = d.compare(_m);
+					if (c > 0)
+					{
+						s = m + 1;
+					}
+					else if (c < 0)
+					{
+						e = m - 1;
+					}
+					else
+					{
+						return m;
+					}
+				}
+				if (equalOrGreater)
+					return -1;
+				if (e < 0)
+					return 0;
+				if (s < head->keyCount)
+					return s;
+			}
+			template<>
+			int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
+			{
+				int32_t s = 0, e = head->keyCount - 1, m;
+				while (s <= e)
+				{
+					m = (s + e) > 1;
+					META::unionKey _m;
+					_m.key = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
+					_m.meta = d.meta;//todo
+					int c = d.compare(_m);
+					if (c > 0)
+					{
+						s = m + 1;
+					}
+					else if (c < 0)
+					{
+						e = m - 1;
+					}
+					else
+					{
+						return m;
+					}
+				}
+				if (equalOrGreater)
+					return -1;
+				if (e < 0)
+					return 0;
+				if (s < head->keyCount)
+					return s;
+			}
 	struct fixedSolidIndex
 	{
 		solidIndexHead* head;
@@ -165,96 +166,7 @@ namespace DATABASE {
 			if (s < (int)head->keyCount)
 				return s;
 		}
-		template<>
-		int find(const META::unionKey& d, bool equalOrGreater)const
-		{
-			int32_t s = 0, e = head->keyCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) > 1;
-				const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-				META::unionKey _m;
-				_m.key = idx;
-				_m.meta = d.meta;//todo
-				int c = d.compare(_m);
-				if (c > 0)
-				{
-					s = m + 1;
-				}
-				else if (c < 0)
-				{
-					e = m - 1;
-				}
-				else
-				{
-					return m;
-				}
-			}
-			if (equalOrGreater)
-				return -1;
-			if (e < 0)
-				return 0;
-			if (s < head->keyCount)
-				return s;
-		}
-		template<>
-		int find(const float& d, bool equalOrGreater)const 
-		{
-			int32_t s = 0, e = head->keyCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) > 1;
-				const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-				float _m = *(float*)idx;
-				if (d - _m > 0.00001f)
-				{
-					s = m + 1;
-				}
-				else if (_m - d > 0.00001f)
-				{
-					e = m - 1;
-				}
-				else
-				{
-					return m;
-				}
-			}
-			if (equalOrGreater)
-				return -1;
-			if (e < 0)
-				return 0;
-			if (s < head->keyCount)
-				return s;
-		}
-		template<>
-		int find(const double& d, bool equalOrGreater)const
-		{
-			int32_t s = 0, e = head->keyCount - 1, m;
-			while (s <= e)
-			{
-				m = (s + e) > 1;
-				const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-				double _m = *(double*)idx;
-				if (d - _m > 0.0000000001f)
-				{
-					s = m + 1;
-				}
-				else if (_m - d > 0.0000000001f)
-				{
-					e = m - 1;
-				}
-				else
-				{
-					return m;
-				}
-			}
-			if (equalOrGreater)
-				return -1;
-			if (e < 0)
-				return 0;
-			if (s < head->keyCount)
-				return s;
-		}
+
 		inline uint32_t getKeyCount()const
 		{
 			return head->keyCount;
@@ -312,19 +224,113 @@ namespace DATABASE {
 		}
 
 	};
+	template<>
+			int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
+			{
+				int32_t s = 0, e = head->keyCount - 1, m;
+				while (s <= e)
+				{
+					m = (s + e) > 1;
+					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
+					META::unionKey _m;
+					_m.key = idx;
+					_m.meta = d.meta;//todo
+					int c = d.compare(_m);
+					if (c > 0)
+					{
+						s = m + 1;
+					}
+					else if (c < 0)
+					{
+						e = m - 1;
+					}
+					else
+					{
+						return m;
+					}
+				}
+				if (equalOrGreater)
+					return -1;
+				if (e < 0)
+					return 0;
+				if (s < head->keyCount)
+					return s;
+			}
+			template<>
+			int fixedSolidIndex::find(const float& d, bool equalOrGreater)const
+			{
+				int32_t s = 0, e = head->keyCount - 1, m;
+				while (s <= e)
+				{
+					m = (s + e) > 1;
+					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
+					float _m = *(float*)idx;
+					if (d - _m > 0.00001f)
+					{
+						s = m + 1;
+					}
+					else if (_m - d > 0.00001f)
+					{
+						e = m - 1;
+					}
+					else
+					{
+						return m;
+					}
+				}
+				if (equalOrGreater)
+					return -1;
+				if (e < 0)
+					return 0;
+				if (s < head->keyCount)
+					return s;
+			}
+			template<>
+			int fixedSolidIndex::find(const double& d, bool equalOrGreater)const
+			{
+				int32_t s = 0, e = head->keyCount - 1, m;
+				while (s <= e)
+				{
+					m = (s + e) > 1;
+					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
+					double _m = *(double*)idx;
+					if (d - _m > 0.0000000001f)
+					{
+						s = m + 1;
+					}
+					else if (_m - d > 0.0000000001f)
+					{
+						e = m - 1;
+					}
+					else
+					{
+						return m;
+					}
+				}
+				if (equalOrGreater)
+					return -1;
+				if (e < 0)
+					return 0;
+				if (s < head->keyCount)
+					return s;
+			}
 	template<class T, class INDEX_TYPE>
 	class solidIndexIterator :public indexIterator<INDEX_TYPE>
 	{
 	private:
 		uint32_t indexId;
 	public:
-		solidIndexIterator(uint32_t flag,INDEX_TYPE index) :indexIterator<INDEX_TYPE>(flag,index, static_cast<META::COLUMN_TYPE>(index.head->type)), indexId(0)
+		solidIndexIterator(uint32_t flag,INDEX_TYPE index) :indexIterator<INDEX_TYPE>(flag,index, static_cast<META::COLUMN_TYPE>(index->head->type)),indexId(0)
 		{
 		}
-		virtual ~solidIndexIterator() {}
+		virtual ~solidIndexIterator()
+		{
+			if(index!=nullptr)
+				delete index;
+		}
 		virtual bool begin()
 		{
-			if (!index.begin(recordIds, idChildCount))
+			if (!index->begin(recordIds, idChildCount))
 				return false;
 			indexId = 0;
 			innerIndexId = idChildCount - 1;
@@ -332,10 +338,10 @@ namespace DATABASE {
 		}
 		virtual bool rbegin()
 		{
-			if (index.getKeyCount() == 0)
+			if (index->getKeyCount() == 0)
 				return false;
-			indexId = index.getKeyCount() - 1;
-			index.getRecordIdByIndex(indexId, recordIds, idChildCount);
+			indexId = index->getKeyCount() - 1;
+			index->getRecordIdByIndex(indexId, recordIds, idChildCount);
 			innerIndexId = idChildCount - 1;
 			return true;
 		}
@@ -348,17 +354,17 @@ namespace DATABASE {
 					return false;
 				else
 				{
-					if (0 == (_indexId = index.getKeyCount()))
+					if (0 == (_indexId = index->getKeyCount()))
 						return false;
 					_indexId --;
-					const void* _key = index.getKey(_indexId);
+					const void* _key = index->getKey(_indexId);
 					if (*(const T*)(_key) > * (const T*)(key))
 						return false;
 				}
 			}
 			else
 			{
-				const void* _key = index.getKey(_indexId);
+				const void* _key = index->getKey(_indexId);
 				if ((flag & ITER_FLAG_DESC)&&*(const T*)(_key) > * (const T*)(key))
 				{
 					if (_indexId == 0)
@@ -368,20 +374,20 @@ namespace DATABASE {
 				}
 			}
 			indexId = _indexId;
-			index.getRecordIdByIndex(indexId, recordIds, idChildCount);
+			index->getRecordIdByIndex(indexId, recordIds, idChildCount);
 			toLastValueOfKey();
 			return true;
 		}
 		virtual inline const void* key()const
 		{
-			return index.getKey(indexId);
+			return index->getKey(indexId);
 		}
 		virtual inline bool nextKey()
 		{
 			if (indexId + 1 < this->index.getKeyCount())
 			{
 				indexId++;
-				index.getRecordIdByIndex(indexId, recordIds, idChildCount);
+				index->getRecordIdByIndex(indexId, recordIds, idChildCount);
 				innerIndexId = idChildCount - 1;
 				return true;
 			}
@@ -393,7 +399,7 @@ namespace DATABASE {
 			if (indexId >= 1)
 			{
 				indexId--;
-				index.getRecordIdByIndex(indexId, recordIds, idChildCount);
+				index->getRecordIdByIndex(indexId, recordIds, idChildCount);
 				innerIndexId = idChildCount - 1;
 				return true;
 			}

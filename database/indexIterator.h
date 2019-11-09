@@ -9,13 +9,13 @@ namespace DATABASE
 	{
 	protected:
 		uint32_t flag;
-		INDEX_TYPE index;
+		INDEX_TYPE* index;
 		META::COLUMN_TYPE type;
 		const uint32_t* recordIds;
 		uint32_t idChildCount;
 		uint32_t innerIndexId;
 	public:
-		indexIterator(uint32_t flag,INDEX_TYPE index ,META::COLUMN_TYPE type) :flag(flag),index(index), type(type),recordIds(nullptr), idChildCount(0), innerIndexId(0)
+		indexIterator(uint32_t flag,INDEX_TYPE* index ,META::COLUMN_TYPE type) :flag(flag),index(index), type(type),recordIds(nullptr), idChildCount(0), innerIndexId(0)
 		{
 		}
 		indexIterator(const indexIterator& iter) :flag(iter.flag),index(iter.index), type(iter.type),recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}

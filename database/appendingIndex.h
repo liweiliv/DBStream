@@ -161,11 +161,11 @@ namespace DATABASE {
 		}
 		void append(const DATABASE_INCREASE::DMLRecord  * r, uint32_t id);
 		template <typename T>
-		class iterator:public indexIterator<appendingIndex*> {
+		class iterator:public indexIterator<appendingIndex> {
 		private:
 			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator m_iter;
 		public:
-			iterator(uint32_t flag,appendingIndex* index) :indexIterator<appendingIndex*>(flag,index, index->m_type), m_iter(nullptr)
+			iterator(uint32_t flag,appendingIndex* index) :indexIterator<appendingIndex>(flag,index, index->m_type), m_iter(static_cast<leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >*>(index->m_index))
 			{
 			}
 			inline bool begin()

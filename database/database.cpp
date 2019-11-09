@@ -287,30 +287,42 @@ namespace DATABASE {
 		{
 		case META::COLUMN_TYPE::T_UNION:
 			CREATE_KWEY_ITER(META::unionKey, flag);
+			break;
 		case META::COLUMN_TYPE::T_INT8:
 			CREATE_KWEY_ITER(int8_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_UINT8:
 			CREATE_KWEY_ITER(uint8_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_INT16:
 			CREATE_KWEY_ITER(int16_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_UINT16:
 			CREATE_KWEY_ITER(uint16_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_INT32:
 			CREATE_KWEY_ITER(int32_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_UINT32:
 			CREATE_KWEY_ITER(uint32_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_INT64:
 			CREATE_KWEY_ITER(int64_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
 			CREATE_KWEY_ITER(uint64_t, flag);
+			break;
 		case META::COLUMN_TYPE::T_FLOAT:
 			CREATE_KWEY_ITER(float, flag);
+			break;
 		case META::COLUMN_TYPE::T_DOUBLE:
 			CREATE_KWEY_ITER(double, flag);
+			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
 			CREATE_KWEY_ITER(META::binaryType, flag);
+			break;
 		default:
 			abort();
 		}

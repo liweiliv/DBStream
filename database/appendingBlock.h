@@ -650,7 +650,7 @@ namespace DATABASE
 		appendingIndex* m_index;
 		appendingBlock* m_block;
 		appendingBlock::tableData* m_table;
-		indexIterator<appendingIndex*> * indexIter;
+		indexIterator<appendingIndex> * indexIter;
 	public:
 		appendingBlockIndexIterator(uint32_t flag,appendingBlock* block, appendingIndex* index);
 		virtual ~appendingBlockIndexIterator()

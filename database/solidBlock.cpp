@@ -1,4 +1,5 @@
 #include "solidBlock.h"
+#include "solidIndex.h"
 namespace DATABASE
 {
 	int solidBlock::load(int id)
@@ -466,9 +467,9 @@ namespace DATABASE
 		}
 		const solidIndexHead* head = (const solidIndexHead*)(p->pageData);
 		if (head->flag & SOLID_INDEX_FLAG_FIXED)
-			return new solidBlockIndexIterator<fixedSolidIndex>(flag,this, fixedSolidIndex(p->pageData));
+			return new solidBlockIndexIterator<fixedSolidIndex>(flag,this,  fixedSolidIndex(p->pageData));
 		else
-			return new solidBlockIndexIterator<varSolidIndex>(flag,this, varSolidIndex(p->pageData));
+			return new solidBlockIndexIterator<varSolidIndex>(flag,this,  varSolidIndex(p->pageData));
 	}
 	char* solidBlock::getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
 	{
