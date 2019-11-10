@@ -121,7 +121,7 @@ namespace DATABASE
 		DLL_EXPORT void commit();;
 		DLL_EXPORT inline void genBlockFileName(uint64_t id,char *fileName)
 		{
-			sprintf(fileName, "%s%s%s.%llu", m_logDir, separatorChar, m_logPrefix,id);
+			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);
 		}
 		DLL_EXPORT int start()//todo
 		{

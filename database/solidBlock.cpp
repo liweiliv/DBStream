@@ -103,7 +103,7 @@ namespace DATABASE
 		for (uint16_t idx = 0; idx < m_pageCount; idx++)
 		{
 			pages[idx] = (page*)m_database->allocMem(sizeof(page));
-			memcpy(pages[idx], pos, offsetof(page, _ref));
+			memcpy((void*)pages[idx], pos, offsetof(page, _ref));
 			pos += offsetof(page, _ref);
 		}
 		m_flag |= BLOCK_FLAG_FLUSHED;
@@ -406,6 +406,8 @@ namespace DATABASE
 		}
 		case META::KEY_TYPE::INDEX:
 			return -1;
+		default:
+			return -1;
 		}
 	}
 	int solidBlock::gc()
@@ -424,9 +426,11 @@ namespace DATABASE
 			unuse();
 			return nullptr;
 		}
-		const META::unionKeyMeta * key;
-		if (type == META::KEY_TYPE::PRIMARY_KEY)
-			key = table->m_primaryKey;
+		if (type == META::KEY_TYPE::PRIMARY_KEY&&table->m_primaryKey==nullptr)
+		{
+			unuse();
+			return nullptr;
+		}
 		else if (type == META::KEY_TYPE::UNIQUE_KEY)
 		{
 			if (table->m_uniqueKeysCount <= keyId)
@@ -434,7 +438,6 @@ namespace DATABASE
 				unuse();
 				return nullptr;
 			}
-			key = table->m_uniqueKeys[keyId];
 		}
 		else
 		{
@@ -467,9 +470,15 @@ namespace DATABASE
 		}
 		const solidIndexHead* head = (const solidIndexHead*)(p->pageData);
 		if (head->flag & SOLID_INDEX_FLAG_FIXED)
-			return new solidBlockIndexIterator<fixedSolidIndex>(flag,this,  fixedSolidIndex(p->pageData));
+		{
+			fixedSolidIndex sidx(p->pageData);
+			return new solidBlockIndexIterator<fixedSolidIndex>(flag,this, sidx);
+		}
 		else
-			return new solidBlockIndexIterator<varSolidIndex>(flag,this,  varSolidIndex(p->pageData));
+		{
+			varSolidIndex vidx(p->pageData);
+			return new solidBlockIndexIterator<varSolidIndex>(flag,this,  vidx);
+		}
 	}
 	char* solidBlock::getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
 	{
@@ -648,13 +657,13 @@ namespace DATABASE
 		}
 		if (e < 0)
 			m = 0;
-		if (s > m_block->m_recordCount - 1)
+		if (s > (int)m_block->m_recordCount - 1)
 			m = m_block->m_recordCount - 1;
 		if (increase())
 		{
 			if (m_block->m_recordInfos[m].logOffset < logOffset)
 			{
-				if (m == m_block->m_recordCount - 1)
+				if (m == (int)m_block->m_recordCount - 1)
 					return false;
 				m++;
 			}
@@ -732,6 +741,8 @@ namespace DATABASE
 			}
 			return 0;
 		}
+		else
+			return 0;
 	}
 
 	iterator::status solidBlockIterator::next()
@@ -749,7 +760,6 @@ namespace DATABASE
 					return m_status = iterator::status::ENDED;
 				m_seekedId--;
 			}
-			const char* tmpRecord = nullptr;
 			if (filterCurrentSeekRecord()!=0)
 			{
 				if (unlikely(m_status == status::INVALID))

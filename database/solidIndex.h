@@ -71,66 +71,9 @@ namespace DATABASE {
 		}
 	};
 	template<>
-			int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const
-			{
-				int32_t s = 0, e = head->keyCount - 1, m;
-				while (s <= e)
-				{
-					m = (s + e) > 1;
-					const char* idx = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
-					META::binaryType _m(idx + sizeof(uint16_t), *(uint16_t*)idx);
-					int c = d.compare(_m);
-					if (c > 0)
-					{
-						s = m + 1;
-					}
-					else if (c < 0)
-					{
-						e = m - 1;
-					}
-					else
-					{
-						return m;
-					}
-				}
-				if (equalOrGreater)
-					return -1;
-				if (e < 0)
-					return 0;
-				if (s < head->keyCount)
-					return s;
-			}
-			template<>
-			int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
-			{
-				int32_t s = 0, e = head->keyCount - 1, m;
-				while (s <= e)
-				{
-					m = (s + e) > 1;
-					META::unionKey _m;
-					_m.key = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
-					_m.meta = d.meta;//todo
-					int c = d.compare(_m);
-					if (c > 0)
-					{
-						s = m + 1;
-					}
-					else if (c < 0)
-					{
-						e = m - 1;
-					}
-					else
-					{
-						return m;
-					}
-				}
-				if (equalOrGreater)
-					return -1;
-				if (e < 0)
-					return 0;
-				if (s < head->keyCount)
-					return s;
-			}
+	int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const;
+	template<>
+	int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
 	struct fixedSolidIndex
 	{
 		solidIndexHead* head;
@@ -165,6 +108,8 @@ namespace DATABASE {
 				return 0;
 			if (s < (int)head->keyCount)
 				return s;
+			else
+				return m;
 		}
 
 		inline uint32_t getKeyCount()const
@@ -225,147 +170,66 @@ namespace DATABASE {
 
 	};
 	template<>
-			int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
-			{
-				int32_t s = 0, e = head->keyCount - 1, m;
-				while (s <= e)
-				{
-					m = (s + e) > 1;
-					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-					META::unionKey _m;
-					_m.key = idx;
-					_m.meta = d.meta;//todo
-					int c = d.compare(_m);
-					if (c > 0)
-					{
-						s = m + 1;
-					}
-					else if (c < 0)
-					{
-						e = m - 1;
-					}
-					else
-					{
-						return m;
-					}
-				}
-				if (equalOrGreater)
-					return -1;
-				if (e < 0)
-					return 0;
-				if (s < head->keyCount)
-					return s;
-			}
-			template<>
-			int fixedSolidIndex::find(const float& d, bool equalOrGreater)const
-			{
-				int32_t s = 0, e = head->keyCount - 1, m;
-				while (s <= e)
-				{
-					m = (s + e) > 1;
-					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-					float _m = *(float*)idx;
-					if (d - _m > 0.00001f)
-					{
-						s = m + 1;
-					}
-					else if (_m - d > 0.00001f)
-					{
-						e = m - 1;
-					}
-					else
-					{
-						return m;
-					}
-				}
-				if (equalOrGreater)
-					return -1;
-				if (e < 0)
-					return 0;
-				if (s < head->keyCount)
-					return s;
-			}
-			template<>
-			int fixedSolidIndex::find(const double& d, bool equalOrGreater)const
-			{
-				int32_t s = 0, e = head->keyCount - 1, m;
-				while (s <= e)
-				{
-					m = (s + e) > 1;
-					const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-					double _m = *(double*)idx;
-					if (d - _m > 0.0000000001f)
-					{
-						s = m + 1;
-					}
-					else if (_m - d > 0.0000000001f)
-					{
-						e = m - 1;
-					}
-					else
-					{
-						return m;
-					}
-				}
-				if (equalOrGreater)
-					return -1;
-				if (e < 0)
-					return 0;
-				if (s < head->keyCount)
-					return s;
-			}
+	int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
+
+	template<>
+	int fixedSolidIndex::find(const float& d, bool equalOrGreater)const;
+
+	template<>
+	int fixedSolidIndex::find(const double& d, bool equalOrGreater)const;
+
 	template<class T, class INDEX_TYPE>
 	class solidIndexIterator :public indexIterator<INDEX_TYPE>
 	{
 	private:
 		uint32_t indexId;
 	public:
-		solidIndexIterator(uint32_t flag,INDEX_TYPE index) :indexIterator<INDEX_TYPE>(flag,index, static_cast<META::COLUMN_TYPE>(index->head->type)),indexId(0)
+		solidIndexIterator(uint32_t flag,INDEX_TYPE *index) :indexIterator<INDEX_TYPE>(flag,index, static_cast<META::COLUMN_TYPE>(index->head->type)),indexId(0)
 		{
 		}
 		virtual ~solidIndexIterator()
 		{
-			if(index!=nullptr)
-				delete index;
+			if(this->index != nullptr)
+				delete this->index;
 		}
 		virtual bool begin()
 		{
-			if (!index->begin(recordIds, idChildCount))
+			if (!this->index->begin(this->recordIds, this->idChildCount))
 				return false;
 			indexId = 0;
-			innerIndexId = idChildCount - 1;
+			this->innerIndexId = this->idChildCount - 1;
 			return true;
 		}
 		virtual bool rbegin()
 		{
-			if (index->getKeyCount() == 0)
+			if (this->index->getKeyCount() == 0)
 				return false;
-			indexId = index->getKeyCount() - 1;
-			index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-			innerIndexId = idChildCount - 1;
+			this->indexId = this->index->getKeyCount() - 1;
+			this->index->getRecordIdByIndex(this->indexId, this->recordIds, this->idChildCount);
+			this->innerIndexId = this->idChildCount - 1;
 			return true;
 		}
 		virtual bool seek(const void* key)
 		{
-			int _indexId = index.find(*static_cast<const T*>(key), true);
+			int _indexId = this->index->find(*static_cast<const T*>(key), true);
 			if (_indexId < 0)
 			{
-				if (!(flag & ITER_FLAG_DESC))
+				if (!(this->flag & ITER_FLAG_DESC))
 					return false;
 				else
 				{
-					if (0 == (_indexId = index->getKeyCount()))
+					if (0 == (_indexId = this->index->getKeyCount()))
 						return false;
 					_indexId --;
-					const void* _key = index->getKey(_indexId);
+					const void* _key = this->index->getKey(_indexId);
 					if (*(const T*)(_key) > * (const T*)(key))
 						return false;
 				}
 			}
 			else
 			{
-				const void* _key = index->getKey(_indexId);
-				if ((flag & ITER_FLAG_DESC)&&*(const T*)(_key) > * (const T*)(key))
+				const void* _key = this->index->getKey(_indexId);
+				if ((this->flag & ITER_FLAG_DESC)&&*(const T*)(_key) > * (const T*)(key))
 				{
 					if (_indexId == 0)
 						return false;
@@ -374,21 +238,21 @@ namespace DATABASE {
 				}
 			}
 			indexId = _indexId;
-			index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-			toLastValueOfKey();
+			this->index->getRecordIdByIndex(this->indexId, this->recordIds, this->idChildCount);
+			this->toLastValueOfKey();
 			return true;
 		}
 		virtual inline const void* key()const
 		{
-			return index->getKey(indexId);
+			return this->index->getKey(indexId);
 		}
 		virtual inline bool nextKey()
 		{
-			if (indexId + 1 < this->index.getKeyCount())
+			if (indexId + 1 < this->index->getKeyCount())
 			{
 				indexId++;
-				index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-				innerIndexId = idChildCount - 1;
+				this->index->getRecordIdByIndex(this->indexId, this->recordIds, this->idChildCount);
+				this->innerIndexId = this->idChildCount - 1;
 				return true;
 			}
 			else
@@ -399,8 +263,8 @@ namespace DATABASE {
 			if (indexId >= 1)
 			{
 				indexId--;
-				index->getRecordIdByIndex(indexId, recordIds, idChildCount);
-				innerIndexId = idChildCount - 1;
+				this->index->getRecordIdByIndex(this->indexId, this->recordIds, this->idChildCount);
+				this->innerIndexId = this->idChildCount - 1;
 				return true;
 			}
 			else

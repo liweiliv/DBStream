@@ -22,37 +22,32 @@ namespace SHELL {
 	{
 		return nullptr;
 	}
-	bool expressionField::checkAndGetType(Field** list, uint16_t listSize, bool logicOrMath, uint8_t& type, bool& group)
+	bool expressionField::checkAndGetType(Field** list, uint16_t listSize, bool logicOrMath, META::COLUMN_TYPE& type, bool& group)
 	{
 		int16_t  fieldStackSize = 0;
 		int16_t  valueTypeStackSize = 0;
 		group = false;
-		bool hasRowFunction = false;
 		for (uint16_t idx = 0; idx < listSize; idx++)
 		{
 			if (((uint64_t)list[idx] & DUAL_ARGV_MATH_OP_FUNC_TYPE) != 0)
 			{
-				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)list[idx]) & ~DUAL_ARGV_MATH_OP_FUNC_TYPE);
 				pullOneValue;
 				pullOneValue;
 				valueTypeStackSize++;
 			}
 			else if (((uint64_t)list[idx] & SINGLE_ARGV_MATH_OP_FUNC_TYPE) != 0)
 			{
-				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)list[idx]) & ~SINGLE_ARGV_MATH_OP_FUNC_TYPE);
 				pullOneValue;
 				valueTypeStackSize++;
 			}
 			else if (((uint64_t)list[idx] & DUAL_ARGV_LOGIC_OP_FUNC_TYPE) != 0)
 			{
-				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)list[idx]) & ~DUAL_ARGV_LOGIC_OP_FUNC_TYPE);
 				pullOneValue;
 				pullOneValue;
 				valueTypeStackSize++;
 			}
 			else if (((uint64_t)list[idx] & SINGLE_ARGV_LOGIC_OP_FUNC_TYPE) != 0)
 			{
-				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)list[idx]) & ~SINGLE_ARGV_LOGIC_OP_FUNC_TYPE);
 				pullOneValue;
 				valueTypeStackSize++;
 			}

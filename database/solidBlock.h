@@ -46,8 +46,8 @@ namespace DATABASE
 		friend class solidBlockIterator;
 		friend class solidBlockTimestampIterator;
 		friend class solidBlockCheckpointIterator;
-		//friend class solidBlockIndexIterator<fixedSolidIndex>;
-		//friend class solidBlockIndexIterator<varSolidIndex>;
+		template <class T>
+		friend class solidBlockIndexIterator;
 	public:
 		solidBlock(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
@@ -220,7 +220,7 @@ public:
 	public:
 		solidBlockCheckpointIterator(solidBlock* block, int flag, filter* filter) :solidBlockIterator(block, flag, filter)
 		{
-			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
+			this->m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
 		}
 		bool seek(const void* key);
 		inline const void* key()const

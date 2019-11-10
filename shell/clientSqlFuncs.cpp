@@ -69,19 +69,19 @@ namespace SHELL {
 		v->size = static_cast<SQL_PARSER::SQLStringValue*>(value)->size;
 		v->value = static_cast<SQL_PARSER::SQLStringValue*>(value)->value;
 		v->alloced = false;
-		field->init(v, META::T_STRING);
+		field->init(v, META::COLUMN_TYPE::T_STRING);
 		return field;
 	}
 	static inline rawField* SQLValue2Int(SQL_PARSER::SQLValue* value)
 	{
 		rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
-		field->init(*(void**) & static_cast<SQL_PARSER::SQLIntNumberValue*>(value)->number, META::T_INT64);
+		field->init(*(void**) & static_cast<SQL_PARSER::SQLIntNumberValue*>(value)->number, META::COLUMN_TYPE::T_INT64);
 		return field;
 	}
 	static inline rawField* SQLValue2Float(SQL_PARSER::SQLValue* value)
 	{
 		rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
-		field->init(*(void**) & static_cast<SQL_PARSER::SQLFloatNumberValue*>(value)->number, META::T_DOUBLE);
+		field->init(*(void**) & static_cast<SQL_PARSER::SQLFloatNumberValue*>(value)->number, META::COLUMN_TYPE::T_DOUBLE);
 		return field;
 	}
 	static inline Field* SQLValue2Column(SQL_PARSER::SQLValue* value, selectSqlInfo* sql, bool isSelectedColumn)
@@ -96,7 +96,7 @@ namespace SHELL {
 			{
 				if (alias[idx] != nullptr && strcmp(alias[idx], columnValue->columnName.c_str()) == 0)
 				{
-					if (sql->selectFields.size <= idx)
+					if (sql->selectFields.size <= (uint32_t)idx)
 						return nullptr;
 					sql->selectFields.list[idx]->ref++;
 					return sql->selectFields.list[idx];
@@ -144,7 +144,7 @@ namespace SHELL {
 				delete[]argvs;
 				return nullptr;
 			}
-			argvTypeList[argvListSize] = argvs[argvListSize]->valueType;
+			argvTypeList[argvListSize] = static_cast<uint8_t>(argvs[argvListSize]->valueType);
 			argvListSize++;
 		}
 		argvTypeList[argvListSize] = '\0';
@@ -186,15 +186,15 @@ namespace SHELL {
 					if (func != nullptr)
 					{
 						typeBufferSize -= 2;
-						typeBuffer[typeBufferSize++] = func->returnType;
+						typeBuffer[typeBufferSize++] = static_cast<uint8_t>(func->returnType);
 						fields[idx] = (Field*)(void*)(((uint64_t)func) | DUAL_ARGV_MATH_OP_FUNC_TYPE);
 						continue;
 					}
-					func = getDualArgvLogicFunc(op->opera, typeBuffer[typeBufferSize - 1], typeBufferSize - 2);
+					func = getDualArgvLogicFunc(op->opera, static_cast<META::COLUMN_TYPE>(typeBuffer[typeBufferSize - 1]), static_cast<META::COLUMN_TYPE>(typeBufferSize - 2));
 					if (func != nullptr)
 					{
 						typeBufferSize -= 2;
-						typeBuffer[typeBufferSize++] = func->returnType;
+						typeBuffer[typeBufferSize++] = static_cast<uint8_t>(func->returnType);
 						fields[idx] = (Field*)(void*)(((uint64_t)func) | DUAL_ARGV_LOGIC_OP_FUNC_TYPE);
 						continue;
 					}
@@ -202,17 +202,17 @@ namespace SHELL {
 				if (typeBufferSize >= 1)
 				{
 					SQL_PARSER::SQLOperatorValue* op = static_cast<SQL_PARSER::SQLOperatorValue*>(expValue->valueStack[idx]);
-					operatorFuncInfo* func = getSingleArgvMathFunc(op->opera, typeBuffer[typeBufferSize - 1]);
+					operatorFuncInfo* func = getSingleArgvMathFunc(op->opera, static_cast<META::COLUMN_TYPE>(typeBuffer[typeBufferSize - 1]));
 					if (func != nullptr)
 					{
-						typeBuffer[typeBufferSize - 1] = func->returnType;
+						typeBuffer[typeBufferSize - 1] = static_cast<uint8_t>(func->returnType);
 						fields[idx] = (Field*)(void*)(((uint64_t)func) | SINGLE_ARGV_MATH_OP_FUNC_TYPE);
 						continue;
 					}
-					func = getSingleArgvLogicFunc(op->opera, typeBuffer[typeBufferSize - 1]);
+					func = getSingleArgvLogicFunc(op->opera, static_cast<META::COLUMN_TYPE>(typeBuffer[typeBufferSize - 1]));
 					if (func != nullptr)
 					{
-						typeBuffer[typeBufferSize - 1] = func->returnType;
+						typeBuffer[typeBufferSize - 1] = static_cast<uint8_t>(func->returnType);
 						fields[idx] = (Field*)(void*)(((uint64_t)func) | SINGLE_ARGV_LOGIC_OP_FUNC_TYPE);
 						continue;
 					}
@@ -223,9 +223,9 @@ namespace SHELL {
 			else
 			{
 				fields[idx] = createFieldFromSqlValue(expValue->valueStack[idx], sql, isSelectedColumn);
-				if (fields[idx]->valueType == GROUP_FUNCTION_FIELD)
+				if (fields[idx]->fieldType == GROUP_FUNCTION_FIELD)
 					group = true;
-				typeBuffer[typeBufferSize++] = fields[idx]->valueType;
+				typeBuffer[typeBufferSize++] = static_cast<uint8_t>(fields[idx]->valueType);
 			}
 		}
 		if (typeBufferSize != 1)
@@ -280,12 +280,11 @@ namespace SHELL {
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
-		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
 		/*not allowed group expression in where condition,and return type of this expression must be bool*/
-		if (exp->group || static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+		if (exp->group || static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
 			shellGlobalBufferPool.free(exp);
@@ -330,11 +329,10 @@ namespace SHELL {
 		if (sql->joinedUsingColumns.size != 0)
 			return SQL_PARSER::INVALID;
 		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
-		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
-		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
 			shellGlobalBufferPool.free(exp);
@@ -357,7 +355,6 @@ namespace SHELL {
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		if (value->type == SQL_PARSER::COLUMN_NAME_TYPE)
 		{
-			SQL_PARSER::SQLColumnNameValue* columnValue = static_cast<SQL_PARSER::SQLColumnNameValue*>(value);
 			return SQL_PARSER::OK;
 		}
 		else if (value->type == SQL_PARSER::EXPRESSION_TYPE)
@@ -365,7 +362,7 @@ namespace SHELL {
 			expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 			if (exp == nullptr)
 				return SQL_PARSER::INVALID;
-			if (exp->valueType == META::T_BOOL)
+			if (exp->valueType == META::COLUMN_TYPE::T_BOOL)
 			{
 				exp->clean();
 				shellGlobalBufferPool.free(exp);
@@ -395,12 +392,11 @@ namespace SHELL {
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
-		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
 		/*return type of this expression must be bool*/
-		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
 			shellGlobalBufferPool.free(exp);
@@ -413,12 +409,11 @@ namespace SHELL {
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
-		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
 		/*return type of this expression must be bool*/
-		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::T_BOOL)
+		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
 			shellGlobalBufferPool.free(exp);

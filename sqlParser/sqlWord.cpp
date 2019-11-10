@@ -277,7 +277,7 @@ namespace SQL_PARSER {
 				delete value;
 				return NOT_MATCH_PTR;
 			}
-			for (int soffset = 1; soffset < value->volumn; soffset++)
+			for (uint32_t soffset = 1; soffset < value->volumn; soffset++)
 			{
 				if (unlikely(p[soffset] == '\\'))
 				{

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include "meta/columnType.h"
+#include "iterator.h"
 namespace DATABASE
 {
 	template<class INDEX_TYPE>
@@ -46,7 +47,7 @@ namespace DATABASE
 		{
 			innerIndexId = 0;
 		}
-		virtual inline const void* key()const = 0;
+		virtual const void* key()const = 0;
 		virtual inline uint32_t currentVersionValue()
 		{
 			return recordIds[idChildCount - 1];
@@ -61,7 +62,7 @@ namespace DATABASE
 			else
 				return false;
 		}
-		virtual inline bool nextKey() = 0;
+		virtual bool nextKey() = 0;
 		virtual inline bool prev()
 		{
 			if (innerIndexId >= 1)
@@ -72,6 +73,6 @@ namespace DATABASE
 			else
 				return false;
 		}
-		virtual inline bool prevKey() = 0;
+		virtual bool prevKey() = 0;
 	};
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "database/iterator.h"
-#include "filter.h"
+#include "database/filter.h"
 #include "job.h"
 #include "database/database.h"
 namespace DATABASE_INCREASE {
@@ -19,7 +19,7 @@ private:
 		DATABASE_INCREASE::record * m_currentData;
 		META::tableMeta * m_meta;
 		uint32_t m_flag;
-		DATABASE::blockManager * m_blocks;
+		DATABASE::database * m_blocks;
 		void(*m_workFunc)(DBStream * s);
 		void(*m_destroy)(DBStream * s);
 		void(*m_finish)(DBStream * );
@@ -30,12 +30,19 @@ public:
 		if (m_destroy)
 			m_destroy(this);
 	}
-	template<typename T>
-	iterator * find(uint64_t startRecordID,META::tableMeta * meta,uint16_t columnIndex,const T * v)//todo
+	DATABASE::iterator * find(uint64_t startRecordID,const META::tableMeta * meta,META::KEY_TYPE type,uint16_t keyIndex,const void * v)//todo
 	{
-		if (!m_flag&S_CACHED)
+		if (!(m_flag&S_CACHED))
 			return nullptr;
-		blockManagerIterator *iter = new blockManagerIterator(m_flag,nullptr,m_blocks);//todo
+		DATABASE::iterator *iter = m_blocks->createIndexIterator(0,meta,type,keyIndex);
+		if(iter!=nullptr)
+		{
+			if(!iter->seek(v))
+			{
+				delete iter;
+				return nullptr;
+			}
+		}
 		return iter;
 	}
 

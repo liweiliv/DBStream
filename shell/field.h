@@ -24,11 +24,11 @@ namespace SHELL {
 	};
 	struct Field {
 		FieldType fieldType;
-		uint8_t valueType;
+		META::COLUMN_TYPE valueType;
 		void* (*getValueFunc)(Field* field, const DATABASE_INCREASE::DMLRecord** const row);
 		void (*cleanFunc)(Field*);
 		int ref;
-		inline void initField(FieldType fieldType, uint8_t valueType, void* (*_getValueFunc)(Field*, const DATABASE_INCREASE::DMLRecord** const) = nullptr, void (*_cleanFunc)(Field*) = nullptr)
+		inline void initField(FieldType fieldType, META::COLUMN_TYPE valueType, void* (*_getValueFunc)(Field*, const DATABASE_INCREASE::DMLRecord** const) = nullptr, void (*_cleanFunc)(Field*) = nullptr)
 		{
 			ref = 0;
 			this->fieldType = fieldType;
@@ -59,7 +59,7 @@ namespace SHELL {
 	};
 	struct rawField :public Field {
 		void* data;
-		inline void init(void* data, uint8_t type)
+		inline void init(void* data, META::COLUMN_TYPE type)
 		{
 			initField(RAW_FIELD, type, _getValueFunc, _clean);
 			this->data = data;
@@ -70,7 +70,7 @@ namespace SHELL {
 		}
 		static void _clean(Field* field)
 		{
-			if (!META::columnInfos[static_cast<rawField*>(field)->valueType].fixed)
+			if (!META::columnInfos[static_cast<uint8_t>(static_cast<rawField*>(field)->valueType)].fixed)
 			{
 				static_cast<varLenValue*>(static_cast<rawField*>(field)->data)->clean();
 				basicBufferPool::free(static_cast<rawField*>(field)->data);
@@ -88,39 +88,39 @@ namespace SHELL {
 		{
 			columnFiled* selectField = static_cast<columnFiled*>(field);
 			const char* value = row[selectField->tableJoinId]->column(selectField->column->m_columnIndex);
-			switch (field->valueType)
+			switch (static_cast<META::COLUMN_TYPE>(field->valueType))
 			{
-			case META::T_INT32:
+			case META::COLUMN_TYPE::T_INT32:
 				return (void*)(uint64_t) * (int32_t*)value;
-			case META::T_UINT32:
+			case META::COLUMN_TYPE::T_UINT32:
 				return (void*)(uint64_t) * (uint32_t*)value;
-			case META::T_INT64:
-			case META::T_DATETIME:
+			case META::COLUMN_TYPE::T_INT64:
+			case META::COLUMN_TYPE::T_DATETIME:
 				return (void*)(uint64_t) * (int64_t*)value;
-			case META::T_UINT64:
-			case META::T_TIMESTAMP:
+			case META::COLUMN_TYPE::T_UINT64:
+			case META::COLUMN_TYPE::T_TIMESTAMP:
 				return (void*)(uint64_t) * (int64_t*)value;
-			case META::T_FLOAT:
+			case META::COLUMN_TYPE::T_FLOAT:
 			{
 				float v = *(float*)value;
 				return *(void**)&v;
 			}
-			case META::T_DOUBLE:
+			case META::COLUMN_TYPE::T_DOUBLE:
 			{
 				float v = *(double*)value;
 				return *(void**)&v;
 			}
-			case META::T_UINT16:
+			case META::COLUMN_TYPE::T_UINT16:
 				return (void*)(uint64_t) * (uint16_t*)value;
-			case META::T_INT16:
+			case META::COLUMN_TYPE::T_INT16:
 				return (void*)(uint64_t) * (int16_t*)value;
-			case META::T_UINT8:
+			case META::COLUMN_TYPE::T_UINT8:
 				return (void*)(uint64_t) * (uint8_t*)value;
-			case META::T_INT8:
+			case META::COLUMN_TYPE::T_INT8:
 				return (void*)(uint64_t) * (int8_t*)value;
 			default:
 			{
-				if (META::columnInfos[field->valueType].fixed)
+				if (META::columnInfos[static_cast<uint8_t>(field->valueType)].fixed)
 					return (void*)value;
 				else
 				{
@@ -219,10 +219,10 @@ namespace SHELL {
 		uint16_t listSize;
 		bool logicOrMath;
 		bool group;
-		static bool checkAndGetType(Field** list, uint16_t listSize, bool logicOrMath, uint8_t& type, bool& group);
+		static bool checkAndGetType(Field** list, uint16_t listSize, bool logicOrMath, META::COLUMN_TYPE& type, bool& group);
 		inline void init(Field** list, uint16_t listSize, bool logicOrMath, bool group, uint8_t type)
 		{
-			initField(EXPRESSION_FIELD, type, _getValue, _clean);
+			initField(EXPRESSION_FIELD, static_cast<META::COLUMN_TYPE>(type), _getValue, _clean);
 			this->list = list;
 			this->listSize = listSize;
 			this->logicOrMath = logicOrMath;

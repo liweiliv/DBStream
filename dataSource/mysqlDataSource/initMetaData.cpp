@@ -142,7 +142,7 @@ namespace DATA_SOURCE {
 		}
 		if (row[10] != nullptr && strlen(row[10]) > 0)
 			column->m_generated = true;
-		if (row[11] != nullptr && !META::columnInfos[column->m_columnType].fixed)
+		if (row[11] != nullptr && !META::columnInfos[TID(column->m_columnType)].fixed)
 			column->m_size = (uint64_t)atol(row[11]);
 		return 0;
 	}
@@ -221,7 +221,7 @@ namespace DATA_SOURCE {
 	}
 	struct keyInfo {
 		std::map<int, uint16_t> columns;
-		int type;
+		META::KEY_TYPE type;
 	};
 	int initMetaData::loadAllKeyColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > &constraints)
 	{
@@ -329,17 +329,17 @@ namespace DATA_SOURCE {
 			META::tableMeta* meta = collection->get(row[2], row[3], 1);
 			if (meta == nullptr)
 				continue;
-			int type = 0;
+			META::KEY_TYPE type = META::KEY_TYPE::PRIMARY_KEY;
 			if (strncasecmp(row[4], "PRIMARY KEY", 11) == 0)
-				type = 1;
+				type = META::KEY_TYPE::PRIMARY_KEY;
 			else if (strncasecmp(row[4], "UNIQUE", 6) == 0)
 			{
-				type = 2;
+				type = META::KEY_TYPE::UNIQUE_KEY;
 				meta->m_uniqueKeysCount++;
 			}
 			else if (strncasecmp(row[4], "KEY", 3) == 0)
 			{
-				type = 3;
+				type = META::KEY_TYPE::INDEX;
 				meta->m_indexCount++;
 			}
 			else
@@ -370,7 +370,7 @@ namespace DATA_SOURCE {
 		mysql_free_result(rs);
 		if (loadAllKeyColumns(collection, databases, constraints) != 0)
 			ret = -1;
-
+		uint16_t keyIdxs[256];
 		for (std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >::iterator databaseIter = constraints.begin();
 			databaseIter != constraints.end(); databaseIter++)
 		{
@@ -382,23 +382,30 @@ namespace DATA_SOURCE {
 					if (table != nullptr)
 					{
 						if (table->m_uniqueKeysCount > 0)
-							table->m_uniqueKeys = new META::keyInfo[table->m_uniqueKeysCount];
+							table->m_uniqueKeys = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_uniqueKeysCount);
 						if (table->m_indexCount > 0)
-							table->m_indexs = new META::keyInfo[table->m_indexCount];
+							table->m_indexs = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_indexCount);
 						uint16_t ukCount = 0, indexCount = 0;
 						for (std::map<std::string, keyInfo*>::iterator keyIter = tableIter->second->begin(); keyIter != tableIter->second->end(); keyIter++)
 						{
-							META::keyInfo* key;
-							if (keyIter->second->type == 1)
-								key = &table->m_primaryKey;
-							else if (keyIter->second->type == 2)
-								key = &table->m_uniqueKeys[ukCount++];
-							else
-								key = &table->m_indexs[indexCount++];
-							key->name = keyIter->first;
-							key->keyIndexs = new uint16_t[keyIter->second->columns.size()];
+							int keyCount = 0;
 							for (std::map<int, uint16_t>::const_iterator columnIter = keyIter->second->columns.begin(); columnIter != keyIter->second->columns.end(); columnIter++)
-								key->keyIndexs[key->count++] = columnIter->second;
+								keyIdxs[keyCount++] = columnIter->second;
+
+							if (keyIter->second->type == META::KEY_TYPE::PRIMARY_KEY)
+							{
+								table->m_primaryKey = table->createUnionKey(0,META::KEY_TYPE::PRIMARY_KEY,keyIdxs,keyCount);
+							}
+							else if (keyIter->second->type == META::KEY_TYPE::UNIQUE_KEY)
+							{
+								table->m_uniqueKeys[ukCount] = table->createUnionKey(ukCount,META::KEY_TYPE::UNIQUE_KEY,keyIdxs,keyCount);
+								table->m_uniqueKeyNames[ukCount++] = keyIter->first;
+							}
+							else
+							{
+								table->m_indexs[indexCount] = table->createUnionKey(ukCount,META::KEY_TYPE::INDEX,keyIdxs,keyCount);
+								table->m_indexNames[indexCount++] = keyIter->first;
+							}
 						}
 					}
 				}

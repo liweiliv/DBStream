@@ -59,7 +59,7 @@ public:
 	inline bool seek(const void* key)
 	{
 		m_heap.clear();
-		for (int i = 0; i < m_iterCount; i++)
+		for (uint32_t i = 0; i < m_iterCount; i++)
 		{
 			if (m_iters[i]->seek(key))
 				m_heap.insert(m_iters[i]);

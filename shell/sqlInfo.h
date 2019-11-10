@@ -84,7 +84,7 @@ namespace SHELL {
 		}
 		bool isGroupColumn(const char* columnName, uint64_t tableId)
 		{
-			for (int idx = 0; idx < groupByColumnNames.size; idx++)
+			for (uint32_t idx = 0; idx < groupByColumnNames.size; idx++)
 			{
 				if (tableId == groupByColumnNames.list[idx]->tableId)
 				{
@@ -112,7 +112,7 @@ namespace SHELL {
 					return 0;
 				if (strcmp(alias, tableName) == 0)
 					return 0;
-				for (int idx = 0; idx < joinedTablesAlias.size; idx++)
+				for (uint32_t idx = 0; idx < joinedTablesAlias.size; idx++)
 				{
 					if (joinedTablesAlias.list[idx] != nullptr && strcmp(joinedTablesAlias.list[idx], tableName) == 0)
 						return 0;
@@ -123,7 +123,7 @@ namespace SHELL {
 			}
 			if (table->isMe(database, tableName))
 				return 0;
-			for (int idx = 0; idx < joinedTables.size; idx++)
+			for (uint32_t idx = 0; idx < joinedTables.size; idx++)
 			{
 				if (joinedTables.list[idx]->isMe(database, tableName))
 					return idx;

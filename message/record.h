@@ -39,7 +39,7 @@ namespace DATABASE_INCREASE
 #define GENRATED_COLUMN 0x02
 #define PRIMARY_KEY_COLUMN 0x04
 #define UNIQUE_KEY_COLUMN 0x08
-	enum RecordType
+	enum class RecordType
 	{
 		R_INSERT,
 		R_UPDATE,
@@ -260,18 +260,18 @@ namespace DATABASE_INCREASE
 		const uint8_t* updatedBitmap;
 		const uint8_t* updatedNullBitmap;
 		DMLRecord() {}
-		DMLRecord(char* data, const META::tableMeta* meta, uint8_t type) //for write
+		DMLRecord(char* data, const META::tableMeta* meta, RecordType type) //for write
 		{
 			initRecord(data, meta, type);
 		}
-		inline void initRecord(char* data, const META::tableMeta* meta, uint8_t type)
+		inline void initRecord(char* data, const META::tableMeta* meta, RecordType type)
 		{
 			init(data);
 			this->meta = meta;
 			oldColumnsSizeOfUpdateType = nullptr;
 			oldColumnsOfUpdateType = nullptr;
 			updatedBitmap = nullptr;
-			head->minHead.type = type;
+			head->minHead.type = static_cast<uint8_t>(type);
 			char* ptr = data + head->minHead.headSize;
 			tableMetaID = meta->m_id;
 			*((uint64_t*)(ptr)) = tableMetaID;
@@ -379,7 +379,7 @@ namespace DATABASE_INCREASE
 			ptr += meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount];
 			varLengthColumns = (const uint32_t*)ptr;
 			ptr = columns + varLengthColumns[meta->m_varColumnCount];
-			if (head->minHead.type == R_UPDATE || head->minHead.type == R_REPLACE)
+			if (head->minHead.type == static_cast<uint8_t>(RecordType::R_UPDATE)  || head->minHead.type == static_cast<uint8_t>(RecordType::R_REPLACE))
 			{
 				updatedBitmap = (uint8_t*)ptr;
 				updatedNullBitmap = updatedBitmap+bitmapSize;
@@ -623,7 +623,7 @@ namespace DATABASE_INCREASE
 				uint32_t valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : varColumnSize(idx);
 				std::String cv = columnValue(value, valueLength, c);
 				str.append(cv.c_str());
-				if (head->minHead.type == R_UPDATE || head->minHead.type == R_REPLACE)
+				if (head->minHead.type == static_cast<uint8_t>(RecordType::R_UPDATE)  || head->minHead.type == static_cast<uint8_t>(RecordType::R_REPLACE))
 				{
 					value = oldColumnOfUpdateType(idx);
 					valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
@@ -725,24 +725,24 @@ namespace DATABASE_INCREASE
 	static record* createRecord(const char* data, META::metaDataBaseCollection* mc)
 	{
 		recordHead* head = (recordHead*)data;
-		switch (head->minHead.type)
+		switch (static_cast<RecordType>(head->minHead.type))
 		{
-		case R_INSERT:
-		case R_DELETE:
-		case R_UPDATE:
-		case R_REPLACE:
+		case RecordType::R_INSERT:
+		case RecordType::R_DELETE:
+		case RecordType::R_UPDATE:
+		case RecordType::R_REPLACE:
 		{
 			return new DMLRecord(data, mc);
 		}
-		case R_DDL:
+		case RecordType::R_DDL:
 		{
 			return new DDLRecord(data);
 		}
-		case R_TABLE_META:
+		case RecordType::R_TABLE_META:
 		{
 			return new TableMetaMessage(data);
 		}
-		case R_DATABASE_META:
+		case RecordType::R_DATABASE_META:
 		{
 			return new DatabaseMetaMessage(data);
 		}
@@ -752,16 +752,16 @@ namespace DATABASE_INCREASE
 	}
 	static std::String getString(record * r)
 	{
-		switch (r->head->minHead.type)
+		switch (static_cast<RecordType>(r->head->minHead.type))
 		{
-		case R_INSERT:
-		case R_DELETE:
-		case R_UPDATE:
-		case R_REPLACE:
+		case RecordType::R_INSERT:
+		case RecordType::R_DELETE:
+		case RecordType::R_UPDATE:
+		case RecordType::R_REPLACE:
 		{
 			return static_cast<DMLRecord*>(r)->toString();
 		}
-		case R_DDL:
+		case RecordType::R_DDL:
 		{
 			return static_cast<DDLRecord*>(r)->toString();
 		}

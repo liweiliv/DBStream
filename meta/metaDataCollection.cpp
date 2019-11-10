@@ -55,6 +55,7 @@ namespace META {
 			name = db.name;
 			charset = db.charset;
 			collate = db.collate;
+			return *this;
 		}
 	};
 	void initVirtualConf(config * conf)
@@ -398,7 +399,6 @@ namespace META {
 		const createTableDDL* table = static_cast<const createTableDDL*>(tableDDL);
 		tableMeta* meta = new tableMeta(m_nameCompare.caseSensitive);
 		*meta = table->tableDef;
-		MetaTimeline<dbInfo>* db;
 		if (meta->m_dbName.empty())
 		{
 			if (table->usedDb.empty())
@@ -565,6 +565,7 @@ namespace META {
 			LOG(ERROR) << "drop table " << database << "." << table<< " failed";
 			return -1;
 		}
+		return 0;
 	}
 	int metaDataCollection::renameTable(const char* srcDatabase, const char* srcTable, const char* destDatabase, const char* destTable, uint64_t originCheckPoint)
 	{

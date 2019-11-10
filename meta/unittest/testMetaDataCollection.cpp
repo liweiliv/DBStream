@@ -92,6 +92,7 @@ int test()
 	m1.processDDL("create table test.test2 (a int primary key,b char(20),c char(20))", nullptr, 3);
 	if (*m1.get("test", "test2") != *m.get("test", "test2"))
 		FAILED;
+	return 0;
 }
 int main()
 {

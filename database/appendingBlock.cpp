@@ -312,7 +312,7 @@ namespace DATABASE {
 				return rtv;
 			}
 		}
-		if (record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE) //build index
+		if (record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) //build index
 		{
 			const META::tableMeta* meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
 			tableData* table = static_cast<tableData*>(meta->userData);
@@ -331,7 +331,7 @@ namespace DATABASE {
 		if (m_maxTime < record->head->timestamp)
 			m_maxTime = record->head->timestamp;
 		m_recordCount++;
-		if (record->head->txnId > m_txnId || record->head->minHead.type == DATABASE_INCREASE::R_DDL)
+		if (record->head->txnId > m_txnId || record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
 			m_committedRecordID.store(m_recordCount, std::memory_order_release);
 		m_txnId = record->head->txnId;
 		m_cond.wakeUp();

@@ -7,14 +7,18 @@
 
 #ifndef HEAP_H_
 #define HEAP_H_
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 #include <stdint.h>
+#include "likely.h"
 template<typename T, typename Compare>
 class heap {
 protected:
 	Compare compare;
+	T* h;
 	uint32_t maxSize;
 	uint32_t currentSize;
-	T* h;
 	inline void adjust(int start, int end)
 	{
 		int p = start, c = left(start);
@@ -53,7 +57,7 @@ public:
 	}
 	void set(const T* data, int size)
 	{
-		for (int i = 0; i < sizei++)
+		for (int i = 0; i < size;i++)
 			h[i+1] = data[i];
 		currentSize = size + 1;
 	}
@@ -131,12 +135,14 @@ public:
 		print();
 #endif
 	}
+#ifdef DEBUG
 	void print()
 	{
 		for (int i = 1; i <= currentSize; i++)
 			printf("%d ", h[i]);
 		printf("\n");
 	}
+#endif
 	inline void pop()
 	{
 		popAt(0);

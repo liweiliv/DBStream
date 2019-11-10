@@ -326,14 +326,14 @@ namespace DATABASE
 			unuse();
 			return newRecord;
 		}
-		inline appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem);
+		appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem);
 		inline appendingBlockStaus allocMemForRecord(META::tableMeta* table, size_t size, void*& mem)
 		{
 			return allocMemForRecord(getTableData(table), size, mem);
 		}
 		inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record* record)
 		{
-			tableData* t = getTableData(likely(record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
+			tableData* t = getTableData(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
 			page* current = t->current;
 			if (unlikely(current == nullptr || current->pageData + current->pageUsedSize != record->data))
 			{

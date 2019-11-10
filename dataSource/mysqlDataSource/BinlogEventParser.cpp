@@ -270,7 +270,7 @@ namespace DATA_SOURCE {
 		setRecordBasicInfo(header, r);
 		r->head->minHead.size = DATABASE_INCREASE::recordRealSize;
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->minHead.type = DATABASE_INCREASE::R_ROLLBACK;
+		r->head->minHead.type = static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_ROLLBACK);
 		PUSH_RECORD(r);
 		return ParseStatus::OK;
 	}
@@ -283,7 +283,7 @@ namespace DATA_SOURCE {
 		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord), query.charset_inited?query.charset:nullptr,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->minHead.type = DATABASE_INCREASE::R_DDL;
+		r->head->minHead.type = static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL);
 		PUSH_RECORD(r);
 		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty()?nullptr:query.db.c_str(),r->head->logOffset);
 		return ParseStatus::OK;
@@ -383,7 +383,7 @@ namespace DATA_SOURCE {
 			{
 				if (newORold)
 				{
-					if (!META::columnInfos[columnMeta->m_columnType].fixed)
+					if (!META::columnInfos[TID(columnMeta->m_columnType)].fixed)
 						record->setVarColumnNull(idx);
 				}
 				else
@@ -505,7 +505,7 @@ namespace DATA_SOURCE {
 		while (parsePos < end)
 		{
 			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DMLRecord) + DATABASE_INCREASE::recordHeadSize + header->eventSize * 4);
-			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, DATABASE_INCREASE::R_UPDATE);
+			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, DATABASE_INCREASE::RecordType::R_UPDATE);
 			setRecordBasicInfo(header, record);
 			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 
@@ -547,7 +547,7 @@ namespace DATA_SOURCE {
 		{
 		case WRITE_ROWS_EVENT:
 		case WRITE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(logEvent,size, DATABASE_INCREASE::R_INSERT);
+			rtv = parseRowLogevent(logEvent,size, DATABASE_INCREASE::RecordType::R_INSERT);
 			break;
 		case UPDATE_ROWS_EVENT:
 		case UPDATE_ROWS_EVENT_V1:
@@ -555,7 +555,7 @@ namespace DATA_SOURCE {
 			break;
 		case DELETE_ROWS_EVENT:
 		case DELETE_ROWS_EVENT_V1:
-			rtv = parseRowLogevent(logEvent, size, DATABASE_INCREASE::R_DELETE);
+			rtv = parseRowLogevent(logEvent, size, DATABASE_INCREASE::RecordType::R_DELETE);
 			break;
 		case QUERY_EVENT:
 			rtv = parseQuery(logEvent, size);

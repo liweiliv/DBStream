@@ -27,15 +27,15 @@ namespace REPLICATOR
 		tableInfo* next;
 		tableInfo* prev;
 		static std::mutex  escapLock;
-		tableInfo(const META::tableMeta* meta, const META::tableMeta* destMeta) :id(meta->m_id), empty(true), tableName(meta->m_tableName), uniqueKeysCount(meta->m_uniqueKeysCount), primaryKey(nullptr), uniqueKeys(nullptr), keyCount(meta->m_uniqueKeysCount + (meta->m_primaryKey.count > 0?1 : 0)), ddlRecord(nullptr), ddlWaitListHead(nullptr), meta(meta),destMeta(destMeta), columnMap(nullptr),next(nullptr), prev(nullptr)
+		tableInfo(const META::tableMeta* meta, const META::tableMeta* destMeta) :id(meta->m_id), empty(true), tableName(meta->m_tableName), primaryKey(nullptr),uniqueKeys(nullptr),uniqueKeysCount(meta->m_uniqueKeysCount), keyCount(meta->m_uniqueKeysCount + (meta->m_primaryKey!=nullptr?1 : 0)), ddlRecord(nullptr), ddlWaitListHead(nullptr), meta(meta),destMeta(destMeta), columnMap(nullptr),next(nullptr), prev(nullptr)
 		{
-			if (destMeta->m_primaryKey.count > 0)
-				primaryKey = createBukcet(destMeta, &destMeta->m_primaryKey);
+			if (destMeta->m_primaryKey != nullptr)
+				primaryKey = createBukcet(destMeta, destMeta->m_primaryKey);
 			if (destMeta->m_uniqueKeysCount > 0)
 			{
 				uniqueKeys = new void* [destMeta->m_uniqueKeysCount];
 				for (int idx = 0; idx < destMeta->m_uniqueKeysCount; idx++)
-					uniqueKeys[idx] = createBukcet(destMeta, &destMeta->m_uniqueKeys[idx]);
+					uniqueKeys[idx] = createBukcet(destMeta, destMeta->m_uniqueKeys[idx]);
 			}
 			escapedColumnNames = new std::string[destMeta->m_columnsCount];
 		}
@@ -92,12 +92,12 @@ namespace REPLICATOR
 		~tableInfo()
 		{
 			if (primaryKey != nullptr)
-				destroyBukcet(meta, &meta->m_primaryKey, primaryKey);
+				destroyBukcet(meta, meta->m_primaryKey, primaryKey);
 			if (uniqueKeys != nullptr)
 			{
 
 				for (int idx = 0; idx < uniqueKeysCount; idx++)
-					destroyBukcet(meta, &meta->m_uniqueKeys[idx], uniqueKeys[idx]);
+					destroyBukcet(meta, meta->m_uniqueKeys[idx], uniqueKeys[idx]);
 				delete[] uniqueKeys;
 			}
 			if (columnMap != nullptr)

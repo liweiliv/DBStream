@@ -247,7 +247,7 @@ namespace DATABASE {
 		block* from,*to;
 		while ((from = getBlock(blockId = m_firstBlockId.load(std::memory_order_relaxed))) == nullptr)
 		{
-			if (blockId == m_firstBlockId.load(std::memory_order_relaxed))
+			if (blockId == (int)m_firstBlockId.load(std::memory_order_relaxed))
 				return nullptr;
 		}
 		barrier;
@@ -326,6 +326,7 @@ namespace DATABASE {
 		default:
 			abort();
 		}
+		return nullptr;
 	}
 	DLL_EXPORT char* database::getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
 	{
@@ -660,6 +661,11 @@ namespace DATABASE {
 		std::set<uint64_t> ids;
 		std::set<uint64_t> redos;
 		errno = 0;
+		std::map<uint32_t, block*> recovried;
+		block* prevBlock = nullptr;
+		int64_t prev = -1;
+		block* last = nullptr;
+		char fileName[512];
 #ifdef OS_WIN
 		WIN32_FIND_DATA findFileData;
 		std::string findString(m_logDir);
@@ -681,14 +687,17 @@ namespace DATABASE {
 #endif
 #ifdef OS_LINUX
 				DIR* dir = opendir(m_logDir);
+				dirent* file;
 				if (dir == nullptr)
 				{
-					mkdir(m_logDir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-					goto CREATE_CURRENT;
-					LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
-					return -1;
+					if(0!=mkdir(m_logDir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+					{
+						LOG(ERROR) << "open data dir:" << m_logDir << " failed,errno:" << errno << "," << strerror(errno);
+						return -1;
+					}
+					else
+						goto CREATE_CURRENT;
 				}
-				dirent* file;
 				while ((file = readdir(dir)) != nullptr)
 				{
 					if (file->d_type != 8)
@@ -719,10 +728,7 @@ namespace DATABASE {
 		}
 		closedir(dir);
 #endif
-		std::map<uint32_t, block*> recovried;
-		block* prevBlock = nullptr;
-		int64_t prev = -1;
-		char fileName[512];
+
 		if (!redos.empty())
 		{
 			recoveryFromRedo(redos, recovried);
@@ -819,8 +825,7 @@ namespace DATABASE {
 				delete iter->second;
 			}
 		}
-		block* last = m_blocks.end();
-		if (likely(last != nullptr))
+		if (likely((last = m_blocks.end()) != nullptr))
 		{
 			m_tnxId = last->m_maxTxnId + 1;
 			m_recordId = last->m_minRecordId + last->m_recordCount;
@@ -834,7 +839,7 @@ namespace DATABASE {
 			m_firstBlockId.store(1, std::memory_order_relaxed);
 			m_lastBlockId.store(1, std::memory_order_relaxed);
 		}
-
+CREATE_CURRENT:
 		m_current = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
 			m_redoFlushDataSize, m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 		m_current->m_blockID = m_lastBlockId.load(std::memory_order_relaxed) + 1;

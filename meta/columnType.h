@@ -48,6 +48,7 @@ namespace META {
 		T_CURRENT_VERSION_MAX_TYPE = 29,
 		T_MAX_TYPE = 255
 	};
+#define TID(t) static_cast<uint8_t>(t)
 	struct columnTypeInfo
 	{
 		COLUMN_TYPE type;

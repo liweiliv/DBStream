@@ -103,7 +103,7 @@ namespace DATABASE {
 		uint32_t m_solidBlockHeadPageRawSize;
 		uint32_t m_solidBlockHeadPageSize;
 		uint32_t m_crc;
-		block(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :next(nullptr),prev(nullptr),m_database(db), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
+		block(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db),next(nullptr),prev(nullptr), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
 			m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
 			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
@@ -134,7 +134,7 @@ namespace DATABASE {
 #pragma pack()
 	class blockIndexIterator :public iterator {
 	public:
-		blockIndexIterator(uint32_t flag, filter* filter,uint32_t blockId) :iterator(flag, filter),m_blockId(m_blockId) {}
+		blockIndexIterator(uint32_t flag, filter* filter,uint32_t blockId) :iterator(flag, filter),m_blockId(blockId) {}
 		virtual ~blockIndexIterator() {}
 		uint32_t getBlockId()const { return m_blockId; }
 	protected:

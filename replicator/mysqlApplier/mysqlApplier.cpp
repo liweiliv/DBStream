@@ -32,6 +32,7 @@ namespace REPLICATOR
 			}
 			current = t->mergeNext;
 		}
+		return 0;
 	}
 	void mysqlApplier::createTxnTableSql(char * sqlBuf,const DATABASE_INCREASE::record* record)
 	{
@@ -46,36 +47,36 @@ namespace REPLICATOR
 		m_sqlBufferPos += sizeof(TXN_TABLE_TAIL) - 1;
 	}
 	/*pic an unique key which all columns of it are not null*/
-	static const META::keyInfo* picUniqueKey(const tableInfo* table, const DATABASE_INCREASE::DMLRecord* dml,bool newOrOld)
+	static const META::unionKeyMeta* picUniqueKey(const tableInfo* table, const DATABASE_INCREASE::DMLRecord* dml,bool newOrOld)
 	{
-		const META::keyInfo* key = nullptr,*prev = nullptr;
+		const META::unionKeyMeta* prev = nullptr;
 		for (int idx = 0; idx < table->destMeta->m_uniqueKeysCount; idx++)
 		{
-			if (table->destMeta->m_uniqueKeys[idx].count == 1)
+			if (table->destMeta->m_uniqueKeys[idx]->columnCount == 1)
 			{
 				if (newOrOld)
 				{
-					if (!dml->columnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx].keyIndexs[0]]))
+					if (!dml->columnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx]->columnInfo[0].columnId]))
 					{
-						return &table->destMeta->m_uniqueKeys[idx];
+						return table->destMeta->m_uniqueKeys[idx];
 					}
 				}
 				else
 				{
-					if (!dml->oldColumnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx].keyIndexs[0]]))
+					if (!dml->oldColumnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx]->columnInfo[0].columnId]))
 					{
-						return &table->destMeta->m_uniqueKeys[idx];
+						return table->destMeta->m_uniqueKeys[idx];
 					}
 				}
 			}
 			else if(prev == nullptr)
 			{
 				bool hasNullValue = false;
-				for (int i = 0; i < table->destMeta->m_uniqueKeys[idx].count; i++)
+				for (int i = 0; i < table->destMeta->m_uniqueKeys[idx]->columnCount; i++)
 				{
 					if (newOrOld)
 					{
-						if (dml->columnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx].keyIndexs[i]]))
+						if (dml->columnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx]->columnInfo[i].columnId]))
 						{
 							hasNullValue = true;
 							break;
@@ -83,7 +84,7 @@ namespace REPLICATOR
 					}
 					else
 					{
-						if (dml->oldColumnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx].keyIndexs[i]]))
+						if (dml->oldColumnIsNull(table->columnMap[table->destMeta->m_uniqueKeys[idx]->columnInfo[i].columnId]))
 						{
 							hasNullValue = true;
 							break;
@@ -91,7 +92,7 @@ namespace REPLICATOR
 					}
 				}
 				if (!hasNullValue)
-					prev = &table->destMeta->m_uniqueKeys[idx];
+					prev = table->destMeta->m_uniqueKeys[idx];
 			}
 		}
 		return prev;
@@ -101,22 +102,22 @@ namespace REPLICATOR
 		const tableInfo* table = static_cast<const tableInfo*>(dml->meta->userData);
 		memcpy(sqlBuffer + m_sqlBufferPos, " WHERE ", sizeof(" WHERE ") - 1);
 		m_sqlBufferPos += sizeof(" WHERE ") - 1;
-		const META::keyInfo* key = nullptr;
-		if (table->destMeta->m_primaryKey.count > 0)
-			key = &table->destMeta->m_primaryKey;
+		const META::unionKeyMeta* key = nullptr;
+		if (table->destMeta->m_primaryKey != nullptr)
+			key = table->destMeta->m_primaryKey;
 		else if (table->destMeta->m_uniqueKeysCount > 0)
-			key = picUniqueKey(table, dml, dml->head->minHead.type == DATABASE_INCREASE::R_DELETE);
+			key = picUniqueKey(table, dml, dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE));
 		if (key != nullptr)
 		{
-			for (int idx = 0; idx < key->count; idx++)
+			for (int idx = 0; idx < key->columnCount; idx++)
 			{
 				if (idx != 0)
 				{
 					memcpy(sqlBuffer + m_sqlBufferPos, " AND ", sizeof(" AND ") - 1);
 					m_sqlBufferPos += sizeof(" AND ") - 1;
 				}
-				memcpy(sqlBuffer + m_sqlBufferPos, table->escapedColumnNames[key->keyIndexs[idx]].c_str(), table->escapedColumnNames[key->keyIndexs[idx]].size());
-				m_sqlBufferPos += table->escapedColumnNames[key->keyIndexs[idx]].size();
+				memcpy(sqlBuffer + m_sqlBufferPos, table->escapedColumnNames[key->columnInfo[idx].columnId].c_str(), table->escapedColumnNames[key->columnInfo[idx].columnId].size());
+				m_sqlBufferPos += table->escapedColumnNames[key->columnInfo[idx].columnId].size();
 
 				if (TEST_BITMAP(dml->nullBitmap, table->columnMap[idx]))
 				{
@@ -126,7 +127,7 @@ namespace REPLICATOR
 				else
 				{
 					sqlBuffer[m_sqlBufferPos++] = '=';
-					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[key->keyIndexs[idx]]], dml,dml->head->minHead.type==DATABASE_INCREASE::R_DELETE))
+					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[key->columnInfo[idx].columnId]], dml,dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE)))
 					{
 						return -1;
 					}
@@ -141,8 +142,8 @@ RESET:
 			for (idx = 0; idx < table->destMeta->m_columnsCount; idx++)
 			{
 				/*often we do not add lob,text column to where condition for it is too slow and will increase pressure of database server */
-				if (notSetLobColumn&&(dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::T_BLOB||
-					dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::T_TEXT))
+				if (notSetLobColumn&&(dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::COLUMN_TYPE::T_BLOB||
+					dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::COLUMN_TYPE::T_TEXT))
 					continue;
 				if (columnSetted)
 				{
@@ -163,7 +164,7 @@ RESET:
 				else
 				{
 					sqlBuffer[m_sqlBufferPos++] = '=';
-					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[idx]], dml, dml->head->minHead.type == DATABASE_INCREASE::R_DELETE))
+					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[idx]], dml, dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE)))
 					{
 						return -1;
 					}
@@ -187,7 +188,7 @@ RESET:
 		const tableInfo* table = static_cast<const tableInfo*>(dml->meta->userData);
 		if (m_sqlBufferPos + record->record->head->minHead.size * 3 < m_sqlBufferSize)
 			reallocSqlBuf(sqlBuffer, record->record->head->minHead.size * 3);
-		if (record->record->head->minHead.type == DATABASE_INCREASE::R_INSERT)
+		if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_INSERT))
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "INSERT INTO ", sizeof("INSERT INTO ") - 1);
 			m_sqlBufferPos += sizeof("INSERT INTO ") - 1;
@@ -216,7 +217,7 @@ RESET:
 			m_sqlBufferPos--;//delete last [,]
 			return 0;
 		}
-		else if (record->record->head->minHead.type == DATABASE_INCREASE::R_DELETE)
+		else if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "DELETE ", sizeof("DELETE ") - 1);
 			m_sqlBufferPos += sizeof("DELETE ") - 1;
@@ -272,29 +273,29 @@ RESET:
 		const char* value = newOrOld ? dml->column(column->m_columnIndex) : dml->oldColumnOfUpdateType(column->m_columnIndex);
 		switch (column->m_columnType)
 		{
-		case  META::T_INT32:
+		case  META::COLUMN_TYPE::T_INT32:
 		{
 			m_sqlBufferPos += i32toa_sse2(*(const int32_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_UINT32:
+		case META::COLUMN_TYPE::T_UINT32:
 		{
 			m_sqlBufferPos += u32toa_sse2(*(const uint32_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_INT64:
+		case META::COLUMN_TYPE::T_INT64:
 		{
 			m_sqlBufferPos += i64toa_sse2(*(const int64_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_DATETIME:
+		case META::COLUMN_TYPE::T_DATETIME:
 		{
 			META::dateTime t;
 			t.time = *(const int64_t*)value;
 			m_sqlBufferPos += t.toString(sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_TIMESTAMP:
+		case META::COLUMN_TYPE::T_TIMESTAMP:
 		{
 			META::timestamp t;
 			t.time = *(const uint64_t*)value;
@@ -309,23 +310,23 @@ RESET:
 			sqlBuffer[m_sqlBufferPos++] = ')';
 			break;
 		}
-		case META::T_STRING:
-		case META::T_TEXT:
+		case META::COLUMN_TYPE::T_STRING:
+		case META::COLUMN_TYPE::T_TEXT:
 			if (column->m_charset != nullptr)
 			{
 				sqlBuffer[m_sqlBufferPos++] = '_';
 				memcpy(sqlBuffer + m_sqlBufferPos, column->m_charset->name, column->m_charset->nameSize);
 				m_sqlBufferPos += column->m_charset->nameSize;
 			}
-		case META::T_BLOB:
-		case  META::T_BINARY:
+		case META::COLUMN_TYPE::T_BLOB:
+		case  META::COLUMN_TYPE::T_BINARY:
 		{
 			sqlBuffer[m_sqlBufferPos++] = '\'';
 			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld ? dml->varColumnSize(column->m_columnIndex) : dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex, value));
 			sqlBuffer[m_sqlBufferPos++] = '\'';
 			break;
 		}
-		case META::T_JSON://todo
+		case META::COLUMN_TYPE::T_JSON://todo
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "CONVERT(", sizeof("CONVERT(") - 1);
 			m_sqlBufferPos += sizeof("CONVERT(") - 1;
@@ -338,14 +339,14 @@ RESET:
 			sqlBuffer[m_sqlBufferPos++] = ')';
 			break;
 		}
-		case META::T_DECIMAL:
-		case META::T_BIG_NUMBER:
+		case META::COLUMN_TYPE::T_DECIMAL:
+		case META::COLUMN_TYPE::T_BIG_NUMBER:
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, value, dml->varColumnSize(column->m_columnIndex));
 			m_sqlBufferPos += dml->varColumnSize(column->m_columnIndex);
 			break;
 		}
-		case META::T_ENUM:
+		case META::COLUMN_TYPE::T_ENUM:
 		{
 			uint16_t idx = *(const uint16_t*)value;
 			if (idx >= column->m_setAndEnumValueList.m_count)
@@ -359,7 +360,7 @@ RESET:
 			sqlBuffer[m_sqlBufferPos++] = '\'';
 			break;
 		}
-		case META::T_GEOMETRY:
+		case META::COLUMN_TYPE::T_GEOMETRY:
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "ST_GeomCollFromWKB(", sizeof("ST_GeomCollFromWKB(") - 1);
 			m_sqlBufferPos += sizeof("ST_GeomCollFromWKB(") - 1;
@@ -367,7 +368,7 @@ RESET:
 			sqlBuffer[m_sqlBufferPos++] = ')';
 			break;
 		}
-		case META::T_FLOAT:
+		case META::COLUMN_TYPE::T_FLOAT:
 		{
 			float f = *(const float*)value;
 			if (column->m_decimals >= NOT_FIXED_DEC)
@@ -378,48 +379,48 @@ RESET:
 					sqlBuffer + m_sqlBufferPos, nullptr);
 			break;
 		}
-		case META::T_DOUBLE:
+		case META::COLUMN_TYPE::T_DOUBLE:
 		{
 			m_sqlBufferPos+=my_fcvt(*(const double*) value, column->m_decimals, sqlBuffer + m_sqlBufferPos, nullptr);
 			break;
 		}
-		case  META::T_DATE:
+		case  META::COLUMN_TYPE::T_DATE:
 		{
 			META::Date t;
 			t.time = *(const int32_t*)dml->column(column->m_columnIndex);
 			m_sqlBufferPos += t.toString(sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_TIME:
+		case META::COLUMN_TYPE::T_TIME:
 		{
 			META::Time t;
 			t.time = *(const int64_t*)value;
 			m_sqlBufferPos += t.toString(sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_SET:
-		case META::T_UINT64:
+		case META::COLUMN_TYPE::T_SET:
+		case META::COLUMN_TYPE::T_UINT64:
 		{
 			m_sqlBufferPos += u64toa_sse2(*(const uint64_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_INT8:
+		case META::COLUMN_TYPE::T_INT8:
 		{
 			m_sqlBufferPos += i32toa_sse2(value[0], sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case META::T_UINT8:
+		case META::COLUMN_TYPE::T_UINT8:
 		{
 			m_sqlBufferPos += u32toa_sse2(((const uint8_t*)value)[0], sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case  META::T_INT16:
+		case  META::COLUMN_TYPE::T_INT16:
 		{
 			m_sqlBufferPos += i32toa_sse2(*(const int16_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;
 		}
-		case  META::T_YEAR:
-		case META::T_UINT16:
+		case  META::COLUMN_TYPE::T_YEAR:
+		case META::COLUMN_TYPE::T_UINT16:
 		{
 			m_sqlBufferPos += u32toa_sse2(*(const uint16_t*)value, sqlBuffer + m_sqlBufferPos);
 			break;

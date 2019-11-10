@@ -24,7 +24,7 @@ namespace DATABASE {
 		uint32_t m_tableIdWhiteListSize;
 		uint64_t* m_tableIdBlackList;
 		uint32_t m_tableIdBlackListSize;
-		uint8_t m_typeBitmap[(DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE >> 3) + (DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE & 0x7) ? 1 : 0];
+		uint8_t m_typeBitmap[(static_cast<uint8_t>(DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE) >> 3) + (static_cast<uint8_t>(DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE) & 0x7) ? 1 : 0];
 		filter(uint32_t filterType) :m_filterType(filterType) {
 
 		}

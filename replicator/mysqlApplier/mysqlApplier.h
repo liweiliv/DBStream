@@ -120,6 +120,7 @@ namespace REPLICATOR {
 				m_sqlBufferSize = m_defaultSqlBufferSize;
 			}
 			m_sqlBufferPos = 0;
+			return 0;
 		}
 		virtual int rollback(char *& sqlBuffer)
 		{
@@ -136,13 +137,13 @@ namespace REPLICATOR {
 			m_sqlBufferSize = m_defaultSqlBufferSize;
 			m_sqlBufferPos = 0;
 
-			if (t->recordCount > 1|| t->mergeNext!=nullptr||(!m_txnTable.empty()&& !t->firstRecord->record->head->minHead.type == DATABASE_INCREASE::R_DDL))
+			if (t->recordCount > 1|| t->mergeNext!=nullptr||(!m_txnTable.empty()&& !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))))
 			{
 				createBegin();
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))
 					return -1;
 			}
-			if (!m_txnTable.empty() && !(t->recordCount == 1 && t->firstRecord->record->head->minHead.type == DATABASE_INCREASE::R_DDL))
+			if (!m_txnTable.empty() && !(t->recordCount == 1 && t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL)))
 			{
 				createTxnTableSql(sqlBuffer, t->firstRecord->record);
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))
@@ -157,7 +158,7 @@ namespace REPLICATOR {
 					{
 						if (record->mergeNext == nullptr || record->mergeNext->record->head->recordId > record->mergePrev->record->head->recordId)
 						{
-							if (record->record->head->minHead.type <= DATABASE_INCREASE::R_REPLACE)
+							if (record->record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE))
 							{
 								if (0 != createDMLSql(record, sqlBuffer))
 								{
@@ -165,7 +166,7 @@ namespace REPLICATOR {
 									return -1;
 								}
 							}
-							else if (record->record->head->minHead.type == DATABASE_INCREASE::R_DDL)
+							else if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
 							{
 
 							}
@@ -179,7 +180,7 @@ namespace REPLICATOR {
 				}
 				current = t->mergeNext;
 			}
-			if (t->recordCount > 1 || t->mergeNext != nullptr || (!m_txnTable.empty() && !t->firstRecord->record->head->minHead.type == DATABASE_INCREASE::R_DDL))
+			if (t->recordCount > 1 || t->mergeNext != nullptr || (!m_txnTable.empty() && !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))))
 			{
 				createCommit(sqlBuffer);
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))

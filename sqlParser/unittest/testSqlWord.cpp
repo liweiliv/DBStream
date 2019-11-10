@@ -7,9 +7,7 @@ int testSQLCharWord()
 	for (char idx = 1; idx < 127; idx++)
 	{
 		char str[2] = { 0 };
-		char strSql[2] = { 0 };
 		str[0] = idx;
-		strSql[0] = idx;
 		const char* s = &str[0];
 		SQL_PARSER::SQLCharWord word(false, str);
 		SQL_PARSER::SQLValue* value;
@@ -343,16 +341,16 @@ int testSQLArrayWord()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("\"qwerty123456\"");
 	checkArray(value, "qwerty123456");
-	MATCH_ASSERT_SUCCESS("\"ÖÐÎÄ²âÊÔ123\"");
-	checkArray(value, "ÖÐÎÄ²âÊÔ123");
+	MATCH_ASSERT_SUCCESS("\"ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123\"");
+	checkArray(value, "ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123");
 	MATCH_ASSERT_SUCCESS("'qwerty123456'");
 	checkArray(value, "qwerty123456");
-	MATCH_ASSERT_SUCCESS("'ÖÐÎÄ²âÊÔ123'");
-	checkArray(value, "ÖÐÎÄ²âÊÔ123");
-	MATCH_ASSERT_SUCCESS("'qwe\\'ÖÐÎÄ²âÊÔ123'");
-	checkArray(value, "qwe'ÖÐÎÄ²âÊÔ123");
-	MATCH_ASSERT_SUCCESS("'qwe\\\"ÖÐÎÄ²âÊÔ123'");
-	checkArray(value, "qwe\"ÖÐÎÄ²âÊÔ123");
+	MATCH_ASSERT_SUCCESS("'ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123'");
+	checkArray(value, "ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123");
+	MATCH_ASSERT_SUCCESS("'qwe\\'ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123'");
+	checkArray(value, "qwe'ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123");
+	MATCH_ASSERT_SUCCESS("'qwe\\\"ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123'");
+	checkArray(value, "qwe\"ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½123");
 	MATCH_ASSERT_SUCCESS("'qwerty123456~`{}:;/.,<>&*))^%$#'");
 	checkArray(value, "qwerty123456~`{}:;/.,<>&*))^%$#");
 	MATCH_ASSERT_SUCCESS("\"qwerty123456~`{}:;/.,<>&*))^%$#\"");

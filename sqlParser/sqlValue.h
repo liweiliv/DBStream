@@ -71,7 +71,7 @@ namespace SQL_PARSER {
 		uint32_t volumn;
 		bool quote;
 		SQLStringValue(SQLValueType type) :SQLValue(type), value(nullptr),size(0), volumn(0), quote(false){}
-		inline const char* assign(const char* src, int size)
+		inline const char* assign(const char* src, uint32_t size)
 		{
 			if (!quote && volumn > size)
 			{

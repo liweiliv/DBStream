@@ -18,6 +18,9 @@
 namespace SQL_PARSER {
 	class sqlParser;
 }
+namespace META{
+	class metaDataCollection;
+}
 namespace DATA_SOURCE
 {
 	static constexpr uint16_t M_PARSER_RECORD_CACHE_VOLUMN = 2048;

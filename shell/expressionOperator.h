@@ -9,29 +9,29 @@ namespace SHELL {
 	typedef bool (*SingleArgvLogicOperater)(void*);
 
 	struct operatorFuncInfo {
-		uint8_t returnType;
+		META::COLUMN_TYPE returnType;
 		void* func;
-		operatorFuncInfo(uint8_t returnType, void* func) :returnType(returnType), func(func) {}
+		operatorFuncInfo(META::COLUMN_TYPE returnType, void* func) :returnType(returnType), func(func) {}
 	};
 	struct dualArgvMathOperatorMatrix
 	{
 		SQL_PARSER::OPERATOR op;
 		operatorFuncInfo*** matrix;
 		dualArgvMathOperatorMatrix(SQL_PARSER::OPERATOR op) :op(op), matrix(nullptr) {}
-		void set(uint8_t returnType, DualArgvMathOperater func, uint8_t ltype, uint8_t rtype)
+		void set(META::COLUMN_TYPE returnType, DualArgvMathOperater func, META::COLUMN_TYPE ltype, META::COLUMN_TYPE rtype)
 		{
 			if (matrix == nullptr)
 			{
-				matrix = new operatorFuncInfo * *[META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix, 0, sizeof(operatorFuncInfo**) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix = new operatorFuncInfo * *[static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix, 0, sizeof(operatorFuncInfo**) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			if (matrix[ltype] == nullptr)
+			if (matrix[TID(ltype)] == nullptr)
 			{
-				matrix[ltype] = new operatorFuncInfo * [META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix[ltype], 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix[TID(ltype)] = new operatorFuncInfo * [static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix[TID(ltype)], 0, sizeof(operatorFuncInfo*) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			if (matrix[ltype][rtype] == nullptr)
-				matrix[ltype][rtype] = new operatorFuncInfo(returnType, (void*)func);
+			if (matrix[TID(ltype)][TID(rtype)] == nullptr)
+				matrix[TID(ltype)][TID(rtype)] = new operatorFuncInfo(returnType, (void*)func);
 		}
 		inline operatorFuncInfo* get(uint8_t ltype, uint8_t rtype)
 		{
@@ -43,11 +43,11 @@ namespace SHELL {
 		{
 			if (matrix == nullptr)
 				return;
-			for (int i = 0; i < META::T_CURRENT_VERSION_MAX_TYPE; i++)
+			for (uint8_t i = 0; i < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); i++)
 			{
 				if (matrix[i] == nullptr)
 					continue;
-				for (int j = 0; j < META::T_CURRENT_VERSION_MAX_TYPE; j++)
+				for (uint8_t j = 0; j < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); j++)
 				{
 					if (matrix[i][j] != nullptr)
 						delete matrix[i][j];
@@ -62,26 +62,26 @@ namespace SHELL {
 		SQL_PARSER::OPERATOR op;
 		operatorFuncInfo** matrix;
 		singleArgvMathOperatorMatrix(SQL_PARSER::OPERATOR op) :op(op), matrix(nullptr) {}
-		void set(uint8_t returnType, SingleArgvMathOperater func, uint8_t type)
+		void set(META::COLUMN_TYPE returnType, SingleArgvMathOperater func, META::COLUMN_TYPE type)
 		{
 			if (matrix == nullptr)
 			{
-				matrix = new operatorFuncInfo * [META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix, 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix = new operatorFuncInfo * [static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix, 0, sizeof(operatorFuncInfo*) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			matrix[type] = new operatorFuncInfo(returnType, (void*)func);
+			matrix[TID(type)] = new operatorFuncInfo(returnType, (void*)func);
 		}
-		inline operatorFuncInfo* get(uint8_t type)
+		inline operatorFuncInfo* get(META::COLUMN_TYPE type)
 		{
-			if (matrix == nullptr || matrix[type] == nullptr)
+			if (matrix == nullptr || matrix[TID(type)] == nullptr)
 				return nullptr;
-			return matrix[type];
+			return matrix[TID(type)];
 		}
 		~singleArgvMathOperatorMatrix()
 		{
 			if (matrix == nullptr)
 				return;
-			for (int i = 0; i < META::T_CURRENT_VERSION_MAX_TYPE; i++)
+			for (uint8_t i = 0; i < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); i++)
 			{
 				if (matrix[i] != nullptr)
 					delete matrix[i];
@@ -94,36 +94,36 @@ namespace SHELL {
 		SQL_PARSER::OPERATOR op;
 		operatorFuncInfo*** matrix;
 		dualArgvLogicOperatorMatrix(SQL_PARSER::OPERATOR op) :op(op), matrix(nullptr) {}
-		void set(DualArgvLogicOperater func, uint8_t ltype, uint8_t rtype)
+		void set(DualArgvLogicOperater func, META::COLUMN_TYPE ltype, META::COLUMN_TYPE rtype)
 		{
 			if (matrix == nullptr)
 			{
-				matrix = new operatorFuncInfo * *[META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix, 0, sizeof(operatorFuncInfo**) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix = new operatorFuncInfo * *[static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix, 0, sizeof(operatorFuncInfo**) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			if (matrix[ltype] == nullptr)
+			if (matrix[static_cast<uint8_t>(ltype)] == nullptr)
 			{
-				matrix[ltype] = new operatorFuncInfo * [META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix[ltype], 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix[static_cast<uint8_t>(ltype)] = new operatorFuncInfo * [static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix[static_cast<uint8_t>(ltype)], 0, sizeof(operatorFuncInfo*) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			if (matrix[ltype][rtype] == nullptr)
-				matrix[ltype][rtype] = new operatorFuncInfo(META::T_BOOL, (void*)func);
+			if (matrix[static_cast<uint8_t>(ltype)][static_cast<uint8_t>(rtype)] == nullptr)
+				matrix[static_cast<uint8_t>(ltype)][static_cast<uint8_t>(rtype)] = new operatorFuncInfo(META::COLUMN_TYPE::T_BOOL, (void*)func);
 		}
-		inline operatorFuncInfo* get(uint8_t ltype, uint8_t rtype)
+		inline operatorFuncInfo* get(META::COLUMN_TYPE ltype, META::COLUMN_TYPE rtype)
 		{
-			if (matrix == nullptr || matrix[ltype] == nullptr || matrix[ltype][rtype] == nullptr)
+			if (matrix == nullptr || matrix[TID(ltype)] == nullptr || matrix[TID(ltype)][TID(rtype)] == nullptr)
 				return nullptr;
-			return matrix[ltype][rtype];
+			return matrix[TID(ltype)][TID(rtype)];
 		}
 		~dualArgvLogicOperatorMatrix()
 		{
 			if (matrix == nullptr)
 				return;
-			for (int i = 0; i < META::T_CURRENT_VERSION_MAX_TYPE; i++)
+			for (int i = 0; i < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); i++)
 			{
 				if (matrix[i] == nullptr)
 					continue;
-				for (int j = 0; j < META::T_CURRENT_VERSION_MAX_TYPE; j++)
+				for (int j = 0; j < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); j++)
 				{
 					if (matrix[i][j] != nullptr)
 						delete matrix[i][j];
@@ -142,22 +142,22 @@ namespace SHELL {
 		{
 			if (matrix == nullptr)
 			{
-				matrix = new operatorFuncInfo * [META::T_CURRENT_VERSION_MAX_TYPE];
-				memset(matrix, 0, sizeof(operatorFuncInfo*) * META::T_CURRENT_VERSION_MAX_TYPE);
+				matrix = new operatorFuncInfo * [static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE)];
+				memset(matrix, 0, sizeof(operatorFuncInfo*) * static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE));
 			}
-			matrix[type] = new operatorFuncInfo(META::T_BOOL, (void*)func);
+			matrix[type] = new operatorFuncInfo(META::COLUMN_TYPE::T_BOOL, (void*)func);
 		}
-		inline operatorFuncInfo* get(uint8_t type)
+		inline operatorFuncInfo* get(META::COLUMN_TYPE type)
 		{
-			if (matrix == nullptr || matrix[type] == nullptr)
+			if (matrix == nullptr || matrix[TID(type)] == nullptr)
 				return nullptr;
-			return matrix[type];
+			return matrix[TID(type)];
 		}
 		~singleArgvLogicOperatorMatrix()
 		{
 			if (matrix == nullptr)
 				return;
-			for (int i = 0; i < META::T_CURRENT_VERSION_MAX_TYPE; i++)
+			for (uint8_t i = 0; i < static_cast<uint8_t>(META::COLUMN_TYPE::T_MAX_TYPE); i++)
 			{
 				if (matrix[i] != nullptr)
 					delete matrix[i];
@@ -173,21 +173,21 @@ namespace SHELL {
 		return dualArgvMathOperators[op]->get(ltype, rtype);
 	}
 	extern  singleArgvMathOperatorMatrix* singleArgvMathOperators[SQL_PARSER::NOT_OPERATION];
-	static inline operatorFuncInfo* getSingleArgvMathFunc(SQL_PARSER::OPERATOR op, uint8_t type)
+	static inline operatorFuncInfo* getSingleArgvMathFunc(SQL_PARSER::OPERATOR op, META::COLUMN_TYPE type)
 	{
 		if (singleArgvMathOperators[op] == nullptr)
 			return nullptr;
 		return singleArgvMathOperators[op]->get(type);
 	}
 	extern  dualArgvLogicOperatorMatrix* dualArgvLogicOperators[SQL_PARSER::NOT_OPERATION];
-	static inline operatorFuncInfo* getDualArgvLogicFunc(SQL_PARSER::OPERATOR op, uint8_t ltype, uint8_t rtype)
+	static inline operatorFuncInfo* getDualArgvLogicFunc(SQL_PARSER::OPERATOR op, META::COLUMN_TYPE ltype, META::COLUMN_TYPE rtype)
 	{
 		if (dualArgvLogicOperators[op] == nullptr)
 			return nullptr;
 		return dualArgvLogicOperators[op]->get(ltype, rtype);
 	}
 	extern  singleArgvLogicOperatorMatrix* singleArgvLogicOperators[SQL_PARSER::NOT_OPERATION];
-	static inline operatorFuncInfo* getSingleArgvLogicFunc(SQL_PARSER::OPERATOR op, uint8_t type)
+	static inline operatorFuncInfo* getSingleArgvLogicFunc(SQL_PARSER::OPERATOR op, META::COLUMN_TYPE type)
 	{
 		if (singleArgvLogicOperators[op] == nullptr)
 			return nullptr;

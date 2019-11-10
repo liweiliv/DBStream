@@ -294,8 +294,8 @@ namespace SQL_PARSER
 		return array;
 	}
 	DLL_EXPORT sqlParser::sqlParser() :
-		m_funcsHandle(nullptr), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
-			nullptr),m_quote(0)
+		m_funcsHandle(nullptr),m_quote(0), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
+			nullptr)
 	{
 	}
 	DLL_EXPORT sqlParser::~sqlParser()

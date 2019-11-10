@@ -168,8 +168,10 @@ namespace META {
 			*(uint16_t*)key = size;
 			ptr += sizeof(uint16_t);
 		}
-		if (r->head->minHead.type == DATABASE_INCREASE::R_INSERT || r->head->minHead.type == DATABASE_INCREASE::R_DELETE ||
-			((r->head->minHead.type == DATABASE_INCREASE::R_UPDATE || r->head->minHead.type == DATABASE_INCREASE::R_REPLACE) && !keyUpdated))
+		if (r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_INSERT) ||
+				r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE) ||
+			((r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) ||
+					r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) && !keyUpdated))
 		{
 			for (uint16_t i = 0; i < keyMeta->columnCount; i++)
 			{

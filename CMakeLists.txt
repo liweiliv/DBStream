@@ -167,7 +167,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
-TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta memory)
+TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta metaCollection memory)
 target_include_directories(DBStream PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -208,7 +208,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ADD_EXECUTABLE(testThreadLocal  util/unittest/testThreadLocal.cpp)
 TARGET_LINK_LIBRARIES(testThreadLocal util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testThreadLocal pthread)
+        TARGET_LINK_LIBRARIES(testThreadLocal thread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testpageTable  util/unittest/testpageTable.cpp)
