@@ -345,6 +345,8 @@ namespace SQL_PARSER {
 		column->m_charset = getCharset(static_cast<SQLStringValue*>(value)->value);
 		if (column->m_charset == nullptr)
 			return NOT_SUPPORT;
+		if (column->m_size > 0)
+			column->m_size *= column->m_charset->byteSizePerChar;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue stringTypeSize(handle* h, SQLValue * value)
@@ -654,7 +656,12 @@ namespace SQL_PARSER {
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}
-	
+	extern "C" DLL_EXPORT  parseValue  alterTableAddColumns(handle * h, SQLValue * value)
+	{
+		META::addColumns* ddl = new META::addColumns();
+		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
+		return OK;
+	}
 	extern "C" DLL_EXPORT  parseValue  AlterNewColumnAtFirst(handle* h, SQLValue * value)
 	{
 		static_cast<META::addColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->first = true;

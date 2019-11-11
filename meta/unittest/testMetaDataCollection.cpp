@@ -92,6 +92,14 @@ int test()
 	m1.processDDL("create table test.test2 (a int primary key,b char(20),c char(20))", nullptr, 3);
 	if (*m1.get("test", "test2") != *m.get("test", "test2"))
 		FAILED;
+	m.processDDL("alter table test.test2 add column d text first", nullptr, 4);
+	m1.processDDL("drop table test.test2", nullptr, 5);
+	m1.processDDL("create table test.test2 (d text,a int primary key,b char(20),c char(20))", nullptr, 6);
+	printf("%s\n", m.get("test", "test2")->toString().c_str());
+	printf("%s\n", m1.get("test", "test2")->toString().c_str());
+
+	if (*m.get("test", "test2") != *m1.get("test", "test2"))
+		FAILED;
 	return 0;
 }
 int main()

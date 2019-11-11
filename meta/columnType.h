@@ -111,7 +111,9 @@ namespace META {
 		{
 			return sizeof(unionKeyMeta) + sizeof(uniqueKeyTypePair) * (keyCount - 1);
 		}
-		unionKeyMeta() {}
+		unionKeyMeta() 
+		{
+		}
 		unionKeyMeta(const unionKeyMeta& dest)
 		{
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
@@ -121,12 +123,25 @@ namespace META {
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
 			return *this;
 		}
+		inline bool operator==(const unionKeyMeta& dest)
+		{
+			if (columnCount != dest.columnCount || memcmp(&columnCount, &dest.columnCount, memSize(columnCount) != 0))
+				return false;
+			else
+				return true;
+		}
+		inline bool operator!=(const unionKeyMeta& dest)
+		{
+			return !(*this == dest);
+		}
 		void columnUpdate(uint16_t from, uint16_t to, COLUMN_TYPE newType)
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
-				if (columnInfo[i].columnId<std::min(from, to) || columnInfo[i].columnId > std::min(from, to))
+				if (columnInfo[i].columnId<std::min<uint16_t>(from, to) || columnInfo[i].columnId > std::min<uint16_t>(from, to))
+				{
 					continue;
+				}
 				else if (columnInfo[i].columnId == from)
 				{
 					if (columnInfos[columnInfo[i].type].fixed && !columnInfos[static_cast<int>(newType)].fixed)

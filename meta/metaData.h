@@ -118,10 +118,10 @@ namespace META {
 		bool m_isUnique;
 		bool m_isIndex;
 		bool m_generated;
-		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr),m_size(0), m_precision(0), m_decimals(0),
+		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
 			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
 		{}
-		columnMeta &operator =(const columnMeta &c)
+		columnMeta& operator =(const columnMeta& c)
 		{
 			m_columnType = c.m_columnType;
 			m_srcColumnType = c.m_srcColumnType;
@@ -165,193 +165,7 @@ namespace META {
 		{
 			return !(*this == c);
 		}
-		std::string toString()
-		{
-			return m_columnName;
-		}
-#if 0
-		std::string toString()
-		{
-			std::string sql("`");
-			sql.append(m_columnName).append("` ");
-			char numBuf[40] = { 0 };
-			switch (m_srcColumnType)
-			{
-			case MYSQL_TYPE_DECIMAL:
-				sql.append("DECIMAL").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case MYSQL_TYPE_DOUBLE:
-				sql.append("DOUBLE").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case MYSQL_TYPE_FLOAT:
-				sql.append("FLOAT").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case MYSQL_TYPE_BIT:
-				sql.append("BIT").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(")");
-				break;
-			case MYSQL_TYPE_TINY:
-				sql.append("TINY");
-				if (!m_signed)
-					sql.append(" UNSIGNED");
-				break;
-			case MYSQL_TYPE_SHORT:
-				sql.append("SMALLINT");
-				if (!m_signed)
-					sql.append(" UNSIGNED");
-				break;
-			case MYSQL_TYPE_INT24:
-				sql.append("MEDIUMINT");
-				if (!m_signed)
-					sql.append(" UNSIGNED");
-				break;
-			case MYSQL_TYPE_LONG:
-				sql.append("INTEGER");
-				if (!m_signed)
-					sql.append(" UNSIGNED");
-				break;
-			case MYSQL_TYPE_LONGLONG:
-				sql.append("BIGINT");
-				if (!m_signed)
-					sql.append(" UNSIGNED");
-				break;
-			case MYSQL_TYPE_DATETIME:
-			case MYSQL_TYPE_DATETIME2:
-				sql.append("DATETIME");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case MYSQL_TYPE_TIMESTAMP:
-			case MYSQL_TYPE_TIMESTAMP2:
-				sql.append("TIMESTAMP");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case MYSQL_TYPE_DATE:
-				sql.append("DATE");
-				break;
-			case MYSQL_TYPE_TIME:
-			case MYSQL_TYPE_TIME2:
-				sql.append("TIME");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case MYSQL_TYPE_YEAR:
-				sql.append("YEAR");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case MYSQL_TYPE_STRING:
-				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
-				if (m_charset == nullptr)
-				{
-					sql.append("BINARY").append("(").append(numBuf).append(")");
-				}
-				else
-				{
-					sql.append("CHAR").append("(").append(numBuf).append(") CHARACTER SET ").append(m_charset->name);
-				}
-				break;
-			case MYSQL_TYPE_VARCHAR:
-				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
-				sql.append("VARCHAR").append("(").append(numBuf).append(") CHARACTER SET ").append(m_charset->name);
-				break;
-			case MYSQL_TYPE_VAR_STRING:
-				sprintf(numBuf, "%u", m_size/m_charset->byteSizePerChar);
-				if (m_charset != nullptr)
-				{
-					sql.append("VARBINARY").append("(").append(numBuf).append(")");
-				}
-				else
-				{
-					sql.append("VARCHAR").append("(").append(numBuf).append(") CHARACTER SET").append(m_charset->name);
-				}
-				break;
-			case MYSQL_TYPE_TINY_BLOB:
-				if (m_charset != nullptr)
-					sql.append("TINYTEXT").append(" CHARACTER SET ").append(m_charset->name);
-				else
-					sql.append("TINYBLOB");
-				break;
-			case MYSQL_TYPE_MEDIUM_BLOB:
-				if (m_charset != nullptr)
-					sql.append("MEDIUMTEXT").append(" CHARACTER SET ").append(m_charset->name);
-				else
-					sql.append("MEDIUMBLOB");
-				break;
-			case MYSQL_TYPE_BLOB:
-				if (m_charset != nullptr)
-					sql.append("TEXT").append(" CHARACTER SET ").append(m_charset->name);
-				else
-					sql.append("BLOB");
-				break;
-			case MYSQL_TYPE_LONG_BLOB:
-				if (m_charset != nullptr)
-					sql.append("LONGTEXT").append(" CHARACTER SET ").append(m_charset->name);
-				else
-					sql.append("LONGBLOB");
-				break;
-			case MYSQL_TYPE_ENUM:
-			{
-				sql.append("ENUM (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
-				{
-					if (idx > 0)
-						sql.append(",");
-					sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
-				}
-				sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
-				break;
-			}
-			case MYSQL_TYPE_SET:
-			{
-				sql.append("SET (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
-				{
-					if (idx > 0)
-						sql.append(",");
-					sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
-				}
-				sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
-				break;
-			}
-			case MYSQL_TYPE_GEOMETRY:
-				sql.append("GEOMETRY");
-				break;
-			case MYSQL_TYPE_JSON:
-				sql.append("JSON");
-				break;
-			default:
-				abort();
-			}
-			return sql;
-		}
-#endif
+		std::string toString()const;
 	};
 
 	struct DLL_EXPORT tableMeta
@@ -468,7 +282,7 @@ namespace META {
 		int convertDefaultCharset(const charsetInfo* charset, const char* collationName);
 		bool operator==(const tableMeta& dest)const;
 		bool operator!=(const tableMeta& dest)const;
-		std::string toString();
+		std::string toString()const;
 	};
 }
 #endif /* _METADATA_H_ */

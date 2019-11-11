@@ -329,19 +329,26 @@ namespace META {
 			newMeta = true;
 			metas = new MetaTimeline<tableMeta>(m_maxTableId++,table);
 		}
-		if (0 != metas->put(meta, originCheckPoint))//here meta id will be set
+		if (meta == nullptr)
 		{
+			metas->disableCurrent(originCheckPoint);
+		}
+		else
+		{
+			if (0 != metas->put(meta, originCheckPoint))//here meta id will be set
+			{
+				if (newMeta)
+					delete metas;
+				LOG(ERROR) << "put new table meta to MetaTimeline failed";
+				return -1;
+			}
 			if (newMeta)
-				delete metas;
-			LOG(ERROR) << "put new table meta to MetaTimeline failed";
-			return -1;
+			{
+				barrier;
+				currentDB->tables.insert(std::pair<const char*, MetaTimeline<tableMeta>* >(meta->m_tableName.c_str(), metas));
+			}
+			m_allTables.put(meta);
 		}
-		if (newMeta)
-		{
-			barrier;
-			currentDB->tables.insert(std::pair<const char*, MetaTimeline<tableMeta>* >(meta->m_tableName.c_str(), metas));
-		}
-		m_allTables.put(meta);
 		return 0;
 	}
 	int metaDataCollection::createDatabase(const ddl* database,uint64_t originCheckPoint)
@@ -420,6 +427,12 @@ namespace META {
 			meta->m_charset = currentDb->charset;
 		for (int idx = 0; idx < meta->m_columnsCount; idx++)
 		{
+			if (columnInfos[TID(meta->m_columns[idx].m_columnType)].stringType && meta->m_columns[idx].m_charset == nullptr)
+			{
+				meta->m_columns[idx].m_charset = meta->m_charset;
+				if (meta->m_columns[idx].m_size != 0)
+					meta->m_columns[idx].m_size *= meta->m_charset->byteSizePerChar;
+			}
 			if (meta->m_columns[idx].m_isPrimary)
 			{
 				std::list<std::string> pk;

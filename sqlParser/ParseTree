@@ -1690,7 +1690,10 @@
 		"C": [
 			{ "K": "_S_:ADD" },
 			{ "K": "_S_:COLUMN" },
-			{ "K": "_C_:(" },
+			{
+				"K": "_C_:(",
+				"F": "alterTableAddColumns"
+			},
 			{
 				"LOOP": "_C_:,",
 				"C": [
