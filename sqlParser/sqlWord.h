@@ -11,7 +11,7 @@ namespace SQL_PARSER {
 	{
 	public:
 		bool m_optional;
-		uint32_t m_refs;
+		int32_t m_refs;
 		std::string m_comment;
 		bool m_forwardDeclare;
 		enum SQLWordType
@@ -26,7 +26,7 @@ namespace SQL_PARSER {
 		}
 		bool deInclude()
 		{
-			return --m_refs == 0;
+			return --m_refs <= 0;
 		}
 		SQLWord(SQLWordType t, bool optional = false) :
 			m_optional(optional), m_refs(0), m_forwardDeclare(false), m_type(t)
@@ -191,6 +191,8 @@ namespace SQL_PARSER {
 						delete (*iter);
 				}
 			}
+			if(m_loopCondition != nullptr)
+				delete m_loopCondition;
 		}
 		SQLWordArray(const SQLWordArray& s) :
 			SQLWord(SQL_ARRAY, s.m_optional), m_or(s.m_or), m_loop(s.m_loop), m_loopCondition(s.m_loopCondition)

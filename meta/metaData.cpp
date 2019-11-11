@@ -267,7 +267,7 @@ namespace META {
 	}
 	tableMeta::~tableMeta()
 	{
-
+		clean();
 	}
 	tableMeta &tableMeta::operator =(const tableMeta &t)
 	{

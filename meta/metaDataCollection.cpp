@@ -14,7 +14,6 @@
 #include "charset.h"
 #include "metaTimeline.h"
 #include "message/record.h"
-#include "metaChangeInfo.h"
 #include "util/barrier.h"
 #include "util/likely.h"
 #include "util/config.h"
@@ -57,6 +56,12 @@ namespace META {
 			collate = db.collate;
 			return *this;
 		}
+		~dbInfo()
+		{
+			for(tbTree::iterator iter = tables.begin();iter!=tables.end();iter++)
+				delete iter->second;
+			tables.clear();
+		}
 	};
 	void initVirtualConf(config * conf)
 	{
@@ -95,6 +100,9 @@ namespace META {
 	{
 		if (m_sqlParser != nullptr)
 			delete m_sqlParser;
+		for(dbTree::iterator iter = m_dbs.begin();iter!=m_dbs.end();iter++)
+			delete iter->second;
+		m_dbs.clear();
 	}
 	tableMeta * metaDataCollection::get(const char * database, const char * table,
 		uint64_t originCheckPoint)
@@ -805,9 +813,9 @@ namespace META {
 				break;
 			case ALTER_TABLE_ADD_COLUMNS:
 			{
-				for (std::list<columnMeta>::const_iterator citer = static_cast<const struct addColumns*>(*iter)->columns.begin(); citer != static_cast<const struct addColumns*>(*iter)->columns.end(); citer++)
+				for (std::list<columnMeta*>::const_iterator citer = static_cast<const struct addColumns*>(*iter)->columns.begin(); citer != static_cast<const struct addColumns*>(*iter)->columns.end(); citer++)
 				{
-					if (0 != (ret = newVersion->addColumn(&(*citer))))
+					if (0 != (ret = newVersion->addColumn(*citer)))
 						break;
 				}
 				break;

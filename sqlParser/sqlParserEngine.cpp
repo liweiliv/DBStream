@@ -579,6 +579,8 @@ namespace SQL_PARSER
 		h = new handle;
 		if (database != nullptr)
 			h->dbName = database;
+		if (m_destroyUserDataFunc)
+			h->destroyUserDataFunc = m_destroyUserDataFunc;
 		handle* currentHandle = h;
 		while (true)
 		{
@@ -605,14 +607,14 @@ namespace SQL_PARSER
 PARSE_SUCCESS:
 			if (m_initUserDataFunc)
 				m_initUserDataFunc(h);
-			if (m_destroyUserDataFunc)
-				h->destroyUserDataFunc = m_initUserDataFunc;
+
 			statusInfo* s = currentHandle->head;
 			while (s)
 			{
 				if (s->process(h) != OK)
 				{
 					delete h;
+					h = nullptr;
 					return parseValue::NOT_MATCH;
 				}
 				s = s->next;
@@ -626,6 +628,8 @@ PARSE_SUCCESS:
 			handle* _h = new handle;
 			if (!currentHandle->dbName.empty())
 				h->dbName = currentHandle->dbName;
+			if (m_destroyUserDataFunc)
+				_h->destroyUserDataFunc = m_destroyUserDataFunc;
 			currentHandle->next = _h;
 			currentHandle = _h;
 		}

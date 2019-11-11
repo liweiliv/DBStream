@@ -5,7 +5,6 @@
  *      Author: liwei
  */
 #include <assert.h>
-#include "meta/metaChangeInfo.h"
 #include "meta/charset.h"
 #include "sqlParser/sqlParserHandle.h"
 #include "util/winDll.h"
@@ -31,12 +30,6 @@ namespace SQL_PARSER {
 		ddl->table = at->table;
 		ddl->rawDdl = at->rawDdl;
 		ddl->usedDb = at->usedDb;
-	}
-	static inline void setTableName(Table* table, const string& tableName, handle* h)
-	{
-		table->table = tableName;
-		if (table->database.empty())
-			table->database = h->dbName;
 	}
 	extern "C" DLL_EXPORT  void createUserData(handle* h)
 	{
@@ -70,7 +63,7 @@ namespace SQL_PARSER {
 			case META::ALTER_TABLE_ADD_COLUMN:
 				return &static_cast<META::addColumn*>(alterInfo)->column;
 			case META::ALTER_TABLE_ADD_COLUMNS:
-				return &(*static_cast<META::addColumns*>(alterInfo)->columns.rbegin());
+				return (*static_cast<META::addColumns*>(alterInfo)->columns.rbegin());
 			case META::ALTER_TABLE_CHANGE_COLUMN:
 				return &static_cast<META::changeColumn*>(alterInfo)->newColumn;
 			case META::ALTER_TABLE_MODIFY_COLUMN:
@@ -107,10 +100,10 @@ namespace SQL_PARSER {
 			}
 			case META::ALTER_TABLE_ADD_COLUMNS:
 			{
-				META::columnMeta column;
-				column.m_columnName.assign(name);
+				META::columnMeta *column = new META::columnMeta();
+				column->m_columnName.assign(name);
 				static_cast<META::addColumns*>(alterInfo)->columns.push_back(column);
-				return &(*static_cast<META::addColumns*>(alterInfo)->columns.rbegin());
+				return column;
 			}
 			case META::ALTER_TABLE_CHANGE_COLUMN:
 			{
@@ -554,6 +547,14 @@ namespace SQL_PARSER {
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
 			(*static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin()).columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+		}
+		else if(ddl->m_type == META::ALTER_TABLE)
+		{
+			alterTableHead * lastAlter = *static_cast<META::alterTable*>(ddl)->detail.rbegin();
+			if(lastAlter->type==META::ALTER_TABLE_ADD_UNIQUE_KEY)
+				static_cast<META::addKey*>(lastAlter)->name = static_cast<SQLNameValue*>(value)->name;
+			else
+				return INVALID;
 		}
 		else
 			return NOT_MATCH;

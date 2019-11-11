@@ -11,8 +11,10 @@ namespace META {
 		{
 			T* meta;
 			uint64_t startPos;
-			//uint64_t endPos;
 			MetaInfo* prev;
+			MetaInfo():meta(nullptr),startPos(0),prev(nullptr)
+			{
+			}
 		};
 		MetaInfo* m_current;
 		uint64_t m_id;

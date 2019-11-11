@@ -383,8 +383,10 @@ namespace DATA_SOURCE {
 					{
 						if (table->m_uniqueKeysCount > 0)
 							table->m_uniqueKeys = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_uniqueKeysCount);
+						table->m_uniqueKeyNames = new std::string[table->m_uniqueKeysCount];
 						if (table->m_indexCount > 0)
 							table->m_indexs = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_indexCount);
+						table->m_indexNames = new std::string[table->m_indexCount];
 						uint16_t ukCount = 0, indexCount = 0;
 						for (std::map<std::string, keyInfo*>::iterator keyIter = tableIter->second->begin(); keyIter != tableIter->second->end(); keyIter++)
 						{

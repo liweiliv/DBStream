@@ -874,6 +874,7 @@ namespace SQL_PARSER {
 						return value;
 					}
 				}
+				delete opValue;
 				sql = savePoint;
 				return NOT_MATCH_PTR;
 			}
@@ -933,6 +934,7 @@ namespace SQL_PARSER {
 			}
 			if (op == nullptr || op->opera != LEFT_BRACKET)
 				return NOT_MATCH_PTR;
+			delete opStack.top();
 			opStack.pop();
 			sql = ptr + 1;
 			return MATCH;
@@ -1000,7 +1002,7 @@ namespace SQL_PARSER {
 
 	CHECK:
 		if (bracketCount != 0)
-			return NOT_MATCH_PTR;
+			goto NOT_MATCH;
 
 		value = new SQLExpressionValue();
 		value->valueStack = new SQLValue * [valueList.size() + opStack.size()];
@@ -1009,7 +1011,6 @@ namespace SQL_PARSER {
 			value->valueStack[value->count++] = *iter;
 		while (!opStack.empty())
 		{
-
 			value->valueStack[value->count++] = opStack.top();
 			opStack.pop();
 		}
@@ -1017,10 +1018,15 @@ namespace SQL_PARSER {
 			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType == LOGIC) ^ logicOrMath)
 			|| !value->check())
 		{
+			LOG(ERROR)<<"exp check failed";
 			delete value;
 			return NOT_MATCH_PTR;
 		}
 		sql = pos;
+		if(needValue)
+			value->ref++;
+		if (m_parser != nullptr)
+			value->ref++;
 		return value;
 	NOT_MATCH:
 		for (std::list <SQLValue*>::iterator iter = valueList.begin(); iter != valueList.end(); iter++)
@@ -1044,7 +1050,10 @@ namespace SQL_PARSER {
 			return NOT_MATCH_PTR;
 		pos = nextWord(pos);
 		if (*pos != '(')
+		{
+			delete name;
 			return NOT_MATCH_PTR;
+		}
 		SQLFunctionValue* sfv = MATCH;
 
 		if (needValue || m_parser != nullptr)
@@ -1053,8 +1062,8 @@ namespace SQL_PARSER {
 				return NOT_MATCH_PTR;
 			sfv = new SQLFunctionValue();
 			sfv->funcName = static_cast<SQLStringValue*>(name)->value;
-			delete name;
 		}
+		delete name;
 
 		pos = nextWord(pos + 1);
 		while (*pos != '\0')
@@ -1085,6 +1094,8 @@ namespace SQL_PARSER {
 			{
 				if (sfv != nullptr)
 					sfv->argvs.push_back(value);
+				else if(value!=nullptr)
+					delete value;
 			}
 			else
 			{

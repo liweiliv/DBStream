@@ -18,21 +18,24 @@ int testSQLCharWord()
 			printf("test %s failed @%d\n", __FUNCTION__,__LINE__);
 			return -1;
 		}
+		else if(value!=nullptr)
+			delete value;
 	}
 	return 0;
 }
 #define MATCH_ASSERT_SUCCESS(sql) do{	\
-	_sql = sql;\
+	_sql = sql;value=nullptr;\
 	if ((value = word.match(&h, _sql,true)) == NOT_MATCH_PTR)\
 	{\
 		printf("test %s failed @%d\n", __FUNCTION__, __LINE__);\
 		return -1;\
 	}}while(0);
 #define MATCH_ASSERT_FAIL(sql) do{	\
-	_sql = sql;\
+	_sql = sql;value=nullptr;\
 	if ((value = word.match(&h, _sql,true)) != NOT_MATCH_PTR)\
 	{\
 		printf("test %s failed @%d\n", __FUNCTION__, __LINE__);\
+		if(value!=nullptr)delete value;\
 		return -1;\
 	}}while(0);
 int testSQLNameWord()
@@ -52,9 +55,13 @@ int testSQLNameWord()
 	MATCH_ASSERT_FAIL("`name'");
 	MATCH_ASSERT_FAIL("`name\"");
 	MATCH_ASSERT_SUCCESS("`name`");
+	delete value;
 	MATCH_ASSERT_SUCCESS("'name'");
+	delete value;
 	MATCH_ASSERT_SUCCESS("\"name\"");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name");
+	delete value;
 	return 0;
 }
 #define checkTable(value,db,tb) do{\
@@ -93,39 +100,50 @@ int testSQLTableNameWord()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("\"name\".\"name1\"");
 	checkTable(value, "name", "name1");
-
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`.`name1`");
 	checkTable(value, "name", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("'name'.'name1'");
 	checkTable(value, "name", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("name.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("\"name1\" ");
 	checkTable(value, "", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("'name1' ");
 	checkTable(value, "", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("`name1` ");
 	checkTable(value, "", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("`name1'` ");
 	checkTable(value, "", "name1'");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("'name1'` ");
 	checkTable(value, "", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("'name1'` ");
 	checkTable(value, "", "name1");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("`name1 ` ");
 	checkTable(value, "", "name1 ");
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("`name`.name1 ");
 	checkTable(value, "name", "name1");
+	delete value;
 
 	MATCH_ASSERT_FAIL("`name`.`name1 ");
 	MATCH_ASSERT_FAIL("'name`.`name1` ");
@@ -141,18 +159,26 @@ int testSQLTableNameWord1()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("\"name\".\"name1\"");
 	checkTable(value, "name", "name1");
+	delete value;
+
 	MATCH_ASSERT_SUCCESS("\"name\".name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.\"name1\"");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name");
 	checkTable(value, "","name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("\"name\"");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("\"name\"");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_FAIL("`name`.`name1`");
 	MATCH_ASSERT_FAIL("\"name\".`name1`");
 	MATCH_ASSERT_FAIL("\"name\".'name1'");
@@ -168,18 +194,25 @@ int testSQLTableNameWord2()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("'name'.'name1'");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("'name'.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.'name1'");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("'name'");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("'name'");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_FAIL("`name`.`name1`");
 	MATCH_ASSERT_FAIL("'name'.`name1`");
 	MATCH_ASSERT_FAIL("'name'.\"name1\"");
@@ -195,18 +228,25 @@ int testSQLTableNameWord3()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("`name`.`name1`");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.`name1`");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.name1");
 	checkTable(value, "name", "name1");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`");
 	checkTable(value, "", "name");
+	delete value;
 	MATCH_ASSERT_FAIL("'name'.`name1`");
 	MATCH_ASSERT_FAIL("\"name\".`name1`");
 	MATCH_ASSERT_FAIL("`name`.\"name1\"");
@@ -259,27 +299,38 @@ int testSQLColumnNameWord()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("`name`.`name1`.`name2`");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1`.`name2`");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name2`");
 	checkColumn(value, "", "", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`.'name1'.`name2`");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name`.name1.`name2`");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.name1.name2");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name2");
 	checkColumn(value, "", "", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1`.name2");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name1.name2");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1'`.name2");
 	checkColumn(value, "", "name1'", "name2");
+	delete value;
 	MATCH_ASSERT_FAIL("`name1'.name2");
 	MATCH_ASSERT_SUCCESS("`name`.`name1.`name2`");
 	checkColumn(value,"", "name", "name1.");
+	delete value;
 	MATCH_ASSERT_FAIL("`name2");
 	MATCH_ASSERT_FAIL("`name2`.");
 	return 0;
@@ -292,26 +343,36 @@ int testSQLColumnNameWord1()
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("`name`.`name1`.`name2`");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1`.`name2`");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name2`");
 	checkColumn(value, "", "", "name2");
+	delete value;
 	MATCH_ASSERT_FAIL("`name`.'name1'.`name2`");
 	MATCH_ASSERT_SUCCESS("`name`.name1.`name2`");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name.name1.name2");
 	checkColumn(value, "name", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name2");
 	checkColumn(value, "", "", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1`.name2");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("name1.name2");
 	checkColumn(value, "", "name1", "name2");
+	delete value;
 	MATCH_ASSERT_SUCCESS("`name1'`.name2");
 	checkColumn(value, "", "name1'", "name2");
+	delete value;
 	MATCH_ASSERT_FAIL("`name1'.name2");
 	MATCH_ASSERT_SUCCESS("`name`.`name1.`name2`");
 	checkColumn(value, "", "name", "name1.");
+	delete value;
 	MATCH_ASSERT_FAIL("`name2");
 	MATCH_ASSERT_FAIL("`name2`.");
 	return 0;
@@ -332,6 +393,7 @@ int testSQLColumnNameWord1()
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
 	}\
+	delete svalue;\
 }while(0);
 int testSQLArrayWord()
 {
@@ -370,10 +432,15 @@ int testSQLStringWord()
 	SQL_PARSER::SQLStringWord word(false,"asdf123");
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("asdf123");
+	delete value;
 	MATCH_ASSERT_SUCCESS("ASdf123");
+	delete value;
 	MATCH_ASSERT_SUCCESS("ASdf123 sda");
+	delete value;
 	MATCH_ASSERT_SUCCESS("ASdf123(");
+	delete value;
 	MATCH_ASSERT_SUCCESS("ASdf123,");
+	delete value;
 	MATCH_ASSERT_FAIL("ASdf12 3");
 	return 0;
 }
@@ -399,14 +466,19 @@ int testSQLIntNumberWord()
 
 	MATCH_ASSERT_SUCCESS("123456790");
 	checkInt(value, 123456790);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123456790");
 	checkInt(value, -123456790);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123456790 346");
 	checkInt(value, -123456790);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123456790-");
 	checkInt(value, -123456790);
+	delete value;
 	MATCH_ASSERT_SUCCESS("+123456790");
 	checkInt(value, 123456790);
+	delete value;
 	MATCH_ASSERT_FAIL("0.123456");
 	MATCH_ASSERT_FAIL("-123456.1");
 	MATCH_ASSERT_FAIL("123456dwa");
@@ -433,18 +505,25 @@ int testSQLFloatNumberWord()
 	MATCH_ASSERT_FAIL("");
 	MATCH_ASSERT_SUCCESS("123.214");
 	checkFloat(value, 123.214);
+	delete value;
 	MATCH_ASSERT_SUCCESS("+123.214");
 	checkFloat(value, 123.214);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123.214");
 	checkFloat(value, -123.214);
+	delete value;
 	MATCH_ASSERT_SUCCESS("123.2e12");
 	checkFloat(value, 123.2e12);
+	delete value;
 	MATCH_ASSERT_SUCCESS("123.2e-12");
 	checkFloat(value, 123.2e-12);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123.2e-12");
 	checkFloat(value, -123.2e-12);
+	delete value;
 	MATCH_ASSERT_SUCCESS("-123.2e12");
 	checkFloat(value, -123.2e12);
+	delete value;
 	return 0;
 }
 int testSQLAnyStringWord()
@@ -510,6 +589,7 @@ int testSQLOperatorWord()
 		strcpy(sign, SQL_PARSER::operationInfos[idx].signStr);
 		MATCH_ASSERT_SUCCESS(sign);
 		checkOpt(value, SQL_PARSER::operationInfos[idx].type);
+		delete value;
 	}
 	MATCH_ASSERT_FAIL("qw");
 	return 0;
@@ -538,6 +618,8 @@ int testSQLWordExpressions()
 		printf("test %s failed @%d\n", __FUNCTION__, __LINE__);
 		return -1;
 	}
+	delete value;
+
 	MATCH_ASSERT_SUCCESS("a+b/c");
 	exp = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 	CHECK_EXP_FIELD_COUNT(exp, 5);
@@ -546,6 +628,7 @@ int testSQLWordExpressions()
 	checkColumn(exp->valueStack[2], "", "", "c");
 	checkOpt(exp->valueStack[3], SQL_PARSER::DIVISION);
 	checkOpt(exp->valueStack[4], SQL_PARSER::PLUS);
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("(a+m.b)/c");
 	exp = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
@@ -555,6 +638,7 @@ int testSQLWordExpressions()
 	checkOpt(exp->valueStack[2], SQL_PARSER::PLUS);
 	checkColumn(exp->valueStack[3], "", "", "c");
 	checkOpt(exp->valueStack[4], SQL_PARSER::DIVISION);
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("a+(5+(a+m.b)/c)*1.2+((23*u-(-24.2*d)))");
 	exp = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
@@ -578,6 +662,7 @@ int testSQLWordExpressions()
 	checkOpt(exp->valueStack[16], SQL_PARSER::MULTIPLE);
 	checkOpt(exp->valueStack[17], SQL_PARSER::SUBTRACT);
 	checkOpt(exp->valueStack[18], SQL_PARSER::PLUS);
+	delete value;
 
 
 	MATCH_ASSERT_SUCCESS("(a+b)/c-(123*d)");
@@ -592,6 +677,7 @@ int testSQLWordExpressions()
 	checkColumn(exp->valueStack[6], "", "", "d");
 	checkOpt(exp->valueStack[7], SQL_PARSER::MULTIPLE);
 	checkOpt(exp->valueStack[8], SQL_PARSER::SUBTRACT);
+	delete value;
 
 	MATCH_ASSERT_SUCCESS("(a+b)/c+func(\"dwad\",b.c)");
 	exp = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
@@ -617,6 +703,8 @@ int testSQLWordExpressions()
 	iter++;
 	checkColumn((*iter), "", "b", "c");
 	checkOpt(exp->valueStack[6], SQL_PARSER::PLUS);
+
+	delete value;
 	return 0;
 }
 int testSQLWordFunction()
@@ -626,14 +714,23 @@ int testSQLWordFunction()
 	SQL_PARSER::SQLWordFunction word(false, '`');
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("f1(a,b,(A+B))");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(a,\"b\",(A+B))");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(a,\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(123456,\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(123456+35,\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(-123456+35,\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(-0.123456+35,\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(f2(123,t),\"b\",(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_SUCCESS("f1(f2(123,t),f3(1+f2(213,f3(21)),f4(dw,3)),(A+B)/C)");
+	delete value;
 	MATCH_ASSERT_FAIL("f(a,b,c(d,1)");
 	MATCH_ASSERT_FAIL("fa,b,c(d,1))");
 	return 0;

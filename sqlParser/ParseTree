@@ -1808,9 +1808,11 @@
 		"ID": 10060,
 		"OPT": true,
 		"type": "ALTER_TABLE_CHANGE_COLUMN",
-		"F": "alterChangeColumn",
 		"C": [
-			{ "K": "_S_:CHANGE" },
+			{ 
+				"K": "_S_:CHANGE" 	,
+				"F": "alterChangeColumn"
+			},
 			{
 				"OPT": true,
 				"K": "_S_:COLUMN"

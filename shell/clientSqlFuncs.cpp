@@ -1,4 +1,3 @@
-#include "meta/metaChangeInfo.h"
 #include "meta/metaDataCollection.h"
 #include "meta/charset.h"
 #include "sqlParser/sqlParserHandle.h"

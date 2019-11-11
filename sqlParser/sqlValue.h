@@ -23,7 +23,7 @@ namespace SQL_PARSER {
 	public:
 
 		SQLValueType type;
-		uint32_t ref;
+		int32_t ref;
 		SQLValue(SQLValueType type) :type(type), ref(0){}
 		virtual ~SQLValue() {}
 	};

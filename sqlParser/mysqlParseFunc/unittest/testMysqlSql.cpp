@@ -6,7 +6,6 @@
  */
 #include "sqlParser/sqlParser.h"
 #include "sqlParser/sqlParserUtil.h"
-#include "meta/metaChangeInfo.h"
 #include "stdio.h"
 #include "util/stackLog.h"
 #ifdef OS_WIN
@@ -29,8 +28,6 @@ int testSql(SQL_PARSER::sqlParser * parser,const char * dbname,const char * sql)
 		printf("parser sql %s failed\n",sql);
 		return -1;
 	}
-	META::metaChangeInfo * m = static_cast<META::metaChangeInfo*>(h->userData);
-	m->print();
 	delete h;
 	return 0;
 }
@@ -57,6 +54,7 @@ int main()
 	//testSql(&parser,"alter table test.t1 add column a int unsignedd");
 	//testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
 	testSql(&parser,"test","alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
+	testSql(&parser,"test","alter table aaa change d c int");
 	destroyStackLog();
 }
 

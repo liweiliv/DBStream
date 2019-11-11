@@ -91,6 +91,7 @@ namespace META {
 	struct alterTableHead {
 		DDL_TYPE type;
 		alterTableHead(DDL_TYPE type = UNKNOW_DDL_TYPE) :type(type) {}
+		virtual ~alterTableHead(){}
 	};
 	struct addKey :public alterTableHead
 	{
@@ -158,8 +159,14 @@ namespace META {
 	};
 	struct addColumns :public alterTableHead
 	{
-		std::list<columnMeta> columns;
+		std::list<columnMeta*> columns;
 		addColumns() :alterTableHead(ALTER_TABLE_ADD_COLUMNS) {}
+		~addColumns()
+		{
+			for(std::list<columnMeta*>::iterator iter = columns.begin();iter!=columns.end();iter++)
+				delete *iter;
+			columns.clear();
+		}
 	};
 	struct renameColumn :public alterTableHead
 	{
