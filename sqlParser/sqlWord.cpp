@@ -270,7 +270,7 @@ namespace SQL_PARSER {
 
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
+			value = new SQLStringValue(SQLValueType::STRING_TYPE);
 			if (nullptr == (value->value = (char*)malloc(value->volumn = (end - p))))
 			{
 				LOG(ERROR) << m_comment << " do not match " << sql << " for alloc memory failed";
@@ -362,7 +362,7 @@ namespace SQL_PARSER {
 
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
+			value = new SQLStringValue(SQLValueType::STRING_TYPE);
 			value->value = (char*)m_word.c_str();
 			value->quote = true;
 			if (needValue)
@@ -595,7 +595,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
+			value = new SQLStringValue(SQLValueType::STRING_TYPE);
 
 			value->assign(p, end - p);
 			if (needValue)
@@ -709,7 +709,7 @@ namespace SQL_PARSER {
 		}
 		if (m_parser != nullptr || needValue)
 		{
-			value = new SQLStringValue(STRING_TYPE);
+			value = new SQLStringValue(SQLValueType::STRING_TYPE);
 			value->assign(p + 1, end - p - 1);
 			if (needValue)
 				value->ref++;
@@ -1014,7 +1014,7 @@ namespace SQL_PARSER {
 			value->valueStack[value->count++] = opStack.top();
 			opStack.pop();
 		}
-		if (value->count == 0 || value->valueStack[value->count - 1]->type != OPERATOR_TYPE ||
+		if (value->count == 0 || value->valueStack[value->count - 1]->type != SQLValueType::OPERATOR_TYPE ||
 			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType == LOGIC) ^ logicOrMath)
 			|| !value->check())
 		{

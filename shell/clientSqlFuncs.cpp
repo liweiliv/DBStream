@@ -53,7 +53,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectTableName(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::TABLE_NAME_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::TABLE_NAME_TYPE);
 		const char* database = static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.empty() ? (h->dbName.empty() ? nullptr : h->dbName.c_str()) : static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.c_str();
 		if (database == nullptr)
 			return SQL_PARSER::INVALID;
@@ -166,7 +166,7 @@ namespace SHELL {
 
 	static inline expressionField* SQLValue2ExpressionField(SQL_PARSER::SQLValue* value, selectSqlInfo* sql, bool isSelectedColumn)
 	{
-		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE);
 		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		if (expValue->count <= 1)
 			return nullptr;
@@ -176,7 +176,7 @@ namespace SHELL {
 		bool group = false;
 		for (uint16_t idx = 0; idx < expValue->count; idx++)
 		{
-			if (expValue->valueStack[idx]->type == SQL_PARSER::OPERATOR_TYPE)
+			if (expValue->valueStack[idx]->type == SQL_PARSER::SQLValueType::OPERATOR_TYPE)
 			{
 				if (typeBufferSize >= 2)
 				{
@@ -241,17 +241,17 @@ namespace SHELL {
 	{
 		switch (value->type)
 		{
-		case SQL_PARSER::INT_NUMBER_TYPE:
+		case SQL_PARSER::SQLValueType::INT_NUMBER_TYPE:
 			return SQLValue2Int(value);
-		case SQL_PARSER::STRING_TYPE:
+		case SQL_PARSER::SQLValueType::STRING_TYPE:
 			return SQLValue2String(value);
-		case SQL_PARSER::COLUMN_NAME_TYPE:
+		case SQL_PARSER::SQLValueType::COLUMN_NAME_TYPE:
 			return SQLValue2Column(value, select, isSelectedColumn);
-		case SQL_PARSER::FUNCTION_TYPE:
+		case SQL_PARSER::SQLValueType::FUNCTION_TYPE:
 			return SQLValue2FunctionField(value, select, isSelectedColumn);
-		case SQL_PARSER::EXPRESSION_TYPE:
+		case SQL_PARSER::SQLValueType::EXPRESSION_TYPE:
 			return SQLValue2ExpressionField(value, select, isSelectedColumn);
-		case SQL_PARSER::FLOAT_NUMBER_TYPE:
+		case SQL_PARSER::SQLValueType::FLOAT_NUMBER_TYPE:
 			return SQLValue2Float(value);
 		default:
 			return nullptr;
@@ -278,7 +278,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectWhereField(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
@@ -295,7 +295,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectJoinTable(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::TABLE_NAME_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::TABLE_NAME_TYPE);
 		const META::tableMeta* meta = getMeta(h, static_cast<SQL_PARSER::SQLTableNameValue*>(value));
 		if (meta == nullptr)
 		{
@@ -327,7 +327,7 @@ namespace SHELL {
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		if (sql->joinedUsingColumns.size != 0)
 			return SQL_PARSER::INVALID;
-		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
@@ -343,7 +343,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectJoinUsingColumn(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::STRING_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::STRING_TYPE);
 		if (sql->joinedCondition != nullptr)
 			return SQL_PARSER::INVALID;
 		sql->joinedUsingColumns.add(static_cast<SQL_PARSER::SQLStringValue*>(value)->value);
@@ -352,11 +352,11 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectGroupByColumn(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		if (value->type == SQL_PARSER::COLUMN_NAME_TYPE)
+		if (value->type == SQL_PARSER::SQLValueType::COLUMN_NAME_TYPE)
 		{
 			return SQL_PARSER::OK;
 		}
-		else if (value->type == SQL_PARSER::EXPRESSION_TYPE)
+		else if (value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE)
 		{
 			expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 			if (exp == nullptr)
@@ -370,7 +370,7 @@ namespace SHELL {
 			sql->groupBy.add(exp);
 			return SQL_PARSER::OK;
 		}
-		else if (value->type == SQL_PARSER::FUNCTION_TYPE)
+		else if (value->type == SQL_PARSER::SQLValueType::FUNCTION_TYPE)
 		{
 			Field* field = SQLValue2FunctionField(value, sql, false);
 			if (field == nullptr)
@@ -390,7 +390,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectHavingCondition(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;
@@ -407,7 +407,7 @@ namespace SHELL {
 	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectOrderByExpressionField(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
-		assert(value->type == SQL_PARSER::EXPRESSION_TYPE);
+		assert(value->type == SQL_PARSER::SQLValueType::EXPRESSION_TYPE);
 		expressionField* exp = SQLValue2ExpressionField(value, sql, false);
 		if (exp == nullptr)
 			return SQL_PARSER::INVALID;

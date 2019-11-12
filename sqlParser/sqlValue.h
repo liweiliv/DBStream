@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "operationInfo.h"
 namespace SQL_PARSER {
-	enum SQLValueType {
+	enum class SQLValueType {
 		OPERATOR_TYPE,
 		INT_NUMBER_TYPE,
 		FLOAT_NUMBER_TYPE,
@@ -31,28 +31,28 @@ namespace SQL_PARSER {
 	{
 	public:
 		int64_t number;
-		SQLIntNumberValue(int64_t number):SQLValue(INT_NUMBER_TYPE), number(number){}
+		SQLIntNumberValue(int64_t number):SQLValue(SQLValueType::INT_NUMBER_TYPE), number(number){}
 	};
 	class SQLFloatNumberValue :public SQLValue
 	{
 	public:
 		double number;
-		SQLFloatNumberValue(double number) :SQLValue(FLOAT_NUMBER_TYPE), number(number) {}
+		SQLFloatNumberValue(double number) :SQLValue(SQLValueType::FLOAT_NUMBER_TYPE), number(number) {}
 	};
 	class SQLOperatorValue :public SQLValue {
 	public:
 		OPERATOR opera;
-		SQLOperatorValue(const char* op) :SQLValue(OPERATOR_TYPE)
+		SQLOperatorValue(const char* op) :SQLValue(SQLValueType::OPERATOR_TYPE)
 		{
 			opera = parseOperation(op);
 		}
-		SQLOperatorValue(OPERATOR opera) :SQLValue(OPERATOR_TYPE), opera(opera)
+		SQLOperatorValue(OPERATOR opera) :SQLValue(SQLValueType::OPERATOR_TYPE), opera(opera)
 		{}
 	};
 	class SQLValueList :public SQLValue {
 	public:
 		std::list<SQLValue*> values;
-		SQLValueList() :SQLValue(LIST_TYPE) {}
+		SQLValueList() :SQLValue(SQLValueType::LIST_TYPE) {}
 		~SQLValueList()
 		{
 			for (std::list<SQLValue*>::iterator iter = values.begin(); iter != values.end(); iter++)
@@ -62,7 +62,7 @@ namespace SQL_PARSER {
 	class SQLCharValue :public SQLValue {
 	public:
 		char value;
-		SQLCharValue() :SQLValue(CHAR_TYPE), value(0) {}
+		SQLCharValue() :SQLValue(SQLValueType::CHAR_TYPE), value(0) {}
 	};
 	class SQLStringValue :public SQLValue {
 	public:
@@ -99,27 +99,27 @@ namespace SQL_PARSER {
 	class SQLNameValue :public SQLValue {
 	public:
 		std::string name;
-		SQLNameValue() :SQLValue(NAME_TYPE) {}
+		SQLNameValue() :SQLValue(SQLValueType::NAME_TYPE) {}
 	};
 	class SQLTableNameValue :public SQLValue {
 	public:
 		std::string database;
 		std::string table;
 		std::string alias;
-		SQLTableNameValue() :SQLValue(TABLE_NAME_TYPE) {}
+		SQLTableNameValue() :SQLValue(SQLValueType::TABLE_NAME_TYPE) {}
 	};
 	class SQLColumnNameValue :public SQLValue {
 	public:
 		std::string database;
 		std::string table;
 		std::string columnName;
-		SQLColumnNameValue() :SQLValue(COLUMN_NAME_TYPE) {}
+		SQLColumnNameValue() :SQLValue(SQLValueType::COLUMN_NAME_TYPE) {}
 	};
 	class SQLFunctionValue :public SQLValue {
 	public:
 		std::string funcName;
 		std::list<SQLValue*> argvs;
-		SQLFunctionValue() :SQLValue(FUNCTION_TYPE) {}
+		SQLFunctionValue() :SQLValue(SQLValueType::FUNCTION_TYPE) {}
 		~SQLFunctionValue()
 		{
 			for (std::list<SQLValue*>::iterator iter = argvs.begin(); iter != argvs.end(); iter++)
@@ -130,7 +130,7 @@ namespace SQL_PARSER {
 	public:
 		SQLValue** valueStack;
 		uint16_t count;
-		SQLExpressionValue() :SQLValue(EXPRESSION_TYPE), valueStack(nullptr), count(0){}
+		SQLExpressionValue() :SQLValue(SQLValueType::EXPRESSION_TYPE), valueStack(nullptr), count(0){}
 		~SQLExpressionValue()
 		{
 			if (valueStack != nullptr)

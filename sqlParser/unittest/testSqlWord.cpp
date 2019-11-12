@@ -65,7 +65,7 @@ int testSQLNameWord()
 	return 0;
 }
 #define checkTable(value,db,tb) do{\
-	if(value->type!=SQL_PARSER::TABLE_NAME_TYPE)\
+	if(value->type!=SQL_PARSER::SQLValueType::TABLE_NAME_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -255,7 +255,7 @@ int testSQLTableNameWord3()
 	return 0;
 }
 #define checkColumn(value,db,tb,col) do{\
-	if(value->type!=SQL_PARSER::COLUMN_NAME_TYPE)\
+	if(value->type!=SQL_PARSER::SQLValueType::COLUMN_NAME_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -378,7 +378,7 @@ int testSQLColumnNameWord1()
 	return 0;
 }
 #define checkArray(svalue,str) do{\
-	if(svalue->type!=SQL_PARSER::STRING_TYPE)\
+	if(svalue->type!=SQL_PARSER::SQLValueType::STRING_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -445,7 +445,7 @@ int testSQLStringWord()
 	return 0;
 }
 #define checkInt(value,num) do{\
-	if(value->type!=SQL_PARSER::INT_NUMBER_TYPE)\
+	if(value->type!=SQL_PARSER::SQLValueType::INT_NUMBER_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -485,7 +485,7 @@ int testSQLIntNumberWord()
 	return 0;
 }
 #define checkFloat(value,num) do{\
-	if(value->type!=SQL_PARSER::FLOAT_NUMBER_TYPE)\
+	if(value->type!=SQL_PARSER::SQLValueType::FLOAT_NUMBER_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -565,7 +565,7 @@ int testSQLBracketsWord()
 	return 0;
 }
 #define checkOpt(value,op) do{\
-	if(value->type!=SQL_PARSER::OPERATOR_TYPE)\
+	if(value->type!=SQL_PARSER::SQLValueType::OPERATOR_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -687,7 +687,7 @@ int testSQLWordExpressions()
 	checkOpt(exp->valueStack[2], SQL_PARSER::PLUS);
 	checkColumn(exp->valueStack[3], "", "", "c");
 	checkOpt(exp->valueStack[4], SQL_PARSER::DIVISION);
-	if (exp->valueStack[5]->type != SQL_PARSER::FUNCTION_TYPE)
+	if (exp->valueStack[5]->type != SQL_PARSER::SQLValueType::FUNCTION_TYPE)
 	{
 		printf("test %s failed @%d\n", __FUNCTION__, __LINE__); 
 		return -1;
