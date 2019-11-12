@@ -295,7 +295,7 @@
 		}
 		for (std::list<char*>::iterator iter = buflist.begin(); iter != buflist.end(); iter++)
 			delete[] * iter;
-		free((char*)solidIndx);
+		//free((char*)solidIndx);
 		return 0;
 	}
 int main()

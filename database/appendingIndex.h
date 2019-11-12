@@ -35,6 +35,7 @@ namespace DATABASE {
 	template <typename T>
 	struct keyComparator
 	{
+		keyComparator(){}
 		inline int operator()(const KeyTemplate<T> * a, const KeyTemplate<T> * b) const
 		{
 			if (a->key < b->key)
@@ -49,6 +50,7 @@ namespace DATABASE {
 	template <>
 	struct keyComparator<double>
 	{
+		keyComparator(){}
 		inline int operator()(const KeyTemplate<double> * a, const KeyTemplate<double> * b) const
 		{
 			if (a->key < 0.000000001f + b->key)
@@ -62,6 +64,7 @@ namespace DATABASE {
 	template <>
 	struct keyComparator<float>
 	{
+		keyComparator(){}
 		inline int operator()(const KeyTemplate<float> * a, const KeyTemplate<float> * b) const
 		{
 			if (a->key < 0.000001f + b->key)
@@ -75,6 +78,7 @@ namespace DATABASE {
 	template <>
 	struct keyComparator<META::unionKey>
 	{
+		keyComparator(){}
 		inline int operator()(const KeyTemplate<META::unionKey>* a, const KeyTemplate<META::unionKey>* b) const
 		{
 			return a->key.compare(b->key);
@@ -83,6 +87,7 @@ namespace DATABASE {
 	template <>
 	struct keyComparator<META::binaryType>
 	{
+		keyComparator(){}
 		inline int operator()(const KeyTemplate<META::binaryType>* a, const KeyTemplate<META::binaryType>* b) const
 		{
 			return a->key.compare(b->key);
@@ -96,7 +101,6 @@ namespace DATABASE {
 		const META::unionKeyMeta *m_ukMeta;
 		leveldb::Arena *m_arena;
 		bool m_localArena;
-		void* m_comp;
 		uint32_t m_allCount;
 		uint32_t m_keyCount;
 		uint32_t m_varSize;

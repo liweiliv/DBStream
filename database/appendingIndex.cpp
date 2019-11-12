@@ -275,54 +275,42 @@ namespace DATABASE {
 		switch (m_type)
 		{
 		case META::COLUMN_TYPE::T_INT8:
-			m_comp = new keyComparator<int8_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<int8_t>*, keyComparator<int8_t> >(*static_cast<keyComparator<int8_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<int8_t>*, keyComparator<int8_t> >(keyComparator<int8_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UINT8:
-			m_comp = new keyComparator<uint8_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<uint8_t>*, keyComparator<uint8_t> >(*static_cast<keyComparator<uint8_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<uint8_t>*, keyComparator<uint8_t> >(keyComparator<uint8_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT16:
-			m_comp = new keyComparator<int16_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<int16_t>*, keyComparator<int16_t> >(*static_cast<keyComparator<int16_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<int16_t>*, keyComparator<int16_t> >(keyComparator<int16_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UINT16:
-			m_comp = new keyComparator<uint16_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<uint16_t>*, keyComparator<uint16_t> >(*static_cast<keyComparator<uint16_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<uint16_t>*, keyComparator<uint16_t> >(keyComparator<uint16_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT32:
-			m_comp = new keyComparator<int32_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<int32_t>*, keyComparator<int32_t> >(*static_cast<keyComparator<int32_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<int32_t>*, keyComparator<int32_t> >(keyComparator<int32_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UINT32:
-			m_comp = new keyComparator<uint32_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<uint32_t>*, keyComparator<uint32_t> >(*static_cast<keyComparator<uint32_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<uint32_t>*, keyComparator<uint32_t> >(keyComparator<uint32_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT64:
-			m_comp = new keyComparator<int64_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >(*static_cast<keyComparator<int64_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >(keyComparator<int64_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
-			m_comp = new keyComparator<uint64_t>;
-			m_index = new leveldb::SkipList< KeyTemplate<uint64_t>*, keyComparator<uint64_t> >(*static_cast<keyComparator<uint64_t>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<uint64_t>*, keyComparator<uint64_t> >(keyComparator<uint64_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_FLOAT:
-			m_comp = new keyComparator<float>;
-			m_index = new leveldb::SkipList< KeyTemplate<float>*, keyComparator<float> >(*static_cast<keyComparator<float>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<float>*, keyComparator<float> >(keyComparator<float>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_DOUBLE:
-			m_comp = new keyComparator<double>;
-			m_index = new leveldb::SkipList< KeyTemplate<double>*, keyComparator<double> >(*static_cast<keyComparator<double>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<double>*, keyComparator<double> >(keyComparator<double>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
-			m_comp = new keyComparator<META::binaryType>;
-			m_index = new leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >(*static_cast<keyComparator<META::binaryType>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >(keyComparator<META::binaryType>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UNION:
-			m_comp = new keyComparator<META::unionKey>;
-			m_index = new leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >(*static_cast<keyComparator<META::unionKey>*>(m_comp), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >(keyComparator<META::unionKey>(), m_arena);
 			break;
 		default:
 			abort();
