@@ -307,9 +307,10 @@ int main()
 		printf("load sqlparser failed");
 		return -1;
 	}
-	//testAppendingIndex();
-	//testAppendingIndexUnion();
+	testAppendingIndex();
+	testAppendingIndexUnion();
 	testAppendingIndexUnionFixed();
-	//testAppendingIndexBinary();
+	testAppendingIndexBinary();
+	delete dbs;
 	return 0;
 }

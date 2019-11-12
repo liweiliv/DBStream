@@ -58,7 +58,9 @@ namespace SQL_PARSER {
 			c += 'a' - 'A';
 		if (m_word != c)
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
@@ -76,7 +78,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = p + 1;
 		return value;
 	}
@@ -89,7 +93,9 @@ namespace SQL_PARSER {
 		SQLNameValue* value = MATCH;
 		if (!getName(p, nameStart, nameSize, nameEnd))
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
@@ -107,7 +113,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = nameEnd;
 		return value;
 	}
@@ -120,7 +128,9 @@ namespace SQL_PARSER {
 		SQLTableNameValue* value = MATCH;
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd, quote))
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (*nameEnd == '.')
@@ -128,7 +138,9 @@ namespace SQL_PARSER {
 			p = nameEnd + 1;
 			if (!getName(p, nameStart[1], nameSize[1], nameEnd, quote))
 			{
+#ifdef DEBUG
 				LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 				return NOT_MATCH_PTR;
 			}
 		}
@@ -140,7 +152,9 @@ namespace SQL_PARSER {
 				p = nextWord(p + 2);
 				if (*p == '\0' || !getName(p, nameStart[2], nameSize[2], nameEnd, quote))
 				{
+#ifdef DEBUG
 					LOG(ERROR) << m_comment << " do not match for must have alias after AS in table name" << sql;
+#endif
 					return NOT_MATCH_PTR;
 				}
 			}
@@ -172,7 +186,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = nameEnd;
 		return value;
 	}
@@ -185,7 +201,9 @@ namespace SQL_PARSER {
 		SQLColumnNameValue* value = MATCH;
 		if (!getName(p, nameStart[0], nameSize[0], nameEnd,quote))
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (*nameEnd == '.')
@@ -193,7 +211,9 @@ namespace SQL_PARSER {
 			p = nameEnd + 1;
 			if (!getName(p, nameStart[1], nameSize[1], nameEnd, quote))
 			{
-				LOG(ERROR) << m_comment << " do not match " << sql;
+#ifdef DEBUG
+			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 				return NOT_MATCH_PTR;
 			}
 			if (*nameEnd == '.')
@@ -201,7 +221,9 @@ namespace SQL_PARSER {
 				p = nameEnd + 1;
 				if (!getName(p, nameStart[2], nameSize[2], nameEnd, quote))
 				{
+#ifdef DEBUG
 					LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 					return NOT_MATCH_PTR;
 				}
 			}
@@ -236,7 +258,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = nameEnd;
 		return value;
 	}
@@ -246,7 +270,9 @@ namespace SQL_PARSER {
 		SQLStringValue* value = MATCH;
 		if (*p != '\'' && *p != '"')
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		char quote = *p;
@@ -255,7 +281,9 @@ namespace SQL_PARSER {
 		{
 			if (*end == '\0')
 			{
+#ifdef DEBUG
 				LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 				return NOT_MATCH_PTR;
 			}
 			if (*end == quote)
@@ -321,7 +349,10 @@ namespace SQL_PARSER {
 					}
 					else
 					{
+
+#ifdef DEBUG
 						LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 						delete value;
 						return NOT_MATCH_PTR;
 					}
@@ -343,7 +374,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = end + 1;
 		return value;
 	}
@@ -354,10 +387,14 @@ namespace SQL_PARSER {
 		if (strncasecmp(m_word.c_str(), p, m_word.size()) != 0
 			|| (!isSpaceOrComment(p + m_word.size()) && p[m_word.size()] != '\0' && !isKeyChar(p[m_word.size()])))
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = p + m_word.size();
 
 		if (m_parser != nullptr || needValue)
@@ -413,19 +450,25 @@ namespace SQL_PARSER {
 			{
 				if (n == p || *n == '.')
 				{
+#ifdef DEBUG
 					LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 					return NOT_MATCH_PTR;
 				}
 			}
 			else if (!isSpaceOrComment(n))
 			{
+#ifdef DEBUG
 				LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 				return NOT_MATCH_PTR;
 			}
 		}
 		else if (n == p)
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 
@@ -443,7 +486,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = n;
 		return value;
 	}
@@ -541,19 +586,25 @@ namespace SQL_PARSER {
 			{
 				if (n == p)
 				{
+#ifdef DEBUG
 					LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 					return NOT_MATCH_PTR;
 				}
 			}
 			else if (!isSpaceOrComment(n))
 			{
+#ifdef DEBUG
 				LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 				return NOT_MATCH_PTR;
 			}
 		}
 		else if (n == p)
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 
@@ -574,7 +625,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = n;
 		return value;
 	}
@@ -585,12 +638,16 @@ namespace SQL_PARSER {
 		SQLStringValue* value = MATCH;
 		if (end == nullptr || end == p)
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (isKeyWord(p, end - p))
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
@@ -609,7 +666,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = end;
 		return value;
 	}
@@ -618,10 +677,14 @@ namespace SQL_PARSER {
 		OPERATOR op = parseOperation(sql);
 		if (op == NOT_OPERATION)
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << operationInfos[op].signStr;
+#endif
 		return new SQLOperatorValue(op);
 	}
 	DLL_EXPORT SQLValue* SQLValueListWord::match(handle* h, const char*& sql, bool needValue)
@@ -686,7 +749,9 @@ namespace SQL_PARSER {
 
 		if (*p != '(')
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		const char* end = p + 1;
@@ -704,7 +769,9 @@ namespace SQL_PARSER {
 		}
 		if (*end == '\0')
 		{
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 			return NOT_MATCH_PTR;
 		}
 		if (m_parser != nullptr || needValue)
@@ -722,7 +789,9 @@ namespace SQL_PARSER {
 				h->addStatus(s);
 			}
 		}
+#ifdef DEBUG
 		LOG(ERROR) << m_comment << "match " << sql;
+#endif
 		sql = end + 1;
 		return value;
 	}
@@ -805,11 +874,17 @@ namespace SQL_PARSER {
 			else
 				h->head = nullptr;
 			sql = savePoint;
+#ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
 		}
 		else
 		{
+#ifdef DEBUG
+
 			LOG(ERROR) << m_comment << "  match " << savePoint;
+#endif
+
 		}
 		return rtv;
 	}
