@@ -440,7 +440,7 @@ namespace SQL_PARSER
 		{
 			if (NULL == (segment = jsonValue::Parse(p, size)))
 			{
-				LOG(ERROR) << "load parse tree from " << p << " failed";
+				LOG(ERROR) << "load parse tree from " << p << " failed for json string is parse failed";
 				return -1;
 			}
 			if (segment->t != jsonValue::J_OBJECT)

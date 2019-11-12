@@ -45,6 +45,7 @@ namespace DATABASE {
 				return 0;
 		}
 	};
+
 	template <>
 	struct keyComparator<double>
 	{
@@ -69,6 +70,22 @@ namespace DATABASE {
 				return +1;
 			else
 				return 0;
+		}
+	};
+	template <>
+	struct keyComparator<META::unionKey>
+	{
+		inline int operator()(const KeyTemplate<META::unionKey>* a, const KeyTemplate<META::unionKey>* b) const
+		{
+			return a->key.compare(b->key);
+		}
+	};
+	template <>
+	struct keyComparator<META::binaryType>
+	{
+		inline int operator()(const KeyTemplate<META::binaryType>* a, const KeyTemplate<META::binaryType>* b) const
+		{
+			return a->key.compare(b->key);
 		}
 	};
 	class appendingIndex {
@@ -129,8 +146,8 @@ namespace DATABASE {
 	public:
 		static appendIndexFunc m_appendIndexFuncs[];
 	public:
-		appendingIndex(const META::unionKeyMeta * ukMeta, const META::tableMeta * meta, leveldb::Arena *arena = nullptr);
-		~appendingIndex();
+		DLL_EXPORT appendingIndex(const META::unionKeyMeta * ukMeta, const META::tableMeta * meta, leveldb::Arena *arena = nullptr);
+		DLL_EXPORT ~appendingIndex();
 		inline uint32_t getKeyCount()
 		{
 			return m_keyCount;
@@ -159,7 +176,7 @@ namespace DATABASE {
 			int count = k.child.count;
 			return k.child.subArray[count-1];
 		}
-		void append(const DATABASE_INCREASE::DMLRecord  * r, uint32_t id);
+		DLL_EXPORT void append(const DATABASE_INCREASE::DMLRecord  * r, uint32_t id);
 		template <typename T>
 		class iterator:public indexIterator<appendingIndex> {
 		private:
@@ -175,7 +192,9 @@ namespace DATABASE {
 					return false;
 				if (0 == m_iter.key()->child.count)
 					return false;
-				innerIndexId = m_iter.key()->child.count-1;
+				recordIds = m_iter.key()->child.subArray;
+				idChildCount = m_iter.key()->child.count;
+				innerIndexId = idChildCount - 1;
 				return true;
 			}
 			inline bool rbegin()
@@ -185,7 +204,9 @@ namespace DATABASE {
 					return false;
 				if (0 == m_iter.key()->child.count)
 					return false;
-				innerIndexId = m_iter.key()->child.count - 1;
+				recordIds = m_iter.key()->child.subArray;
+				idChildCount = m_iter.key()->child.count;
+				innerIndexId = idChildCount - 1;
 				return true;
 			}
 			inline bool valid()
@@ -356,16 +377,16 @@ namespace DATABASE {
 			if (fixed)
 				createFixedSolidIndex(data, iter, keySize);
 			else
-				createVarSolidIndex(data, iter);
+				createVarSolidIndex<T>(data, iter);
 			return data;
 		}
 	};
 	template<>
-	void appendingIndex::createFixedSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter, uint16_t keySize);
+	DLL_EXPORT void appendingIndex::createFixedSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter, uint16_t keySize);
 	template<>
-	void appendingIndex::createVarSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter);
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char * data, appendingIndex::iterator<META::unionKey> &iter);
 	template<>
-	void appendingIndex::createVarSolidIndex<META::binaryType>(char * data, appendingIndex::iterator<META::binaryType> &iter);
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char * data, appendingIndex::iterator<META::binaryType> &iter);
 }
 #endif /* APPENDINGINDEX_H_ */
 

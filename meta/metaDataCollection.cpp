@@ -400,7 +400,7 @@ namespace META {
 		getDbInfo(static_cast<const dataBaseDDL*>(database)->name.c_str(), db);
 		if (db == nullptr)
 		{
-			LOG(ERROR) << "drop database failed for database" << static_cast<const dataBaseDDL*>(database)->name << " not exist";
+			LOG(ERROR) << "drop database failed for database: " << static_cast<const dataBaseDDL*>(database)->name << " not exist";
 			return -1;
 		}
 		else

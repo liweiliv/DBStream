@@ -44,7 +44,7 @@ namespace DATABASE {
 			appendIndex(index, r, &c, id, false);
 			if (r->isKeyUpdated(index->m_ukMeta))
 			{
-				
+
 				c.key = *(int8_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				appendIndex(index, r, &c, id, true);
 			}
@@ -106,7 +106,7 @@ namespace DATABASE {
 		{
 			c.key = *(uint32_t*)r->column(index->m_ukMeta->columnInfo[0].columnId);
 			appendIndex(index, r, &c, id, false);
-			
+
 			if (r->isKeyUpdated(index->m_ukMeta))
 			{
 				c.key = *(uint32_t*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
@@ -250,7 +250,7 @@ namespace DATABASE {
 		KeyTemplate<META::unionKey> c;
 		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
 		c.key.key = index->m_arena->Allocate(size);
-		META::unionKey::initKey((char*)c.key.key,size, index->m_ukMeta, r, false);
+		META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, false);
 		if (!index->m_ukMeta->fixed)
 			index->m_varSize += *(uint16_t*)(c.key.key + index->m_ukMeta->size + sizeof(uint16_t));
 		c.key.meta = index->m_ukMeta;
@@ -263,12 +263,12 @@ namespace DATABASE {
 			appendIndex(index, r, &c, id, true);
 		}
 	}
-	appendingIndex::appendingIndex(const META::unionKeyMeta * ukMeta, const META::tableMeta* meta, leveldb::Arena* arena) :
-		 m_meta(meta), m_ukMeta(ukMeta),m_arena(arena),  m_localArena(arena == nullptr), m_allCount(0), m_keyCount(0), m_varSize(0)
+	DLL_EXPORT appendingIndex::appendingIndex(const META::unionKeyMeta* ukMeta, const META::tableMeta* meta, leveldb::Arena* arena) :
+		m_meta(meta), m_ukMeta(ukMeta), m_arena(arena), m_localArena(arena == nullptr), m_allCount(0), m_keyCount(0), m_varSize(0)
 	{
 		if (m_arena == nullptr)
 			m_arena = new leveldb::Arena();
-		if(ukMeta->columnCount>1)
+		if (ukMeta->columnCount > 1)
 			m_type = META::COLUMN_TYPE::T_UNION;
 		else
 			m_type = static_cast<META::COLUMN_TYPE>(ukMeta->columnInfo[0].type);
@@ -329,7 +329,7 @@ namespace DATABASE {
 		}
 
 	};
-	appendingIndex::~appendingIndex()
+	DLL_EXPORT appendingIndex::~appendingIndex()
 	{
 		if (m_index != nullptr)
 		{
@@ -386,9 +386,9 @@ namespace DATABASE {
 		appendUint32Index,appendInt32Index,appendUint64Index,appendInt64Index,nullptr,
 		appendFloatIndex,appendDoubleIndex,nullptr,appendUint64Index,nullptr,nullptr,nullptr,nullptr,
 		appendBinaryIndex ,appendBinaryIndex,nullptr,nullptr,nullptr,nullptr };
-	void  appendingIndex::append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
+	DLL_EXPORT void  appendingIndex::append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
 	{
-		m_appendIndexFuncs[static_cast<int>(m_type)](this, r, id);
+		m_appendIndexFuncs[TID(m_type)](this, r, id);
 		m_allCount++;
 	}
 	template<>
@@ -425,13 +425,13 @@ namespace DATABASE {
 		} while (iter.nextKey());
 	}
 	template<>
-	void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
 	{
-		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
+		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * (m_keyCount + 1);
 		((solidIndexHead*)(data))->flag = 0;
 		((solidIndexHead*)(data))->length = sizeof(uint32_t);
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
-		((solidIndexHead*)(data))->type = static_cast<int8_t>(META::COLUMN_TYPE::T_UNION);
+		((solidIndexHead*)(data))->type = TID(META::COLUMN_TYPE::T_UNION);
 		int kc = 0;
 		do
 		{
@@ -439,8 +439,7 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = m_ukMeta->size + *(const uint16_t*)(static_cast<const META::unionKey*>(iter.key())->key + m_ukMeta->size);
-			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::unionKey*>(iter.key())->key, *(uint16_t*)externCurretPos);
+			memcpy(externCurretPos, static_cast<const META::unionKey*>(iter.key())->key, sizeof(uint16_t)+*(const uint16_t*)(static_cast<const META::unionKey*>(iter.key())->key));
 			externCurretPos += sizeof(uint16_t) + *(uint16_t*)externCurretPos;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
@@ -449,13 +448,13 @@ namespace DATABASE {
 		*(uint32_t*)indexPos = externCurretPos - data;
 	}
 	template<>
-	void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
 	{
-		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * m_keyCount;
+		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * (m_keyCount + 1);
 		((solidIndexHead*)(data))->flag = 0;
 		((solidIndexHead*)(data))->length = sizeof(uint32_t);
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
-		((solidIndexHead*)(data))->type = static_cast<int8_t>(META::COLUMN_TYPE::T_BINARY);
+		((solidIndexHead*)(data))->type = TID(META::COLUMN_TYPE::T_BINARY);
 		do
 		{
 			const keyChildInfo* k = iter.keyDetail();
@@ -463,7 +462,7 @@ namespace DATABASE {
 			indexPos += sizeof(uint32_t);
 			*(uint16_t*)externCurretPos = static_cast<const META::binaryType*>(iter.key())->size;
 			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::binaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
-			externCurretPos += static_cast<const META::binaryType*>(iter.key())->size;
+			externCurretPos += static_cast<const META::binaryType*>(iter.key())->size + sizeof(uint16_t);
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;

@@ -23,15 +23,10 @@ namespace DATABASE {
 		{
 			abort();//not use this
 		}
-
-		inline const void* key(uint32_t idx)const
-		{
-			return ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(uint32_t)))[idx];
-		}
 		inline void getRecordIdByIndex(uint32_t idx, const uint32_t*& recordIds, uint32_t& count)const
 		{
-			const char* indexData = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[idx];
-			recordIds = (const uint32_t*)(indexData + *(uint16_t*)indexData + sizeof(uint16_t) + sizeof(uint32_t));
+			const char* indexData = (const char*)getKey(idx);
+			recordIds = (const uint32_t*)(indexData + (*(uint16_t*)indexData) + sizeof(uint16_t) + sizeof(uint32_t));
 			count = *(uint32_t*)(((const char*)recordIds) - sizeof(uint32_t));
 		}
 		template<class T>
@@ -45,14 +40,14 @@ namespace DATABASE {
 		}
 		bool begin(const uint32_t*& recordIds, uint32_t& count)
 		{
-			if (count == 0)
+			if (head->keyCount == 0)
 				return false;
 			getRecordIdByIndex(0, recordIds, count);
 			return true;
 		}
 		bool rbegin(const uint32_t*& recordIds, uint32_t& count)
 		{
-			if (count == 0)
+			if (head->keyCount == 0)
 				return false;
 			getRecordIdByIndex(this->head->keyCount - 1, recordIds, count);
 			return true;
@@ -71,9 +66,9 @@ namespace DATABASE {
 		}
 	};
 	template<>
-	int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const;
+	DLL_EXPORT int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const;
 	template<>
-	int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
+	DLL_EXPORT int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
 	struct fixedSolidIndex
 	{
 		solidIndexHead* head;
@@ -86,9 +81,9 @@ namespace DATABASE {
 			int32_t s = 0, e = head->keyCount - 1, m;
 			while (s <= e)
 			{
-				m = (s + e) > 1;
+				m = (s + e) >> 1;
 				const char* idx = ((const char*)head) + sizeof(solidIndexHead) + (head->length + sizeof(uint32_t)) * m;
-				T _m = *(T*)idx;
+				T _m = *(const T*)idx;
 				if (d > _m)
 				{
 					s = m + 1;
@@ -147,14 +142,14 @@ namespace DATABASE {
 		}
 		bool begin(const uint32_t*& recordIds, uint32_t& count)
 		{
-			if (count == 0)
+			if (head->keyCount == 0)
 				return false;
 			getRecordIdByIndex(0, recordIds, count);
 			return true;
 		}
 		bool rbegin(const uint32_t*& recordIds, uint32_t& count)
 		{
-			if (count == 0)
+			if (head->keyCount == 0)
 				return false;
 			getRecordIdByIndex(this->head->keyCount - 1, recordIds, count);
 			return true;
@@ -170,13 +165,13 @@ namespace DATABASE {
 
 	};
 	template<>
-	int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
+	DLL_EXPORT int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
 
 	template<>
-	int fixedSolidIndex::find(const float& d, bool equalOrGreater)const;
+	DLL_EXPORT int fixedSolidIndex::find(const float& d, bool equalOrGreater)const;
 
 	template<>
-	int fixedSolidIndex::find(const double& d, bool equalOrGreater)const;
+	DLL_EXPORT int fixedSolidIndex::find(const double& d, bool equalOrGreater)const;
 
 	template<class T, class INDEX_TYPE>
 	class solidIndexIterator :public indexIterator<INDEX_TYPE>
@@ -189,8 +184,6 @@ namespace DATABASE {
 		}
 		virtual ~solidIndexIterator()
 		{
-			if(this->index != nullptr)
-				delete this->index;
 		}
 		virtual bool begin()
 		{

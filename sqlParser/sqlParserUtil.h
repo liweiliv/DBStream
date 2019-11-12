@@ -13,8 +13,8 @@
 #include "util/winDll.h"
 static inline bool isSpaceOrComment(const char *str)
 {
-    if ((*str == ' ' || *str == '\t' || *str == '\n'))
-        return true;
+	if ((*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r'))
+		return true;
     if (str[0] == '/' && str[1] == '*')
         return true;
     return false;
@@ -22,8 +22,8 @@ static inline bool isSpaceOrComment(const char *str)
 static inline const char * jumpOverSpace(const char * str)
 {
     const char * p = str;
-    while (*p == ' ' || *p == '\t' || *p == '\n')
-        p++;
+	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+		p++;
     return p;
 }
 static bool jumpOverComment(const char *& str)

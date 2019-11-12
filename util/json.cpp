@@ -17,8 +17,8 @@ jsonValue::type jsonValue::getType(const char * data)
     if (data == NULL)
         return J_NULLTYPE;
     const char * ptr = data;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-        ptr++;
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+		ptr++;
     if (*ptr == '{')
         return J_OBJECT;
     else if (*ptr == '[')
@@ -127,7 +127,7 @@ int jsonString::parse(const char * data)
     m_value.clear();
     const char * ptr = data;
     string value;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
+    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n'|| *ptr == '\r')
         ptr++;
     if (ptr[0] != '"')
         return -1;
@@ -149,8 +149,8 @@ int jsonNum::parse(const char * data)
     if (data == NULL)
         return 0;
     const char * ptr = data;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-        ptr++;
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+		ptr++;
     if (*ptr == '-')
     {
         flag = false;
@@ -218,15 +218,15 @@ int jsonObject::parse(const char * data)
     clean();
     const char * ptr = data;
     string value;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-        ptr++;
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+		ptr++;
     if (ptr[0] != '{')
         return -1;
     ptr++;
     while (*ptr != 0)
     {
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-            ptr++;
+		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+			ptr++;
         if (*ptr == '}')
             break;
 		jsonString k;
@@ -237,8 +237,8 @@ int jsonObject::parse(const char * data)
             return -1;
         }
         ptr += size;
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-            ptr++;
+		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+			ptr++;
         if (*ptr != ':')
         {
             clean();
@@ -260,8 +260,8 @@ int jsonObject::parse(const char * data)
         objectKeyValuePair kv(k.m_value.c_str(), v);
         m_valueList.push_back(kv);
 
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-            ptr++;
+		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+			ptr++;
         if (*ptr == '}')
             break;
         else if (*ptr != ',')
@@ -338,15 +338,15 @@ int jsonArray::parse(const char * data)
     clean();
     const char * ptr = data;
     string value;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-        ptr++;
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+		ptr++;
     if (ptr[0] != '[')
         return -1;
     ptr++;
     while (*ptr != 0)
     {
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-            ptr++;
+		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+			ptr++;
         if (*ptr == ']')
             break;
         int size = 0;
@@ -358,8 +358,8 @@ int jsonArray::parse(const char * data)
         }
         m_values.push_back(v);
         ptr+=size;
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-            ptr++;
+		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+			ptr++;
         if (*ptr == ']')
             break;
         else if (*ptr != ',')
@@ -408,8 +408,8 @@ int jsonBool::parse(const char * data)
         return 0;
     }
     const char * ptr =data;
-    while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n')
-        ptr++;
+	while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
+		ptr++;
     if(strncasecmp(ptr,"true",4)==0)
     {
         m_value = true;

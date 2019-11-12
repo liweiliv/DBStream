@@ -68,8 +68,7 @@ namespace META {
 		int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);
 		int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
 		int purge(uint64_t originCheckPoint);
-		int processDDL(const char * ddl, const char * database,uint64_t originCheckPoint);
-		int processDDL(const struct ddl* ddl, uint64_t originCheckPoint);
+		int processDDL(const char* ddl, const char* database, uint64_t originCheckPoint);
 		int setDefaultCharset(const charsetInfo* defaultCharset);
 		const charsetInfo* getDefaultCharset();
 	private:
@@ -77,6 +76,7 @@ namespace META {
 		dbInfo * getDatabaseMetaFromRemote(uint64_t databaseID);
 		dbInfo * getDatabaseMetaFromRemote(const char * databaseName, uint64_t offset);
 		dbInfo* getDatabase(const char* database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
+		int processDDL(const struct ddl* ddl, uint64_t originCheckPoint);
 
 		int createDatabase(const ddl* database, uint64_t originCheckPoint);
 		int alterDatabase(const ddl* database, uint64_t originCheckPoint);

@@ -221,8 +221,8 @@ namespace META {
 		{
 			if (columnInfos[meta->columnInfo[columnId].type].fixed)
 			{
-				memcpy((char*)key + offset, value, columnInfos[meta->columnInfo[columnId].columnId].columnTypeSize);
-				return offset + columnInfos[meta->columnInfo[columnId].columnId].columnTypeSize;
+				memcpy((char*)key + offset, value, columnInfos[meta->columnInfo[columnId].type].columnTypeSize);
+				return offset + columnInfos[meta->columnInfo[columnId].type].columnTypeSize;
 			}
 			else
 			{

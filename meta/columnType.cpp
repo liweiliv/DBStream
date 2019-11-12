@@ -25,16 +25,16 @@ namespace META {
 	{
 		if (size == dest.size)
 			return memcmp(data, dest.data, size);
-		else if (size > dest.size)
+		else if (size < dest.size)
 		{
-			if (memcmp(data, dest.data, size) >= 0)
-				return -1;
-			else
+			if (memcmp(data, dest.data, size) > 0)
 				return 1;
+			else
+				return -1;
 		}
 		else
 		{
-			if (memcmp(data, dest.data, dest.size) > 0)
+			if (memcmp(data, dest.data, dest.size) >= 0)
 				return 1;
 			else
 				return -1;
@@ -47,7 +47,7 @@ namespace META {
 	DLL_EXPORT int unionKey::compare(const unionKey& dest) const
 	{
 		assert(meta == dest.meta);
-		const char* srcKey = key, * destKey = dest.key;
+		const char* srcKey = key + (dest.meta->fixed?0:2), * destKey = dest.key + (dest.meta->fixed ? 0 : 2);
 		for (uint16_t i = 0; i < meta->columnCount; i++)
 		{
 			switch (static_cast<META::COLUMN_TYPE>(meta->columnInfo[i].type))
@@ -124,10 +124,10 @@ namespace META {
 			default:
 				abort();
 			}
-			if (META::columnInfos[static_cast<int>(meta->columnInfo[i].columnId)].fixed)
+			if (META::columnInfos[TID(meta->columnInfo[i].type)].fixed)
 			{
-				srcKey += META::columnInfos[static_cast<int>(meta->columnInfo[i].type)].columnTypeSize;
-				destKey += META::columnInfos[static_cast<int>(meta->columnInfo[i].type)].columnTypeSize;
+				srcKey += META::columnInfos[TID(meta->columnInfo[i].type)].columnTypeSize;
+				destKey += META::columnInfos[TID(meta->columnInfo[i].type)].columnTypeSize;
 			}
 			else
 			{
@@ -177,8 +177,8 @@ namespace META {
 			{
 				if (META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].fixed)
 				{
-					memcpy(ptr, r->column(keyMeta->columnInfo[i].columnId), META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].columnTypeSize);
-					ptr += META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].columnTypeSize;
+					memcpy(ptr, r->column(keyMeta->columnInfo[i].columnId), META::columnInfos[keyMeta->columnInfo[i].type].columnTypeSize);
+					ptr += META::columnInfos[keyMeta->columnInfo[i].type].columnTypeSize;
 				}
 				else
 				{

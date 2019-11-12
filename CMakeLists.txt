@@ -205,6 +205,12 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMetaDataCollection dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+ADD_EXECUTABLE(testAppendingIndex database/unittest/testAppendingIndex.cpp)
+TARGET_LINK_LIBRARIES(testAppendingIndex util database meta metaCollection sqlParser)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testAppendingIndex dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 ADD_EXECUTABLE(testThreadLocal  util/unittest/testThreadLocal.cpp)
 TARGET_LINK_LIBRARIES(testThreadLocal util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -249,6 +255,8 @@ ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
 
 ADD_EXECUTABLE(testString util/unittest/testString.cpp)
 TARGET_LINK_LIBRARIES(testString util)
+
+
 
 ADD_EXECUTABLE(testHeap util/unittest/testHeap.cpp)
 TARGET_LINK_LIBRARIES(testHeap util)
