@@ -186,7 +186,7 @@ namespace DATA_SOURCE {
 #ifdef OS_LINUX
 		static uint32_t genSrvierId(uint32_t seed)
 		{
-			uint32_t serverId;
+			uint32_t serverId = 0;
 			struct ifaddrs* ifAddrStruct = NULL;
 			struct ifaddrs* ifa = NULL;
 			getifaddrs(&ifAddrStruct);

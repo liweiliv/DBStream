@@ -335,13 +335,13 @@ namespace META {
 		uk->varColumnCount = 0;
 		for (int i = 0; i < columnCount; i++)
 		{
-			if (columnIds[i] >= m_columnsCount|| !columnInfos[static_cast<int>(m_columns[columnIds[i]].m_columnType)].asIndex)
+			if (columnIds[i] >= m_columnsCount|| !columnInfos[TID(m_columns[columnIds[i]].m_columnType)].asIndex)
 			{
 				free(uk);
 				return nullptr;
 			}
 			uk->columnInfo[i].columnId = columnIds[i];
-			uk->columnInfo[i].type = static_cast<int>(m_columns[columnIds[i]].m_columnType);
+			uk->columnInfo[i].type = TID(m_columns[columnIds[i]].m_columnType);
 			if (!columnInfos[uk->columnInfo[i].type].fixed)
 			{
 				uk->varColumnCount++;
@@ -509,7 +509,7 @@ namespace META {
 		}
 		else
 		{
-			int to;
+			int to = idx;
 			if (first)
 				to = 0;
 			else if (addAfter != nullptr)
@@ -574,7 +574,7 @@ namespace META {
 		}
 		else
 		{
-			int to;
+			int to = idx;
 			if (first)
 				to = 0;
 			else if (addAfter != nullptr)

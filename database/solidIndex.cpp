@@ -11,7 +11,7 @@ namespace DATABASE
 	template<>
 	DLL_EXPORT int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const
 	{
-		int32_t s = 0, e = head->keyCount - 1, m;
+		int32_t s = 0, e = head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
@@ -43,7 +43,7 @@ namespace DATABASE
 	template<>
 	DLL_EXPORT int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
 	{
-		int32_t s = 0, e = (int32_t)head->keyCount - 1, m;
+		int32_t s = 0, e = (int32_t)head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
@@ -74,7 +74,7 @@ namespace DATABASE
 	template<>
 	DLL_EXPORT int fixedSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const
 	{
-		int32_t s = 0, e = head->keyCount - 1, m;
+		int32_t s = 0, e = head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
@@ -105,7 +105,7 @@ namespace DATABASE
 	template<>
 	DLL_EXPORT int fixedSolidIndex::find(const float& d, bool equalOrGreater)const
 	{
-		int32_t s = 0, e = head->keyCount - 1, m;
+		int32_t s = 0, e = head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
@@ -135,7 +135,7 @@ namespace DATABASE
 	template<>
 	DLL_EXPORT int fixedSolidIndex::find(const double& d, bool equalOrGreater)const
 	{
-		int32_t s = 0, e = head->keyCount - 1, m;
+		int32_t s = 0, e = head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;

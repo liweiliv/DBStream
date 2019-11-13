@@ -14,7 +14,7 @@ namespace DATABASE
 		}
 		if (!fileHandleValid(m_fd))
 		{
-			char fileName[512];
+			char fileName[524];
 			m_database->genBlockFileName(m_blockID, fileName);
 			m_fd = openFile(fileName, true, false, false);
 			if (!fileHandleValid(m_fd))
@@ -129,7 +129,7 @@ namespace DATABASE
 		}
 		if (!fileHandleValid(m_fd))
 		{
-			char fileName[512];
+			char fileName[524];
 			m_database->genBlockFileName(m_blockID, fileName);
 			m_fd = openFile(fileName, true, false, false);
 			if (!fileHandleValid(m_fd))
@@ -304,7 +304,7 @@ namespace DATABASE
 			return 0;
 		if (fileHandleValid(m_fd))
 			closeFile(m_fd);
-		char fileName[512], tmpFile[512];
+		char fileName[524], tmpFile[524];
 		m_database->genBlockFileName(m_blockID, fileName);
 		strcpy(tmpFile, fileName);
 		strcat(tmpFile, ".tmp");
@@ -358,7 +358,7 @@ namespace DATABASE
 	}
 	int solidBlock::loadFromFile()
 	{
-		char fileName[512];
+		char fileName[524];
 		m_database->genBlockFileName(m_blockID, fileName);
 		m_fd = openFile(fileName, true, false, false);
 		if (!fileHandleValid(m_fd))

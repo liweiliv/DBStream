@@ -134,7 +134,7 @@ namespace META {
 		{
 			return !(*this == dest);
 		}
-		void columnUpdate(uint16_t from, uint16_t to, COLUMN_TYPE newType)
+		void columnUpdate(uint16_t from, uint16_t to,COLUMN_TYPE newType)
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
@@ -145,11 +145,24 @@ namespace META {
 				else if (columnInfo[i].columnId == from)
 				{
 					if (columnInfos[columnInfo[i].type].fixed && !columnInfos[static_cast<int>(newType)].fixed)
+					{
+						size -= columnInfos[columnInfo[i].type].columnTypeSize;
+						size += sizeof(uint16_t);
 						varColumnCount++;
+					}
 					else if (!columnInfos[columnInfo[i].type].fixed && columnInfos[static_cast<int>(newType)].fixed)
+					{
+						size -= sizeof(uint16_t) ;
+						size += columnInfos[TID(newType)].columnTypeSize;
 						varColumnCount--;
+					}
+					else if (columnInfos[columnInfo[i].type].fixed)
+					{
+						size -= columnInfos[columnInfo[i].type].columnTypeSize;
+						size += columnInfos[TID(newType)].columnTypeSize;
+					}
 					columnInfo[i].columnId = to;
-					columnInfo[i].type = static_cast<int>(newType);
+					columnInfo[i].type = TID(newType);
 				}
 				else
 				{
@@ -158,6 +171,16 @@ namespace META {
 					else
 						columnInfo[i].columnId++;
 				}
+			}
+			if(varColumnCount>0&&fixed>0)
+			{
+				size += sizeof(uint16_t);
+				fixed = 0;
+			}
+			else if(varColumnCount==0&&fixed==0)
+			{
+				size -= sizeof(uint16_t);
+				fixed = 1;
 			}
 		}
 	};

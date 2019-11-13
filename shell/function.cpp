@@ -101,10 +101,10 @@ namespace SHELL {
 		virtual void* exec(Field** const valueList, const DATABASE_INCREASE::DMLRecord** const row)const
 		{
 			void* s = valueList[0]->getValue(row);
-			if (*static_cast<T*>((void*)&s) < (T)0)
+			if (*static_cast<T*>(s) < (T)0)
 			{
 
-				T v = 0 - *static_cast<T*>((void*)&s);
+				T v = 0 - *static_cast<T*>(s);
 				return *(void**)(void*)&v;
 			}
 			else

@@ -314,7 +314,7 @@ namespace DATA_SOURCE
 			  * 		 		 events (see the end of this 'if' block).
 			  * 		 		 		 */
 			memcpy(post_header_len, server_event_header_length,
-				number_of_event_types);
+					number_of_event_types);
 			/*
 			 * 		 As we are copying from a char * it might be the case at times that some
 			 * 		 		 part of the array server_version remains uninitialized so memset will help

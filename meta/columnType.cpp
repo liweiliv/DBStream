@@ -141,18 +141,17 @@ namespace META {
 	{
 		if (!meta->fixed)
 		{
-			uint16_t keySize = 0;
+			uint16_t keySize = meta->size;
 			for (uint16_t idx = 0; idx < meta->columnCount; idx++)
 			{
-				if (!META::columnInfos[static_cast<int>(meta->columnInfo[idx].type)].fixed)
+				if (!META::columnInfos[TID(meta->columnInfo[idx].type)].fixed)
 				{
 					if (keyUpdated)
-						keySize += r->oldVarColumnSizeOfUpdateType(meta->columnInfo[idx].columnId, r->oldColumnOfUpdateType(meta->columnInfo[idx].columnId)) + sizeof(uint16_t);
+						keySize += r->oldVarColumnSizeOfUpdateType(meta->columnInfo[idx].columnId, r->oldColumnOfUpdateType(meta->columnInfo[idx].columnId));
 					else
 						keySize += r->varColumnSize(meta->columnInfo[idx].columnId);
 				}
 			}
-			keySize += meta->size;
 			return keySize;
 		}
 		else
@@ -182,7 +181,7 @@ namespace META {
 				}
 				else
 				{
-					*(uint16_t*)ptr = r->varColumnSize(i);
+					*(uint16_t*)ptr = r->varColumnSize(keyMeta->columnInfo[i].columnId);
 					memcpy(ptr + sizeof(uint16_t), r->column(keyMeta->columnInfo[i].columnId), *(uint16_t*)ptr);
 					ptr += sizeof(uint16_t) + *(uint16_t*)ptr;
 				}

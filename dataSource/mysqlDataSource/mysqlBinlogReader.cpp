@@ -26,11 +26,9 @@ namespace DATA_SOURCE {
 		binlogFileInfo(const binlogFileInfo& info) :file(info.file), size(info.size) {}
 	};
 
-	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool, mysqlConnector* connector) :m_mysqlConnector(connector), m_localFile(nullptr),m_currentPos(0),m_pool(pool)
+	mysqlBinlogReader::mysqlBinlogReader(ringBuffer* pool, mysqlConnector* connector) :m_mysqlConnector(connector), m_conn(nullptr),m_serverId(0),m_remoteServerID(0),m_localFile(nullptr),m_currentPos(0),m_pool(pool)
 	{
-		m_conn = NULL;
 		m_serverId = mysqlConnector::genSrvierId(time(nullptr));
-		m_remoteServerID = 0;
 		m_readLocalBinlog = false;
 		m_localBinlogList = NULL;
 		m_currFileID = 0;

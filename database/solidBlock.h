@@ -49,7 +49,7 @@ namespace DATABASE
 		template <class T>
 		friend class solidBlockIndexIterator;
 	public:
-		solidBlock(database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+		solidBlock(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(blockId,db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 		}

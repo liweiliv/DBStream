@@ -78,7 +78,7 @@ namespace DATABASE {
 		template<class T>
 		int find(const T& d, bool equalOrGreater)const
 		{
-			int32_t s = 0, e = head->keyCount - 1, m;
+			int32_t s = 0, e = head->keyCount - 1, m = 0;
 			while (s <= e)
 			{
 				m = (s + e) >> 1;

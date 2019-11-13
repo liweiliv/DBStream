@@ -30,7 +30,7 @@
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
 		char rbuf[1024] = { 0 };
-		for (int i = 1; i < 10000; i++)
+		for (int i = 1; i < 20000; i++)
 		{
 			int k = rand();
 			if (t1Kv.find(k) == t1Kv.end())
@@ -56,7 +56,7 @@
 			assert(idx.find<int>(&k)==iter->second);
 			assert(*(int*)aiter.key() == k);
 			uint32_t v = aiter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			aiter.nextKey();
 		}
 		const char * solidIndx = idx.toString<int>();
@@ -70,7 +70,7 @@
 			assert(ks == iter->first);
 			assert(*(int*)siter.key() == k);
 			uint32_t v = siter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
 		free((char*)solidIndx);
@@ -87,7 +87,7 @@
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
 		char rbuf[1024] = { 0 };
-		for (int i = 1; i < 5; i++)
+		for (int i = 1; i < 20000; i++)
 		{
 			int k = rand();
 			char sbuf[30] = { 0 };
@@ -101,7 +101,7 @@
 				r.setFixedColumn(0, k);
 				sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
 				r.setVarColumn(1, sbuf, strlen(sbuf));
-				sprintf(sbuf, "dwad%d_&%$sdf_%dw", k, k * 123);
+				sprintf(sbuf, "dwad%d_&sdf_%dw", k, k * 123);
 				r.setVarColumn(2, sbuf, strlen(sbuf));
 				r.setFixedColumn(3, i);
 				r.finishedSet();
@@ -120,12 +120,12 @@
 			int off = uk.appendValue(&k, 4, 0, 2);
 			sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
 			off = uk.appendValue(sbuf, strlen(sbuf), 1, off);
-			sprintf(sbuf, "dwad%d_&%$sdf_%dw", k, k * 123);
+			sprintf(sbuf, "dwad%d_&sdf_%dw", k, k * 123);
 			off = uk.appendValue(sbuf, strlen(sbuf), 1, off);
 			*(uint16_t*)&ubuf[0] = off - 2;
 			assert(idx.find<META::unionKey>(&uk) == iter->second);
 			uint32_t v = aiter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
@@ -141,7 +141,7 @@
 			int off = uk.appendValue(&k, 4, 0, 2);
 			sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
 			off = uk.appendValue(sbuf, strlen(sbuf), 1, off);
-			sprintf(sbuf, "dwad%d_&%$sdf_%dw", k, k * 123);
+			sprintf(sbuf, "dwad%d_&sdf_%dw", k, k * 123);
 			off = uk.appendValue(sbuf, strlen(sbuf), 1, off);
 			*(uint16_t*)&ubuf[0] = off - 2;
 			META::unionKey ukf((char*)fsi.getKey(fsi.find<META::unionKey>(uk, true)), t1->m_primaryKey);
@@ -150,7 +150,7 @@
 			assert(ukf == uk);
 
 			uint32_t v = siter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
 		free((char*)solidIndx);
@@ -167,12 +167,11 @@
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
 		char rbuf[1024] = { 0 };
-		for (int i = 1; i < 5; i++)
+		for (int i = 1; i < 20000; i++)
 		{
 			int k = rand();
 			int64_t b = k * k;
 			short c = k;
-			char sbuf[30] = { 0 };
 			if (t1Kv.find(k) == t1Kv.end())
 			{
 				DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
@@ -203,7 +202,7 @@
 			off = uk.appendValue(&c,2, 2, off);
 			assert(idx.find<META::unionKey>(&uk) == iter->second);
 			uint32_t v = aiter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
@@ -226,7 +225,7 @@
 			assert(ukf == uk);
 
 			uint32_t v = siter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
 		free((char*)solidIndx);
@@ -243,7 +242,7 @@
 		std::map<std::string, int> t1Kv;
 		std::list<char*> buflist;
 
-		for (int i = 1; i < 5; i++)
+		for (int i = 1; i < 20000; i++)
 		{
 			int k = rand();
 			char sbuf[30] = { 0 };
@@ -272,7 +271,7 @@
 			META::binaryType b(k.c_str(),k.size());
 			assert(idx.find<META::binaryType>(&b) == iter->second);
 			uint32_t v = aiter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::binaryType>();
@@ -290,12 +289,12 @@
 			assert(ukf == b);
 
 			uint32_t v = siter.value();
-			assert(v == iter->second);
+			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
 		for (std::list<char*>::iterator iter = buflist.begin(); iter != buflist.end(); iter++)
 			delete[] * iter;
-		//free((char*)solidIndx);
+		free((char*)solidIndx);
 		return 0;
 	}
 int main()
@@ -311,6 +310,7 @@ int main()
 	testAppendingIndexUnion();
 	testAppendingIndexUnionFixed();
 	testAppendingIndexBinary();
+	LOG(INFO)<<"finished";
 	delete dbs;
 	return 0;
 }

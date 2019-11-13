@@ -353,9 +353,9 @@ namespace DATABASE {
 				fixed = m_ukMeta->fixed;
 			}
 			if (fixed)
-				size = 2 * sizeof(uint32_t) + (keySize + sizeof(uint32_t)) * m_keyCount + sizeof(uint32_t) * (m_allCount - m_keyCount) * 2;
+				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount);
 			else
-				size = 2 * sizeof(uint32_t) + (keySize + sizeof(uint32_t)) * m_keyCount + sizeof(uint32_t) * (m_allCount - m_keyCount) * 2 + m_varSize;
+				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount) + m_varSize;
 			return size;
 		}
 		template<typename T>

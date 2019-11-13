@@ -249,7 +249,7 @@ namespace DATA_SOURCE {
 		uint8_t post_header_len[ENUM_END_EVENT];
 		uint8_t number_of_event_types;
 		uint8_t common_header_len;
-		char server_version[ST_SERVER_VER_LEN];
+		char server_version[ST_SERVER_VER_LEN+1];
 		unsigned char server_version_split[3];
 		enum_binlog_checksum_alg alg;
 		commonMysqlBinlogEventHeader_v4 head;

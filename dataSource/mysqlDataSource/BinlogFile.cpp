@@ -330,7 +330,7 @@ namespace DATA_SOURCE {
 			{
 				char binlogFile[256] =
 				{ 0 };
-				strncpy(binlogFile, basename(m_filePath.c_str()), 256);
+				strncpy(binlogFile, basename(m_filePath.c_str()), 255);
 				int len = strlen(binlogFile) - 1;
 				char c;
 				for (char cr = 1; cr > 0;)

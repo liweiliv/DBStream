@@ -72,7 +72,7 @@ namespace DATABASE {
 	}
 	int appendingBlock::openRedoFile(bool w)
 	{
-		char fileName[512];
+		char fileName[524];
 		m_database->genBlockFileName(m_blockID, fileName);
 		strcat(fileName, ".redo");
 		m_redoFd = openFile(fileName, true, true,
@@ -394,7 +394,7 @@ namespace DATABASE {
 	{
 		if (!use())
 			return nullptr;
-		solidBlock* block = new solidBlock(m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED);
+		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED);
 		uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
 		block->firstPage = m_database->allocPage(firstPageSize);
 		block->pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);

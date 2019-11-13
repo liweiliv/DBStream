@@ -164,11 +164,10 @@ namespace DATABASE {
 	}
 	bool database::createNewBlock()
 	{
-		appendingBlock* newBlock = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
+		appendingBlock* newBlock = new appendingBlock(m_current->m_blockID + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
 			m_blockDefaultSize, m_redoFlushDataSize,
 			m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
 
-		newBlock->m_blockID = m_current->m_blockID + 1;
 		m_current->m_flag |= BLOCK_FLAG_FINISHED;
 		if (m_current->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
@@ -468,7 +467,7 @@ namespace DATABASE {
 		if (block->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
 			block->finishRedo();
-			char fileName[512];
+			char fileName[524];
 			genBlockFileName(block->m_blockID, fileName);
 			strcat(fileName, ".redo");
 			remove(fileName);
@@ -506,7 +505,7 @@ namespace DATABASE {
 		/*end is < m_lastBlockId.load(std::memory_order_relaxed) - 1,so we keep at least two block in disk*/
 		for (uint32_t blockId = m_lastBlockId.load(std::memory_order_relaxed); blockId < m_lastBlockId.load(std::memory_order_relaxed) - 1; blockId++)
 		{
-			char fileName[512];
+			char fileName[524];
 			genBlockFileName(blockId, fileName);
 			if (checkFileExist(fileName, 0) == 0)
 			{
@@ -549,7 +548,7 @@ namespace DATABASE {
 		m_blocks.erase(b->m_blockID);
 		int id = b->m_blockID;
 		b->unuse();
-		char fileName[512];
+		char fileName[524];
 		genBlockFileName(id, fileName);
 		remove(fileName);
 		return 0;
@@ -565,7 +564,7 @@ namespace DATABASE {
 		uint32_t activeCount = 0, lastActiveId = 0;
 		for (std::set<uint64_t>::iterator iter = redos.begin(); iter != redos.end(); iter++)
 		{
-			char fileName[512];
+			char fileName[524];
 			genBlockFileName(*iter, fileName);
 			if (checkFileExist(fileName, 0) < 0)
 			{
@@ -580,10 +579,9 @@ namespace DATABASE {
 				LOG(WARNING) << "redo file of block " << *iter << " is not exist ";
 				return 1;
 			}
-			appendingBlock* block = new appendingBlock(BLOCK_FLAG_APPENDING,
+			appendingBlock* block = new appendingBlock(*iter,BLOCK_FLAG_APPENDING,
 				m_blockDefaultSize, m_redoFlushDataSize,
 				m_redoFlushPeriod, 0, this, m_metaDataCollection);
-			block->m_blockID = *iter;
 			int ret = block->recoveryFromRedo();
 			if (ret == -1)
 			{
@@ -665,7 +663,7 @@ namespace DATABASE {
 		block* prevBlock = nullptr;
 		int64_t prev = -1;
 		block* last = nullptr;
-		char fileName[512];
+		char fileName[524];
 #ifdef OS_WIN
 		WIN32_FIND_DATA findFileData;
 		std::string findString(m_logDir);
@@ -840,9 +838,8 @@ namespace DATABASE {
 			m_lastBlockId.store(1, std::memory_order_relaxed);
 		}
 CREATE_CURRENT:
-		m_current = new appendingBlock(BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
+		m_current = new appendingBlock(m_lastBlockId.load(std::memory_order_relaxed) + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
 			m_redoFlushDataSize, m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
-		m_current->m_blockID = m_lastBlockId.load(std::memory_order_relaxed) + 1;
 		if (m_blocks.end() != nullptr)
 		{
 			m_blocks.end()->next.store(m_current, std::memory_order_relaxed);
@@ -859,9 +856,9 @@ CREATE_CURRENT:
 	}
 	int database::initConfig()
 	{
-		strncpy(m_logDir, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(), 256);
+		strncpy(m_logDir, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_DIR), "data").c_str(), 255);
 
-		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log").c_str(), 256);
+		strncpy(m_logPrefix, m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_LOG_PREFIX), "log").c_str(), 255);
 
 		m_redo = (m_config->get(C_STORE_SCTION, REAL_CONF_STRING(C_REDO), "off") == "on");
 

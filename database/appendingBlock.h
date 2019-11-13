@@ -111,9 +111,9 @@ namespace DATABASE
 			return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
 		}
 	public:
-		appendingBlock(uint32_t flag,
+		appendingBlock(uint32_t blockId,uint32_t flag,
 			uint32_t bufSize, int32_t redoFlushDataSize,
-			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(db, metaDataCollection, flag),
+			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(blockId,db, metaDataCollection, flag),
 			m_size(0), m_maxSize(bufSize), m_status(appendingBlockStaus::B_OK), m_defaultData(
 				m_blockID, nullptr, &m_arena, 4096),
 			m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(

@@ -249,7 +249,7 @@ namespace DATABASE {
 	{
 		KeyTemplate<META::unionKey> c;
 		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
-		c.key.key = index->m_arena->Allocate(size);
+		c.key.key = index->m_arena->Allocate(size + (index->m_ukMeta->fixed?0:sizeof(uint16_t)));
 		META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, false);
 		if (!index->m_ukMeta->fixed)
 			index->m_varSize += *(uint16_t*)(c.key.key + index->m_ukMeta->size + sizeof(uint16_t));

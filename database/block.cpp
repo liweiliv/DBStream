@@ -48,7 +48,7 @@ namespace DATABASE {
 	}
 	block* block::loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection)
 	{
-		char fileName[512];
+		char fileName[524];
 		db->genBlockFileName(id, fileName);
 		fileHandle h = openFile(fileName, true, false, false);
 		if (!fileHandleValid(h))
