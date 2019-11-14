@@ -56,7 +56,7 @@ namespace DATABASE {
 			LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
 			return nullptr;
 		}
-		solidBlock* b = new solidBlock(db, metaDataCollection,0);
+		solidBlock* b = new solidBlock(id,db, metaDataCollection,0);
 		if (0 != b->loadBlockInfo(h, id))
 		{
 			closeFile(h);

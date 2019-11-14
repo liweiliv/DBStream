@@ -38,6 +38,7 @@ namespace SQL_PARSER {
 	static inline void setDdl(handle* h, struct META::ddl* ddl)
 	{
 		ddl->rawDdl = h->sql;
+		ddl->usedDb = h->dbName;
 		h->userData = ddl;
 	}
 	extern "C" DLL_EXPORT  void destroyUserData(handle* h)

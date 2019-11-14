@@ -36,7 +36,7 @@ public:
 		if (_head == nullptr)
 		{
 			head.store(n, std::memory_order_relaxed);
-			end.store(n, std::memory_order_acquire);
+			end.store(n, std::memory_order_release);
 			return;
 		}
 		_head->next = n;

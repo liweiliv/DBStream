@@ -464,6 +464,7 @@ namespace DATABASE {
 			delete sb;
 			return -1;
 		}
+		LOG(INFO) << "trans appending block " << block->m_blockID << " to solidblock success";
 		if (block->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
 			block->finishRedo();

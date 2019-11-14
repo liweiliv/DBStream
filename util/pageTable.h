@@ -139,7 +139,7 @@ public:
 		uint32_t lowId = PT_LOW(id);
 		if (nullptr == low->child[lowId].load(std::memory_order_relaxed))
 			return false;
-		low->child[lowId].store(data, std::memory_order_acquire);
+		low->child[lowId].store(data, std::memory_order_release);
 		return true;
 	}
 	inline bool updateCas(uint32_t id, T data,T & expect)

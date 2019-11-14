@@ -185,7 +185,7 @@ namespace DATABASE
 			return m_database != nullptr && m_current != nullptr && m_blockIter != nullptr;
 		}
 		DLL_EXPORT status next();
-		DLL_EXPORT inline const void* value() const
+		DLL_EXPORT inline const void* value()
 		{
 			return m_blockIter->value();
 		}
@@ -200,6 +200,7 @@ namespace DATABASE
 	};
 	class databaseTimestampIterator :public databaseIterator
 	{
+	public:
 		databaseTimestampIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::TIMESTAMP_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
@@ -209,6 +210,7 @@ namespace DATABASE
 	};
 	class databaseCheckpointIterator :public databaseIterator
 	{
+	public:
 		databaseCheckpointIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::CHECKPOINT_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
@@ -218,6 +220,7 @@ namespace DATABASE
 	};
 	class databaseRecordIdIterator :public databaseIterator
 	{
+	public:
 		databaseRecordIdIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::RECORD_ID_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;

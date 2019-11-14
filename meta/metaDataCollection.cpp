@@ -363,7 +363,7 @@ namespace META {
 	{
 		if (getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint) != nullptr)
 		{
-			LOG(ERROR) << "create database failed for database" << static_cast<const dataBaseDDL*>(database)->name << " exist";
+			LOG(ERROR) << "create database failed for database:" << static_cast<const dataBaseDDL*>(database)->name << " exist";
 			return -1;
 		}
 		else
@@ -578,7 +578,7 @@ namespace META {
 		}
 		if (get(database, table, originCheckPoint) == nullptr)
 		{
-			LOG(ERROR) << "unknown table :" << database << "." << table;
+			LOG(ERROR) << "drop table failed for :" << database << "." << table<<" not exists";
 			return -1;
 		}
 		if (put(database, table, nullptr, originCheckPoint) != 0)

@@ -288,7 +288,7 @@ namespace DATABASE_INCREASE
 		template<class T>
 		inline void setFixedColumn(uint16_t id, T value)
 		{
-			assert(meta->m_realIndexInRowFormat[id]<meta->m_fixedColumnCount);
+			assert(meta->m_realIndexInRowFormat[id]<meta->m_columnsCount);
 			*(T*)(columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[id]]) = value;
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
