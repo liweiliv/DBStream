@@ -7,6 +7,7 @@ namespace DATABASE {
 #define SOLID_INDEX_FLAG_FIXED 0x01
 #pragma pack(1)
 	struct solidIndexHead {
+		uint32_t size;
 		uint32_t keyCount;
 		int8_t type;
 		int8_t flag;

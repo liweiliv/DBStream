@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <dirent.h>
+#include <string.h>
 #define fileHandle int
 static fileHandle openFile(const char *file, bool read, bool write, bool create)
 {
@@ -141,4 +143,45 @@ static int getFileSizeAndTimestamp(const char* fileName,int64_t *size,int64_t* t
 	*timestamp = stbuf.st_mtime;
 	closeFile(fd);
 	return 0;
+}
+static int removeDir(const char * dir)
+{
+	char cur_dir[] = ".";
+	char up_dir[] = "..";
+	char dir_name[128];
+	DIR *dirp;
+	struct dirent *dp;
+	struct stat dir_stat;
+
+		// 参数传递进来的目录不存在，直接返回
+		if ( 0 != access(dir, F_OK) ) {
+			return 0;
+		}
+
+		// 获取目录属性失败，返回错误
+		if ( 0 > stat(dir, &dir_stat) ) {
+			perror("get directory stat error");
+			return -1;
+		}
+
+		if ( S_ISREG(dir_stat.st_mode) ) {	// 普通文件直接删除
+			remove(dir);
+		} else if ( S_ISDIR(dir_stat.st_mode) ) {	// 目录文件，递归删除目录中内容
+			dirp = opendir(dir);
+			while ( (dp=readdir(dirp)) != NULL ) {
+				// 忽略 . 和 ..
+				if ( (0 == strcmp(cur_dir, dp->d_name)) || (0 == strcmp(up_dir, dp->d_name)) ) {
+					continue;
+				}
+
+				sprintf(dir_name, "%s/%s", dir, dp->d_name);
+				removeDir(dir_name);   // 递归调用
+			}
+			closedir(dirp);
+
+			rmdir(dir);		// 删除空目录
+		} else {
+			perror("unknow file type!");
+		}
+		return 0;
 }

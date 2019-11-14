@@ -327,9 +327,11 @@ namespace DATABASE {
 						externCurretPos += sizeof(uint32_t);
 					}
 					memcpy(externCurretPos, k->subArray, sizeof(uint32_t)*k->count);
+					externCurretPos += sizeof(uint32_t)*k->count;
 				}
 				indexPos += keySize + sizeof(uint32_t);
 			} while (iter.nextKey());
+			((solidIndexHead*)(data))->size = externCurretPos-data;
 		}
 
 		template<typename T>

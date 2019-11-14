@@ -34,7 +34,7 @@ namespace DATABASE {
 				if (uniqueKeys[idx] != nullptr)
 					delete uniqueKeys[idx];
 			}
-			delete uniqueKeys;
+			delete []uniqueKeys;
 			uniqueKeys = nullptr;
 		}
 	}
@@ -265,13 +265,13 @@ namespace DATABASE {
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if (t->current == nullptr)
 			{
-				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : (t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount)) >= m_maxPageCount || m_size + psize >= m_maxSize)
+				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount))) >= m_maxPageCount || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
 					return appendingBlockStaus::B_FULL;
 				}
-				m_pageCount += 1 + (t->meta == nullptr ? 0 : t->meta->m_primaryKey!=nullptr ? 1 : 0 + t->meta->m_uniqueKeysCount);//every index look as a page
+				m_pageCount += 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount));//every index look as a page
 			}
 			else
 			{
@@ -284,8 +284,8 @@ namespace DATABASE {
 				m_pageCount++;
 			}
 			t->current = m_database->allocPage(psize);
-			t->current->pageId = m_pageCount;
-			m_pages[m_pageCount] = t->current;
+			t->current->pageId = m_pageCount-1;
+			m_pages[m_pageCount-1] = t->current;
 			m_size += t->current->pageSize;
 			t->pages.append(t->current);
 		}
@@ -294,7 +294,7 @@ namespace DATABASE {
 	}
 	appendingBlock::appendingBlockStaus appendingBlock::append(const DATABASE_INCREASE::record* record)
 	{
-		if (m_maxLogOffset > record->head->logOffset)
+		if (unlikely(m_maxLogOffset > record->head->logOffset))
 		{
 			LOG(ERROR) << "can not append record to block for record log offset " << record->head->logOffset << "is less than max log offset:" << m_maxLogOffset
 				<< "record type:" << record->head->minHead.type;
@@ -322,7 +322,6 @@ namespace DATABASE {
 			for (int i = 0; i < meta->m_uniqueKeysCount; i++)
 				table->uniqueKeys[i]->append((const DATABASE_INCREASE::DMLRecord*)record, m_recordCount);
 		}
-		barrier;
 		m_maxLogOffset = record->head->logOffset;
 		if (m_minLogOffset == 0)
 			m_minLogOffset = record->head->logOffset;
@@ -332,7 +331,7 @@ namespace DATABASE {
 			m_maxTime = record->head->timestamp;
 		m_recordCount++;
 		if (record->head->txnId > m_txnId || record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
-			m_committedRecordID.store(m_recordCount, std::memory_order_release);
+			m_committedRecordID.store(m_recordCount, std::memory_order_relaxed);
 		m_txnId = record->head->txnId;
 		m_cond.wakeUp();
 		return appendingBlockStaus::B_OK;
@@ -387,13 +386,15 @@ namespace DATABASE {
 		{
 			index->toString<META::unionKey>(p->pageData);
 		}
-		p->pageUsedSize = p->pageSize;
+		p->pageUsedSize = p->pageSize = ((solidIndexHead*)(p->pageData))->size;
 		return p;
 	}
 	solidBlock* appendingBlock::toSolidBlock()
 	{
 		if (!use())
 			return nullptr;
+		uint32_t memSize = 0;
+		uint32_t* pageMap = (uint32_t*)m_arena.Allocate(sizeof(uint32_t)*m_pageCount);
 		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED);
 		uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
 		block->firstPage = m_database->allocPage(firstPageSize);
@@ -408,22 +409,22 @@ namespace DATABASE {
 		pos += sizeof(uint32_t) * m_recordCount;
 		block->pageOffsets = (uint64_t*)pos;
 		pos += sizeof(uint64_t) * (m_pageCount + 1);
-		block->pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);
 		uint16_t pageId = 0;
 		uint16_t tableIdx = 0;
 		uint32_t recordIdsOffset = 0;
+		assert(m_tableCount==m_tableDatas.size());
 		for (std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.begin(); iter != m_tableDatas.end(); iter++)
 		{
 			block->m_tableInfo[tableIdx].firstPageId = pageId;
 			tableData* t = iter->second;
-			uint16_t keyPageCount = 0;
 			if (t->meta != nullptr)
 			{
-				keyPageCount = t->meta->m_primaryKey!=nullptr ? 1 : 0 + t->meta->m_uniqueKeysCount;
 				if (t->primaryKey != nullptr)
 				{
 					block->pages[pageId] = createSolidIndexPage(t->primaryKey, t->meta->m_primaryKey, t->meta);
 					block->pages[pageId]->pageId = pageId;
+					memSize += block->pages[pageId]->pageUsedSize;
+
 					pageId++;
 				}
 				if (t->uniqueKeys != nullptr)
@@ -432,6 +433,8 @@ namespace DATABASE {
 					{
 						block->pages[pageId] = createSolidIndexPage(t->uniqueKeys[idx], t->meta->m_uniqueKeys[idx], t->meta);
 						block->pages[pageId]->pageId = pageId;
+						memSize += block->pages[pageId]->pageUsedSize;
+
 						pageId++;
 					}
 				}
@@ -444,8 +447,10 @@ namespace DATABASE {
 				arrayList<page*>::iterator piter;
 				t->pages.begin(piter);
 				do {
+					pageMap[piter.value()->pageId] = pageId;
 					block->pages[pageId] = piter.value();
 					block->pages[pageId]->pageId = pageId;
+					memSize += block->pages[pageId]->pageUsedSize;
 					pageId++;
 				} while (piter.next());
 			}
@@ -458,7 +463,7 @@ namespace DATABASE {
 				do {
 					uint32_t rid = riter.value();
 					uint32_t& currentOffset = m_recordIDs[rid], & newOffset = block->m_recordInfos[rid].offset;
-					setRecordPosition(newOffset, pageId(currentOffset) + keyPageCount, offsetInPage(currentOffset));
+					setRecordPosition(newOffset, pageMap[pageId(currentOffset)], offsetInPage(currentOffset));
 					block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
 					const DATABASE_INCREASE::recordHead* head = (const DATABASE_INCREASE::recordHead*)getRecordByIdx(rid);
 					block->m_recordInfos[rid].tableIndex = tableIdx;
@@ -469,7 +474,9 @@ namespace DATABASE {
 			}
 			tableIdx++;
 		}
+		assert(pageId==m_pageCount);
 		unuse();
+		LOG(INFO)<<"block:"<<m_blockID<<" trans to solid block success,size:"<<memSize<<",record count:"<<m_recordCount<<",table count:"<<m_tableCount;
 		return block;
 	}
 	blockIndexIterator* appendingBlock::createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId)
@@ -497,30 +504,42 @@ namespace DATABASE {
 		{
 		case META::COLUMN_TYPE::T_UNION:
 			indexIter =  new appendingIndex::iterator<META::unionKey>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_INT8:
 			indexIter =  new appendingIndex::iterator<int8_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_UINT8:
 			indexIter =  new appendingIndex::iterator<uint8_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_INT16:
 			indexIter =  new appendingIndex::iterator<int16_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_UINT16:
 			indexIter =  new appendingIndex::iterator<uint16_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_INT32:
 			indexIter =  new appendingIndex::iterator<int32_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_UINT32:
 			indexIter =  new appendingIndex::iterator<uint32_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_INT64:
 			indexIter =  new appendingIndex::iterator<int64_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
 			indexIter =  new appendingIndex::iterator<uint64_t>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_FLOAT:
 			indexIter =  new appendingIndex::iterator<float>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_DOUBLE:
 			indexIter =  new appendingIndex::iterator<double>(flag,index);
+			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
 			indexIter =  new appendingIndex::iterator<META::binaryType>(flag,index);
+			break;
 		default:
 			abort();
 		}

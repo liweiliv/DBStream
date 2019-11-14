@@ -26,7 +26,7 @@ private:
 	std::string m_name;
 private:
 
-	static R wrap(threadPool *p, P&& ... args)
+	static R wrap(threadPool *p, int id,P&& ... args)
 	{
 		p->m_delegate(std::forward<P>(args) ...);
 		if (p->m_quitThreadid == std::this_thread::get_id())
@@ -34,10 +34,7 @@ private:
 			p->m_quitThreadid = std::thread::id();
 			p->m_quitLock.unlock();
 		}
-		else if (p->m_quitThreadid != std::thread::id())
-		{
-			abort();//todo
-		}
+		p->m_threadStatus[id] = T_JOIN_ABLE;
 		p->m_currentThreadCount--;
 		LOG(INFO)<<"thread of :"<<p->m_name<<" exit,current thread count is:" << p->getCurrentThreadNumber();
 	}
@@ -52,7 +49,7 @@ private:
 				m_threadStatus[id] = T_IDLE;
 				return false;
 			}
-			m_threads[id] = std::thread(wrap, this, std::forward<P>(args) ...);
+			m_threads[id] = std::thread(wrap, this, id,std::forward<P>(args) ...);
 			return true;
 		}
 		else

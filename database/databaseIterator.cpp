@@ -257,13 +257,13 @@ RESEEK:
 					if (!(m_flag & ITER_FLAG_DESC))
 					{
 						if(nullptr==(nextBlock = m_current->next.load(std::memory_order_relaxed)))
-							return status::BLOCKED;
+							return m_status=status::BLOCKED;
 
 					}
 					else
 					{
 						if (nullptr == (nextBlock = m_current->prev.load(std::memory_order_relaxed)))
-							return status::ENDED;
+							return m_status=status::ENDED;
 					}
 					if (nextBlock->use())
 						break;

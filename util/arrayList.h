@@ -40,7 +40,7 @@ struct arrayList
 		if (end->size < arrayListNodeSize)
 		{
 			end->data[end->size] = d;
-			barrier;
+	//		barrier;
 			end->size++;
 		}
 		else
@@ -49,7 +49,7 @@ struct arrayList
 			next->next = nullptr;
 			next->data[0] = d;
 			next->size = 1;
-			barrier;
+	//		barrier;
 			end->next = next;
 			end = next;
 			nodeCount++;

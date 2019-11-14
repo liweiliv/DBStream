@@ -119,11 +119,23 @@ namespace DATABASE {
 		if (likely(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING))
 			m_current->commit();
 	}
-	DLL_EXPORT database::database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection) :m_status(BLOCK_MANAGER_STATUS::BM_UNINIT), m_confPrefix(confPrefix), m_blocks(nullptr), m_maxBlockID(0)
+	static int destroyMemBlock(block * b)
+	{
+		delete b;
+		return 0;
+	}
+	DLL_EXPORT database::database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection) :m_status(BLOCK_MANAGER_STATUS::BM_UNINIT), m_confPrefix(confPrefix), m_blocks(destroyMemBlock), m_maxBlockID(0)
 		, m_config(conf), m_last(nullptr), m_current(nullptr), m_pool(pool), m_metaDataCollection(metaDataCollection), m_threadPool(createThreadPool(32, this, &database::flushThread, std::string("databaseFlush_").append(confPrefix).c_str())), m_firstBlockId(0), m_lastBlockId(0), m_currentFlushThreadCount(0), m_recordId(0), m_tnxId(0)
 	{
 		initConfig();
 	}
+	DLL_EXPORT database::~database()
+	{
+		if(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING)
+			stop();
+		m_blocks.clear();
+	}
+
 	DLL_EXPORT int database::insert(DATABASE_INCREASE::record* r)
 	{
 		if (unlikely(m_status != BLOCK_MANAGER_STATUS::BM_RUNNING))
@@ -162,36 +174,48 @@ namespace DATABASE {
 			return -1;
 		}
 	}
-	bool database::createNewBlock()
+	int database::finishAppendingBlock(appendingBlock* b)
 	{
-		appendingBlock* newBlock = new appendingBlock(m_current->m_blockID + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
-			m_blockDefaultSize, m_redoFlushDataSize,
-			m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
-
-		m_current->m_flag |= BLOCK_FLAG_FINISHED;
-		if (m_current->m_flag & BLOCK_FLAG_HAS_REDO)
+		if(unlikely(b->m_flag&BLOCK_FLAG_FLUSHED))
+			return 0;
+		if (b->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
-			if (m_current->finishRedo() != 0)
+			if (b->finishRedo() != 0)
 			{
-				delete newBlock;
-				return false;
+				return -1;
 			}
 		}
-		while (!m_unflushedBlocks.push(m_current, 1000))
+		while (!m_unflushedBlocks.push(b, 1000))
 		{
 			if (m_status != BLOCK_MANAGER_STATUS::BM_RUNNING)
 			{
-				delete newBlock;
-				return false;
+				return -1;
 			}
 			m_threadPool.createNewThread();
 		}
-		m_blocks.set(newBlock->m_blockID, newBlock);
-		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_release);
+		return 0;
+	}
+	bool database::createNewBlock()
+	{
+		appendingBlock* tmp = m_current,*newBlock = new appendingBlock(m_current->m_blockID + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
+			m_blockDefaultSize, m_redoFlushDataSize,
+			m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);
+
 		newBlock->prev.store(m_current, std::memory_order_relaxed);
 		newBlock->m_prevBlockID = m_current->m_blockID;
+		m_blocks.set(newBlock->m_blockID, newBlock);
+
 		m_current->next.store(newBlock, std::memory_order_release);
+		m_lastBlockId.store(newBlock->m_blockID, std::memory_order_release);
 		m_current = newBlock;
+		barrier;
+
+		if(0!=finishAppendingBlock(tmp))
+		{
+			m_current = tmp;
+			delete newBlock;
+			return false;
+		}
 		return true;
 	}
 	DLL_EXPORT void* database::allocMemForRecord(META::tableMeta* table, size_t size)
@@ -464,6 +488,14 @@ namespace DATABASE {
 			delete sb;
 			return -1;
 		}
+		m_flushLock.lock();
+		sb->next.store(block->next.load(std::memory_order_relaxed),std::memory_order_relaxed);
+		sb->prev.store(block->prev.load(std::memory_order_relaxed),std::memory_order_relaxed);
+		if(block->prev.load(std::memory_order_relaxed)!=nullptr)
+			block->prev.load(std::memory_order_relaxed)->next.store(sb,std::memory_order_relaxed);
+		if(block->next.load(std::memory_order_relaxed)!=nullptr)
+			block->next.load(std::memory_order_relaxed)->prev.store(sb,std::memory_order_relaxed);
+		m_flushLock.unlock();
 		LOG(INFO) << "trans appending block " << block->m_blockID << " to solidblock success";
 		if (block->m_flag & BLOCK_FLAG_HAS_REDO)
 		{
@@ -474,6 +506,7 @@ namespace DATABASE {
 			remove(fileName);
 		}
 		assert(m_blocks.update(block->m_blockID, sb));
+		block->m_flag |= BLOCK_FLAG_FLUSHED;
 		block->unuse();
 		return 0;
 	}
@@ -481,16 +514,22 @@ namespace DATABASE {
 	{
 		appendingBlock* block;
 		uint32_t idleRound = 0;
-		while (likely(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING))
+		while (likely(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING||m_status == BLOCK_MANAGER_STATUS::BM_STOPPING))
 		{
 			if (!m_unflushedBlocks.pop(block, 1000))
 			{
-				if (++idleRound > 1000)
+				if (m_status >= BLOCK_MANAGER_STATUS::BM_STOPPING||++idleRound > 1000)
 				{
 					if (m_threadPool.quitIfThreadMoreThan(1))
 						return;
+					else if(m_status >= BLOCK_MANAGER_STATUS::BM_STOPPING)//this is the last flush thread
+					{
+						if (!m_unflushedBlocks.pop(block, 100))
+							return;
+					}
 				}
-				continue;
+				else
+					continue;
 			}
 			if (0 != flush(block))
 			{
@@ -654,6 +693,17 @@ namespace DATABASE {
 		return 0;
 	}
 
+	DLL_EXPORT int database::stop()
+	{
+		if(m_current!=nullptr)
+		{
+			m_current->m_flag |= BLOCK_FLAG_FINISHED;
+			finishAppendingBlock(m_current);
+		}
+		m_status = BLOCK_MANAGER_STATUS::BM_STOPPING;
+		m_threadPool.join();
+		return 0;
+	}
 	int database::load()
 	{
 		int prefixSize = strlen(m_logPrefix);

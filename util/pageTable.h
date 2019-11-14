@@ -97,14 +97,16 @@ public:
 								if (destoryValueFunc)
 									destoryValueFunc(data);
 							}
+							else
+								low->child[m].store(decltype(data)(0L),std::memory_order_relaxed);
 						}
 						delete low;
+						mid->child[j].store(nullptr,std::memory_order_relaxed);
 					}
 				}
 				delete mid;
+				root.child[i].store(nullptr,std::memory_order_relaxed);
 			}
-			else
-				root.child[i].store(nullptr, std::memory_order_relaxed);
 		}
 	}
 	inline T get(uint32_t id)

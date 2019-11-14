@@ -25,8 +25,9 @@ namespace DATABASE {
 		}
 		inline void unuse()
 		{
-			if (_ref.unuse())
+			if (!_ref.unuse())
 			{
+				abort();
 				char* data = pageData;
 				pageData = nullptr;
 				_ref.reset();

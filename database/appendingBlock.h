@@ -129,7 +129,7 @@ namespace DATABASE
 			m_minLogOffset = m_maxLogOffset = 0;
 			m_minRecordId = startID;
 			m_recordCount = 0;
-			m_tableCount = 0;
+			m_tableCount = 1;
 			m_tableDatas.insert(std::pair<uint64_t, tableData*>(0, &m_defaultData));
 		}
 		~appendingBlock()
@@ -137,7 +137,7 @@ namespace DATABASE
 			assert(m_flag & BLOCK_FLAG_FINISHED);
 			bufferPool::free(m_recordIDs);
 			bufferPool::free(m_pages);
-			if (m_flag & BLOCK_FLAG_HAS_REDO && !fileHandleValid(m_redoFd))
+			if ((m_flag & BLOCK_FLAG_HAS_REDO) && !fileHandleValid(m_redoFd))
 				closeFile(m_redoFd);
 			for (std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.begin(); iter != m_tableDatas.end(); iter++)
 			{
@@ -452,11 +452,13 @@ namespace DATABASE
 						std::this_thread::sleep_for(std::chrono::nanoseconds(10000));
 						continue;
 					}
+					else
+						return  m_status = status::BLOCKED;
 				}
 				m_seekedId++;
-			} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
+			} while (m_filter!=nullptr&&!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
 			m_recordId = m_seekedId;
-			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			m_realRecordId = m_recordId + m_block->m_minRecordId;
 			return  m_status = status::OK;
 		}
 		inline status realPrev()
@@ -468,7 +470,7 @@ namespace DATABASE
 				m_seekedId--;
 			} while (!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
 			m_recordId = m_seekedId;
-			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			m_realRecordId = m_recordId + m_block->m_minRecordId;
 			return  m_status = status::OK;
 		}
 		inline bool end()
@@ -487,7 +489,7 @@ namespace DATABASE
 		{
 			m_status = status::UNINIT;
 			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+			if (m_block == nullptr || m_block->m_maxTime < timestamp || m_block->m_minTime > timestamp)
 				return false;
 			m_recordId = -1;
 			m_seekedId = -1;
@@ -510,7 +512,7 @@ namespace DATABASE
 		{
 			m_status = status::UNINIT;
 			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+			if (m_block == nullptr || m_block->m_maxTime < timestamp || m_block->m_minTime > timestamp)
 				return false;
 			m_recordId = m_block->m_recordCount;
 			m_seekedId = m_recordId;
@@ -560,7 +562,7 @@ namespace DATABASE
 			uint64_t logOffset = *(const uint64_t*)(key);
 			m_status = status::UNINIT;
 			m_errInfo.clear();
-			if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
+			if (m_block == nullptr || m_block->m_maxLogOffset < logOffset || m_block->m_minLogOffset > logOffset)
 				return false;
 			int _e = m_block->m_recordCount - 1;
 			int s = 0, e = _e, m;
@@ -605,7 +607,7 @@ namespace DATABASE
 				m_recordId = 0xfffffffeu;
 				return false;
 			}
-			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			m_realRecordId = m_recordId + m_block->m_minRecordId;
 			m_status = status::OK;
 			return true;
 		}

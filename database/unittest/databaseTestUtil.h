@@ -14,6 +14,7 @@
 #include "meta/columnType.h"
 #include "sqlParser/sqlParser.h"
 #include "util/config.h"
+#include "util/file.h"
 #ifdef OS_WIN
 #include <windows.h>
 #define mysqlFuncLib "mysqlParserFuncs.dll"
@@ -266,7 +267,7 @@ int init()
 		printf("load sqlparser failed");
 		return -1;
 	}
-	remove("data");
+	removeDir("data");
 	db = new DATABASE::database("test", &conf, &pool, dbs);
 	if (0 != db->load())
 		return -1;

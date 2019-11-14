@@ -591,6 +591,11 @@ namespace DATABASE
 	}
 	void solidBlockIterator::resetBlock(solidBlock* block)
 	{
+		if (currentPageId != 0xfffffffful)
+		{
+			m_block->getPage(currentPageId)->unuse();
+			currentPageId = 0xfffffffful;
+		}
 		if (m_block != nullptr)
 			m_block->unuse();
 		m_block = block;
@@ -601,7 +606,7 @@ namespace DATABASE
 		uint64_t timestamp = *(uint64_t*)key;
 		m_status = status::UNINIT;
 		m_errInfo.clear();
-		if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+		if (m_block == nullptr || m_block->m_maxTime < timestamp || m_block->m_minTime > timestamp)
 			return false;
 		m_recordId = -1;
 		m_seekedId = -1;
@@ -621,7 +626,7 @@ namespace DATABASE
 		uint64_t timestamp = *(uint64_t*)key;
 		m_status = status::UNINIT;
 		m_errInfo.clear();
-		if (m_block == nullptr || m_block->m_maxTime > timestamp || m_block->m_minTime < timestamp)
+		if (m_block == nullptr || m_block->m_maxTime < timestamp || m_block->m_minTime > timestamp)
 			return false;
 		m_recordId = m_block->m_recordCount;
 		m_seekedId = m_recordId;
@@ -641,7 +646,7 @@ namespace DATABASE
 		uint64_t logOffset = *(uint64_t*)key;
 		m_status = status::UNINIT;
 		m_errInfo.clear();
-		if (m_block == nullptr || m_block->m_maxLogOffset > logOffset || m_block->m_minLogOffset < logOffset)
+		if (m_block == nullptr || m_block->m_maxLogOffset < logOffset || m_block->m_minLogOffset > logOffset)
 			return false;
 		int s = 0, e = m_block->m_recordCount - 1, m;
 		while (s <= e)
@@ -679,7 +684,7 @@ namespace DATABASE
 		}
 	FIND:
 		m_recordId = m_seekedId = m;
-		m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+		m_realRecordId = m_recordId + m_block->m_minRecordId;
 		if (filterCurrentSeekRecord() != 0)
 		{
 			if (m_status == status::INVALID)
@@ -749,7 +754,7 @@ namespace DATABASE
 	{
 		for(;;)
 		{
-			if (m_flag & ITER_FLAG_DESC)
+			if (likely(increase()))
 			{
 				if (++m_seekedId >= m_block->m_recordCount)
 					return m_status = iterator::status::ENDED;
@@ -768,7 +773,7 @@ namespace DATABASE
 					continue;
 			}
 			m_recordId = m_seekedId;
-			m_realRecordId = m_recordId + m_block->m_minRecordId + 1;
+			m_realRecordId = m_recordId + m_block->m_minRecordId;
 			return status::OK;
 		}
 		return m_status = status::ENDED;

@@ -3,7 +3,6 @@ set(CMAKE_BUILD_TYPE "Debug")
 project (DBStream)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_DEFINITIONS(-DOS_LINUX)
-	ADD_DEFINITIONS(-DDEBUG)
 
 	set(CMAKE_CXX_FLAGS "-g -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
 	SET(LIBRARY_OUTPUT_PATH lib)

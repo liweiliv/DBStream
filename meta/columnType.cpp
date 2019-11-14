@@ -193,12 +193,12 @@ namespace META {
 			{
 				if (META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].fixed)
 				{
-					memcpy(ptr, r->column(keyMeta->columnInfo[i].columnId), META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].columnTypeSize);
+					memcpy(ptr, r->oldColumnOfUpdateType(keyMeta->columnInfo[i].columnId), META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].columnTypeSize);
 					ptr += META::columnInfos[static_cast<int>(keyMeta->columnInfo[i].type)].columnTypeSize;
 				}
 				else
 				{
-					const char* v = r->column(keyMeta->columnInfo[i].columnId);
+					const char* v = r->oldColumnOfUpdateType(keyMeta->columnInfo[i].columnId);
 					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(i, v);
 					memcpy(ptr + sizeof(uint16_t), v, *(uint16_t*)ptr);
 					ptr += sizeof(uint16_t) + *(uint16_t*)ptr;

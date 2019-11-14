@@ -10,8 +10,10 @@ int testAppend()
 		sprintf(buf,"table_%d", i);
 		tl[i] = createTable("test", buf, static_cast<tableType>(i), ckp++, dbs);
 	}
-	uint64_t first = ckp + 1;
-	for (int i = 0; i < 1000000; i++)
+	uint64_t first = ckp;
+	LOG(ERROR)<<"insert start";
+
+	for (int i = 0; i < 100000; i++)
 	{
 		int transReconrdCount = abs(rand()) % 50;
 		db->begin();
@@ -34,22 +36,30 @@ int testAppend()
 				r = createDeleteRecord_mod1(tl[tid], pk);
 				break;
 			}
-			std::map<int, uint64_t>::iterator iiter = rmap.insert(std::pair<int, uint64_t>(pk, *(uint64_t*)r->column(4))).first;
-			if (iiter != rmap.end())
-				iiter->second = *(uint64_t*)r->column(4);
+			//std::map<int, uint64_t>::iterator iiter = rmap.insert(std::pair<int, uint64_t>(pk, *(uint64_t*)r->column(4))).first;
+			//if (iiter != rmap.end())
+			//	iiter->second = *(uint64_t*)r->column(4);
 			db->insert(r);
+			delete r;
 		}
 		db->commit();
 	}
+	LOG(ERROR)<<"insert finished";
 	DATABASE::databaseCheckpointIterator iter(0,nullptr,db);
 	assert(iter.seek(&first));
+	int c=0;
 	for (std::list<int>::iterator riter = allrecords.begin(); riter != allrecords.end(); riter++)
+	//for(;;)
 	{
 		const char* iv = (const char*)iter.value();
 		DATABASE_INCREASE::DMLRecord ir(iv, dbs);
 		assert(mod1ValueCheck(&ir, *riter));
 		iter.next();
+		//if(iter.next()!=DATABASE::iterator::status::OK)
+			//break;
+		c++;
 	}
+	LOG(INFO)<<"test count:"<<c;
 	return 0;
 }
 int main()

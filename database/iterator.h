@@ -15,7 +15,7 @@ namespace DATABASE
 #define ITER_FLAG_DESC   0x05  //iter is decrease
 	class iterator
 	{
-	protected:
+	public:
 		enum class status {
 			OK,
 			UNINIT,
@@ -23,6 +23,7 @@ namespace DATABASE
 			INVALID,
 			ENDED
 		};
+	protected:
 		META::COLUMN_TYPE m_keyType;
 		status m_status;
 		std::string m_errInfo;

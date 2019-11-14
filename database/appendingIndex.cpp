@@ -408,9 +408,11 @@ namespace DATABASE {
 					externCurretPos += sizeof(uint32_t);
 				}
 				memcpy(externCurretPos, k->subArray, sizeof(uint32_t) * k->count);
+				externCurretPos+=sizeof(uint32_t) * k->count;
 			}
 			indexPos += keySize + sizeof(uint32_t);
 		} while (iter.nextKey());
+		((solidIndexHead*)(data))->size = externCurretPos-data;
 	}
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
@@ -434,6 +436,7 @@ namespace DATABASE {
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;
 		} while (iter.nextKey());
 		*(uint32_t*)indexPos = externCurretPos - data;
+		((solidIndexHead*)(data))->size = externCurretPos-data;
 	}
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
@@ -456,6 +459,7 @@ namespace DATABASE {
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;
 		} while (iter.nextKey());
 		*(uint32_t*)indexPos = externCurretPos - data;
+		((solidIndexHead*)(data))->size = externCurretPos-data;
 	}
 
 

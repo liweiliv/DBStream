@@ -114,6 +114,7 @@ public:
 	}
 	inline void freeMem(void *_block)
 	{
+
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
 		getCacheWithDeclare(localCache, m_cache2);
 		if (localCache->caches.m_count.load(std::memory_order_relaxed) < (int32_t)basicBlockCount * 2)
@@ -144,13 +145,13 @@ public:
 		void* mem = malloc(size + offsetof(basicBlock, mem));
 		if (likely(mem != nullptr))
 			memset(mem, 0, offsetof(basicBlock, mem));
-		return mem;
+		return (char*)mem+offsetof(basicBlock, mem);
 	}
 	static inline void free(void * _block)
 	{
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
 		if (unlikely(basic->_block == nullptr))//mem is not alloced by buffer pool
-			free(basic);
+			::free(basic);
 		else
 			basic->_block->pool->freeMem(_block);
 	}

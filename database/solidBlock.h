@@ -61,10 +61,14 @@ namespace DATABASE
 		~solidBlock()
 		{
 			assert(m_flag & BLOCK_FLAG_FLUSHED);
-			for (uint32_t i = 0; i < m_pageCount; i++)
+			if(pages!=nullptr)
 			{
-				if (pages[i] != nullptr)
-					m_database->freePage(pages[i]);
+				for (uint32_t i = 0; i < m_pageCount; i++)
+				{
+					if (pages[i] != nullptr)
+						m_database->freePage(pages[i]);
+				}
+				basicBufferPool::free(pages);
 			}
 			m_database->freePage(firstPage);
 			if (fileHandleValid(m_fd))
@@ -124,7 +128,7 @@ public:
 		solidBlock* m_block;
 		uint32_t currentPageId;
 	public:
-		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block), currentPageId(0)
+		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block), currentPageId(0xfffffffful)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 			begin();
@@ -133,7 +137,7 @@ public:
 		{
 			if (m_block != nullptr)
 			{
-				if (currentPageId != 0)
+				if (currentPageId != 0xfffffffful)
 					m_block->getPage(currentPageId)->unuse();
 				m_block->unuse();
 			}
@@ -181,7 +185,7 @@ public:
 			uint32_t pageId = m_block->getPageId(m_recordId);
 			if (currentPageId != pageId)
 			{
-				if (currentPageId != 0)
+				if (currentPageId != 0xfffffffful)
 					m_block->getPage(currentPageId)->unuse();
 				m_block->getPage(pageId)->use();
 				currentPageId = pageId;

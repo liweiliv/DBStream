@@ -57,6 +57,7 @@ namespace DATABASE
 	public:
 		enum class BLOCK_MANAGER_STATUS {
 			BM_RUNNING,
+			BM_STOPPING,
 			BM_STOPPED,
 			BM_FAILED,
 			BM_UNINIT
@@ -88,6 +89,7 @@ namespace DATABASE
 		uint32_t m_maxUnflushedBlock;
 		uint32_t m_fileSysPageSize;
 		shared_mutex m_blockLock;//all read ,write thread use shared lock,purge thread use mutex lock,avoid the aba problem
+		std::mutex m_flushLock;
 		threadPool<database, void> m_threadPool;
 		std::atomic<uint32_t> m_firstBlockId;
 		std::atomic<uint32_t> m_lastBlockId;
@@ -96,6 +98,7 @@ namespace DATABASE
 		uint64_t m_tnxId;
 	public:
 		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
+		DLL_EXPORT ~database();
 		DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 	private:
 		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t,block*> &recoveried);
@@ -104,6 +107,7 @@ namespace DATABASE
 		int checkSolidBlock(block* b);
 		block* getBasciBlock(uint32_t blockId);
 		int initConfig();
+		int finishAppendingBlock(appendingBlock* b);
 		bool createNewBlock();
 		int flush(appendingBlock* block);
 		void flushThread();
@@ -118,31 +122,23 @@ namespace DATABASE
 			if (0 == (++m_tnxId))
 				m_tnxId++;
 		}
-		DLL_EXPORT void commit();;
+		DLL_EXPORT void commit();
 		DLL_EXPORT inline void genBlockFileName(uint64_t id,char *fileName)
 		{
 			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);
 		}
-		DLL_EXPORT int start()//todo
+		DLL_EXPORT int start()
 		{
 			m_status = BLOCK_MANAGER_STATUS::BM_RUNNING;
 			m_threadPool.createNewThread();
 			return 0;
 		}
-		DLL_EXPORT int stop() //todo
-		{
-			m_status = BLOCK_MANAGER_STATUS::BM_STOPPED;
-			m_threadPool.join();
-			return 0;
-		}
+		DLL_EXPORT int stop();
 		DLL_EXPORT int load();
 		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
 			page* p = (page*)m_pool->allocByLevel(0);
-			if (size > m_pool->maxSize())
-				p->pageData = (char*)malloc(size);
-			else
-				p->pageData = (char*)m_pool->alloc(size);
+			p->pageData = (char*)m_pool->alloc(size);
 			p->pageSize = size;
 			p->pageUsedSize = 0;
 			return p;
@@ -153,9 +149,7 @@ namespace DATABASE
 		}
 		DLL_EXPORT inline void freePage(page* p)
 		{
-			if (p->pageSize > m_pool->maxSize())
-				free(p->pageData);
-			else
+			if (p->pageData != nullptr)
 				m_pool->free(p->pageData);
 			m_pool->free(p);
 		}
