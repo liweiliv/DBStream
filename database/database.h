@@ -141,6 +141,7 @@ namespace DATABASE
 			p->pageData = (char*)m_pool->alloc(size);
 			p->pageSize = size;
 			p->pageUsedSize = 0;
+			p->_ref.m_ref.store(0,std::memory_order_relaxed);
 			return p;
 		}
 		DLL_EXPORT inline void* allocMem(size_t size)

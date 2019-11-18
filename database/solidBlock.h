@@ -23,6 +23,9 @@
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
+#define SOLID_ITER_PAGE_CACHE_SIZE 16
+#define SOLID_ITER_PAGE_CACHE_MASK 0xf
+
 namespace DATABASE
 {
 	class solidBlockIterator;
@@ -105,6 +108,10 @@ namespace DATABASE
 			page* p = getPage(pId);
 			if (unlikely(p == nullptr))
 				return nullptr;
+			return getRecordFromPage(p,recordId);
+		}
+		inline const char * getRecordFromPage(page* p,uint32_t recordId)
+		{
 			return p->pageData + offsetInPage(m_recordInfos[recordId].offset);
 		}
 public:
@@ -126,19 +133,26 @@ public:
 		uint32_t m_seekedId;
 		uint64_t m_realRecordId;
 		solidBlock* m_block;
-		uint32_t currentPageId;
+		page* m_pageCache[16];
 	public:
-		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block), currentPageId(0xfffffffful)
+		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block)
 		{
+			memset(m_pageCache,0,sizeof(m_pageCache));
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 			begin();
 		}
 		~solidBlockIterator()
 		{
+			for(int i=0;i<SOLID_ITER_PAGE_CACHE_SIZE;i++)
+			{
+				if(m_pageCache[i]!=nullptr)
+				{
+					m_pageCache[i]->unuse();
+					m_pageCache[i] = nullptr;
+				}
+			}
 			if (m_block != nullptr)
 			{
-				if (currentPageId != 0xfffffffful)
-					m_block->getPage(currentPageId)->unuse();
 				m_block->unuse();
 			}
 		}
@@ -180,17 +194,28 @@ public:
 		{
 			return &m_realRecordId;
 		}
+	private:
+		inline const void* value(uint32_t rid)
+		{
+			uint32_t pageId = m_block->getPageId(rid),cacheId = pageId&SOLID_ITER_PAGE_CACHE_MASK;
+			if(likely(m_pageCache[cacheId] != nullptr))
+			{
+				if(m_pageCache[cacheId]->pageId != pageId)
+				{
+					m_pageCache[cacheId]->unuse();
+					m_pageCache[cacheId] = m_block->getPage(pageId);
+				}
+			}
+			else
+			{
+				m_pageCache[cacheId] = m_block->getPage(pageId);
+			}
+			return m_block->getRecordFromPage(m_pageCache[cacheId],rid);
+		}
+	public:
 		inline const void* value()
 		{
-			uint32_t pageId = m_block->getPageId(m_recordId);
-			if (currentPageId != pageId)
-			{
-				if (currentPageId != 0xfffffffful)
-					m_block->getPage(currentPageId)->unuse();
-				m_block->getPage(pageId)->use();
-				currentPageId = pageId;
-			}
-			return m_block->getRecordByInnerId(m_recordId);
+			return value(m_recordId);
 		}
 		inline bool end()
 		{
@@ -253,6 +278,8 @@ public:
 		INDEX_TYPE m_index;
 		indexIterator<INDEX_TYPE>* indexIter;
 		uint32_t currentPageId;
+		page* m_pageCache[16];
+
 	public:
 		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), currentPageId(0)
 		{

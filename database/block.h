@@ -117,11 +117,11 @@ namespace DATABASE {
 		virtual ~block() {}
 		inline bool use()
 		{
-			return m_ref.use();
+			return m_ref.use()>=0;
 		}
 		inline void unuse()
 		{
-			if (!m_ref.unuse())//no user now,and blockManager wants to delete it
+			if (m_ref.unuse()<0)//no user now,and blockManager wants to delete it
 				delete this;
 		}
 		//call it after loading 

@@ -103,6 +103,7 @@ namespace DATABASE
 		for (uint16_t idx = 0; idx < m_pageCount; idx++)
 		{
 			pages[idx] = (page*)m_database->allocMem(sizeof(page));
+			pages[idx]->_ref.m_ref.store(0,std::memory_order_relaxed);
 			memcpy((void*)pages[idx], pos, offsetof(page, _ref));
 			pos += offsetof(page, _ref);
 		}
@@ -413,7 +414,7 @@ namespace DATABASE
 	int solidBlock::gc()
 	{
 		for (int i = 0; i < m_pageCount; i++)
-			pages[i]->_ref.unuse();
+			pages[i]->unuse();
 		return 0;
 	}
 	page* solidBlock::getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId)
@@ -591,10 +592,13 @@ namespace DATABASE
 	}
 	void solidBlockIterator::resetBlock(solidBlock* block)
 	{
-		if (currentPageId != 0xfffffffful)
+		for(int i=0;i<SOLID_ITER_PAGE_CACHE_SIZE;i++)
 		{
-			m_block->getPage(currentPageId)->unuse();
-			currentPageId = 0xfffffffful;
+			if(m_pageCache[i]!=nullptr)
+			{
+				m_pageCache[i]->unuse();
+				m_pageCache[i] = nullptr;
+			}
 		}
 		if (m_block != nullptr)
 			m_block->unuse();
@@ -732,7 +736,7 @@ namespace DATABASE
 				return 1;
 			if (!m_filter->onlyNeedGeneralInfo())
 			{
-				if ((tmpRecord = m_block->getRecord(m_seekedId)) == nullptr)
+				if ((tmpRecord = value(m_seekedId)) == nullptr)
 				{
 					m_status = status::INVALID;
 					LOG(ERROR) << "read next record from block " << m_block->m_blockID << " failed,record id:" << m_seekedId;
