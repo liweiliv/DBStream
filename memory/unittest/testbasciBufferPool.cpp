@@ -39,9 +39,12 @@ void test(int size)
 	}
 	for (int i = 0; i < 10; i++)
 		tl[i].join();
+	t(&pool, size);
+
 }
 int main()
 {
 	test(32);
 	test(256);
+	test(1024);
 }

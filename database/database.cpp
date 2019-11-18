@@ -885,8 +885,8 @@ namespace DATABASE {
 		{
 			m_tnxId = 1;
 			m_recordId = 1;
-			m_firstBlockId.store(1, std::memory_order_relaxed);
-			m_lastBlockId.store(1, std::memory_order_relaxed);
+			m_firstBlockId.store(0, std::memory_order_relaxed);
+			m_lastBlockId.store(0, std::memory_order_relaxed);
 		}
 CREATE_CURRENT:
 		m_current = new appendingBlock(m_lastBlockId.load(std::memory_order_relaxed) + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,

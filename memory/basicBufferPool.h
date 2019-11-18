@@ -150,6 +150,8 @@ public:
 	static inline void free(void * _block)
 	{
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
+		if (basic->_block >= (void*)0xddddddddddddddddULL)
+			abort();
 		if (unlikely(basic->_block == nullptr))//mem is not alloced by buffer pool
 			::free(basic);
 		else

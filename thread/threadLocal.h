@@ -33,14 +33,21 @@ public:
 		memset(m_var, 0, sizeof(m_var));
 		registerThreadLocalVar(_unset, this);
 	}
-	virtual ~threadLocal() 
+	inline void clear()
 	{
-		destroyThreadLocalVar(this);
 		for (int i = 0; i < maxThreadCount; i++)
 		{
 			if (m_var[i] != nullptr)
+			{
 				delete m_var[i];
+				m_var[i] = nullptr;
+			}
 		}
+	}
+	virtual ~threadLocal()
+	{
+		clear();
+		destroyThreadLocalVar(this);
 	}
 	inline T* get()
 	{
@@ -57,10 +64,11 @@ public:
 	inline void unset()
 	{
 		getThreadLocalWrap().idle();
-		if (likely(m_var[getThreadId()] != nullptr))
+		int tid = getThreadId();
+		if (likely(m_var[tid] != nullptr))
 		{
-			delete m_var[getThreadId()];
-			m_var[getThreadId()] = nullptr;
+			delete m_var[tid];
+			m_var[tid] = nullptr;
 		}
 	}
 	static void _unset(void * v)

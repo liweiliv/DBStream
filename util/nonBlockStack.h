@@ -1,6 +1,6 @@
 /*
  * nonBlockLinkList.h
- * actually it is a no block statck
+ * actually it is a no block stack
  *  Created on: 2018年12月20日
  *      Author: liwei
  */
@@ -56,7 +56,7 @@ struct nonBlockStack
 #endif
 	}
 #ifndef ST_WITHOUT_COUNT
-	inline T * pushFastUtilCount(T* data,int max)
+	inline T * pushFastUntilCount(T* data,int max)
 	{
 		T* end = data;
 		T* next;

@@ -164,3 +164,29 @@ static int getFileSizeAndTimestamp(const char* fileName, int64_t* size, int64_t*
 	closeFile(fd);
 	return 0;
 }
+static int removeDir(const char* dir)
+{
+	WIN32_FIND_DATA findFileData;
+	std::string findString(dir);
+	findString.append("\\").append("*");
+	HANDLE hFind = FindFirstFile(findString.c_str(), &findFileData);
+	if (INVALID_HANDLE_VALUE == hFind && errno != 0)
+		return -1;
+	if (INVALID_HANDLE_VALUE != hFind)
+	{
+		do
+		{
+			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			{
+				if (strcmp(findFileData.cFileName, ".") == 0|| strcmp(findFileData.cFileName, "..") == 0)
+					continue;
+				if (0 != removeDir(std::string(dir).append("\\").append(findFileData.cFileName).c_str()))
+					return -1;
+			}
+			else
+				remove(std::string(dir).append("\\").append(findFileData.cFileName).c_str());
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
+	}
+	return RemoveDirectory(dir) ? 0 : -1;
+}

@@ -15,10 +15,16 @@ namespace DATABASE {
 	};
 #pragma pack()
 	struct varSolidIndex {
+		page* p;
 		solidIndexHead* head;
-		varSolidIndex(const char* data) :head((solidIndexHead*)data) {}
-		varSolidIndex(const varSolidIndex& index) :head(index.head) {}
-		varSolidIndex& operator=(const varSolidIndex& index) { head = index.head; return *this; }
+		varSolidIndex(page* p) :p(p),head((solidIndexHead*)p->pageData) {}
+		varSolidIndex(const varSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
+		varSolidIndex& operator=(const varSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
+		virtual ~varSolidIndex()
+		{
+			if (p != nullptr)
+				p->unuse();
+		}
 		template<class T>
 		int find(const T& d, bool equalOrGreater)const
 		{
@@ -72,10 +78,16 @@ namespace DATABASE {
 	DLL_EXPORT int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
 	struct fixedSolidIndex
 	{
+		page* p;
 		solidIndexHead* head;
-		fixedSolidIndex(const char* data) : head((solidIndexHead*)data) {}
-		fixedSolidIndex(const fixedSolidIndex& index) :head(index.head) {}
-		fixedSolidIndex& operator=(const fixedSolidIndex& index) { head = index.head; return *this; }
+		fixedSolidIndex(page * p) : p(p),head((solidIndexHead*)p->pageData) {}
+		fixedSolidIndex(const fixedSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
+		fixedSolidIndex& operator=(const fixedSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
+		virtual ~fixedSolidIndex() 
+		{
+			if (p != nullptr)
+				p->unuse();
+		}
 		template<class T>
 		int find(const T& d, bool equalOrGreater)const
 		{

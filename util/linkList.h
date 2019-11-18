@@ -51,10 +51,10 @@ public:
 			return _end;
 		if (_end->next == nullptr)
 		{
-			if (head.load(std::memory_order_release) == _end)
+			if (head.load(std::memory_order_acquire) == _end)
 			{
 				std::lock_guard<std::mutex> lock(pushLock);
-				if (head.load(std::memory_order_release) == _end)
+				if (head.load(std::memory_order_acquire) == _end)
 				{
 					head.store(nullptr, std::memory_order_relaxed);
 					end.store(nullptr, std::memory_order_relaxed);
@@ -63,7 +63,7 @@ public:
 				}
 			}
 		}
-		end.store(_end->next, std::memory_order_acquire);
+		end.store(_end->next, std::memory_order_release);
 		changeCount(-1);
 		return _end;
 	}

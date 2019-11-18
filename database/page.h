@@ -28,18 +28,16 @@ namespace DATABASE {
 		{
 			if (_ref.unuse()<0)
 			{
-				char* data = pageData;
-				pageData = nullptr;
-				_ref.reset();
-				barrier;
-				basicBufferPool::free(data);
-			}
-		}
-		inline void tryGc()
-		{
-			if(_ref.tryUnuseIfZero())
-			{
-
+				if (likely(pageData != nullptr))
+				{
+					char* data = pageData;
+					pageData = nullptr;
+					_ref.reset();
+					barrier;
+					basicBufferPool::free(data);
+				}
+				else
+					_ref.reset();
 			}
 		}
 	};

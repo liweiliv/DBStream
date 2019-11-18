@@ -26,6 +26,9 @@
 #define SOLID_ITER_PAGE_CACHE_SIZE 16
 #define SOLID_ITER_PAGE_CACHE_MASK 0xf
 
+#define SOLID_INDEX_ITER_PAGE_CACHE_SIZE 4
+#define SOLID_INDEX_ITER_PAGE_CACHE_MASK 0xf
+
 namespace DATABASE
 {
 	class solidBlockIterator;
@@ -88,10 +91,23 @@ namespace DATABASE
 		inline page* getPage(int pageId)
 		{
 			page* p = pages[pageId];
-			if (p == nullptr)
+			p->use();
+RETRY:
+			if (p->pageData == nullptr)
 			{
-				if (unlikely(0 != loadPage(pages[pageId], ALIGN(pageOffsets[pageId], 512), pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512))))
+				if (!p->_ref.own())
+				{
+					p->_ref.waitForShare();
+					goto RETRY;
+				}
+				if (unlikely(0 != loadPage(p, ALIGN(pageOffsets[pageId], 512), pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512))))
+				{
+					p->_ref.share();
+					p->unuse();
 					return nullptr;
+				}
+				else
+					p->_ref.share();
 			}
 			return p;
 		}
@@ -100,7 +116,7 @@ namespace DATABASE
 			return pageId(m_recordInfos[recordId].offset);
 		}
 		page* getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		inline const char* getRecordByInnerId(uint32_t recordId)
+		inline char* getRecordByInnerId(uint32_t recordId)
 		{
 			if (recordId >= m_recordCount)
 				return nullptr;
@@ -108,7 +124,11 @@ namespace DATABASE
 			page* p = getPage(pId);
 			if (unlikely(p == nullptr))
 				return nullptr;
-			return getRecordFromPage(p,recordId);
+			const char * v =  getRecordFromPage(p,recordId);
+			char* newRecord = (char*)m_database->allocMem(((const DATABASE_INCREASE::minRecordHead*)v)->size);
+			memcpy(newRecord, v, ((const DATABASE_INCREASE::minRecordHead*)v)->size);
+			p->unuse();
+			return newRecord;
 		}
 		inline const char * getRecordFromPage(page* p,uint32_t recordId)
 		{
@@ -204,11 +224,13 @@ public:
 				{
 					m_pageCache[cacheId]->unuse();
 					m_pageCache[cacheId] = m_block->getPage(pageId);
+					m_pageCache[cacheId]->use();
 				}
 			}
 			else
 			{
 				m_pageCache[cacheId] = m_block->getPage(pageId);
+				m_pageCache[cacheId]->use();
 			}
 			return m_block->getRecordFromPage(m_pageCache[cacheId],rid);
 		}
@@ -277,8 +299,7 @@ public:
 		solidBlock* m_block;
 		INDEX_TYPE m_index;
 		indexIterator<INDEX_TYPE>* indexIter;
-		uint32_t currentPageId;
-		page* m_pageCache[16];
+		page* m_currentPage;
 
 	public:
 		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), currentPageId(0)
@@ -335,8 +356,8 @@ public:
 				delete indexIter;
 			if (m_block != nullptr)
 			{
-				if (currentPageId != 0)
-					m_block->getPage(currentPageId)->unuse();
+				if (m_currentPage != 0)
+					m_currentPage->unuse();
 				m_block->unuse();
 			}
 		}
@@ -363,14 +384,20 @@ public:
 		{
 			uint32_t recordId = indexIter->value();
 			uint32_t pageId = m_block->getPageId(recordId);
-			if (currentPageId != pageId)
+			if (m_currentPage != nullptr)
 			{
-				if (currentPageId != 0)
-					m_block->getPage(currentPageId)->unuse();
-				m_block->getPage(pageId)->use();
-				currentPageId = pageId;
+				if (m_currentPage->pageId != pageId)
+				{
+					m_currentPage->unuse();
+					m_currentPage = m_block->getPage(pageId);
+
+				}
 			}
-			return m_block->getRecordByInnerId(recordId);
+			else
+				m_currentPage = m_block->getPage(pageId);
+			if (m_currentPage == nullptr)
+				return nullptr;
+			return m_block->getRecordFromPage(m_currentPage,recordId);
 		}
 		virtual bool end()
 		{

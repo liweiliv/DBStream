@@ -53,6 +53,8 @@ DLL_EXPORT basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _
 }
 DLL_EXPORT basicBufferPool::~basicBufferPool()
 {
+	m_cache1.clear();
+	m_cache2.clear();
 	dualLinkListNode* n;
 	do {
 		nonBlockStackWrap* wrap = m_globalCache.pop();
@@ -80,11 +82,11 @@ DLL_EXPORT void basicBufferPool::fillCache(basicBlock* basic)
 {
 	if (basic != nullptr)
 	{
-		basic = m_cache1.get()->caches.pushFastUtilCount(basic, 32);
+		basic = m_cache1.get()->caches.pushFastUntilCount(basic, 32);
 	}
 	if (basic != nullptr)
 	{
-		basic = m_cache2.get()->caches.pushFastUtilCount(basic, 32);
+		basic = m_cache2.get()->caches.pushFastUntilCount(basic, 32);
 	}
 	if (basic != nullptr)
 	{
@@ -114,13 +116,13 @@ DLL_EXPORT void basicBufferPool::cleanCache(cache * c)
 			block* b = basic->_block;
 			b->dlNode.lock.lock();
 			b->basicBlocks.push(basic);
-			if (b->basicBlocks.m_count.load(std::memory_order_release) == 1)//used out
+			if (b->basicBlocks.m_count.load(std::memory_order_acquire) == 1)//used out
 			{
 				b->dlNode.lock.unlock();
 				m_usedOutBlocks.eraseWithHandleLock(&b->dlNode);
 				m_activeBlocks.insertForHandleLock(&b->dlNode);
 			}
-			else if (b->basicBlocks.m_count.load(std::memory_order_release) == (int32_t)basicBlockCount)//no use
+			else if (b->basicBlocks.m_count.load(std::memory_order_acquire) == (int32_t)basicBlockCount)//no use
 			{
 				while (!m_activeBlocks.tryEraseForHandleLock(&b->dlNode));
 				m_freeBlocks.insertForHandleLock(&b->dlNode);

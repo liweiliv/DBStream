@@ -472,12 +472,12 @@ namespace DATABASE
 		const solidIndexHead* head = (const solidIndexHead*)(p->pageData);
 		if (head->flag & SOLID_INDEX_FLAG_FIXED)
 		{
-			fixedSolidIndex sidx(p->pageData);
+			fixedSolidIndex sidx(p);
 			return new solidBlockIndexIterator<fixedSolidIndex>(flag,this, sidx);
 		}
 		else
 		{
-			varSolidIndex vidx(p->pageData);
+			varSolidIndex vidx(p);
 			return new solidBlockIndexIterator<varSolidIndex>(flag,this,  vidx);
 		}
 	}
@@ -498,81 +498,81 @@ namespace DATABASE
 		{
 			if (head->flag & SOLID_INDEX_FLAG_FIXED)
 			{
-				fixedSolidIndex i(p->pageData);
+				fixedSolidIndex i(p);
 				recordId = i.find(*static_cast<const META::unionKey*>(key), true);
 			}
 			else
 			{
-				varSolidIndex i(p->pageData);
+				varSolidIndex i(p);
 				recordId = i.find(*static_cast<const META::unionKey*>(key), true);
 			}
 		}
 		break;
 		case META::COLUMN_TYPE::T_INT8:
 		{					
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const int8_t*>(key), true);
 			break;
 		}
 		case META::COLUMN_TYPE::T_UINT8:
 		{					
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const uint8_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT16:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const int16_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_UINT16:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const uint16_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT32:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const int32_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_UINT32:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const uint32_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT64:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const int64_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const uint64_t*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_FLOAT:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const float*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_DOUBLE:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const double*>(key), true);
 			break;
 		};
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
 		{
-			fixedSolidIndex i(p->pageData);
+			fixedSolidIndex i(p);
 			recordId = i.find(*static_cast<const META::binaryType*>(key), true);
 			break;
 		};
@@ -584,11 +584,9 @@ namespace DATABASE
 			unuse();
 			return nullptr;
 		}
-		const char* r = getRecordByInnerId(recordId);
-		char* newRecord = (char*)m_database->allocMem(((const DATABASE_INCREASE::minRecordHead*)r)->size);
-		memcpy(newRecord, r, ((const DATABASE_INCREASE::minRecordHead*)r)->size);
+		char* r = getRecordByInnerId(recordId);
 		unuse();
-		return newRecord;
+		return r;
 	}
 	void solidBlockIterator::resetBlock(solidBlock* block)
 	{
@@ -736,7 +734,7 @@ namespace DATABASE
 				return 1;
 			if (!m_filter->onlyNeedGeneralInfo())
 			{
-				if ((tmpRecord = value(m_seekedId)) == nullptr)
+				if ((tmpRecord = (const char*)value(m_seekedId)) == nullptr)
 				{
 					m_status = status::INVALID;
 					LOG(ERROR) << "read next record from block " << m_block->m_blockID << " failed,record id:" << m_seekedId;
