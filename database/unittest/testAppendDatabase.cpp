@@ -13,7 +13,7 @@ int testAppend()
 	uint64_t first = ckp;
 	LOG(ERROR)<<"insert start";
 
-	for (int i = 0; i < 20000; i++)
+	for (int i = 0; i < 200000; i++)
 	{
 		int transReconrdCount = abs(rand()) % 50;
 		db->begin();

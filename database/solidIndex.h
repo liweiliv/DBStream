@@ -3,6 +3,7 @@
 #include "meta/columnType.h"
 #include "indexIterator.h"
 #include "util/likely.h"
+#include "page.h"
 namespace DATABASE {
 #define SOLID_INDEX_FLAG_FIXED 0x01
 #pragma pack(1)

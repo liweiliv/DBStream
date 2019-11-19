@@ -302,7 +302,7 @@ public:
 		page* m_currentPage;
 
 	public:
-		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), currentPageId(0)
+		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), m_currentPage(nullptr)
 		{
 			switch (index.getType())
 			{

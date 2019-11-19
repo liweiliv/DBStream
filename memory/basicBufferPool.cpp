@@ -133,6 +133,7 @@ DLL_EXPORT void basicBufferPool::cleanCache(cache * c)
 					{
 						b = container_of(n, block, dlNode);
 						delete b;
+						blockCount--;
 					}
 					else
 						break;
@@ -191,6 +192,7 @@ DLL_EXPORT void * basicBufferPool::allocNewMem()
 			m_usedOutBlocks.insert(&b->dlNode);
 			if (isStarvation)
 				starvation--;
+			blockCount++;
 			return &basic->mem[0];
 		}
 	} while (1);
