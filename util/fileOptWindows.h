@@ -4,12 +4,12 @@
 #include <io.h>
 #define fileHandle HANDLE 
 
-static fileHandle openFile(const char *file,bool read,bool write,bool create)
+static fileHandle openFile(const char *file,bool readFlag,bool writeFlag,bool createFlag)
 {
 	uint64_t flag = 0;
-	if (read)
+	if (readFlag)
 		flag |= GENERIC_READ;
-	if (write)
+	if (writeFlag)
 		flag |= GENERIC_WRITE;
 	fileHandle fd = CreateFile(file, flag, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (fd == INVALID_HANDLE_VALUE)

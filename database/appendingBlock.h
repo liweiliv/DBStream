@@ -134,7 +134,8 @@ namespace DATABASE
 		}
 		~appendingBlock()
 		{
-			assert(m_flag & BLOCK_FLAG_FINISHED);
+			if(m_recordCount>0)
+				assert(m_flag & BLOCK_FLAG_FINISHED);
 			bufferPool::free(m_recordIDs);
 			bufferPool::free(m_pages);
 			if ((m_flag & BLOCK_FLAG_HAS_REDO) && !fileHandleValid(m_redoFd))
@@ -161,6 +162,7 @@ namespace DATABASE
 		inline const char* getRecord(uint64_t recordId)
 		{
 			uint32_t offset = m_recordIDs[recordId - m_minRecordId];
+			assert(m_pages[pageId(offset)]->pageId == pageId(offset));
 			return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
 		}
 
@@ -257,18 +259,14 @@ namespace DATABASE
 		}
 		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId,const void * key)
 		{
-			if (!use())
-				return nullptr;
 			tableData* tableInfo = getTableData(table->m_id);
 			if (tableInfo == nullptr)
 			{
-				unuse();
 				return nullptr;
 			}
 			appendingIndex* index = getTableIndex(tableInfo, table, type, keyId);
 			if (index == nullptr)
 			{
-				unuse();
 				return nullptr;
 			}
 			int32_t recordId = -1;
@@ -317,13 +315,11 @@ namespace DATABASE
 			}
 			if (recordId < 0)
 			{
-				unuse();
 				return nullptr;
 			}
 			const char* r = getRecordByInnerId(recordId);
 			char* newRecord = (char*)m_database->allocMem(((const DATABASE_INCREASE::minRecordHead*)r)->size);
 			memcpy(newRecord, r, ((const DATABASE_INCREASE::minRecordHead*)r)->size);
-			unuse();
 			return newRecord;
 		}
 		appendingBlockStaus allocMemForRecord(tableData* t, size_t size, void*& mem);

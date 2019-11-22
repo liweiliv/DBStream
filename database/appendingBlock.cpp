@@ -395,10 +395,11 @@ namespace DATABASE {
 			return nullptr;
 		uint32_t memSize = 0;
 		uint32_t* pageMap = (uint32_t*)m_arena.Allocate(sizeof(uint32_t)*m_pageCount);
-		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED);
+		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED|BLOCK_FLAG_SOLID);
 		uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
 		block->firstPage = m_database->allocPage(firstPageSize);
 		block->pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);
+		block->m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED),std::memory_order_relaxed);
 		memcpy(&block->m_blockID, &m_blockID, offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_blockID));
 		char* pos = block->firstPage->pageData;
 		block->m_tableInfo = (tableDataInfo*)pos;
@@ -409,6 +410,8 @@ namespace DATABASE {
 		pos += sizeof(uint32_t) * m_recordCount;
 		block->pageOffsets = (uint64_t*)pos;
 		pos += sizeof(uint64_t) * (m_pageCount + 1);
+		block->pageInfo = pos;
+		block->firstPage->pageUsedSize = firstPageSize;
 		uint16_t pageId = 0;
 		uint16_t tableIdx = 0;
 		uint32_t recordIdsOffset = 0;
@@ -475,6 +478,12 @@ namespace DATABASE {
 			tableIdx++;
 		}
 		assert(pageId==m_pageCount);
+		char * pageInfoPos = block->pageInfo;
+		for(int i=0;i<pageId;i++)
+		{
+			memcpy(pageInfoPos,(void*)block->pages[i], offsetof(page, _ref));
+			pageInfoPos += offsetof(page, _ref);
+		}
 		unuse();
 		LOG(INFO)<<"block:"<<m_blockID<<" trans to solid block success,size:"<<memSize<<",record count:"<<m_recordCount<<",table count:"<<m_tableCount;
 		return block;

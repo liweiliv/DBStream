@@ -106,8 +106,9 @@ namespace DATABASE {
 		uint32_t m_varSize;
 		typedef void(*appendIndexFunc) (appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
 		template <typename T>
-		static inline void appendIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, KeyTemplate<T> *c, uint32_t id, bool keyUpdated = false)
+		static inline bool appendIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, KeyTemplate<T> *c, uint32_t id, bool keyUpdated = false)
 		{
+			bool newKey = true;
 			KeyTemplate<T> *k = nullptr;
 			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator iter(static_cast<leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> > *>(index->m_index));
 			iter.Seek(c);
@@ -121,7 +122,11 @@ namespace DATABASE {
 				index->m_keyCount++;
 			}
 			else
+			{
+				assert(c->key == iter.key()->key);
 				k = (KeyTemplate<T> *)iter.key();
+				newKey = false;
+			}
 			if (k->child.count >= k->child.arraySize)
 			{
 				/*do not free alloced memory ,only copy*/
@@ -133,6 +138,7 @@ namespace DATABASE {
 			k->child.subArray[k->child.count] = id;
 			barrier;
 			k->child.count++;
+			return newKey;
 		}
 
 		static inline void appendUint8Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
@@ -301,7 +307,7 @@ namespace DATABASE {
 		template<typename T>
 		void createFixedSolidIndex(char * data, iterator<T> &iter, uint16_t keySize)
 		{
-			char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + keySize * m_keyCount;
+			char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + (keySize +sizeof(uint32_t)) * (m_keyCount+1);
 			((solidIndexHead*)(data))->flag = SOLID_INDEX_FLAG_FIXED;
 			((solidIndexHead*)(data))->length = keySize;
 			((solidIndexHead*)(data))->keyCount = m_keyCount;
@@ -355,9 +361,9 @@ namespace DATABASE {
 				fixed = m_ukMeta->fixed;
 			}
 			if (fixed)
-				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount);
+				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount) + ((m_allCount-m_keyCount)/0x7f)*sizeof(uint32_t);
 			else
-				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount) + m_varSize;
+				size = sizeof(solidIndexHead) + (keySize + 2*sizeof(uint32_t)) * (1+m_keyCount) + (sizeof(uint16_t)+sizeof(uint32_t)) * (m_allCount) + m_varSize;
 			return size;
 		}
 		template<typename T>
@@ -379,7 +385,7 @@ namespace DATABASE {
 			if (!iter.begin() || !iter.valid())
 				return nullptr;//no data
 			if (data == nullptr)
-				data = (char*)malloc(toSolidIndexSize());
+				data = (char*)basicBufferPool::allocDirect(toSolidIndexSize());
 			if (fixed)
 				createFixedSolidIndex(data, iter, keySize);
 			else

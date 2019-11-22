@@ -27,7 +27,7 @@ namespace DATABASE {
 #define BLOCK_FLAG_COMPRESS     0x20
 #define BLOCK_FLAG_MULTI_TABLE  0x40
 	static constexpr auto DEFAULT_PAGE_SIZE = 512 * 1024;
-	enum BLOCK_LOAD_STATUS {
+	enum class BLOCK_LOAD_STATUS {
 		BLOCK_UNLOAD,
 		BLOCK_LOADING_HEAD,
 		BLOCK_LOADED_HEAD,
@@ -87,8 +87,8 @@ namespace DATABASE {
 		META::metaDataBaseCollection* m_metaDataCollection;
 		uint32_t m_version;
 		uint32_t m_flag;
-		uint32_t m_prevBlockID;
 		uint32_t m_blockID;
+		uint32_t m_prevBlockID;
 		uint64_t m_tableID;// if !(flag&BLOCK_FLAG_MULTI_TABLE)
 		uint64_t m_minTime;
 		uint64_t m_maxTime;
@@ -105,7 +105,7 @@ namespace DATABASE {
 		uint32_t m_crc;
 		block(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db),next(nullptr),prev(nullptr), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
-			m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
+			m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_UNLOAD), std::memory_order_relaxed);
 			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
 			m_blockID = blockId;
 		}

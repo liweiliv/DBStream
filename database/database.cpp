@@ -195,6 +195,15 @@ namespace DATABASE {
 		}
 		return 0;
 	}
+	DLL_EXPORT int database::flushLogs()
+	{
+		if(m_current->m_recordCount == 0)
+			return 0;
+		m_current->m_flag |= BLOCK_FLAG_FINISHED;
+		if (!createNewBlock())
+			return -1;
+		return 0;
+	}
 	bool database::createNewBlock()
 	{
 		appendingBlock* tmp = m_current,*newBlock = new appendingBlock(m_current->m_blockID + 1,BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
@@ -695,7 +704,7 @@ namespace DATABASE {
 
 	DLL_EXPORT int database::stop()
 	{
-		if(m_current!=nullptr)
+		if(m_current!=nullptr&&m_current->m_recordCount>0)
 		{
 			m_current->m_flag |= BLOCK_FLAG_FINISHED;
 			finishAppendingBlock(m_current);

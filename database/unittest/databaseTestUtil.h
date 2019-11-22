@@ -238,7 +238,7 @@ DATABASE_INCREASE::DMLRecord* createDeleteRecord_mod1(META::tableMeta* table, in
 	snprintf(sbuf, 30, "%dwad%d_sw", pk, pk + 1);
 	r->setVarColumn(2, sbuf, strlen(sbuf));
 	r->setFixedColumn(3, pk >> 2);
-	r->setFixedColumn(4, META::timestamp::create(time(nullptr), 0));
+	r->setFixedColumn(4, META::timestamp::create(time(nullptr), abs(rand())));
 	r->finishedSet();
 	return r;
 }

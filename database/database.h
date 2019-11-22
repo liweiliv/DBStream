@@ -135,6 +135,7 @@ namespace DATABASE
 		}
 		DLL_EXPORT int stop();
 		DLL_EXPORT int load();
+		DLL_EXPORT int flushLogs();
 		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
 			page* p = (page*)m_pool->allocByLevel(0);

@@ -45,6 +45,7 @@ namespace DATABASE
 		uint32_t* m_recordIdOrderyTable;
 		tableFullData* m_tables;
 		uint64_t* pageOffsets;
+		char * pageInfo;
 		page** pages;
 		page* firstPage;
 		std::mutex m_fileLock;
@@ -56,11 +57,11 @@ namespace DATABASE
 		friend class solidBlockIndexIterator;
 	public:
 		solidBlock(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(blockId,db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
-			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
+			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr),pages(nullptr), firstPage(nullptr)
 		{
 		}
 		solidBlock(block * b) :block(b), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
-			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pages(nullptr), firstPage(nullptr)
+			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr),pages(nullptr), firstPage(nullptr)
 		{
 
 		}
@@ -100,10 +101,11 @@ RETRY:
 					p->_ref.waitForShare();
 					goto RETRY;
 				}
-				if (unlikely(0 != loadPage(p, ALIGN(pageOffsets[pageId], 512), pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512))))
+				if (unlikely(0 != loadPage(p,  pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512),ALIGN(pageOffsets[pageId], 512))))
 				{
 					p->_ref.share();
 					p->unuse();
+					LOG(ERROR)<<"load page "<<pageId<<" from block "<<m_blockID<<" at offset "<<ALIGN(pageOffsets[pageId], 512) <<" failed";
 					return nullptr;
 				}
 				else
@@ -223,13 +225,15 @@ public:
 				if(m_pageCache[cacheId]->pageId != pageId)
 				{
 					m_pageCache[cacheId]->unuse();
-					m_pageCache[cacheId] = m_block->getPage(pageId);
+					if(nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
+							return nullptr;
 					m_pageCache[cacheId]->use();
 				}
 			}
 			else
 			{
-				m_pageCache[cacheId] = m_block->getPage(pageId);
+				if(nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
+						return nullptr;
 				m_pageCache[cacheId]->use();
 			}
 			return m_block->getRecordFromPage(m_pageCache[cacheId],rid);

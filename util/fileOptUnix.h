@@ -15,17 +15,24 @@
 #include <dirent.h>
 #include <string.h>
 #define fileHandle int
-static fileHandle openFile(const char *file, bool read, bool write, bool create)
+static fileHandle openFile(const char *file, bool readFlag, bool writeFlag, bool createFlag)
 {
-	int fd = 0;
+	int fd = -1;
 	int flag = 0;
-	if (read)
+	if (readFlag)
+	{
 		flag |= O_RDONLY;
-	if (write)
+	}
+	if (writeFlag)
+	{
 		flag |= O_WRONLY;
-	if (create)
+	}
+	if (createFlag)
+	{
 		flag |= O_CREAT;
-	return (fd = open(file, flag, create ? S_IRUSR | S_IWUSR | S_IRGRP : 0));
+	}
+	fd = open(file, flag, createFlag ? S_IRUSR | S_IWUSR | S_IRGRP : 0);
+	return fd;
 }
 #define INVALID_HANDLE_VALUE -1
 static bool fileHandleValid(fileHandle fd)
@@ -148,7 +155,7 @@ static int removeDir(const char * dir)
 {
 	char cur_dir[] = ".";
 	char up_dir[] = "..";
-	char dir_name[128];
+	char dir_name[258];
 	DIR *dirp;
 	struct dirent *dp;
 	struct stat dir_stat;

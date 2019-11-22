@@ -4,7 +4,8 @@ namespace DATABASE
 {
 	int solidBlock::load(int id)
 	{
-		if (m_loading.load(std::memory_order_relaxed) >= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED))
+		uint8_t loadStatus = m_loading.load(std::memory_order_relaxed);
+		if (loadStatus >= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED))
 			return 0;
 		m_fileLock.lock();
 		if (m_loading.load(std::memory_order_relaxed) >= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED))
@@ -20,50 +21,48 @@ namespace DATABASE
 			if (!fileHandleValid(m_fd))
 			{
 				m_fileLock.unlock();
-				m_loading.store(BLOCK_UNLOAD, std::memory_order_relaxed);
+				m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_UNLOAD), std::memory_order_relaxed);
 				LOG(ERROR) << "load block file:" << fileName << " failed for open file failed, errno:" << errno << " ," << strerror(errno);
 				return -1;
 			}
 		}
+		m_fileLock.unlock();
 		if (m_blockID == 0)
 		{
 			if (0 != loadBlockInfo(m_fd, id))
 			{
-				m_fileLock.unlock();
 				LOG(ERROR) << "load block file:" << id << " failed ";
 				return -1;
 			}
 		}
 		if (0 != loadFirstPage())
 		{
-			m_fileLock.unlock();
 			LOG(ERROR) << "load block file:" << id << " failed ";
 			return -1;
 		}
-		m_fileLock.unlock();
 		return 0;
 	}
 	int solidBlock::loadFirstPage()
 	{
 		uint8_t loadStatus = m_loading.load(std::memory_order_relaxed);
 		do {
-			if (loadStatus == BLOCK_LOADED_HEAD)
+			if (loadStatus == static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD))
 			{
-				if (m_loading.compare_exchange_weak(loadStatus, BLOCK_LOADING_FIRST_PAGE, std::memory_order_relaxed,
+				if (m_loading.compare_exchange_weak(loadStatus, static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE), std::memory_order_relaxed,
 					std::memory_order_relaxed))
 					break;
 			}
-			else if (loadStatus == BLOCK_LOADING_FIRST_PAGE)
+			else if (loadStatus == static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
 			{
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 				loadStatus = m_loading.load(std::memory_order_relaxed);
 			}
-			else if (loadStatus < BLOCK_LOADED_HEAD)
+			else if (loadStatus < static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD))
 			{
 				LOG(ERROR) << "loadFirstPage of block file failed for it`s status is less then BLOCK_LOADED_HEAD";
 				return -1;
 			}
-			else if (loadStatus == BLOCK_LOADED)
+			else if (loadStatus == static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED))
 				return 0;
 			else
 				return -1;
@@ -72,47 +71,49 @@ namespace DATABASE
 		firstPage = (page*)m_database->allocMem(sizeof(page));
 		firstPage->pageSize = firstPage->pageUsedSize = m_solidBlockHeadPageRawSize;
 		firstPage->crc = 0;
-		if (0 != loadPage(firstPage, m_solidBlockHeadPageSize, offsetof(solidBlock, m_solidBlockHeadPageSize) - offsetof(solidBlock, m_version)))
+		firstPage->pageData = nullptr;
+		firstPage->pageId = 0;
+		if (0 != loadPage(firstPage, m_solidBlockHeadPageSize, offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_version)))
 		{
-			m_loading.store(BLOCK_LOAD_FAILED, std::memory_order_relaxed);
+			m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOAD_FAILED), std::memory_order_relaxed);
 			return -1;
 		}
 		char* pos = firstPage->pageData;
 		m_tableInfo = (tableDataInfo*)pos;
 
 		pos += sizeof(tableDataInfo) * m_tableCount;
-		goto FIRST_PAGE_SIZE_FAULT;
 		m_recordInfos = (recordGeneralInfo*)pos;
 		pos += sizeof(recordGeneralInfo) * m_recordCount;
-		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
+		if (pos > firstPage->pageData + firstPage->pageUsedSize)
 			goto FIRST_PAGE_SIZE_FAULT;
 
 		m_recordIdOrderyTable = (uint32_t*)pos;
 		pos += sizeof(uint32_t) * m_recordCount;
-		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
+		if (pos > firstPage->pageData + firstPage->pageUsedSize)
 			goto FIRST_PAGE_SIZE_FAULT;
 
 		pageOffsets = (uint64_t*)pos;
 		pos += sizeof(uint64_t) * (m_pageCount + 1);
-		if (pos >= firstPage->pageData + firstPage->pageUsedSize)
+		if (pos > firstPage->pageData + firstPage->pageUsedSize)
 			goto FIRST_PAGE_SIZE_FAULT;
 
 		pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);
-		if (pos + m_pageCount * offsetof(page, _ref) >= firstPage->pageData + firstPage->pageUsedSize)
+		if (pos + m_pageCount * offsetof(page, _ref) > firstPage->pageData + firstPage->pageUsedSize)
 			goto FIRST_PAGE_SIZE_FAULT;
 		for (uint16_t idx = 0; idx < m_pageCount; idx++)
 		{
 			pages[idx] = (page*)m_database->allocMem(sizeof(page));
 			pages[idx]->_ref.m_ref.store(0,std::memory_order_relaxed);
 			memcpy((void*)pages[idx], pos, offsetof(page, _ref));
+			pages[idx]->pageData = nullptr;
 			pos += offsetof(page, _ref);
 		}
 		m_flag |= BLOCK_FLAG_FLUSHED;
-		m_loading.store(BLOCK_LOADED, std::memory_order_relaxed);
+		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED), std::memory_order_relaxed);
 		return 0;
 
 	FIRST_PAGE_SIZE_FAULT:
-		m_loading.store(BLOCK_LOAD_FAILED, std::memory_order_relaxed);
+		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOAD_FAILED), std::memory_order_relaxed);
 		LOG(ERROR) << "load block file:" << m_blockID << " failed for first page is illegal";
 		m_database->freePage(firstPage);
 		firstPage = nullptr;
@@ -192,7 +193,7 @@ namespace DATABASE
 			{
 				if (LZ4_decompress_safe(data, uncompressedData, size, p->pageUsedSize) < 0)
 				{
-					LOG(ERROR) << "deCompress page data in position:" << offset << " of block " << m_blockID << " failed ";
+					LOG(ERROR) << "deCompress page data in position:" << offset << " of block " << m_blockID << " failed,compressed size:"<<size<<",raw size:"<<p->pageUsedSize;
 					bufferPool::free(uncompressedData);
 					bufferPool::free(data);
 					return -1;
@@ -246,6 +247,7 @@ namespace DATABASE
 		if (compress)
 		{
 			p->crc = 0;
+			((page*)(pageInfo+(p->pageId* offsetof(page, _ref))))->crc = 0;
 			char* compressBuf;
 			uint32_t compressedSize = 0;
 			if (unlikely(p->pageUsedSize > LZ4_MAX_INPUT_SIZE))
@@ -281,16 +283,12 @@ namespace DATABASE
 					return -1;
 				}
 			}
-			if (compressedSize != writeFile(m_fd, compressBuf, compressedSize))
-			{
-				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
-				return -1;
-			}
 			return compressedSize;
 		}
 		else
 		{
 			p->crc = hwCrc32c(0, p->pageData, p->pageUsedSize);
+			((page*)(pageInfo+(p->pageId* offsetof(page, _ref))))->crc = p->crc;
 			if (p->pageUsedSize != (uint32_t)writeFile(m_fd, p->pageData, p->pageUsedSize))
 			{
 				LOG(ERROR) << "write page to block " << m_blockID << " failed ,error:" << errno << "," << strerror(errno);
@@ -323,11 +321,15 @@ namespace DATABASE
 		for (uint16_t pageIdx = 0; pageIdx < m_pageCount; pageIdx++)
 		{
 			pageOffsets[pageIdx] = pagePos;
+			assert(pageIdx == pages[pageIdx]->pageId);
+			pagePos = ALIGN(pagePos,512);
 			int64_t writedSize = writepage(pages[pageIdx], pagePos, m_flag & BLOCK_FLAG_COMPRESS);
 			if (writedSize < 0)
 				return -1;
-			pagePos = ALIGN(pagePos + writedSize, 512);
+			pagePos += writedSize;
 		}
+		pageOffsets[m_pageCount] = pagePos;
+
 		m_solidBlockHeadPageSize = writepage(firstPage, headSize, m_flag & BLOCK_FLAG_COMPRESS);
 		m_solidBlockHeadPageRawSize = firstPage->pageUsedSize;
 		if (seekFile(m_fd, 0, SEEK_SET) != 0)
@@ -427,10 +429,13 @@ namespace DATABASE
 			unuse();
 			return nullptr;
 		}
-		if (type == META::KEY_TYPE::PRIMARY_KEY&&table->m_primaryKey==nullptr)
+		if (type == META::KEY_TYPE::PRIMARY_KEY)
 		{
-			unuse();
-			return nullptr;
+			if(table->m_primaryKey==nullptr)
+			{
+				unuse();
+				return nullptr;
+			}
 		}
 		else if (type == META::KEY_TYPE::UNIQUE_KEY)
 		{
@@ -481,6 +486,16 @@ namespace DATABASE
 			return new solidBlockIndexIterator<varSolidIndex>(flag,this,  vidx);
 		}
 	}
+	template<class I,class T>
+	static inline bool getRecordIdsOfKey(page* p,const void* key,const uint32_t*& recordIds,uint32_t &count)
+	{
+		I i(p);
+		int32_t offset = i.find(*static_cast<const T*>(key), true);
+		if(offset<0)
+			return false;
+		i.getRecordIdByIndex(offset,recordIds,count);
+		return true;
+	}
 	char* solidBlock::getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
 	{
 		page* p = getIndex(table, type, keyId);
@@ -490,101 +505,86 @@ namespace DATABASE
 			return nullptr;
 		}
 		const solidIndexHead* head = (const solidIndexHead*)(p->pageData);
-
-		int32_t recordId = -1;
+		const uint32_t* recordIds;
+		uint32_t rcount;
+		bool success;
 		switch (static_cast<META::COLUMN_TYPE>(head->type))
 		{
 		case META::COLUMN_TYPE::T_UNION:
 		{
 			if (head->flag & SOLID_INDEX_FLAG_FIXED)
-			{
-				fixedSolidIndex i(p);
-				recordId = i.find(*static_cast<const META::unionKey*>(key), true);
-			}
+				success = getRecordIdsOfKey<fixedSolidIndex,META::unionKey>(p,key,recordIds,rcount);
 			else
-			{
-				varSolidIndex i(p);
-				recordId = i.find(*static_cast<const META::unionKey*>(key), true);
-			}
+				success = getRecordIdsOfKey<varSolidIndex,META::unionKey>(p,key,recordIds,rcount);
 		}
 		break;
 		case META::COLUMN_TYPE::T_INT8:
 		{					
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const int8_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,int8_t>(p,key,recordIds,rcount);
 			break;
 		}
 		case META::COLUMN_TYPE::T_UINT8:
 		{					
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const uint8_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,uint8_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT16:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const int16_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,int16_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_UINT16:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const uint16_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,uint16_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT32:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const int32_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,int32_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_UINT32:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const uint32_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,uint32_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_INT64:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const int64_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,int64_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const uint64_t*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,uint64_t>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_FLOAT:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const float*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,float>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_DOUBLE:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const double*>(key), true);
+			success = getRecordIdsOfKey<fixedSolidIndex,double>(p,key,recordIds,rcount);
 			break;
 		};
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
 		{
-			fixedSolidIndex i(p);
-			recordId = i.find(*static_cast<const META::binaryType*>(key), true);
+			success = getRecordIdsOfKey<varSolidIndex,META::binaryType>(p,key,recordIds,rcount);
 			break;
 		};
 		default:
-			abort();
+			return nullptr;//todo
 		}
-		if (recordId < 0)
+
+		if (!success)
 		{
 			unuse();
 			return nullptr;
 		}
-		char* r = getRecordByInnerId(recordId);
+		char* r = getRecordByInnerId(recordIds[rcount-1]);
 		unuse();
 		return r;
 	}

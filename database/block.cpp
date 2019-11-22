@@ -6,18 +6,18 @@ namespace DATABASE {
 	{
 		uint8_t loadStatus = m_loading.load(std::memory_order_relaxed);
 		do {
-			if (loadStatus == BLOCK_UNLOAD)
+			if (loadStatus == static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_UNLOAD))
 			{
-				if (m_loading.compare_exchange_weak(loadStatus, BLOCK_LOADING_HEAD, std::memory_order_relaxed,
+				if (m_loading.compare_exchange_weak(loadStatus, static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_HEAD), std::memory_order_relaxed,
 					std::memory_order_relaxed))
 					break;
 			}
-			else if (loadStatus == BLOCK_LOADING_HEAD)
+			else if (loadStatus == static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_HEAD))
 			{
 				std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 				loadStatus = m_loading.load(std::memory_order_relaxed);
 			}
-			else if (loadStatus != BLOCK_LOAD_FAILED)
+			else if (loadStatus != static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOAD_FAILED))
 				return 0;
 			else
 				return -1;
@@ -44,6 +44,7 @@ namespace DATABASE {
 			LOG(ERROR) << "load block file " << id << " failed for crc check failed";
 			return -1;
 		}
+		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD),std::memory_order_release);
 		return 0;
 	}
 	block* block::loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection)

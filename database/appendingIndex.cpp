@@ -228,8 +228,8 @@ namespace DATABASE {
 		{
 			c.key.data = r->column(index->m_ukMeta->columnInfo[0].columnId);
 			c.key.size = r->varColumnSize(index->m_ukMeta->columnInfo[0].columnId);
-			index->m_varSize += c.key.size + sizeof(uint16_t);
-			appendIndex(index, r, &c, id, false);
+			if(appendIndex(index, r, &c, id, false))
+				index->m_varSize += c.key.size;
 		}
 		else if (r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) || r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE))
 		{
@@ -239,7 +239,8 @@ namespace DATABASE {
 			{
 				c.key.data = r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 				c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_ukMeta->columnInfo[0].columnId, c.key.data);
-				appendIndex(index, r, &c, id, true);
+				if(appendIndex(index, r, &c, id, true))
+					index->m_varSize += c.key.size;
 			}
 		}
 		else
@@ -251,16 +252,18 @@ namespace DATABASE {
 		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
 		c.key.key = index->m_arena->Allocate(size + (index->m_ukMeta->fixed?0:sizeof(uint16_t)));
 		META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, false);
-		if (!index->m_ukMeta->fixed)
-			index->m_varSize += *(uint16_t*)(c.key.key + index->m_ukMeta->size + sizeof(uint16_t));
 		c.key.meta = index->m_ukMeta;
-		appendIndex(index, r, &c, id, false);
+		if(appendIndex(index, r, &c, id, false)&&
+				!index->m_ukMeta->fixed)
+				index->m_varSize += *(uint16_t*)c.key.key - index->m_ukMeta->size;
 		if ((r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) || r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) && r->isKeyUpdated(index->m_ukMeta))
 		{
 			size = META::unionKey::memSize(r, index->m_ukMeta, true);
 			c.key.key = index->m_arena->Allocate(size);
 			META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, true);
-			appendIndex(index, r, &c, id, true);
+			if(appendIndex(index, r, &c, id, true)&&
+				!index->m_ukMeta->fixed)
+				index->m_varSize += *(uint16_t*)c.key.key - index->m_ukMeta->size;
 		}
 	}
 	DLL_EXPORT appendingIndex::appendingIndex(const META::unionKeyMeta* ukMeta, const META::tableMeta* meta, leveldb::Arena* arena) :
@@ -382,7 +385,7 @@ namespace DATABASE {
 	template<>
 	void appendingIndex::createFixedSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter, uint16_t keySize)
 	{
-		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + keySize * m_keyCount;
+		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + (keySize +sizeof(uint32_t)) * (m_keyCount+1);
 		((solidIndexHead*)(data))->flag = SOLID_INDEX_FLAG_FIXED;
 		((solidIndexHead*)(data))->length = keySize;
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
@@ -417,15 +420,13 @@ namespace DATABASE {
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
 	{
-		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * (m_keyCount + 1);
+		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + +sizeof(uint32_t) * (m_keyCount+1);
 		((solidIndexHead*)(data))->flag = 0;
 		((solidIndexHead*)(data))->length = sizeof(uint32_t);
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
 		((solidIndexHead*)(data))->type = TID(META::COLUMN_TYPE::T_UNION);
-		int kc = 0;
 		do
 		{
-			kc++;
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);

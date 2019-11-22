@@ -32,21 +32,19 @@
 		char rbuf[1024] = { 0 };
 		for (int i = 1; i < 20000; i++)
 		{
-			int k = rand();
-			if (t1Kv.find(k) == t1Kv.end())
-			{
-				DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-				r.head->logOffset = ckp++;
-				r.head->recordId = i;
-				r.head->timestamp = 1573438210 + i;
-				r.head->txnId = i;
-				r.setFixedColumn(0, k);
-				r.setVarColumn(1, "dwadfw", 6);
-				r.setFixedColumn(2, i);
-				r.finishedSet();
-				t1Kv.insert(std::pair<int, int>(k, i));
-				idx.append(&r, i);
-			}
+			int k = rand()%200000;
+			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
+			r.head->logOffset = ckp++;
+			r.head->recordId = i;
+			r.head->timestamp = 1573438210 + i;
+			r.head->txnId = i;
+			r.setFixedColumn(0, k);
+			r.setVarColumn(1, "dwadfw", 6);
+			r.setFixedColumn(2, i);
+			r.finishedSet();
+			if(!t1Kv.insert(std::pair<int, int>(k, i)).second)
+				t1Kv.find(k)->second = i;
+			idx.append(&r, i);
 		}
 		DATABASE::appendingIndex::iterator<int> aiter(0, &idx);
 		assert(aiter.begin());
@@ -60,7 +58,10 @@
 			aiter.nextKey();
 		}
 		const char * solidIndx = idx.toString<int>();
-		DATABASE::fixedSolidIndex fsi(solidIndx);
+		DATABASE::page p;
+		p.pageId = 1;
+		p.pageData= (char*)solidIndx;
+		DATABASE::fixedSolidIndex fsi(&p);
 		DATABASE::solidIndexIterator<int , DATABASE::fixedSolidIndex> siter(0, &fsi);
 		assert(siter.begin());
 		for (std::map<int, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
@@ -73,8 +74,6 @@
 			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
-		free((char*)solidIndx);
-
 		return 0;
 	}
 	int testAppendingIndexUnion()
@@ -89,25 +88,23 @@
 		char rbuf[1024] = { 0 };
 		for (int i = 1; i < 20000; i++)
 		{
-			int k = rand();
+			int k = rand()%200000;
 			char sbuf[30] = { 0 };
-			if (t1Kv.find(k) == t1Kv.end())
-			{
-				DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-				r.head->logOffset = ckp++;
-				r.head->recordId = i;
-				r.head->timestamp = 1573438210 + i;
-				r.head->txnId = i;
-				r.setFixedColumn(0, k);
-				sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
-				r.setVarColumn(1, sbuf, strlen(sbuf));
-				sprintf(sbuf, "dwad%d_&sdf_%dw", k, k * 123);
-				r.setVarColumn(2, sbuf, strlen(sbuf));
-				r.setFixedColumn(3, i);
-				r.finishedSet();
-				t1Kv.insert(std::pair<int, int>(k, i));
-				idx.append(&r, i);
-			}
+			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
+			r.head->logOffset = ckp++;
+			r.head->recordId = i;
+			r.head->timestamp = 1573438210 + i;
+			r.head->txnId = i;
+			r.setFixedColumn(0, k);
+			sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
+			r.setVarColumn(1, sbuf, strlen(sbuf));
+			sprintf(sbuf, "dwad%d_&sdf_%dw", k, k * 123);
+			r.setVarColumn(2, sbuf, strlen(sbuf));
+			r.setFixedColumn(3, i);
+			r.finishedSet();
+			if(!t1Kv.insert(std::pair<int, int>(k, i)).second)
+				t1Kv.find(k)->second = i;
+			idx.append(&r, i);
 		}
 		DATABASE::appendingIndex::iterator<META::unionKey> aiter(0, &idx);
 		assert(aiter.begin());
@@ -129,7 +126,10 @@
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
-		DATABASE::varSolidIndex fsi(solidIndx);
+		DATABASE::page p;
+		p.pageId = 1;
+		p.pageData= (char*)solidIndx;
+		DATABASE::varSolidIndex fsi(&p);
 		DATABASE::solidIndexIterator<META::unionKey, DATABASE::varSolidIndex> siter(0, &fsi);
 		assert(siter.begin());
 		for (std::map<int, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
@@ -153,8 +153,6 @@
 			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
-		free((char*)solidIndx);
-
 		return 0;
 	}
 	int testAppendingIndexUnionFixed()
@@ -169,24 +167,22 @@
 		char rbuf[1024] = { 0 };
 		for (int i = 1; i < 20000; i++)
 		{
-			int k = rand();
+			int k = rand()%200000;
 			int64_t b = k * k;
 			short c = k;
-			if (t1Kv.find(k) == t1Kv.end())
-			{
-				DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-				r.head->logOffset = ckp++;
-				r.head->recordId = i;
-				r.head->timestamp = 1573438210 + i;
-				r.head->txnId = i;
-				r.setFixedColumn(0, k);
-				r.setFixedColumn(1, b);
-				r.setFixedColumn(2, c);
-				r.setFixedColumn(3, k);
-				r.finishedSet();
-				t1Kv.insert(std::pair<int, int>(k, i));
-				idx.append(&r, i);
-			}
+			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
+			r.head->logOffset = ckp++;
+			r.head->recordId = i;
+			r.head->timestamp = 1573438210 + i;
+			r.head->txnId = i;
+			r.setFixedColumn(0, k);
+			r.setFixedColumn(1, b);
+			r.setFixedColumn(2, c);
+			r.setFixedColumn(3, k);
+			r.finishedSet();
+			if(!t1Kv.insert(std::pair<int, int>(k, i)).second)
+				t1Kv.find(k)->second = i;
+			idx.append(&r, i);
 		}
 		DATABASE::appendingIndex::iterator<META::unionKey> aiter(0, &idx);
 		assert(aiter.begin());
@@ -206,7 +202,10 @@
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
-		DATABASE::fixedSolidIndex fsi(solidIndx);
+		DATABASE::page p;
+		p.pageId = 1;
+		p.pageData= (char*)solidIndx;
+		DATABASE::fixedSolidIndex fsi(&p);
 		DATABASE::solidIndexIterator<META::unionKey, DATABASE::fixedSolidIndex> siter(0, &fsi);
 		assert(siter.begin());
 		for (std::map<int, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
@@ -228,7 +227,6 @@
 			assert(v == (uint32_t)iter->second);
 			siter.nextKey();
 		}
-		free((char*)solidIndx);
 		return 0;
 	}
 	int testAppendingIndexBinary()
@@ -244,7 +242,7 @@
 
 		for (int i = 1; i < 20000; i++)
 		{
-			int k = rand();
+			int k = rand()%200000;
 			char sbuf[30] = { 0 };
 			sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
 			if (t1Kv.find(sbuf) == t1Kv.end())
@@ -275,7 +273,10 @@
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::binaryType>();
-		DATABASE::varSolidIndex fsi(solidIndx);
+		DATABASE::page p;
+		p.pageId = 1;
+		p.pageData= (char*)solidIndx;
+		DATABASE::varSolidIndex fsi(&p);
 		DATABASE::solidIndexIterator<META::binaryType, DATABASE::varSolidIndex> siter(0, &fsi);
 		assert(siter.begin());
 		for (std::map<std::string, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
@@ -294,7 +295,6 @@
 		}
 		for (std::list<char*>::iterator iter = buflist.begin(); iter != buflist.end(); iter++)
 			delete[] * iter;
-		free((char*)solidIndx);
 		return 0;
 	}
 int main()

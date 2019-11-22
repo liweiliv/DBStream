@@ -142,7 +142,7 @@ RESEEK:
 			}
 		}
 	FIND:
-		if ((m_current->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed)<= BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE)
+		if ((m_current->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed)<= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
 		{
 			if (0 != static_cast<solidBlock*>(m_current)->load())
 			{
