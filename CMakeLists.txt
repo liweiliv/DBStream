@@ -117,6 +117,18 @@ add_library(memory SHARED ${memoryDir})
 TARGET_LINK_LIBRARIES(memory util thread ${GLOG} ${GFLAGS})
 target_include_directories(memory PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
+#memory
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	add_library(net SHARED net/net.cpp)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	add_library(net SHARED net/net.cpp net/windowsNetServer.cpp)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
+TARGET_LINK_LIBRARIES(net util thread ${GLOG} ${GFLAGS})
+target_include_directories(net PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+
 #database
 aux_source_directory(database databaseDir)
 add_library(database SHARED ${databaseDir})
@@ -151,6 +163,25 @@ include_directories(/usr/include/mysql)
 aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
 add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
 target_include_directories(mysqlDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
+
+#oracleDataSource
+aux_source_directory(dataSource/oracleDataSource oracleDataSourceDir)
+add_library(oracleDataSource SHARED ${oracleDataSourceDir})
+target_include_directories(oracleDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	target_include_directories(oracleDataSource PRIVATE thirdparty/oracle/linux/include)
+    TARGET_LINK_LIBRARIES(oracleDataSource thirdparty/oracle/linux/lib/libclntsh.so thirdparty/oracle/linux/lib/libocci.so thirdparty/oracle/linux/lib/libnnz19.so)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	target_include_directories(oracleDataSource PRIVATE  thirdparty/oracle/windows/include)
+    TARGET_LINK_LIBRARIES(oracleDataSource thirdparty/oracle/windows/lib/oraocci19d.dll)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
+
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(dataSource dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")

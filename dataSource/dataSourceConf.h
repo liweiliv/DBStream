@@ -20,6 +20,9 @@ namespace DATA_SOURCE
 	static constexpr auto READ_TIMEOUT = "readTimeout";
 	static constexpr auto WRITE_TIMEOUT = "writeTimeout";
 
+	static constexpr auto SERVICE_NAME = "serviceName";
+	static constexpr auto SID = "sid";
+
 
 	static constexpr auto CHECKPOINT_SECTION = "checkpoint.";
 
