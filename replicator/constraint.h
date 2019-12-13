@@ -173,20 +173,21 @@ namespace REPLICATOR {
 			switch (meta->m_columns[key->columnInfo[0].columnId].m_columnType)
 			{
 			case META::COLUMN_TYPE::T_INT32:
+			case META::COLUMN_TYPE::T_DATE:
 				return new spp::sparse_hash_map<int32_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_UINT32:
 				return new spp::sparse_hash_map<uint32_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_INT64:
+			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_TIME:
 				return new spp::sparse_hash_map<int64_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_UINT64:
-			case META::COLUMN_TYPE::T_DATETIME:
 			case META::COLUMN_TYPE::T_TIMESTAMP:
-			case META::COLUMN_TYPE::T_TIME:
 				return new spp::sparse_hash_map<uint64_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_INT16:
+			case META::COLUMN_TYPE::T_YEAR:
 				return new spp::sparse_hash_map<int16_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_UINT16:
-			case META::COLUMN_TYPE::T_YEAR:
 			case META::COLUMN_TYPE::T_ENUM:
 				return new spp::sparse_hash_map<uint16_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_INT8:

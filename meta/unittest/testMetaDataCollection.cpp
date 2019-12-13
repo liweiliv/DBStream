@@ -95,6 +95,42 @@ int test()
 	m.processDDL("alter table test.test2 add column d text first", nullptr, 4);
 	m1.processDDL("drop table test.test2", nullptr, 5);
 	m1.processDDL("create table test.test2 (d text,a int primary key,b char(20),c char(20))", nullptr, 6);
+	m1.processDDL("create table TABLE_0("
+		"`C_0` varchar(181),"
+		"`C_1` varchar(223),"
+		"`C_2` varchar(109),"
+		"`C_3` varchar(98),"
+		"`C_4` varchar(99),"
+		"`C_5` varchar(48),"
+		"`C_6` varchar(71),"
+		"`C_7` varchar(138),"
+		"`C_8` datetime,"
+		"`C_9` double,"
+		"`C_10` datetime,"
+		"`C_11` float,"
+		"`C_12` varchar(73),"
+		"`C_13` varchar(221),"
+		"`C_14` varchar(193),"
+		"`C_15` char(192),"
+		"`C_16` varchar(207),"
+		"`C_17` varchar(152),"
+		"`C_18` varchar(176),"
+		"`C_19` varbinary(204),"
+		"`C_20` float,"
+		"`C_21` double,"
+		"`C_22` varchar(194),"
+		"`C_23` varchar(210),"
+		"`C_24` varchar(94),"
+		"`C_25` datetime,"
+		"`C_26` bigint(38),"
+		"`C_27` double,"
+		"`C_28` varchar(102),"
+		"`C_29` varchar(56),"
+		"`C_30` char(133),"
+		"`ID` bigint(38),"
+		"primary key(ID),"
+		"unique key nullUK1(C_25, C_29, C_10))", "test", 6);
+
 	printf("%s\n", m.get("test", "test2")->toString().c_str());
 	printf("%s\n", m1.get("test", "test2")->toString().c_str());
 

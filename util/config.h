@@ -141,7 +141,12 @@ public:
 			size_t equalPos = line.find('=');
 			if(equalPos==std::string::npos)//section
 			{
-				section = line;
+				if (line.c_str()[0] != '[' || line.size() <= 2 || line.c_str()[line.size() - 1] != ']')
+				{
+					fclose(fp);
+					return -1;
+				}
+				section = line.substr(1,line.size()-2);
 				continue;
 			}
 			else //key and value

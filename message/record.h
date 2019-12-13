@@ -494,10 +494,10 @@ namespace DATABASE_INCREASE
 				str = str << *value << "\n";
 				break;
 			case META::COLUMN_TYPE::T_INT16:
+			case META::COLUMN_TYPE::T_YEAR:
 				str = str << *(const int16_t*)value << "\n";
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
-			case META::COLUMN_TYPE::T_YEAR:
 				str = str << *(const uint16_t*)value << "\n";
 				break;
 			case META::COLUMN_TYPE::T_INT32:

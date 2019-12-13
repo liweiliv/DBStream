@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
 	SetDllDirectory(".\\lib\\");
 #endif
 	google::InitGoogleLogging(argv[0]);
+	FLAGS_minloglevel = google::GLOG_INFO;
 	const char* confPath = nullptr;
 	if (argc <= 1)
 		confPath = "d.cnf";
@@ -48,12 +49,14 @@ int main(int argc, char* argv[])
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
+	LOG(INFO) << "dataSource load success";
 	if (0 != store.start())
 	{
 		LOG(ERROR) << "start store failed";
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
+	LOG(INFO) << "store started";
 	if (!ds->start())
 	{
 		LOG(ERROR) << "start data source failed";
@@ -61,6 +64,7 @@ int main(int argc, char* argv[])
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
+	LOG(INFO) << "dataSource started";
 	while (likely(ds->running()))
 	{
 		DATABASE_INCREASE::record* record = ds->read();

@@ -40,22 +40,22 @@ namespace DATA_SOURCE {
 		}
 		std::string initByConf()
 		{
-			m_host = m_conf->get(SECTION, std::string(CONN_SECTION).append(HOST).c_str());
+			m_host = m_conf->get(SECTION, HOST);
 			if (m_host.empty())
 				return "host can not be null in config";
-			m_user = m_conf->get(SECTION, std::string(CONN_SECTION).append(USER).c_str());
+			m_user = m_conf->get(SECTION, USER);
 			if (m_user.empty())
 				return "user can not be null in config";
-			m_password = m_conf->get(SECTION, std::string(CONN_SECTION).append(PASSWORD).c_str());
+			m_password = m_conf->get(SECTION, PASSWORD);
 			if (m_password.empty())
 				return "password can not be null in config";
-			if((m_port = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(PORT).c_str(),0,0,65536))==0)
+			if((m_port = m_conf->getLong(SECTION, PORT,0,0,65536))==0)
 				return "port can not be null in config";
-			m_sslKey = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_KEY).c_str());
-			m_sslCert = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CERT).c_str());
-			m_sslCa = m_conf->get(SECTION, std::string(CONN_SECTION).append(SSL_CA).c_str());
-			m_readTimeOut = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(READ_TIMEOUT).c_str(), 10, 0, 65536);
-			m_connectTimeOut = m_conf->getLong(SECTION, std::string(CONN_SECTION).append(CONNNECT_TIMEOUT).c_str(), 10, 0, 65536);
+			m_sslKey = m_conf->get(SECTION, SSL_KEY);
+			m_sslCert = m_conf->get(SECTION, SSL_CERT);
+			m_sslCa = m_conf->get(SECTION, SSL_CA);
+			m_readTimeOut = m_conf->getLong(SECTION, READ_TIMEOUT, 10, 0, 65536);
+			m_connectTimeOut = m_conf->getLong(SECTION, CONNNECT_TIMEOUT, 10, 0, 65536);
 			return "";
 		}
 		std::string updateConfig(const char * key,const char * value)

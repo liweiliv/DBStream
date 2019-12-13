@@ -966,7 +966,6 @@
 		]
 	},
 	"CONSTRAINT": {
-		"ID": 2001,
 		"COMMENT": "CONSTRAINT",
 		"C": [
 			{
@@ -975,7 +974,7 @@
 					{ "K": "_S_:CONSTRAINT" },
 					{
 						"OPT": true,
-						"K": "_AS_"
+						"K": "_N_"
 					}
 				]
 			},
@@ -2136,8 +2135,7 @@
 				]
 			},
 			{
-				"K": "_S_:INDEX",
-				"F": "createIndexName"
+				"K": "_S_:INDEX"
 			},
 			{
 				"K": "_N_",

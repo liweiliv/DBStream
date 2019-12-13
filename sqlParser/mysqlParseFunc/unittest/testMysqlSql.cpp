@@ -55,6 +55,7 @@ int main()
 	//testSql(&parser,"create table a (c1 int primary key,c2 char(20))");
 	testSql(&parser,"test","alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
 	testSql(&parser,"test","alter table aaa change d c int");
+	testSql(&parser, "test", "CREATE TABLE IF NOT EXISTS `ACT_RU_VARIABLE` ( `ID_` VARCHAR(128) NOT NULL, `REV_` DECIMAL(65, 30), `TYPE_` VARCHAR(510) NOT NULL, `NAME_` VARCHAR(510) NOT NULL, `EXECUTION_ID_` VARCHAR(128), `PROC_INST_ID_` VARCHAR(128), `TASK_ID_` VARCHAR(128), `BYTEARRAY_ID_` VARCHAR(128), `DOUBLE_` DECIMAL(20, 2), `LONG_` DECIMAL(19, 0), `TEXT_` VARCHAR(4000), `TEXT2_` VARCHAR(4000), CONSTRAINT `SYS_C0015278` PRIMARY KEY(`ID_`) ) CHARACTER SET utf8mb4");
 	destroyStackLog();
 }
 

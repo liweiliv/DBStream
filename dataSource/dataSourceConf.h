@@ -11,7 +11,6 @@ namespace DATA_SOURCE
 	static constexpr auto DATASOURCE_LIBDIR_DEFAULT_PATH = "./lib/dataSource/";
 #endif
 
-	static constexpr auto CONN_SECTION = "connect.";
 	static constexpr auto HOST = "host";
 	static constexpr auto PORT = "port";
 	static constexpr auto USER = "user";

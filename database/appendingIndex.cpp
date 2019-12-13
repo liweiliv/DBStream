@@ -284,18 +284,22 @@ namespace DATABASE {
 			m_index = new leveldb::SkipList< KeyTemplate<uint8_t>*, keyComparator<uint8_t> >(keyComparator<uint8_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT16:
+		case META::COLUMN_TYPE::T_YEAR:
 			m_index = new leveldb::SkipList< KeyTemplate<int16_t>*, keyComparator<int16_t> >(keyComparator<int16_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UINT16:
 			m_index = new leveldb::SkipList< KeyTemplate<uint16_t>*, keyComparator<uint16_t> >(keyComparator<uint16_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT32:
+		case META::COLUMN_TYPE::T_DATE:
 			m_index = new leveldb::SkipList< KeyTemplate<int32_t>*, keyComparator<int32_t> >(keyComparator<int32_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UINT32:
 			m_index = new leveldb::SkipList< KeyTemplate<uint32_t>*, keyComparator<uint32_t> >(keyComparator<uint32_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_INT64:
+		case META::COLUMN_TYPE::T_DATETIME:
+		case META::COLUMN_TYPE::T_TIME:
 			m_index = new leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >(keyComparator<int64_t>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_TIMESTAMP:
@@ -333,18 +337,22 @@ namespace DATABASE {
 				delete static_cast<leveldb::SkipList< KeyTemplate<uint8_t>*, keyComparator<uint8_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT16:
+			case META::COLUMN_TYPE::T_YEAR:
 				delete static_cast<leveldb::SkipList< KeyTemplate<int16_t>*, keyComparator<int16_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
 				delete static_cast<leveldb::SkipList< KeyTemplate<uint16_t>*, keyComparator<uint16_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT32:
+			case META::COLUMN_TYPE::T_DATE:
 				delete static_cast<leveldb::SkipList< KeyTemplate<int32_t>*, keyComparator<int32_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT32:
 				delete static_cast<leveldb::SkipList< KeyTemplate<uint32_t>*, keyComparator<uint32_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT64:
+			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_TIME:
 				delete static_cast<leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_TIMESTAMP:
@@ -372,11 +380,36 @@ namespace DATABASE {
 			delete m_arena;
 	}
 	typename appendingIndex::appendIndexFunc appendingIndex::m_appendIndexFuncs[] = {
-		appendUnionIndex,
-		appendUint8Index,appendInt8Index,appendUint16Index,appendInt16Index,
-		appendUint32Index,appendInt32Index,appendUint64Index,appendInt64Index,nullptr,
-		appendFloatIndex,appendDoubleIndex,nullptr,appendUint64Index,nullptr,nullptr,nullptr,nullptr,
-		appendBinaryIndex ,appendBinaryIndex,nullptr,nullptr,nullptr,nullptr };
+		appendUnionIndex,//T_UNION
+		appendUint8Index,//T_UINT8
+		appendInt8Index,//T_INT8
+		appendUint16Index,//T_UINT16
+		appendInt16Index,//T_INT16
+		appendUint32Index,//T_UINT32
+		appendInt32Index,//T_INT32
+		appendUint64Index,//T_UINT64
+		appendInt64Index,//T_INT64
+		nullptr,//T_BIG_NUMBER
+		appendFloatIndex,//T_FLOAT
+		appendDoubleIndex,//T_DOUBLE
+		nullptr,//T_DECIMAL
+		appendUint64Index,//T_TIMESTAMP
+		appendInt64Index,//T_DATETIME
+		appendInt32Index,//T_DATE
+		appendInt16Index,//T_YEAR
+		appendInt64Index,//T_TIME
+		appendBinaryIndex ,//T_BLOB
+		appendBinaryIndex,//T_STRING
+		nullptr,//T_JSON
+		nullptr,//T_XML
+		nullptr,//T_GEOMETRY
+		nullptr, //T_SET
+		nullptr,//T_ENUM
+		nullptr,//T_BYTE
+		appendBinaryIndex,//T_BINARY
+		appendBinaryIndex,//T_TEXT
+		nullptr//T_BOOL
+	};
 	DLL_EXPORT void  appendingIndex::append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
 	{
 		m_appendIndexFuncs[TID(m_type)](this, r, id);
