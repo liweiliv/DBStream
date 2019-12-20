@@ -267,18 +267,21 @@ namespace META {
 		{
 			/*Little-Endian */
 			struct {
-				uint32_t nanoSeconds;
-				uint32_t seconds;
+				uint32_t nanoSeconds:30;
+				uint64_t seconds:34;
 			};
 			uint64_t time;
 		};
-		static inline uint64_t create(uint32_t seconds, uint32_t nanoSeconds)
+		static inline uint64_t create(uint64_t seconds, uint32_t nanoSeconds)
 		{
-			return (static_cast<uint64_t>(seconds) << 32) + nanoSeconds;
+			timestamp t;
+			t.seconds = seconds;
+			t.nanoSeconds = nanoSeconds;
+			return t.time;
 		}
 		inline uint8_t toString(char* str)
 		{
-			uint8_t len = u32toa_sse2(seconds, str);
+			uint8_t len = u64toa_sse2(seconds, str);
 			if (nanoSeconds != 0)
 			{
 				str[len - 1] = '.';
@@ -293,78 +296,58 @@ namespace META {
 
 		}
 	};
-	/*[22byte usec][6 byte second][6 byte min][5 byte hour][5 byte day][4 byte month][16 bit year]*/
+	/*[20byte usec][6 byte second][6 byte min][5 byte hour][5 byte day][4 byte month][18 bit year]*/
 	struct dateTime
 	{
-		int64_t time;
-		inline int16_t year()
+		union
 		{
-			return time >> 48;
+			int64_t time;
+			struct
+			{
+				uint32_t usec : 20;
+				uint8_t sec : 6;
+				uint8_t min : 6;
+				uint8_t hour : 5;
+				uint8_t day : 5;
+				uint8_t month : 4;
+				int32_t year : 18;
+			};
+		};
+		static inline int64_t createDate(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
+		{
+			dateTime d;
+			d.set(year, month, day, hour, mi, sec, usec);
+			return d.time;
 		}
-		inline uint8_t month()
+		inline void set(int32_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _mi, uint8_t _sec, uint32_t _usec)
 		{
-			return ((uint64_t)time >> 44) & 0x0f;
-		}
-		inline uint8_t day()
-		{
-			return ((uint64_t)time >> 39) & 0x1f;
-		}
-		inline uint8_t hour()
-		{
-			return ((uint64_t)time >> 34) & 0x1f;
-		}
-		inline uint8_t mi()
-		{
-			return ((uint64_t)time >> 28) & 0x3f;
-		}
-		inline uint8_t sec()
-		{
-			return ((uint64_t)time >> 22) & 0x3f;
-		}
-		inline uint32_t usec()
-		{
-			return ((uint64_t)time) & 0x3fffffu;
-		}
-		static inline int64_t createDate(int16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
-		{
-			int64_t tm = year;
-			tm <<= 4;
-			tm |= month;
-			tm <<= 5;
-			tm |= day;
-			tm <<= 5;
-			tm |= hour;
-			tm <<= 6;
-			tm |= mi;
-			tm <<= 6;
-			tm |= sec;
-			tm <<= 22;
-			tm |= usec;
-			return tm;
-		}
-		inline void set(int16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
-		{
-			this->time = createDate(year, month, day, hour, mi, sec, usec);
+			usec = _usec;
+			sec = _sec;
+			min = _mi;
+			hour = _hour;
+			day = _day;
+			month = _month;
+			year = _year;
 		}
 		inline uint8_t toString(char* str)
 		{
-			uint8_t yearLength = i32toa_sse2(year(), str);
+			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month()];
+			*(uint16_t*)& str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day()];
+			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = ' ';
-			*(uint16_t*)& str[yearLength + 6] = numToStrMap[hour()];
+			*(uint16_t*)& str[yearLength + 6] = numToStrMap[hour];
 			str[yearLength + 8] = ':';
-			*(uint16_t*)& str[yearLength + 9] = numToStrMap[mi()];
+			*(uint16_t*)& str[yearLength + 9] = numToStrMap[min];
 			str[yearLength + 11] = ':';
-			*(uint16_t*)& str[yearLength + 12] = numToStrMap[sec()];
-			if (usec() != 0)
+			*(uint16_t*)& str[yearLength + 12] = numToStrMap[sec];
+			if (usec != 0)
 			{
 				str[yearLength + 14] = '.';
 				char usecBuffer[8];
 				*(uint64_t*)(str + yearLength + 15) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
-				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
+				uint8_t secLen = u32toa_sse2(usec, usecBuffer);
 				memcpy(str + yearLength + 15 + 6 - secLen + 1, usecBuffer, secLen);
 				return yearLength + 15 + 6 + 1;
 			}
@@ -376,33 +359,33 @@ namespace META {
 		}
 		inline uint8_t toDateString(char* str)
 		{
-			uint8_t yearLength = i32toa_sse2(year(), str);
+			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month()];
+			*(uint16_t*)& str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day()];
+			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = '\0';
 			return yearLength + 6;
 		}
 		inline uint8_t toTimeString(char* str)
 		{
 			uint8_t hourLength = 0;
-			if (year() < 0)
+			if (year < 0)
 			{
 				hourLength = 1;
 				str[0] = '-';
 			}
-			hourLength += u32toa_sse2(hour(), str + hourLength);
+			hourLength += u32toa_sse2(hour, str + hourLength);
 			str[hourLength - 1] = ':';
-			*(uint16_t*)& str[hourLength] = numToStrMap[mi()];
+			*(uint16_t*)& str[hourLength] = numToStrMap[min];
 			str[hourLength + 2] = ':';
-			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec()];
-			if (usec() != 0)
+			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec];
+			if (usec != 0)
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
 				*(uint64_t*)(str + hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
-				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
+				uint8_t secLen = u32toa_sse2(usec, usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;
 			}
@@ -416,51 +399,46 @@ namespace META {
 	/*[24 bit usc][8 bit second][8 bit min][24 bit hour]*/
 	struct Time
 	{
-		int64_t time;
-		static inline int64_t createTime(int16_t hour, uint8_t mi, uint8_t second, uint32_t usec)
+		union 
 		{
-			int64_t t = hour;
-			t <<= 8;
-			t |= mi;
-			t <<= 8;
-			t |= second;
-			t <<= 24;
-			t |= usec;
-			return t;
+			int64_t time;
+			struct
+			{
+				uint32_t nsec : 30;
+				uint8_t sec : 6;
+				uint8_t min : 6;
+				int32_t hour : 22;
+			};
+		};
+		static inline int64_t createTime(int32_t hour, uint8_t mi, uint8_t second, uint32_t nsec)
+		{
+			Time t;
+			t.hour = hour;
+			t.min = mi;
+			t.sec = second;
+			t.nsec = nsec;
+			return t.time;
 		}
-		inline void  set(int16_t hour, uint8_t mi, uint8_t second, uint32_t usec)
+		inline void  set(int32_t hour, uint8_t mi, uint8_t second, uint32_t nsec)
 		{
-			this->time = createTime(hour, mi, second, usec);
-		}
-		inline int32_t hour()
-		{
-			return time >> 40;
-		}
-		inline uint8_t mi()
-		{
-			return (time >> 32) & 0xffu;
-		}
-		inline uint8_t sec()
-		{
-			return (time >> 24) & 0xffu;
-		}
-		inline uint32_t usec()
-		{
-			return time & 0xffffffu;
+			this->hour = hour;
+			this->min = mi;
+			this->sec = second;
+			this->nsec = nsec;
 		}
 		inline uint8_t toString(char* str)
 		{
-			uint8_t hourLength = u32toa_sse2(hour(), str);
+			uint8_t hourLength = u32toa_sse2(hour, str);
 			str[hourLength - 1] = ':';
-			*(uint16_t*)& str[hourLength] = numToStrMap[mi()];
+			*(uint16_t*)& str[hourLength] = numToStrMap[min];
 			str[hourLength + 2] = ':';
-			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec()];
-			if (usec() != 0)
+			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec];
+			if (nsec != 0)
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
 				*(uint64_t*)(str + hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
-				uint8_t secLen = u32toa_sse2(usec(), usecBuffer);
+				uint8_t secLen = u32toa_sse2(nsec/1000, usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;
 			}
@@ -473,39 +451,37 @@ namespace META {
 	};
 	/*[1 byte day][1 byte month][2 byte year]*/
 	struct Date {
-		int32_t time;
-		static inline int32_t createDate(int16_t year, uint8_t month, uint8_t day)
+		union
 		{
-			int32_t tm = year;
-			tm <<= 16;
-			tm |= month;
-			tm <<= 8;
-			tm |= day;
-			return tm;
+			int32_t time;
+			struct
+			{
+				uint8_t day : 5;
+				uint8_t month : 4;
+				int32_t year : 23;
+			};
+		};
+		static inline int32_t createDate(int32_t _year, uint8_t _month, uint8_t _day)
+		{
+			Date d;
+			d.day == _day;
+			d.month = _month;
+			d.year = _year;
+			return d.time;
 		}
-		inline void set(int16_t year, uint8_t month, uint8_t day)
+		inline void set(int16_t _year, uint8_t _month, uint8_t _day)
 		{
-			time = createDate(year, month, day);
-		}
-		inline int16_t year()
-		{
-			return time >> 16;
-		}
-		inline uint8_t month()
-		{
-			return ((uint32_t)time >> 8) & 0xffu;
-		}
-		inline uint8_t day()
-		{
-			return ((uint32_t)time) & 0xffu;
+			day == _day;
+			month = _month;
+			year = _year;
 		}
 		uint8_t toString(char* str)
 		{
-			uint8_t yearLength = i32toa_sse2(year(), str);
+			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month()];
+			*(uint16_t*)& str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day()];
+			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = '\0';
 			return yearLength + 6;
 		}

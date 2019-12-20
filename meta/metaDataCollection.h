@@ -40,7 +40,7 @@ namespace META {
 	struct Table;
 	struct ddl;
 	struct databaseInfo;
-	class DLL_EXPORT metaDataCollection :public metaDataBaseCollection
+	class  metaDataCollection :public metaDataBaseCollection
 	{
 	private:
 		dbTree m_dbs;
@@ -55,22 +55,22 @@ namespace META {
 		bufferPool* m_bufferPool;
 		config* m_virtualConf;
 	public:
-		metaDataCollection(const char * defaultCharset,bool caseSensitive = true,CLIENT::client *client = nullptr, const char* savePath=nullptr);
-		~metaDataCollection();
-		int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
-		tableMeta * get(uint64_t tableID);
-		tableMeta * getPrevVersion(uint64_t tableID);
-		tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint = 0xffffffffffffffffULL);
-		bool isDataBaseExist(const char * database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
-		tableMeta * getTableMetaFromRemote(uint64_t tableID);
-		tableMeta * getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint);
-		const charsetInfo* getDataBaseCharset(const char* database, uint64_t originCheckPoint);
-		int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);
-		int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
-		int purge(uint64_t originCheckPoint);
-		int processDDL(const char* ddl, const char* database, uint64_t originCheckPoint);
-		int setDefaultCharset(const charsetInfo* defaultCharset);
-		const charsetInfo* getDefaultCharset();
+		DLL_EXPORT metaDataCollection(const char * defaultCharset,bool caseSensitive = true,CLIENT::client *client = nullptr, const char* savePath=nullptr);
+		DLL_EXPORT ~metaDataCollection();
+		DLL_EXPORT int initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile);
+		DLL_EXPORT tableMeta * get(uint64_t tableID);
+		DLL_EXPORT tableMeta * getPrevVersion(uint64_t tableID);
+		DLL_EXPORT tableMeta * get(const char * database, const char * table, uint64_t originCheckPoint = 0xffffffffffffffffULL);
+		DLL_EXPORT bool isDataBaseExist(const char * database, uint64_t originCheckPoint = 0xffffffffffffffffULL);
+		DLL_EXPORT tableMeta * getTableMetaFromRemote(uint64_t tableID);
+		DLL_EXPORT tableMeta * getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint);
+		DLL_EXPORT const charsetInfo* getDataBaseCharset(const char* database, uint64_t originCheckPoint);
+		DLL_EXPORT int put(const char * database, const char * table, tableMeta * meta, uint64_t originCheckPoint);
+		DLL_EXPORT int put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint);
+		DLL_EXPORT int purge(uint64_t originCheckPoint);
+		DLL_EXPORT int processDDL(const char* ddl, const char* database, uint64_t originCheckPoint);
+		DLL_EXPORT int setDefaultCharset(const charsetInfo* defaultCharset);
+		DLL_EXPORT const charsetInfo* getDefaultCharset();
 	private:
 		int put(const char* database, uint64_t offset, dbInfo* db);
 		dbInfo * getDatabaseMetaFromRemote(uint64_t databaseID);
@@ -93,7 +93,7 @@ namespace META {
 		int renameTable(const char * srcDatabase,const char * srcTable,const char * destDatabase,const char * destTable, uint64_t originCheckPoint);
 		int alterTable(const ddl* tableDDL, uint64_t originCheckPoint);
 	public:
-		void print();
+		DLL_EXPORT void print();
 	};
 }
 #endif /* METADATACOLLECTION_H_ */

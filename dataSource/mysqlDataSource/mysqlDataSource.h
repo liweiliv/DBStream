@@ -20,7 +20,6 @@ namespace DATA_SOURCE
 		mysqlBinlogReader * m_reader;
 		BinlogEventParser * m_parser;
 		mysqlConnector * m_connector;
-		ringBuffer* m_readerBufferPool;
 		ringBuffer* m_recordBufferPool;
 		DATABASE_INCREASE::record* m_prevRecord;
 		void initByConf();

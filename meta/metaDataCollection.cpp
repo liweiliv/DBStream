@@ -67,7 +67,7 @@ namespace META {
 	{
 
 	}
-	metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,CLIENT::client *client,const char * savePath) :metaDataBaseCollection(caseSensitive, getCharset(defaultCharset)),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
+	DLL_EXPORT metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,CLIENT::client *client,const char * savePath) :metaDataBaseCollection(caseSensitive, getCharset(defaultCharset)),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
 		 m_maxTableId(1),m_maxDatabaseId(0), m_metaFile(nullptr), m_bufferPool(nullptr)
 	{
 		if (savePath != nullptr)
@@ -79,7 +79,7 @@ namespace META {
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
 			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));
 	}
-	int metaDataCollection::initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile)
+	DLL_EXPORT int metaDataCollection::initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile)
 	{
 		m_sqlParser = new sqlParser();
 		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
@@ -96,7 +96,7 @@ namespace META {
 		}
 		return 0;
 	}
-	metaDataCollection::~metaDataCollection()
+	DLL_EXPORT metaDataCollection::~metaDataCollection()
 	{
 		if (m_sqlParser != nullptr)
 			delete m_sqlParser;
@@ -104,7 +104,7 @@ namespace META {
 			delete iter->second;
 		m_dbs.clear();
 	}
-	tableMeta * metaDataCollection::get(const char * database, const char * table,
+	DLL_EXPORT tableMeta * metaDataCollection::get(const char * database, const char * table,
 		uint64_t originCheckPoint)
 	{
 		MetaTimeline<dbInfo>* db;
@@ -120,7 +120,7 @@ namespace META {
 			return nullptr;
 		return metas->get(originCheckPoint);
 	}
-	const charsetInfo* metaDataCollection::getDataBaseCharset(const char* database, uint64_t originCheckPoint)
+	DLL_EXPORT const charsetInfo* metaDataCollection::getDataBaseCharset(const char* database, uint64_t originCheckPoint)
 	{
 
 		MetaTimeline<dbInfo>* db;
@@ -133,7 +133,7 @@ namespace META {
 		return currentDB->charset;
 	}
 
-	tableMeta *metaDataCollection::getTableMetaFromRemote(uint64_t tableID) {
+	DLL_EXPORT tableMeta *metaDataCollection::getTableMetaFromRemote(uint64_t tableID) {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableID)); i++)
 		{
@@ -150,7 +150,7 @@ namespace META {
 		put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, msg.head->logOffset);
 		return meta;
 	}
-	tableMeta *metaDataCollection::getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint) {
+	DLL_EXPORT tableMeta *metaDataCollection::getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint) {
 		const char * metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database, table,originCheckPoint)); i++)
 		{
@@ -207,7 +207,7 @@ namespace META {
 		put(meta->name.c_str(), msg.head->logOffset, meta);
 		return meta;
 	}
-	bool metaDataCollection::isDataBaseExist(const char* database, uint64_t originCheckPoint)
+	DLL_EXPORT bool metaDataCollection::isDataBaseExist(const char* database, uint64_t originCheckPoint)
 	{
 		return getDatabase(database, originCheckPoint) != nullptr;
 	}
@@ -250,7 +250,7 @@ namespace META {
 				return currentDB;
 		}
 	}
-	tableMeta *metaDataCollection::get(uint64_t tableID) {
+	DLL_EXPORT tableMeta *metaDataCollection::get(uint64_t tableID) {
 		tableMeta * meta = m_allTables.get(tableID);
 		if (meta!=nullptr)
 			return meta;
@@ -264,7 +264,7 @@ namespace META {
 		else
 			return nullptr;
 	}
-	tableMeta* metaDataCollection::getPrevVersion(uint64_t tableID) {
+	DLL_EXPORT tableMeta* metaDataCollection::getPrevVersion(uint64_t tableID) {
 		return m_allTables.getPrevVersion(tableID);
 	}
 	int metaDataCollection::put(const char * database, uint64_t offset, dbInfo *dbmeta)
@@ -292,7 +292,7 @@ namespace META {
 				return 0;
 		}
 	}
-	int metaDataCollection::put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint)
+	DLL_EXPORT int metaDataCollection::put(const char* database, const charsetInfo* charset, uint64_t originCheckPoint)
 	{
 		dbInfo* db = new dbInfo(m_nameCompare);
 		db->charset = charset;
@@ -305,7 +305,7 @@ namespace META {
 		return 0;
 	}
 
-	int metaDataCollection::put(const char * database, const char * table,
+	DLL_EXPORT int metaDataCollection::put(const char * database, const char * table,
 		tableMeta * meta, uint64_t originCheckPoint)
 	{
 		dbInfo * currentDB = nullptr;
@@ -932,7 +932,7 @@ namespace META {
 		}
 	}
 
-	int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
+	DLL_EXPORT int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
 	{
 		handle * h = nullptr;
 		if (OK != m_sqlParser->parse(h, database,ddl))
@@ -951,7 +951,7 @@ namespace META {
 		delete h;
 		return 0;
 	}
-	int metaDataCollection::purge(uint64_t originCheckPoint)
+	DLL_EXPORT int metaDataCollection::purge(uint64_t originCheckPoint)
 	{
 		for (dbTree::iterator iter = m_dbs.begin(); iter!=m_dbs.end(); iter++)
 		{
@@ -972,16 +972,16 @@ namespace META {
 		}
 		return 0;
 	}
-	int metaDataCollection::setDefaultCharset(const charsetInfo* defaultCharset)
+	DLL_EXPORT int metaDataCollection::setDefaultCharset(const charsetInfo* defaultCharset)
 	{
 		m_defaultCharset = defaultCharset;
 		return 0;
 	}
-	const charsetInfo* metaDataCollection::getDefaultCharset()
+	DLL_EXPORT const charsetInfo* metaDataCollection::getDefaultCharset()
 	{
 		return m_defaultCharset;
 	}
-	void metaDataCollection::print()
+	DLL_EXPORT void metaDataCollection::print()
 	{
 		for (dbTree::iterator iter = m_dbs.begin(); iter != m_dbs.end(); iter++)
 		{

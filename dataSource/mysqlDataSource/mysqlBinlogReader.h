@@ -41,7 +41,6 @@ namespace DATA_SOURCE
 		uint32_t  m_currFileID;
 		uint64_t m_currentPos;
 		std::string m_currFile;
-		ringBuffer* m_pool;
 
 		bool m_isTypeNeedParse[ENUM_END_EVENT];
 		int initFmtDescEvent();
@@ -59,7 +58,7 @@ namespace DATA_SOURCE
 		int seekBinlogInFile(uint64_t timestamp, const char* fileName, bool localORRemmote = false, bool strick = false);
 		int dumpBinlog(const char* file, uint64_t offset, bool localORRemote = false);
 	public:
-		mysqlBinlogReader(ringBuffer *pool,mysqlConnector* mysqlConnector);
+		mysqlBinlogReader(mysqlConnector* mysqlConnector);
 		~mysqlBinlogReader();
 		int seekBinlogByCheckpoint(uint32_t fileID, uint64_t position);
 		int seekBinlogByTimestamp(uint64_t timestamp, bool strick = true);

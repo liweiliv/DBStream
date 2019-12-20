@@ -5,6 +5,7 @@
 #include "util/config.h"
 #include "glog/logging.h"
 #include "sqlParser/sqlParserUtil.h"
+#include "globalInfo/global.h"
 #include <stdio.h>
 #ifdef OS_WIN
 #define mysqlFuncLib "mysqlParserFuncs.dll"
@@ -34,6 +35,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	initKeyWords();
+	GLOBAL::init();
 	STORE::store store(&conf);
 	META::metaDataCollection collection("utf8",true,nullptr);
         if(0!=collection.initSqlParser(mysqlParserTree,mysqlFuncLib))
@@ -88,4 +90,5 @@ int main(int argc, char* argv[])
 	}
 	DATA_SOURCE::dataSource::destroyDataSource(ds);
 	google::ShutdownGoogleLogging();
+	GLOBAL::close();
 }

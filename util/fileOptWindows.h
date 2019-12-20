@@ -18,7 +18,7 @@ static fileHandle openFile(const char *file,bool readFlag,bool writeFlag,bool cr
 		errno = errCode;
 		if (errCode == ERROR_FILE_NOT_FOUND)//no such file
 		{
-			if (create)
+			if (createFlag)
 			{
 				fd = CreateFile(file, flag, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
 				return fd;

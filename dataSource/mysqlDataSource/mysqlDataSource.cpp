@@ -40,12 +40,11 @@ namespace DATA_SOURCE {
 	}
 	mysqlDataSource::mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store):dataSource(conf,metaDataCollection,store),m_async(false),m_running(false)
 	{
-		m_readerBufferPool = new ringBuffer();
 		m_recordBufferPool = new ringBuffer();
 		m_connector = new mysqlConnector(conf);
 		m_metaDataCollection = metaDataCollection;
 		m_store = store;
-		m_reader = new mysqlBinlogReader(m_readerBufferPool,m_connector);
+		m_reader = new mysqlBinlogReader(m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 		m_prevRecord = nullptr;
 		remove("r.log");
@@ -58,7 +57,6 @@ namespace DATA_SOURCE {
 		delete m_reader;
 		delete m_parser;
 		delete m_connector;
-		delete m_readerBufferPool;
 		delete m_recordBufferPool;
 		fclose(m_logFile);
 	}
@@ -99,7 +97,6 @@ namespace DATA_SOURCE {
 				m_lastError = m_parser->getError();
 				goto FAILED;
 			}
-			m_readerBufferPool->freeMem((void*)logEvent);
 		}
 	FAILED:
 		m_running = false;
@@ -163,7 +160,6 @@ namespace DATA_SOURCE {
 				m_lastError = m_parser->getError();
 				return nullptr;
 			}
-			m_readerBufferPool->freeMem((void*)logEvent);
 		} while (likely(m_running));
 		return nullptr;
 	}

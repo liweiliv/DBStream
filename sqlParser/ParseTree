@@ -171,8 +171,17 @@
 				"OPT": true,
 				"C": [
 					{
-						"K": "_S_:DECIMAL",
-						"F": "decimalType"
+						"OR": true,
+						"C": [
+							{
+								"K": "_S_:DECIMAL",
+								"F": "decimalType"
+							},
+							{
+								"K": "_S_:NUMERIC",
+								"F": "decimalType"
+							}
+						]
 					},
 					{
 						"OPT": true,
@@ -784,130 +793,137 @@
 				"COMMENT": "column type"
 			},
 			{
-				"OPT": true,
 				"OR": true,
-				"C": [
-					{ "K": "_S_:NOT NULL" },
-					{ "K": "_S_:NULL" }
-				]
-			},
-			{
 				"OPT": true,
+				"LOOP": "always",
 				"C": [
 					{
 						"OPT": true,
-						"K": "_S_:GENERATED ALWAYS"
-					},
-					{
-						"K": "_S_:AS",
-						"F": "generatedColumn"
-					},
-					{ "K": "_B_" },
-					{
-						"OPT": true,
+						"OR": true,
 						"C": [
-							{ "K": "_S_:VIRTUAL" },
-							{ "K": "_S_:STORED" }
+							{ "K": "_S_:NOT NULL" },
+							{ "K": "_S_:NULL" }
 						]
-					}
-				]
-			},
-			{ "INCLUDE": "DEFAULT_VALUE" },
-			{
-				"OPT": true,
-				"K": "_S_:AUTO_INCREMENT"
-			},
-			{
-				"OPT": true,
-				"C": [
-					{
-						"K": "_S_:UNIQUE",
-						"F": "columnIsUK"
 					},
-					{
-						"OPT": true,
-						"K": "_S_:KEY"
-					}
-				]
-			},
-			{
-				"OPT": true,
-				"C": [
-					{
-						"K": "_S_:PRIMARY",
-						"F": "columnIsPK"
-					},
-					{
-						"OPT": true,
-						"K": "_S_:KEY"
-					}
-				]
-			},
-			{
-				"OPT": true,
-				"K": "_S_:KEY",
-				"F": "columnIsKey"
-			},
-			{
-				"OPT": true,
-				"C": [
-					{ "K": "_S_:COMMENT" },
-					{ "K": "_A_" }
-				]
-			},
-			{
-				"OPT": true,
-				"C": [
-					{ "K": "_S_:COLUMN_FORMAT" },
-					{ "K": "_AS_" }
-				]
-			},
-			{
-				"OPT": true,
-				"C": [
-					{ "K": "_S_:STORAGE" },
-					{ "K": "_AS_" }
-				]
-			},
-			{
-				"OPT": true,
-				"C": [
-					{ "K": "_S_:REFERENCES" },
-					{ "K": "_N_" },
-					{ "K": "_B_" },
 					{
 						"OPT": true,
 						"C": [
-							{ "K": "_S_:MATCH" },
 							{
-								"OR": true,
+								"OPT": true,
+								"K": "_S_:GENERATED ALWAYS"
+							},
+							{
+								"K": "_S_:AS",
+								"F": "generatedColumn"
+							},
+							{ "K": "_B_" },
+							{
+								"OPT": true,
 								"C": [
-									{ "K": "_S_:FULL" },
-									{ "K": "_S_:PARTIAL" },
-									{ "K": "_S_:SIMPLE" }
+									{ "K": "_S_:VIRTUAL" },
+									{ "K": "_S_:STORED" }
 								]
+							}
+						]
+					},
+					{ "INCLUDE": "DEFAULT_VALUE" },
+					{
+						"OPT": true,
+						"K": "_S_:AUTO_INCREMENT"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{
+								"K": "_S_:UNIQUE",
+								"F": "columnIsUK"
+							},
+							{
+								"OPT": true,
+								"K": "_S_:KEY"
 							}
 						]
 					},
 					{
 						"OPT": true,
 						"C": [
-							{ "K": "_S_:ON" },
 							{
-								"OR": true,
+								"K": "_S_:PRIMARY",
+								"F": "columnIsPK"
+							},
+							{
+								"OPT": true,
+								"K": "_S_:KEY"
+							}
+						]
+					},
+					{
+						"OPT": true,
+						"K": "_S_:KEY",
+						"F": "columnIsKey"
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:COMMENT" },
+							{ "K": "_A_" }
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:COLUMN_FORMAT" },
+							{ "K": "_AS_" }
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:STORAGE" },
+							{ "K": "_AS_" }
+						]
+					},
+					{
+						"OPT": true,
+						"C": [
+							{ "K": "_S_:REFERENCES" },
+							{ "K": "_N_" },
+							{ "K": "_B_" },
+							{
+								"OPT": true,
 								"C": [
-									{ "K": "_S_:DELETE" },
-									{ "K": "_S_:UPDATE" }
+									{ "K": "_S_:MATCH" },
+									{
+										"OR": true,
+										"C": [
+											{ "K": "_S_:FULL" },
+											{ "K": "_S_:PARTIAL" },
+											{ "K": "_S_:SIMPLE" }
+										]
+									}
 								]
 							},
 							{
-								"OR": true,
+								"OPT": true,
 								"C": [
-									{ "K": "_S_:RESTRICT" },
-									{ "K": "_S_:CASCADE" },
-									{ "K": "_S_:SET NULL" },
-									{ "K": "_S_:NO ACTION" },
-									{ "K": "_S_:SET DEFAULT" }
+									{ "K": "_S_:ON" },
+									{
+										"OR": true,
+										"C": [
+											{ "K": "_S_:DELETE" },
+											{ "K": "_S_:UPDATE" }
+										]
+									},
+									{
+										"OR": true,
+										"C": [
+											{ "K": "_S_:RESTRICT" },
+											{ "K": "_S_:CASCADE" },
+											{ "K": "_S_:SET NULL" },
+											{ "K": "_S_:NO ACTION" },
+											{ "K": "_S_:SET DEFAULT" }
+										]
+									}
 								]
 							}
 						]

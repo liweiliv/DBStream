@@ -88,7 +88,13 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(util pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-#util
+
+#global 
+aux_source_directory(globalInfo globalDir)
+add_library(globalInfo SHARED ${globalDir})
+TARGET_LINK_LIBRARIES(globalInfo util)
+
+#thread
 aux_source_directory(thread threadDir)
 add_library(thread SHARED ${threadDir})
 TARGET_LINK_LIBRARIES(thread ${GLOG} ${GFLAGS})
@@ -135,7 +141,7 @@ target_include_directories(net PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} 
 #database
 aux_source_directory(database databaseDir)
 add_library(database SHARED ${databaseDir})
-TARGET_LINK_LIBRARIES(database  util thread memory meta ${LZ4} ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(database  util globalInfo thread memory meta ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(database PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 #metaCollection
 add_library(metaCollection SHARED meta/metaDataCollection.cpp)
@@ -143,7 +149,7 @@ TARGET_LINK_LIBRARIES(metaCollection meta database util thread sqlParser ${GLOG}
 #store
 aux_source_directory(store storeDir)
 add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(store  util globalInfo thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(store PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 #shell
@@ -202,7 +208,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
-TARGET_LINK_LIBRARIES(DBStream util sqlParser dataSource store meta metaCollection memory)
+TARGET_LINK_LIBRARIES(DBStream util globalInfo sqlParser dataSource store meta metaCollection memory)
 target_include_directories(DBStream PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -239,6 +245,9 @@ TARGET_LINK_LIBRARIES(testMetaDataCollection util sqlParser meta metaCollection)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMetaDataCollection dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testColumnType meta/unittest/testColumnType.cpp)
+TARGET_LINK_LIBRARIES(testColumnType   meta )
 
 ADD_EXECUTABLE(testAppendingIndex database/unittest/testAppendingIndex.cpp)
 TARGET_LINK_LIBRARIES(testAppendingIndex util database meta metaCollection sqlParser)
