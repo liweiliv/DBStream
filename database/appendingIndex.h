@@ -104,7 +104,7 @@ namespace DATABASE {
 		uint32_t m_allCount;
 		uint32_t m_keyCount;
 		uint32_t m_varSize;
-		typedef void(*appendIndexFunc) (appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
+		typedef void(*appendIndexFunc) (appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id,bool keyUpdate);
 		template <typename T>
 		static inline bool appendIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, KeyTemplate<T> *c, uint32_t id, bool keyUpdated = false)
 		{
@@ -141,18 +141,20 @@ namespace DATABASE {
 			return newKey;
 		}
 
-		static inline void appendUint8Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendInt8Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendUint16Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendInt16Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendUint32Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendInt32Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendUint64Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendInt64Index(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendFloatIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendDoubleIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendBinaryIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
-		static inline void appendUnionIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id);
+		template<class T>
+		static void appendIndexByType(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id,bool keyUpdate)
+		{
+			KeyTemplate<T> c;
+			c.key = *(T*)r->column(index->m_ukMeta->columnInfo[0].columnId);
+			appendIndex(index, r, &c, id, false);
+			if (keyUpdate)
+			{
+				c.key = *(T*)r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
+				appendIndex(index, r, &c, id, true);
+			}
+		}
+		static inline void appendBinaryIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id,bool keyUpdate);
+		static inline void appendUnionIndex(appendingIndex * index, const DATABASE_INCREASE::DMLRecord * r, uint32_t id,bool keyUpdate);
 	public:
 		static appendIndexFunc m_appendIndexFuncs[];
 	public:
@@ -315,7 +317,7 @@ namespace DATABASE {
 			do
 			{
 				const keyChildInfo * k = iter.keyDetail();
-				memcpy(indexPos, iter.key(), keySize);
+				*(T*)indexPos = *(T*)iter.key();
 				if (k->count == 1)
 				{
 					*(uint32_t*)(indexPos + keySize) = k->subArray[0];
@@ -364,7 +366,7 @@ namespace DATABASE {
 				size = sizeof(solidIndexHead) + (keySize + sizeof(uint32_t)) * (1+m_keyCount) + sizeof(uint32_t) * (m_allCount) + ((m_allCount-m_keyCount)/0x7f)*sizeof(uint32_t);
 			else
 				size = sizeof(solidIndexHead) + (keySize + 2*sizeof(uint32_t)) * (1+m_keyCount) + (sizeof(uint16_t)+sizeof(uint32_t)) * (m_allCount) + m_varSize;
-			return size;
+			return size ;
 		}
 		template<typename T>
 		const char *toString(char * data = nullptr)

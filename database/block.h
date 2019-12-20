@@ -106,7 +106,7 @@ namespace DATABASE {
 		block(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db),next(nullptr),prev(nullptr), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
 		{
 			m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_UNLOAD), std::memory_order_relaxed);
-			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_tableID));
+			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_blockID));
 			m_blockID = blockId;
 		}
 		block(block* b)

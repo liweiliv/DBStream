@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 int test()
 {
 	char tstr[128] = { 0 }, tstrd[128] = { 0 };

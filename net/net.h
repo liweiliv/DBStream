@@ -3,13 +3,16 @@
 #include <stdint.h>
 #include <mutex>
 #include <thread>
-//#ifdef OS_WIN
+#ifdef OS_WIN
 #include <winsock2.h>
-//#endif
+#endif
 #ifdef OS_LINUX
-#include<sys/socket.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 typedef int SOCKET;
-#define closesocket close
+#define closesocket ::close
+#define SOCKADDR sockaddr
 #endif
 #include "glog/logging.h"
 #include "util/sparsepp/spp.h"
@@ -102,7 +105,7 @@ namespace NET
 			sockAddr.sin_family = PF_INET;
 			sockAddr.sin_addr.s_addr = inet_addr(host.c_str());
 			sockAddr.sin_port = htons(port);
-			if (0 != bind(fd, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR)))
+			if (0 != ::bind(fd, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR)))
 			{
 				LOG(INFO) << "bind listen socket to " << host << ":" << port << " failed for:" << errno << "," << strerror(errno);
 				closesocket(fd);

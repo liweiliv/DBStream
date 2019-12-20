@@ -464,14 +464,14 @@ namespace META {
 		static inline int32_t createDate(int32_t _year, uint8_t _month, uint8_t _day)
 		{
 			Date d;
-			d.day == _day;
+			d.day = _day;
 			d.month = _month;
 			d.year = _year;
 			return d.time;
 		}
 		inline void set(int16_t _year, uint8_t _month, uint8_t _day)
 		{
-			day == _day;
+			day = _day;
 			month = _month;
 			year = _year;
 		}
