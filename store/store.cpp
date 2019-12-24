@@ -14,6 +14,20 @@ namespace STORE {
 		m_genratedStream = new DATABASE::database(GENERATED_STREAM, conf,m_bufferPool,m_metaDataCollection);
 		m_mainStream = new DATABASE::database(MAIN_STREAM, conf,m_bufferPool,m_metaDataCollection);
 	}
+	DLL_EXPORT store::~store()
+	{
+		if(m_genratedStream!=nullptr)
+			delete m_genratedStream;
+		if(m_mainStream!=nullptr)
+			delete m_mainStream;
+		if(m_bufferPool!=nullptr)
+			delete m_bufferPool;
+		if(m_schedule!=nullptr)
+			delete m_schedule;
+		if(m_metaDataCollection!=nullptr)
+			delete m_metaDataCollection;
+	}
+
 	DLL_EXPORT int store::start()
 	{
 		if (0 != m_schedule->start())

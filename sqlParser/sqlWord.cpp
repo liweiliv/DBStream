@@ -862,17 +862,7 @@ namespace SQL_PARSER {
 
 		if (rtv == NOT_MATCH_PTR) //rollback
 		{
-			for (statusInfo* s = top ? top->next : nullptr; s != nullptr;)
-			{
-				statusInfo* tmp = s->next;
-				delete s;
-				s = tmp;
-			}
-			h->end = top;
-			if (h->end != nullptr)
-				h->end->next = nullptr;
-			else
-				h->head = nullptr;
+			h->rollbackTo(top);
 			sql = savePoint;
 #ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;

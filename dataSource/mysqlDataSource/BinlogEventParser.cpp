@@ -385,6 +385,8 @@ namespace DATA_SOURCE {
 				{
 					if (!META::columnInfos[TID(columnMeta->m_columnType)].fixed)
 						record->setVarColumnNull(idx);
+					else
+						record->setFixedColumnNull(idx,META::columnInfos[TID(columnMeta->m_columnType)].columnTypeSize);
 				}
 				else
 					record->setUpdatedColumnNull(idx);
@@ -393,7 +395,7 @@ namespace DATA_SOURCE {
 			}
 			if (unlikely(m_columnInfo[ctype].parseFunc == NULL))
 			{
-				m_error = std::String("unsupport column type :") << ctype<<",column :"<<columnMeta->m_columnName<<",id:"<< columnMeta->m_columnIndex;
+				m_error = std::String("unsupported column type :") << ctype<<",column :"<<columnMeta->m_columnName<<",id:"<< columnMeta->m_columnIndex;
 				LOG(ERROR) << m_error;
 				return ParseStatus::META_NOT_MATCH;
 			}

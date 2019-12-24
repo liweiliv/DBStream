@@ -121,7 +121,7 @@ namespace DATA_SOURCE {
 		if (row[6] != nullptr)
 			column->m_decimals = atoi(row[6]);
 		if (row[7] != nullptr)
-			column->m_decimals = atoi(row[7]);
+			column->m_precision = atoi(row[7]);
 		if (row[8] != nullptr)
 			column->m_charset = getCharset(row[8]);
 		if (column->m_srcColumnType == MYSQL_TYPE_ENUM || column->m_srcColumnType == MYSQL_TYPE_SET)

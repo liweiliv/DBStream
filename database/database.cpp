@@ -525,7 +525,8 @@ namespace DATABASE {
 		uint32_t idleRound = 0;
 		while (likely(m_status == BLOCK_MANAGER_STATUS::BM_RUNNING||m_status == BLOCK_MANAGER_STATUS::BM_STOPPING))
 		{
-			if (!m_unflushedBlocks.pop(block, 1000))
+			block = nullptr;
+			if (!m_unflushedBlocks.pop(block, 1000)||block == nullptr)
 			{
 				if (m_status >= BLOCK_MANAGER_STATUS::BM_STOPPING||++idleRound > 1000)
 				{

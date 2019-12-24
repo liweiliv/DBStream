@@ -51,6 +51,27 @@ namespace SQL_PARSER
 				end->next = s;
 			end = s;
 		}
+		void rollbackTo(statusInfo * s)
+		{
+			statusInfo * status;
+			if(s == nullptr)//save point is marked when end is null,clear all
+				status = head;
+			else
+				status = s->next;
+			while(status != nullptr)
+			{
+				statusInfo * tmp = status->next;
+				delete status;
+				status = tmp;
+			}
+			if(s != nullptr)
+			{
+				end = s;
+				end->next = nullptr;
+			}
+			else
+				head = end = nullptr;
+		}
 		~handle()
 		{
 			if (head != nullptr)

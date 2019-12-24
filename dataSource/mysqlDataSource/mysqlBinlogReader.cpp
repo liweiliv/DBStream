@@ -304,7 +304,7 @@ namespace DATA_SOURCE {
 	}
 	int mysqlBinlogReader::readBinlog(const char*& binlogEvent, size_t& size)
 	{
-		int ret = readRemoteBinlog(binlogEvent, size);//todo
+		int ret = readBinlogWrap(binlogEvent, size);//todo
 		if (READ_OK != ret)
 			return ret;
 
@@ -328,10 +328,19 @@ namespace DATA_SOURCE {
 			RotateEvent* tmp = new RotateEvent(binlogEvent, size,
 				m_descriptionEvent);
 			if (m_currFile.compare(tmp->fileName) != 0)
-				m_currentPos = 4;
-			m_currFile = tmp->fileName;
-			m_currFileID = getFileId(tmp->fileName);
-			delete tmp;
+			{
+				m_currentPos = 4;//todo
+				m_currFile = tmp->fileName;
+				m_currFileID = getFileId(tmp->fileName);
+				delete tmp;
+			}
+			else
+			{
+				binlogEvent = nullptr;
+				size = 0;
+				delete tmp;
+				return readBinlog(binlogEvent,size);
+			}
 		}
 
 		if (header->eventOffset < m_currentPos)
@@ -686,6 +695,7 @@ namespace DATA_SOURCE {
 		}
 		uint64_t beginOffset = 4;
 		uint64_t currentOffset = 4;
+		int rotate = 0;
 		while (true)
 		{
 			const char* logEvent;
@@ -707,20 +717,24 @@ namespace DATA_SOURCE {
 					delete m_descriptionEvent;
 				m_descriptionEvent = tmp;
 			}
-			else if ((header->type == Log_event_type::ROTATE_EVENT
-				&& header->timestamp > 0)) //end of file
+			else if (header->type == Log_event_type::ROTATE_EVENT
+				) //end of file
 			{
-				RotateEvent* event = new RotateEvent(logEvent, size, m_descriptionEvent);
-				m_currFile = event->fileName;
-				m_currentPos = 4;
-				delete event;
-				return READ_OK;
+				if(++rotate>1)
+				{
+					RotateEvent* event = new RotateEvent(logEvent, size, m_descriptionEvent);
+					m_currFile = event->fileName;
+					m_currentPos = 4;
+					delete event;
+					return READ_OK;
+				}
+				continue;
 			}
 			else if (header->type == Log_event_type::HEARTBEAT_LOG_EVENT)
 			{
 				if (strick)
 				{
-					LOG(ERROR) << "reached end of binlog ,bu t can not find " << timestamp;
+					LOG(ERROR) << "reached end of binlog ,but can not find " << timestamp;
 					return READ_CODE::READ_FAILED;
 				}
 				else
@@ -769,6 +783,7 @@ namespace DATA_SOURCE {
 			return ret;
 		if ((ret = seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick)) != READ_OK)
 			return ret;
+		LOG(INFO)<<"seek timestamp:"<<timestamp<<" in log pos:"<<m_currFile<<"."<<m_currentPos;
 		if ((ret = dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog)) != READ_OK)
 			return ret;
 		return READ_OK;

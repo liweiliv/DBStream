@@ -13,6 +13,7 @@ private:
 	uint32_t mask;
 	int32_t head;
 	std::atomic<int32_t> end;
+
 public:
 	ringFixedQueue(uint32_t size = 32):arraySize(1)
 	{

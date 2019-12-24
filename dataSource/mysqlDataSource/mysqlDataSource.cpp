@@ -46,11 +46,7 @@ namespace DATA_SOURCE {
 		m_store = store;
 		m_reader = new mysqlBinlogReader(m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
-		m_prevRecord = nullptr;
-		remove("r.log");
-		m_logFile = fopen("r.log", "w+");
-		if (m_logFile == nullptr)
-			LOG(ERROR) << "open log file failed for" << errno << "," << strerror(errno);
+		m_currentRecord = nullptr;
 	}
 	mysqlDataSource::~mysqlDataSource()
 	{
@@ -58,7 +54,6 @@ namespace DATA_SOURCE {
 		delete m_parser;
 		delete m_connector;
 		delete m_recordBufferPool;
-		fclose(m_logFile);
 	}
 	void mysqlDataSource::readThread()
 	{
@@ -165,19 +160,12 @@ namespace DATA_SOURCE {
 	}
 	DATABASE_INCREASE::record* mysqlDataSource::read()
 	{
-		if (likely(m_prevRecord != nullptr))
-		{
-			m_recordBufferPool->freeMem(m_prevRecord);
-			m_prevRecord = nullptr;
-		}
-		m_prevRecord = m_async ? asyncRead() : syncRead();
-		if (m_prevRecord == nullptr)
+		if (likely(m_currentRecord != nullptr))
+			m_recordBufferPool->freeMem(m_currentRecord);
+		m_currentRecord = m_async ? asyncRead() : syncRead();
+		if (m_currentRecord == nullptr)
 			return nullptr;
-//		std::String s = DATABASE_INCREASE::getString(m_prevRecord);
-//		int len = s.size();
-//		assert(len==fwrite(s.c_str(), 1, s.size(), m_logFile));
-//		fflush(m_logFile);
-		return m_prevRecord;
+		return m_currentRecord;
 	}
 	const char* mysqlDataSource::dataSourceName() const
 	{

@@ -1,5 +1,7 @@
 #include "appendingBlock.h"
 namespace DATABASE {
+	static DATABASE_INCREASE::DMLRecord dml;
+	static DATABASE_INCREASE::DDLRecord ddl;
 	appendingBlock::tableData::tableData(uint64_t blockID, const META::tableMeta* meta,
 		leveldb::Arena* arena, uint32_t _pageSize) :
 		blockID(blockID), meta(meta), primaryKey(nullptr), uniqueKeys(
@@ -292,6 +294,36 @@ namespace DATABASE {
 		mem = t->current->pageData + t->current->pageUsedSize;
 		return appendingBlockStaus::B_OK;
 	}
+	inline appendingBlock::appendingBlockStaus appendingBlock::copyRecord(const DATABASE_INCREASE::record* &record)
+	{
+		tableData* t = getTableData(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
+		page* current = t->current;
+		if (unlikely(current == nullptr || current->pageData + current->pageUsedSize != record->data))
+		{
+			appendingBlockStaus s;
+			void* mem;
+			if (appendingBlockStaus::B_OK != (s = allocMemForRecord(t, record->head->minHead.size, mem)))
+				return s;
+			memcpy(mem, record->data, record->head->minHead.size);
+			current = t->current;
+			if(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)))
+			{
+				dml.load((char*)mem,((const DATABASE_INCREASE::DMLRecord*)record)->meta);
+				record = &dml;
+			}
+			else if(record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
+			{
+				ddl.load((char*)mem);
+				record = &ddl;
+			}
+			else
+				abort();
+		}
+		((DATABASE_INCREASE::recordHead*)(current->pageData + current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
+		setRecordPosition(m_recordIDs[m_recordCount], current->pageId, current->pageUsedSize);
+		current->pageUsedSize += record->head->minHead.size;
+		return appendingBlockStaus::B_OK;
+	}
 	appendingBlock::appendingBlockStaus appendingBlock::append(const DATABASE_INCREASE::record* record)
 	{
 		if (unlikely(m_maxLogOffset > record->head->logOffset))
@@ -339,6 +371,7 @@ namespace DATABASE {
 	page* appendingBlock::createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta)
 	{
 		page* p = m_database->allocPage(index->toSolidIndexSize());
+		memset(p->pageData,0,p->pageSize);
 		if (ukMeta->columnCount == 1)
 		{
 			switch (static_cast<META::COLUMN_TYPE>(ukMeta->columnInfo[0].type))
@@ -398,6 +431,7 @@ namespace DATABASE {
 		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED|BLOCK_FLAG_SOLID);
 		uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
 		block->firstPage = m_database->allocPage(firstPageSize);
+		memset(block->firstPage->pageData,0,block->firstPage->pageSize);
 		block->pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);
 		block->m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED),std::memory_order_relaxed);
 		memcpy(&block->m_blockID, &m_blockID, offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_blockID));

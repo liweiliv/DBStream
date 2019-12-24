@@ -247,7 +247,10 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testColumnType meta/unittest/testColumnType.cpp)
-TARGET_LINK_LIBRARIES(testColumnType   meta )
+TARGET_LINK_LIBRARIES(testColumnType  meta )
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testColumnType dl pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testAppendingIndex database/unittest/testAppendingIndex.cpp)
 TARGET_LINK_LIBRARIES(testAppendingIndex util database meta metaCollection sqlParser)

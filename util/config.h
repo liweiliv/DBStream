@@ -41,6 +41,12 @@ public:
 	}
 	~config()
 	{
+		for(CONFIG_TYPE::iterator siter = m_sections.begin();siter!=m_sections.end();siter++)
+		{
+			siter->second->clear();
+			delete siter->second;
+		}
+		m_sections.clear();
 	}
 	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
 	{
@@ -79,8 +85,6 @@ public:
 	}
 	void set(const char* section,const char* key,const char *value)
 	{
-		char* _value = new char[strlen(value) + 1];
-		strcpy(_value, value);
 		SECTION_TYPE * sec = nullptr;
 		m_lock.lock();
 		CONFIG_TYPE::iterator secIter =  m_sections.find(section);

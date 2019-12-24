@@ -344,9 +344,9 @@ namespace DATA_SOURCE {
 		const char*& data, bool newOrOld)
 	{
 		if(newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, *(uint32_t*)data);
+			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data,0));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, *(uint32_t*)data);
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data,0));
 		data += 4;
 		return 0;
 	}
@@ -359,32 +359,31 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_TIMESTAMP2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		uint64_t tm = 0;
-		assert(colMeta->m_decimals <= DATETIME_MAX_DECIMALS);
-		tm = mi_uint4korr((const uint8_t*)data);
-		tm <<= 32;
-		switch (colMeta->m_decimals) {
+		uint32_t seconds,nanoSeconds = 0;
+		assert(colMeta->m_precision <= DATETIME_MAX_DECIMALS);
+		seconds = mi_uint4korr((const uint8_t*)data);
+		switch (colMeta->m_precision) {
 		case 0:
 		default:
 			break;
 		case 1:
 		case 2:
-			tm += (static_cast<int>(data[4])) * 10000000;
+			nanoSeconds = (static_cast<int>(data[4])) * 10000000;
 			break;
 		case 3:
 		case 4:
-			tm += mi_sint2korr((uint8_t*)data + 4) * 100000;
+			nanoSeconds = mi_sint2korr((uint8_t*)data + 4) * 100000;
 			break;
 		case 5:
 		case 6:
-			tm += mi_sint3korr((uint8_t*)data + 4) * 1000;
+			nanoSeconds = mi_sint3korr((uint8_t*)data + 4) * 1000;
 		}
 		if (newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, tm);
+			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds,nanoSeconds));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, tm);
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds,nanoSeconds));
 
-		data += my_timestamp_binary_length(colMeta->m_decimals);
+		data += my_timestamp_binary_length(colMeta->m_precision);
 		return 0;
 	}
 	int parse_MYSQL_TYPE_DATETIME2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
@@ -392,7 +391,7 @@ namespace DATA_SOURCE {
 	{
 		uint64_t intpart = mi_uint5korr((const uint8_t*)data) - DATETIMEF_INT_OFS;
 		int frac = 0;
-		switch (colMeta->m_decimals) {
+		switch (colMeta->m_precision) {
 		case 0:
 		default:
 			break;
@@ -418,7 +417,7 @@ namespace DATA_SOURCE {
 			record->setFixedColumn(colMeta->m_columnIndex, tm);
 		else
 			record->setFixedUpdatedColumn(colMeta->m_columnIndex, tm);
-		data += my_datetime_binary_length(colMeta->m_decimals);
+		data += my_datetime_binary_length(colMeta->m_precision);
 		return 0;
 	}
 	int parse_MYSQL_TYPE_DATETIME(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,

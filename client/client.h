@@ -23,7 +23,7 @@ namespace CLIENT
 		}
 		int connect()
 		{
-			return  -1;
+			return -1;
 		}
 		const char* askTableMeta(const char* database, const char* table, uint64_t offset)
 		{
@@ -40,7 +40,6 @@ namespace CLIENT
 		const char* askDatabaseMeta(uint64_t databaseID)
 		{
 			return nullptr;
-
 		}
 	};
 }

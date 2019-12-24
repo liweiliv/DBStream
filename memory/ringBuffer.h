@@ -181,5 +181,6 @@ public:
 			}while (1);
 			m_tail.store(node, std::memory_order_relaxed);
 		}
+
 	}
 };

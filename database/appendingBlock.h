@@ -125,6 +125,7 @@ namespace DATABASE
 			m_maxPageCount = m_maxSize / (32 * 1204);
 			m_pages = (page**)m_database->allocMem(
 				sizeof(page*) * m_maxPageCount);
+			memset(m_pages,0,sizeof(page*) * m_maxPageCount);
 			m_minTime = m_maxTime = 0;
 			m_minLogOffset = m_maxLogOffset = 0;
 			m_minRecordId = startID;
@@ -327,24 +328,7 @@ namespace DATABASE
 		{
 			return allocMemForRecord(getTableData(table), size, mem);
 		}
-		inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record* record)
-		{
-			tableData* t = getTableData(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
-			page* current = t->current;
-			if (unlikely(current == nullptr || current->pageData + current->pageUsedSize != record->data))
-			{
-				appendingBlockStaus s;
-				void* mem;
-				if (appendingBlockStaus::B_OK != (s = allocMemForRecord(t, record->head->minHead.size, mem)))
-					return s;
-				memcpy(mem, record->data, record->head->minHead.size);
-				current = t->current;
-			}
-			((DATABASE_INCREASE::recordHead*)(current->pageData + current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
-			setRecordPosition(m_recordIDs[m_recordCount], current->pageId, current->pageUsedSize);
-			current->pageUsedSize += record->head->minHead.size;
-			return appendingBlockStaus::B_OK;
-		}
+		inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record* &record);
 		appendingBlockStaus append(const DATABASE_INCREASE::record* record);
 		page* createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta);
 		solidBlock* toSolidBlock();

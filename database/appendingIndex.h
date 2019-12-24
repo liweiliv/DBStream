@@ -388,6 +388,7 @@ namespace DATABASE {
 				return nullptr;//no data
 			if (data == nullptr)
 				data = (char*)basicBufferPool::allocDirect(toSolidIndexSize());
+			memset(data,0,toSolidIndexSize());
 			if (fixed)
 				createFixedSolidIndex(data, iter, keySize);
 			else

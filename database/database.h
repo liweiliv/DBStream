@@ -138,7 +138,10 @@ namespace DATABASE
 		DLL_EXPORT int flushLogs();
 		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
+			//page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
+			//memset(p,0,sizeof(page));
 			page* p = (page*)m_pool->allocByLevel(0);
+			//p->pageData = (char*)basicBufferPool::allocDirect(size);//(char*)m_pool->alloc(size);
 			p->pageData = (char*)m_pool->alloc(size);
 			p->pageSize = size;
 			p->pageUsedSize = 0;
@@ -147,6 +150,7 @@ namespace DATABASE
 		}
 		DLL_EXPORT inline void* allocMem(size_t size)
 		{
+			//return basicBufferPool::allocDirect(size);
 			return m_pool->alloc(size);
 		}
 		DLL_EXPORT inline void freePage(page* p)

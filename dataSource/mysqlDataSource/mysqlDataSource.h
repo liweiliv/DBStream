@@ -21,7 +21,7 @@ namespace DATA_SOURCE
 		BinlogEventParser * m_parser;
 		mysqlConnector * m_connector;
 		ringBuffer* m_recordBufferPool;
-		DATABASE_INCREASE::record* m_prevRecord;
+		DATABASE_INCREASE::record* m_currentRecord;
 		void initByConf();
 		void updateConf(const char *key,const char *value);
 		void readThread();
@@ -32,9 +32,6 @@ namespace DATA_SOURCE
 			dataSource->readThread();
 		}
 		std::thread m_thread;
-
-		FILE* m_logFile;
-
 	public:
 		mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
 		virtual bool start();

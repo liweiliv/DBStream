@@ -34,6 +34,8 @@ private:
 	bufferPool* m_bufferPool;
 public:
 	DLL_EXPORT store(config* conf);
+	DLL_EXPORT ~store();
+
 	DLL_EXPORT int start();
 	DLL_EXPORT int stop();
 	DLL_EXPORT void begin();
