@@ -172,6 +172,10 @@ include_directories(/usr/include/mysql)
 aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
 add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
 target_include_directories(mysqlDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
+TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 #oracleDataSource
 aux_source_directory(dataSource/oracleDataSource oracleDataSourceDir)
@@ -192,10 +196,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(dataSource dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 
 #mysqlApplier
 aux_source_directory(replicator/mysqlApplier mysqlApplierDir)
@@ -318,6 +319,13 @@ ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
 TARGET_LINK_LIBRARIES(testRingFixedQueue util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testRingFixedQueue pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testMysqlDataCreater dataSource/mysqlDataSource/unittest/mysqlDataCreater.cpp)
+target_include_directories(testMysqlDataCreater PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
+TARGET_LINK_LIBRARIES(testMysqlDataCreater  util ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testMysqlDataCreater pthread ssl crypto rt z dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 

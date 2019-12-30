@@ -11,6 +11,11 @@ struct dualLinkListNode
 	dualLinkListNode *prev;
 	dualLinkListNode* next;
 	spinlock lock;
+	inline void init()
+	{
+		prev = next = nullptr;
+		lock._lock.clear(std::memory_order_relaxed);
+	}
 };
 #ifndef container_of
 #ifdef OS_LINUX

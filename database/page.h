@@ -5,12 +5,13 @@
 #include "util/ref.h"
 #include "util/barrier.h"
 namespace DATABASE {
+#pragma pack(1)
 	struct page {
 		uint64_t pageId;
 		uint64_t pageUsedSize;
 		uint64_t pageSize;
 		uint32_t crc;
-		uint32_t createTime;
+		uint64_t createTime;
 		::ref _ref;
 		dualLinkListNode lruNode;
 		char *pageData;
@@ -41,5 +42,6 @@ namespace DATABASE {
 			}
 		}
 	};
+#pragma pack()
 
 }

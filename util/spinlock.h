@@ -3,14 +3,12 @@
 #include <thread>
 #include <chrono>
 #include "likely.h"
-class spinlock
+struct spinlock
 {
-private:
 	std::atomic_flag _lock = ATOMIC_FLAG_INIT;
 #ifdef DEBUG
 	std::thread::id id;
 #endif
-public:
 	spinlock() //:_lock(ATOMIC_FLAG_INIT)
 	{}
 	inline void lock()

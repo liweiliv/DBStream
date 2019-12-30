@@ -22,6 +22,8 @@
 #include "util/shared_mutex.h"
 #include "util/ringFixedQueue.h"
 #include "thread/threadPool.h"
+#include "globalInfo/global.h"
+#include "util/valgrindTestUtil.h"
 namespace DATABASE
 {
 	constexpr auto C_STORE_SCTION = "store";
@@ -138,20 +140,25 @@ namespace DATABASE
 		DLL_EXPORT int flushLogs();
 		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
-			//page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
+			page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
 			//memset(p,0,sizeof(page));
-			page* p = (page*)m_pool->allocByLevel(0);
-			//p->pageData = (char*)basicBufferPool::allocDirect(size);//(char*)m_pool->alloc(size);
-			p->pageData = (char*)m_pool->alloc(size);
+			//page* p = (page*)m_pool->allocByLevel(0);
+			p->pageData = (char*)basicBufferPool::allocDirect(size);//(char*)m_pool->alloc(size);
+			p->pageId = 0;
+			p->crc = 0;
+			p->createTime = GLOBAL::currentTime.time;
+			//p->pageData = (char*)m_pool->alloc(size);
 			p->pageSize = size;
 			p->pageUsedSize = 0;
 			p->_ref.m_ref.store(0,std::memory_order_relaxed);
+			p->lruNode.init();
+			vSave((char*)p,sizeof(page));
 			return p;
 		}
 		DLL_EXPORT inline void* allocMem(size_t size)
 		{
-			//return basicBufferPool::allocDirect(size);
-			return m_pool->alloc(size);
+			return basicBufferPool::allocDirect(size);
+			//return m_pool->alloc(size);
 		}
 		DLL_EXPORT inline void freePage(page* p)
 		{
