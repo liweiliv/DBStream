@@ -322,7 +322,7 @@ RESET:
 		case  META::COLUMN_TYPE::T_BINARY:
 		{
 			sqlBuffer[m_sqlBufferPos++] = '\'';
-			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld ? dml->varColumnSize(column->m_columnIndex) : dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex, value));
+			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld ? dml->varColumnSize(column->m_columnIndex) : dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex));
 			sqlBuffer[m_sqlBufferPos++] = '\'';
 			break;
 		}
@@ -331,7 +331,7 @@ RESET:
 			memcpy(sqlBuffer + m_sqlBufferPos, "CONVERT(", sizeof("CONVERT(") - 1);
 			m_sqlBufferPos += sizeof("CONVERT(") - 1;
 			sqlBuffer[m_sqlBufferPos++] = '\'';
-			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld?dml->varColumnSize(column->m_columnIndex): dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex,value));
+			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld?dml->varColumnSize(column->m_columnIndex): dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex));
 			sqlBuffer[m_sqlBufferPos++] = '\'';
 			sqlBuffer[m_sqlBufferPos++] = ',';
 			memcpy(sqlBuffer + m_sqlBufferPos, "JSON", sizeof("JSON") - 1);
@@ -364,7 +364,7 @@ RESET:
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "ST_GeomCollFromWKB(", sizeof("ST_GeomCollFromWKB(") - 1);
 			m_sqlBufferPos += sizeof("ST_GeomCollFromWKB(") - 1;
-			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld ? dml->varColumnSize(column->m_columnIndex) : dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex, value));
+			m_sqlBufferPos += mysql_real_escape_string(m_connect, sqlBuffer + m_sqlBufferPos, value, newOrOld ? dml->varColumnSize(column->m_columnIndex) : dml->oldVarColumnSizeOfUpdateType(column->m_columnIndex));
 			sqlBuffer[m_sqlBufferPos++] = ')';
 			break;
 		}

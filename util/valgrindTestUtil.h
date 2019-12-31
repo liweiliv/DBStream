@@ -9,7 +9,7 @@
 #define UTIL_VALGRINDTESTUTIL_H_
 #ifdef OS_LINUX
 #ifdef VLGRIND_TEST
-void vSave(const char * mem,size_t size);
+void vSave(const void * mem,size_t size);
 #else
 #define vSave(mem,size)
 #endif

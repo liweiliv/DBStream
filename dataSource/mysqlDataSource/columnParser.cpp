@@ -318,7 +318,7 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_NEWDECIMAL(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		uint8_t prec = (colMeta->m_decimals == 0) ? (colMeta->m_size - 1) : (colMeta->m_size - 2);
+		uint8_t prec = (colMeta->m_decimals == 0) ? (colMeta->m_precision - 1) : (colMeta->m_precision - 2);
 		if (!colMeta->m_signed)
 			prec++;
 		decimal_digit_t dec_buf[10];

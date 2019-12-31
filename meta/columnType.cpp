@@ -147,7 +147,7 @@ namespace META {
 				if (!META::columnInfos[TID(meta->columnInfo[idx].type)].fixed)
 				{
 					if (keyUpdated)
-						keySize += r->oldVarColumnSizeOfUpdateType(meta->columnInfo[idx].columnId, r->oldColumnOfUpdateType(meta->columnInfo[idx].columnId));
+						keySize += r->oldVarColumnSizeOfUpdateType(meta->columnInfo[idx].columnId);
 					else
 						keySize += r->varColumnSize(meta->columnInfo[idx].columnId);
 				}
@@ -199,7 +199,7 @@ namespace META {
 				else
 				{
 					const char* v = r->oldColumnOfUpdateType(keyMeta->columnInfo[i].columnId);
-					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(i, v);
+					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(i);
 					memcpy(ptr + sizeof(uint16_t), v, *(uint16_t*)ptr);
 					ptr += sizeof(uint16_t) + *(uint16_t*)ptr;
 				}

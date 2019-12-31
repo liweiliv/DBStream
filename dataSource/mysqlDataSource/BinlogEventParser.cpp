@@ -279,7 +279,7 @@ namespace DATA_SOURCE {
 		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)logEvent;
 		QueryEvent query(logEvent, size, m_descEvent);
 		LOG(ERROR)<<"ddl:"<<query.query;
-		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord)+DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(),query.query.size()));
+		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord)+DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(),query.query.size() + 1));
 		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord), query.charset_inited?query.charset:nullptr,query.sql_mode,query.db.c_str(),query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
 		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
@@ -386,7 +386,7 @@ namespace DATA_SOURCE {
 					if (!META::columnInfos[TID(columnMeta->m_columnType)].fixed)
 						record->setVarColumnNull(idx);
 					else
-						record->setFixedColumnNull(idx,META::columnInfos[TID(columnMeta->m_columnType)].columnTypeSize);
+						record->setFixedColumnNull(idx);
 				}
 				else
 					record->setUpdatedColumnNull(idx);

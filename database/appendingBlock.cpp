@@ -333,6 +333,10 @@ namespace DATABASE {
 			return appendingBlockStaus::B_ILLEGAL;
 		}
 		appendingBlockStaus s;
+		if(record->head->minHead.type>=4)
+			vSave(record,record->head->minHead.size+sizeof(DATABASE_INCREASE::DMLRecord));
+		else
+			vSave(record,record->head->minHead.size+sizeof(DATABASE_INCREASE::DDLRecord));
 		if ((s = copyRecord(record)) != appendingBlockStaus::B_OK)
 			return s;
 		if (m_flag & BLOCK_FLAG_HAS_REDO)

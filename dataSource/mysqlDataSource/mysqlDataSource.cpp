@@ -8,6 +8,7 @@
 #include "mysqlRecordOffset.h"
 #include "initMetaData.h"
 #include <thread>
+#include "util/valgrindTestUtil.h"
 namespace DATA_SOURCE {
 #ifdef OS_WIN
 #define mysqlFuncLib "mysqlParserFuncs.dll"
@@ -165,6 +166,12 @@ namespace DATA_SOURCE {
 		m_currentRecord = m_async ? asyncRead() : syncRead();
 		if (m_currentRecord == nullptr)
 			return nullptr;
+#if 0
+		if(m_currentRecord->head->minHead.type>=4)
+			vSave(m_currentRecord,m_currentRecord->head->minHead.size+sizeof(DATABASE_INCREASE::DMLRecord));
+		else
+			vSave(m_currentRecord,m_currentRecord->head->minHead.size+sizeof(DATABASE_INCREASE::DDLRecord));
+#endif
 		return m_currentRecord;
 	}
 	const char* mysqlDataSource::dataSourceName() const

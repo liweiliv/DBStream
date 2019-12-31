@@ -17,7 +17,7 @@ namespace DATABASE {
 		if (keyUpdate)
 		{
 			c.key.data = r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
-			c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_ukMeta->columnInfo[0].columnId, c.key.data);
+			c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 			if(appendIndex(index, r, &c, id, true))
 				index->m_varSize += c.key.size;
 		}

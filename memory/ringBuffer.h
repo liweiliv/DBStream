@@ -63,6 +63,9 @@ public:
 	}
 	void* alloc(size_t size) 
 	{
+#ifdef VLGRIND_TEST
+		return malloc(size);
+#else
 		ringBufferNode* head;
 		void* mem;
 		uint64_t end;
@@ -132,10 +135,14 @@ public:
 				head->end.store((end&NODE_LOW_MASK)|NODE_USED_OUT_MASK);
 			}
 		} while (true);
+#endif
 	}
 	//thread not safe
 	void freeMem(void* mem)
 	{
+#ifdef VLGRIND_TEST
+		free(mem);
+#else
 		mem = (void*)(((int8_t*)mem) - sizeof(uint64_t));
 		*(uint64_t*)mem = (*(uint64_t*)mem) | NODE_FREED_MASK;
 		ringBufferNode* node = m_tail.load(std::memory_order_relaxed);
@@ -181,6 +188,6 @@ public:
 			}while (1);
 			m_tail.store(node, std::memory_order_relaxed);
 		}
-
+#endif
 	}
 };

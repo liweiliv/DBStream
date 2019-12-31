@@ -7,7 +7,7 @@
 #include "file.h"
 #ifdef OS_LINUX
 static int fd = -1;
-void vSave(const char * mem,size_t size)
+void vSave(const void * mem,size_t size)
 {
 	if(fd < 0)
 		fd = open(".VLOG",O_RDWR|O_DIRECT|O_CREAT,S_IRUSR | S_IWUSR | S_IRGRP );

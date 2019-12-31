@@ -337,6 +337,7 @@ namespace META {
 		{
 			if (columnIds[i] >= m_columnsCount|| !columnInfos[TID(m_columns[columnIds[i]].m_columnType)].asIndex)
 			{
+				LOG(ERROR) << "create key failed for column is not in column list or column type can not used as index";
 				free(uk);
 				return nullptr;
 			}
@@ -759,71 +760,49 @@ COLUMN_IS_STILL_UK:
 		m_uniqueKeysCount--;
 		return 0;
 	}
-	int tableMeta::addUniqueKey(const char *ukName, const std::list<std::string> &columns)
-	{
-		if (getUniqueKey(ukName) != nullptr)
-		{
-			LOG(ERROR) << "add unique key " << ukName << " failed for unique key exist";
-			return -1;
-		}
-		if (columns.size() >= 256 || columns.empty())
-		{
-			LOG(ERROR) << "add unique key failed column count " << columns.size() << " is illegal";
-			return -1;
-		}
-		uint16_t columnIds[256];
-		uint16_t columnCount = 0;
-		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
-		{
-			columnMeta* c = (columnMeta*)getColumn((*iter).c_str());
-			if (c == nullptr)
-			{
-				LOG(ERROR) << "add unique key failed for column " << (*iter) << " not exist";
-				return -1;
-			}
-			columnIds[columnCount++] = c->m_columnIndex;
-		}
-		unionKeyMeta *uk = createUnionKey(m_uniqueKeysCount, KEY_TYPE::UNIQUE_KEY, columnIds, columnCount);
-		if (uk != nullptr)
-		{
-			for (int i = 0; i < columnCount; i++)
-				m_columns[columnIds[i]].m_isUnique = true;
-		}
-		else
-			return -1;
-		unionKeyMeta** newUks = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (m_uniqueKeysCount + 1));
-		std::string* newUkNames = new std::string[m_uniqueKeysCount + 1];
-		newUks[m_uniqueKeysCount] = uk;
-		newUkNames[m_uniqueKeysCount] = ukName;
-		/*copy data*/
-		if (m_uniqueKeysCount > 0)
-		{
-			for (int i = 0; i < m_uniqueKeysCount; i++)
-			{
-				newUks[i] = m_uniqueKeys[i];
-				newUkNames[i] = m_uniqueKeyNames[i];
-			}
-			free(m_uniqueKeys);
-			delete[]m_uniqueKeyNames;
+#define ADD_KEY(count,indexs,indexNames,index,indexName) do{\
+	unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * ((count) + 1));\
+	std::string* newIndexNames = new std::string[(count) + 1];\
+	(newIndexs)[count] = (index);\
+	(newIndexNames)[count] = (indexName);\
+	if ((count) > 0)\
+	{\
+		for (int i = 0; i < (count); i++)\
+		{\
+			newIndexs[i] = m_indexs[i];\
+			newIndexNames[i] = m_indexNames[i];\
+		}\
+		free(indexs);\
+		delete[] (indexNames);\
+	}\
+	(indexs) = newIndexs;\
+	(indexNames) = newIndexNames;\
+	(count)++;\
+}while(0);
 
-		}
-		m_uniqueKeys = newUks;
-		m_uniqueKeyNames = newUkNames;
-		m_uniqueKeysCount++;
-		return 0;
-	}
-	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns)
+	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns,KEY_TYPE keyType)
 	{
-		if (getIndex(indexName) != nullptr)
-		{
-			LOG(ERROR) << "add key " << indexName << " failed for  key exist";
-			return -1;
-		}
 		if (columns.size() >= 256 || columns.empty())
 		{
 			LOG(ERROR) << "add key failed column count " << columns.size() << " is illegal";
 			return -1;
 		}
+
+		if(keyType!=KEY_TYPE::INDEX||keyType!=KEY_TYPE::UNIQUE_KEY)
+		{
+			LOG(ERROR) << "add key failed for only support index and unique key";
+			return -1;
+		}
+
+		if(indexName!=nullptr&&strlen(indexName)!=0)
+		{
+			if (getIndex(indexName) != nullptr || getUniqueKey(indexName) != nullptr)
+			{
+				LOG(ERROR) << "add key " << indexName << " failed for key exist";
+				return -1;
+			}
+		}
+
 		uint16_t columnIds[256];
 		uint16_t columnCount = 0;
 		for (std::list<std::string>::const_iterator iter = columns.begin(); iter != columns.end(); iter++)
@@ -834,35 +813,59 @@ COLUMN_IS_STILL_UK:
 				LOG(ERROR) << "add key failed for column " << (*iter) << " not exist";
 				return -1;
 			}
+			if(keyType == KEY_TYPE::UNIQUE_KEY)
+				c->m_isUnique = true;
+			else if(keyType == KEY_TYPE::INDEX)
+				c->m_isIndex = true;
 			columnIds[columnCount++] = c->m_columnIndex;
 		}
-		unionKeyMeta* uk = createUnionKey(m_indexCount, KEY_TYPE::INDEX, columnIds, columnCount);
-		if (uk != nullptr)
+
+		char * tmpName = nullptr;
+
+		if(indexName == nullptr || strlen(indexName) == 0)
+		{
+			if(getIndex(columns.begin()->c_str()) == nullptr&&getUniqueKey(columns.begin()->c_str()) == nullptr)
+			{
+				indexName = columns.begin()->c_str();
+			}
+			else
+			{
+				tmpName = (char*)malloc(columns.begin()->size()+6);
+				for(int i=2;;i++)
+				{
+					sprintf(tmpName,"%s_%d",columns.begin()->c_str(),i);
+					if(getIndex(tmpName) == nullptr&&getUniqueKey(tmpName) == nullptr)
+					{
+						indexName = tmpName;
+						break;
+					}
+				}
+			}
+		}
+
+		unionKeyMeta* index = createUnionKey(m_indexCount, keyType, columnIds, columnCount);
+		if (index != nullptr)
 		{
 			for (int i = 0; i < columnCount; i++)
 				m_columns[columnIds[i]].m_isIndex = true;
 		}
 		else
-			return -1;
-		unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (m_indexCount + 1));
-		std::string* newIndexNames = new std::string[m_indexCount + 1];
-		newIndexs[m_indexCount] = uk;
-		newIndexNames[m_indexCount] = indexName;
-		/*copy data*/
-		if (m_indexCount > 0)
 		{
-			for (int i = 0; i < m_indexCount; i++)
-			{
-				newIndexs[i] = m_indexs[i];
-				newIndexNames[i] = m_indexNames[i];
-			}
-			free(m_indexs);
-			delete[]m_indexNames;
-
+			if(tmpName != nullptr)
+				free(tmpName);
+			return -1;
 		}
-		m_indexs = newIndexs;
-		m_indexNames = newIndexNames;
-		m_indexCount++;
+
+		if(keyType == KEY_TYPE::UNIQUE_KEY)
+		{
+			ADD_KEY(m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,index,indexName);
+		}
+		else if(keyType == KEY_TYPE::INDEX)
+		{
+			ADD_KEY(m_indexCount,m_indexs,m_indexNames,index,indexName);
+		}
+		if(tmpName != nullptr)
+			free(tmpName);
 		return 0;
 	}
 	int tableMeta::renameIndex(const char* oldName, const char* newName)
@@ -884,65 +887,73 @@ COLUMN_IS_STILL_UK:
 		}
 		return 0;
 	}
-	int tableMeta::dropIndex(const char* indexName)
+	int tableMeta::_dropIndex(int idx,uint16_t& indexCount,unionKeyMeta** &indexs,std::string*& indexNames,KEY_TYPE keyType)
 	{
-		int idx = 0;
-		for (; idx < m_indexCount; idx++)
+		if (indexCount == 1)
 		{
-			if (m_nameCompare.compare(m_indexNames[idx].c_str(), indexName) == 0)
-				goto DROP;
-		}
-		LOG(ERROR) << "drop key " << indexName << " failed for key not exist";
-		return -1;
-
-	DROP:
-		if (m_indexCount == 1)
-		{
-			for (uint16_t i = 0; i < m_indexs[idx]->columnCount; i++)
-				((columnMeta*)getColumn(m_indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
-			free(m_indexs[0]);
-			free(m_indexs);
-			delete[]m_indexNames;
-			m_indexCount = 0;
+			for (uint16_t i = 0; i < indexs[idx]->columnCount; i++)
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
+			free(indexs[0]);
+			free(indexs);
+			delete[]indexNames;
+			indexCount = 0;
 			return 0;
 		}
 
-		unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (m_indexCount - 1));
-		std::string* newIndexNames = new std::string[m_indexCount - 1];
+		unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (indexCount - 1));
+		std::string* newIndexNames = new std::string[indexCount - 1];
 		for (int i = 0; i < idx; i++)
 		{
-			newIndexs[i] = m_indexs[i];
-			newIndexNames[i] = m_indexNames[i];
+			newIndexs[i] = indexs[i];
+			newIndexNames[i] = indexNames[i];
 		}
-		for (int i = idx + 1; i < m_indexCount - 1; i++)
+		for (int i = idx + 1; i < indexCount - 1; i++)
 		{
-			newIndexs[i - 1] = m_indexs[i];
-			newIndexNames[i - 1] = m_indexNames[i];
+			newIndexs[i - 1] = indexs[i];
+			newIndexNames[i - 1] = indexNames[i];
 			newIndexs[i - 1]->keyId--;
 		}
 
 		/*update columns */
-		for (uint16_t i = 0; i < m_indexs[idx]->columnCount; i++)
+		for (uint16_t i = 0; i < indexs[idx]->columnCount; i++)
 		{
-			for (uint16_t j = 0; j < m_indexCount - 1; j++)
+			for (uint16_t j = 0; j < indexCount - 1; j++)
 			{
 				for (uint32_t k = 0; k < newIndexs[j]->columnCount; k++)
 				{
-					if (m_indexs[idx]->columnInfo[i].columnId == newIndexs[j]->columnInfo[k].columnId)
+					if (indexs[idx]->columnInfo[i].columnId == newIndexs[j]->columnInfo[k].columnId)
 						goto COLUMN_IS_STILL_INDEX;
 				}
 			}
-			((columnMeta*)getColumn(m_indexs[idx]->columnInfo[i].columnId))->m_isUnique = false;
-		COLUMN_IS_STILL_INDEX:
+			if(keyType == KEY_TYPE::UNIQUE_KEY)
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isUnique = false;
+			else if(keyType == KEY_TYPE::INDEX)
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
+COLUMN_IS_STILL_INDEX:
 			continue;
 		}
-		free(m_indexs[idx]);
-		free(m_indexs);
-		delete[]m_indexNames;
-		m_indexs = newIndexs;
-		m_indexNames = newIndexNames;
-		m_indexCount--;
+		free(indexs[idx]);
+		free(indexs);
+		delete[]indexNames;
+		indexs = newIndexs;
+		indexNames = newIndexNames;
+		indexCount--;
 		return 0;
+	}
+	int tableMeta::dropIndex(const char* indexName)
+	{
+		for (int idx = 0; idx < m_indexCount; idx++)
+		{
+			if (m_nameCompare.compare(m_indexNames[idx].c_str(), indexName) == 0)
+				return _dropIndex(idx,m_indexCount,m_indexs,m_indexNames,KEY_TYPE::INDEX);
+		}
+		for (int idx = 0; idx < m_uniqueKeysCount; idx++)
+		{
+			if (m_nameCompare.compare(m_uniqueKeyNames[idx].c_str(), indexName) == 0)
+				return _dropIndex(idx,m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,KEY_TYPE::UNIQUE_KEY);
+		}
+		LOG(ERROR) << "drop index " << indexName << " failed for index not exist";
+		return -1;
 	}
 	int tableMeta::defaultCharset(const charsetInfo* charset, const char* collationName)
 	{

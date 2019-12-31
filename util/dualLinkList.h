@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "shared_mutex.h"
 #include <stddef.h>
+#include <string.h>
 #include "shared_mutex.h"
 struct dualLinkListNode
 {
@@ -13,8 +14,7 @@ struct dualLinkListNode
 	spinlock lock;
 	inline void init()
 	{
-		prev = next = nullptr;
-		lock._lock.clear(std::memory_order_relaxed);
+		memset(&prev,0,sizeof(dualLinkListNode));
 	}
 };
 #ifndef container_of

@@ -456,7 +456,7 @@ namespace META {
 			{
 				std::list<std::string> uk;
 				uk.push_back(meta->m_columns[idx].m_columnName);
-				if (0 != meta->addUniqueKey(meta->m_columns[idx].m_columnName.c_str(),uk))
+				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(),uk,KEY_TYPE::UNIQUE_KEY))
 				{
 					delete meta;
 					LOG(ERROR) << "create table failed for add unique key failed";
@@ -467,7 +467,7 @@ namespace META {
 			{
 				std::list<std::string> index;
 				index.push_back(meta->m_columns[idx].m_columnName);
-				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), index))
+				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), index,KEY_TYPE::INDEX))
 				{
 					delete meta;
 					LOG(ERROR) << "create table failed for add index failed";
@@ -488,7 +488,7 @@ namespace META {
 		}
 		for (std::list<addKey>::const_iterator iter = table->uniqueKeys.begin(); iter != table->uniqueKeys.end(); iter++)
 		{
-			if (0 != meta->addUniqueKey((*iter).name.c_str(),(*iter).columnNames))
+			if (0 != meta->addIndex((*iter).name.c_str(),(*iter).columnNames,KEY_TYPE::UNIQUE_KEY))
 			{
 				delete meta;
 				LOG(ERROR) << "create table failed for add unique key failed";
@@ -497,7 +497,7 @@ namespace META {
 		}
 		for (std::list<addKey>::const_iterator iter = table->indexs.begin(); iter != table->indexs.end(); iter++)
 		{
-			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames))
+			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames,KEY_TYPE::INDEX))
 			{
 				delete meta;
 				LOG(ERROR) << "create table failed for add index failed";
@@ -703,9 +703,9 @@ namespace META {
 		tableMeta* newVersion = new tableMeta(meta->m_nameCompare.caseSensitive);
 		int ret = 0;
 		if (table->index.type == ALTER_TABLE_ADD_UNIQUE_KEY)
-			ret = newVersion->addUniqueKey(table->index.name.c_str(), table->index.columnNames);
+			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames,KEY_TYPE::UNIQUE_KEY);
 		else
-			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames);
+			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames,KEY_TYPE::INDEX);
 		if (ret != 0)
 		{
 			delete newVersion;
@@ -834,7 +834,7 @@ namespace META {
 				ret = newVersion->dropColumn(static_cast<const struct dropColumn*>(*iter)->columnName.c_str());
 				break;
 			case ALTER_TABLE_ADD_INDEX:
-				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames);
+				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames,KEY_TYPE::INDEX);
 				break;
 			case ALTER_TABLE_DROP_INDEX:
 				ret = newVersion->dropIndex(static_cast<const struct dropKey*>(*iter)->name.c_str());
@@ -843,7 +843,7 @@ namespace META {
 				ret = newVersion->renameIndex(static_cast<const struct renameKey*>(*iter)->srcKeyName.c_str(), static_cast<const struct renameKey*>(*iter)->destKeyName.c_str());
 				break;
 			case ALTER_TABLE_ADD_UNIQUE_KEY:
-				ret = newVersion->addUniqueKey(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames);
+				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames,KEY_TYPE::UNIQUE_KEY);
 				break;
 			case ALTER_TABLE_DROP_UNIQUE_KEY:
 				ret = newVersion->dropUniqueKey(static_cast<const struct dropKey*>(*iter)->name.c_str());

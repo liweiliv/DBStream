@@ -88,6 +88,8 @@ namespace DATABASE_INCREASE
 			head->minHead.version = DBS_MESSAGE_VERSION;
 			head->minHead.headSize = sizeof(recordHead);
 			head->flag = 0;
+			head->recordId = 0;
+			head->txnId = 0;
 		}
 		record() {}
 		record(const char* data) {
@@ -257,8 +259,8 @@ namespace DATABASE_INCREASE
 		const uint8_t* nullBitmap;
 		const char* columns;
 		const uint32_t* varLengthColumns;
-		uint64_t * oldColumnsSizeOfUpdateType;
-		const char* oldColumnsOfUpdateType;
+		const char* oldColumns;
+		const uint32_t* oldVarLengthColumns;
 		const uint8_t* updatedBitmap;
 		const uint8_t* updatedNullBitmap;
 		DMLRecord() {}
@@ -270,8 +272,8 @@ namespace DATABASE_INCREASE
 		{
 			init(data);
 			this->meta = meta;
-			oldColumnsSizeOfUpdateType = nullptr;
-			oldColumnsOfUpdateType = nullptr;
+			oldColumns = nullptr;
+			oldVarLengthColumns = nullptr;
 			updatedBitmap = nullptr;
 			updatedNullBitmap = nullptr;
 			head->minHead.type = static_cast<uint8_t>(type);
@@ -316,20 +318,34 @@ namespace DATABASE_INCREASE
 			UNSET_BITMAP((uint8_t*)nullBitmap, idx);
 			((uint32_t*)varLengthColumns)[meta->m_realIndexInRowFormat[idx]] = varLengthColumns[meta->m_varColumnCount];
 		}
-		inline void setFixedColumnNull(uint16_t idx,uint8_t size)
+		inline void setFixedColumnNull(uint16_t idx)
 		{
 			UNSET_BITMAP((uint8_t*)nullBitmap, idx);
-			memset((char*)columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[idx]],0,size);
+			memset((char*)columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[idx]],0,META::columnInfos[TID(meta->m_columns[idx].m_columnType)].columnTypeSize);
 		}
+		inline void setColumnNotUpdate(uint16_t idx)
+		{
+			UNSET_BITMAP((uint8_t*)updatedBitmap, idx);
+			if(META::columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].fixed)
+			{
+				memset((char*)oldColumns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[idx]],0,META::columnInfos[TID(meta->m_columns[idx].m_columnType)].columnTypeSize);
+			}
+			else
+			{
+				((uint32_t*)oldVarLengthColumns)[meta->m_realIndexInRowFormat[idx]] = oldVarLengthColumns[meta->m_varColumnCount];
+			}
+		}
+
 		inline void startSetUpdateOldValue()
 		{
 			uint16_t bitmapSize = (meta->m_columnsCount >> 3) + (meta->m_columnsCount & 0x7f ? 1 : 0);
 			updatedBitmap = (const uint8_t*)(columns + varLengthColumns[meta->m_varColumnCount]);
 			memset((void*)updatedBitmap, 0, bitmapSize*2);
 			updatedNullBitmap = updatedBitmap+ bitmapSize;
-			oldColumnsSizeOfUpdateType = (uint64_t*)(updatedNullBitmap + bitmapSize);
-			*oldColumnsSizeOfUpdateType = 0;
-			oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) +sizeof(oldColumnsSizeOfUpdateType);
+			oldColumns = (const char*)(updatedNullBitmap + bitmapSize);
+			oldVarLengthColumns = (const uint32_t*)(((const char*)oldColumns) +meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount]);
+			((uint32_t*)oldVarLengthColumns)[meta->m_varColumnCount] = (char*)&oldVarLengthColumns[meta->m_varColumnCount+1] - oldColumns;
+
 		}
 		inline void setUpdatedColumnNull(uint16_t id)
 		{
@@ -339,38 +355,33 @@ namespace DATABASE_INCREASE
 		template<class T>
 		inline void setFixedUpdatedColumn(uint16_t id, T value)
 		{
-			*(T*)(oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) = value;
-			(*oldColumnsSizeOfUpdateType) += sizeof(T);
+			*(T*)(oldColumns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[id]]) = value;
+			SET_BITMAP((uint8_t*)updatedNullBitmap, id);
 			SET_BITMAP((uint8_t*)updatedBitmap, id);
 		}
 		inline char* allocVardUpdatedColumn()
 		{
-			return (char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType + sizeof(uint32_t);
+			return ((char*)oldColumns) + oldVarLengthColumns[meta->m_varColumnCount];
 		}
 		inline void filledVardUpdatedColumn(uint16_t id, size_t size)
 		{
-			*(uint32_t*)(oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) = size;
-			oldColumnsSizeOfUpdateType += sizeof(uint32_t) + size;
-			SET_BITMAP((uint8_t*)updatedBitmap, id);
+			((uint32_t*)oldVarLengthColumns)[meta->m_realIndexInRowFormat[id]] = oldVarLengthColumns[meta->m_varColumnCount];
+			((uint32_t*)oldVarLengthColumns)[meta->m_varColumnCount] += size;
+			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
 		inline void setVardUpdatedColumn(uint16_t id, const char* value, size_t size)
 		{
-			*(uint32_t*)(oldColumnsOfUpdateType+ *oldColumnsSizeOfUpdateType) = size;
-			(*oldColumnsSizeOfUpdateType) += sizeof(uint32_t);
-			memcpy((char*)oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType, value, size);
-			(*oldColumnsSizeOfUpdateType) += size;
+			memcpy(((char*)oldColumns) + oldVarLengthColumns[meta->m_varColumnCount], value, size);
+			filledVardUpdatedColumn(id,size);
 			SET_BITMAP((uint8_t*)updatedBitmap, id);
 		}
 
 		inline void finishedSet()
 		{
-			if (oldColumnsOfUpdateType == nullptr)
-			{
+			if (oldColumns == nullptr)
 				head->minHead.size = (columns + varLengthColumns[meta->m_varColumnCount]) - data;
-				//oldColumnsOfUpdateType = ((const char*)oldColumnsSizeOfUpdateType) + sizeof(oldColumnsSizeOfUpdateType);
-			}
 			else
-				head->minHead.size = (oldColumnsOfUpdateType + *oldColumnsSizeOfUpdateType) - data;
+				head->minHead.size = (oldColumns + oldVarLengthColumns[meta->m_varColumnCount]) - data;
 		}
 		/*----------------------------------------------*/
 		DMLRecord(const char* data, META::metaDataBaseCollection* mc) ://for read
@@ -406,15 +417,17 @@ namespace DATABASE_INCREASE
 			{
 				updatedBitmap = (uint8_t*)ptr;
 				updatedNullBitmap = updatedBitmap+bitmapSize;
-				ptr+= bitmapSize*2;
-				oldColumnsSizeOfUpdateType = (uint64_t*)ptr;
-				oldColumnsOfUpdateType = ptr + sizeof(uint64_t*);
-				ptr += (*oldColumnsSizeOfUpdateType) + sizeof(uint64_t*);
+				ptr += bitmapSize * 2;
+				oldColumns = ptr;
+				oldVarLengthColumns = (uint32_t*)(((const char*)oldColumns) +meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount]);
+				ptr = oldColumns + oldVarLengthColumns[meta->m_varColumnCount];
 			}
 			else
 			{
 				updatedBitmap = nullptr;
-				oldColumnsOfUpdateType = nullptr;
+				updatedNullBitmap = nullptr;
+				oldColumns = nullptr;
+				oldVarLengthColumns = nullptr;
 			}
 			/*if version increased in future,add those code:
 			  if(head->minHead.version >0)
@@ -428,59 +441,46 @@ namespace DATABASE_INCREASE
 		{
 			return *(uint64_t*)(data + ((const recordHead*)data)->minHead.headSize);
 		}
-		inline const char* column(uint16_t index) const
+		inline const char* _column(uint16_t index,const uint8_t* _nullBitmap,const char * _columns,const uint32_t* _varLengthColumns)const
 		{
-			if (!TEST_BITMAP(nullBitmap, index))
+			if (!TEST_BITMAP(_nullBitmap, index))
 				return nullptr;
 			if (META::columnInfos[static_cast<int>(meta->m_columns[index].m_columnType)].fixed)
-				return columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[index]];
+				return _columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[index]];
 			else
-				return columns + varLengthColumns[meta->m_realIndexInRowFormat[index]];
+				return _columns + _varLengthColumns[meta->m_realIndexInRowFormat[index]];
+		}
+		inline const char* column(uint16_t index) const
+		{
+			return _column(index,nullBitmap,columns,varLengthColumns);
 		}
 		inline bool columnIsNull(uint16_t index)const
 		{
 			return !TEST_BITMAP(nullBitmap, index);
 		}
+		inline uint32_t _varColumnSize(uint16_t index,const uint8_t *_nullBitmap,const uint32_t * _varLengthColumns) const
+		{
+			if (!TEST_BITMAP(_nullBitmap, index))
+				return 0;
+			return _varLengthColumns[meta->m_realIndexInRowFormat[index]+1] - varLengthColumns[meta->m_realIndexInRowFormat[index]];
+		}
 		inline uint32_t varColumnSize(uint16_t index)const
 		{
-			if (!TEST_BITMAP(nullBitmap, index))
-				return 0;
-			return varLengthColumns[meta->m_realIndexInRowFormat[index]+1] - varLengthColumns[meta->m_realIndexInRowFormat[index]];
+			return _varColumnSize(index,nullBitmap,varLengthColumns);
 		}
 		inline const char* oldColumnOfUpdateType(uint16_t index) const
 		{
 			if (TEST_BITMAP(updatedBitmap, index))
-			{
-				if (TEST_BITMAP(updatedNullBitmap, index))
-					return nullptr;
-				const char* pos = oldColumnsOfUpdateType;
-				for (uint16_t i = 0; i < index; i++)
-				{
-					if (!TEST_BITMAP(updatedBitmap, index)|| TEST_BITMAP(updatedNullBitmap, i))
-						continue;
-					if (META::columnInfos[static_cast<int>(meta->m_columns[i].m_columnType)].fixed)
-						pos += META::columnInfos[static_cast<int>(meta->m_columns[i].m_columnType)].columnTypeSize;
-					else
-						pos += sizeof(uint32_t) + *(uint32_t*)pos;
-				}
-				if (META::columnInfos[static_cast<int>(meta->m_columns[index].m_columnType)].fixed)
-					return pos;
-				else
-					return pos + sizeof(uint32_t);
-			}
+				return _column(index,updatedNullBitmap,oldColumns,oldVarLengthColumns);
 			else
-			{
-				return column(index);
-			}
+				return _column(index,nullBitmap,columns,varLengthColumns);
 		}
-		inline uint32_t oldVarColumnSizeOfUpdateType(uint16_t index, const char* value) const
+		inline uint32_t oldVarColumnSizeOfUpdateType(uint16_t index) const
 		{
-			if (value == nullptr)
-				return 0;
 			if (TEST_BITMAP(updatedBitmap, index))
-				return *(uint32_t*)(value - sizeof(uint32_t));
+				return _varColumnSize(index,updatedNullBitmap,oldVarLengthColumns);
 			else
-				return varColumnSize(index);
+				return _varColumnSize(index,nullBitmap,varLengthColumns);
 		}
 		inline bool oldColumnIsNull(uint16_t index)const
 		{
@@ -649,7 +649,7 @@ namespace DATABASE_INCREASE
 				if (head->minHead.type == static_cast<uint8_t>(RecordType::R_UPDATE)  || head->minHead.type == static_cast<uint8_t>(RecordType::R_REPLACE))
 				{
 					value = oldColumnOfUpdateType(idx);
-					valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : oldVarColumnSizeOfUpdateType(idx, value);
+					valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : oldVarColumnSizeOfUpdateType(idx);
 					str.append(columnValue(value, valueLength, c));
 				}
 			}
@@ -695,8 +695,13 @@ namespace DATABASE_INCREASE
 			}
 			ddl = this->database + *(uint8_t*)(this->database - 1);
 			memcpy((char*)ddl, query, querySize);
-			((char*)ddl)[querySize] = '\0';
-			head->minHead.size = ddl - data + querySize + 1;
+			if(((char*)ddl)[querySize-1] != '\0')
+			{
+				((char*)ddl)[querySize] = '\0';
+				head->minHead.size = ddl - data + querySize + 1;
+			}
+			else
+				head->minHead.size = ddl - data + querySize;
 			if (database == nullptr || *(uint8_t*)(this->database - 1) == 0)
 				this->database = nullptr;
 		}

@@ -140,14 +140,16 @@ namespace DATABASE
 		DLL_EXPORT int flushLogs();
 		DLL_EXPORT inline page* allocPage(uint64_t size)
 		{
+#ifdef VLGRIND_TEST
 			page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
-			//memset(p,0,sizeof(page));
-			//page* p = (page*)m_pool->allocByLevel(0);
-			p->pageData = (char*)basicBufferPool::allocDirect(size);//(char*)m_pool->alloc(size);
+			p->pageData = (char*)basicBufferPool::allocDirect(size);
+#else
+			page* p = (page*)m_pool->allocByLevel(0);
+			p->pageData = (char*)m_pool->alloc(size);
+#endif
 			p->pageId = 0;
 			p->crc = 0;
 			p->createTime = GLOBAL::currentTime.time;
-			//p->pageData = (char*)m_pool->alloc(size);
 			p->pageSize = size;
 			p->pageUsedSize = 0;
 			p->_ref.m_ref.store(0,std::memory_order_relaxed);
@@ -157,8 +159,11 @@ namespace DATABASE
 		}
 		DLL_EXPORT inline void* allocMem(size_t size)
 		{
+#ifdef VLGRIND_TEST
 			return basicBufferPool::allocDirect(size);
-			//return m_pool->alloc(size);
+#else
+			return m_pool->alloc(size);
+#endif
 		}
 		DLL_EXPORT inline void freePage(page* p)
 		{

@@ -517,21 +517,36 @@ namespace SQL_PARSER {
 			return NOT_MATCH;
 		return OK;
 	}
-	extern "C" DLL_EXPORT  parseValue uniqueKeyName(handle* h, SQLValue * value)
+	extern "C" DLL_EXPORT  parseValue createUniqueKey(handle* h, SQLValue * value)
 	{
 		META::ddl* ddl = static_cast<META::ddl*>(h->userData);
 		if (ddl->m_type == META::ALTER_TABLE)
 		{
 			META::addKey* uk = new META::addKey;
 			uk->type = META::ALTER_TABLE_ADD_UNIQUE_KEY;
-			uk->name = static_cast<SQLNameValue*>(value)->name;
 			static_cast<META::alterTable*>(ddl)->detail.push_back(uk);
 		}
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
 			META::addKey uk;
-			uk.name = static_cast<SQLNameValue*>(value)->name;
 			static_cast<META::createTableDDL*>(ddl)->uniqueKeys.push_back(uk);
+		}
+		else
+			return NOT_MATCH;
+		return OK;
+	}
+	extern "C" DLL_EXPORT  parseValue uniqueKeyName(handle* h, SQLValue * value)
+	{
+		META::ddl* ddl = static_cast<META::ddl*>(h->userData);
+		if (ddl->m_type == META::ALTER_TABLE)
+		{
+			META::addKey* uk = static_cast<META::addKey*>(*static_cast<META::alterTable*>(ddl)->detail.rbegin());
+			uk->name = static_cast<SQLNameValue*>(value)->name;
+		}
+		else if (ddl->m_type == META::CREATE_TABLE)
+		{
+			META::addKey & uk = *static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin();
+			uk.name = static_cast<SQLNameValue*>(value)->name;
 		}
 		else
 			return NOT_MATCH;
