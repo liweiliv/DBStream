@@ -315,6 +315,9 @@ TARGET_LINK_LIBRARIES(testString util)
 ADD_EXECUTABLE(testHeap util/unittest/testHeap.cpp)
 TARGET_LINK_LIBRARIES(testHeap util)
 
+ADD_EXECUTABLE(testItoa util/unittest/testItoa.cpp)
+TARGET_LINK_LIBRARIES(testItoa util)
+
 ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
 TARGET_LINK_LIBRARIES(testRingFixedQueue util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")

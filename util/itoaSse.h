@@ -181,10 +181,71 @@ inline uint8_t u32toa_sse2(uint32_t value, char* dest) {
 		const __m128i result = _mm_srli_si128(ba, 8);
 		_mm_storel_epi64(reinterpret_cast<__m128i*>(buffer), result);
 		buffer[8] = '\0';
-		return 9;
+		return buffer + 9 - dest;
 	}
 }
+inline uint8_t u32toa_sse2_b(uint32_t value, char* dest) {
+	char* buffer = dest;
+	if (value < 10000) {
+		*buffer-- = '\0';
 
+		const uint32_t d1 = (value / 100) << 1;
+		const uint32_t d2 = (value % 100) << 1;
+
+		*buffer-- = gDigitsLut[d2 + 1];
+
+		if (value >= 10)
+			* buffer-- = gDigitsLut[d2];
+		if (value >= 100)
+			* buffer-- = gDigitsLut[d1 + 1];
+		if (value >= 1000)
+			* buffer-- = gDigitsLut[d1];
+		return dest -buffer;
+	}
+	else if (value < 100000000) {
+		*buffer-- = '\0';
+
+		const uint32_t b = value / 10000;
+		const uint32_t c = value % 10000;
+
+		const uint32_t d1 = (b / 100) << 1;
+		const uint32_t d2 = (b % 100) << 1;
+
+		const uint32_t d3 = (c / 100) << 1;
+		const uint32_t d4 = (c % 100) << 1;
+
+		*buffer-- = gDigitsLut[d4 + 1];
+		*buffer-- = gDigitsLut[d4];
+		*buffer-- = gDigitsLut[d3 + 1];
+		*buffer-- = gDigitsLut[d3];
+		*buffer-- = gDigitsLut[d2 + 1];
+		if (value >= 100000)
+			* buffer-- = gDigitsLut[d2];
+		if (value >= 1000000)
+			* buffer-- = gDigitsLut[d1 + 1];
+		if (value >= 10000000)
+			* buffer-- = gDigitsLut[d1];
+		return dest -buffer;
+	}
+	else {
+		const uint32_t a = value / 100000000; // 1 to 42
+		value %= 100000000;
+
+		const __m128i b = Convert8DigitsSSE2(value);
+		const __m128i ba = _mm_add_epi8(_mm_packus_epi16(_mm_setzero_si128(), b), reinterpret_cast<const __m128i*>(kAsciiZero)[0]);
+		const __m128i result = _mm_srli_si128(ba, 8);
+		_mm_storel_epi64(reinterpret_cast<__m128i*>(buffer-=8), result);
+		buffer--;
+		if (a >= 10) {
+			const unsigned i = a << 1;
+			*buffer-- = gDigitsLut[i + 1];
+			*buffer-- = gDigitsLut[i];
+		}
+		else
+			*buffer-- = '0' + static_cast<char>(a);
+		return dest -buffer;
+	}
+}
 inline uint8_t i32toa_sse2(int32_t value, char* dest) {
 	uint32_t u = static_cast<uint32_t>(value);
 	if (value < 0) {
@@ -196,7 +257,19 @@ inline uint8_t i32toa_sse2(int32_t value, char* dest) {
 	{
 		return u32toa_sse2(u, dest);
 	}
-	 
+}
+inline uint8_t i32toa_sse2b(int32_t value, char* dest) {
+	uint32_t u = static_cast<uint32_t>(value);
+	if (value < 0) {
+		u = ~u + 1;
+		uint8_t l =  u32toa_sse2_b(u, dest);
+		*(dest-l) = '-';
+		return l + 1;
+	}
+	else
+	{
+		return u32toa_sse2_b(u, dest);
+	}
 }
 
 inline uint8_t u64toa_sse2(uint64_t value, char* dest) {
@@ -328,7 +401,7 @@ inline uint8_t u64toa_sse2(uint64_t value, char* dest) {
 		const __m128i va = _mm_add_epi8(_mm_packus_epi16(a0, a1), reinterpret_cast<const __m128i*>(kAsciiZero)[0]);
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(buffer), va);
 		buffer[16] = '\0';
-		return 17;
+		return buffer + 17 - dest;
 	}
 }
 

@@ -32,6 +32,7 @@ namespace DATA_SOURCE {
 		m_readLocalBinlog = false;
 		m_localBinlogList = NULL;
 		m_currFileID = 0;
+		m_currentFileRotateCount = 0;
 		m_descriptionEvent = nullptr;
 
 		memset(m_isTypeNeedParse, 0, sizeof(m_isTypeNeedParse));
@@ -134,7 +135,11 @@ namespace DATA_SOURCE {
 		m_readLocalBinlog = false;
 		m_currentPos = offset;
 		m_currFile = fileName;
-		m_currFileID = getFileId(fileName);
+		if(m_currFileID != getFileId(fileName))
+		{
+			m_currFileID = getFileId(fileName);
+			m_currentFileRotateCount = 0;
+		}
 		LOG(INFO) << "dump binlog success";
 		return 0;
 	}
@@ -327,19 +332,19 @@ namespace DATA_SOURCE {
 		{
 			RotateEvent* tmp = new RotateEvent(binlogEvent, size,
 				m_descriptionEvent);
-			if (m_currFile.compare(tmp->fileName) != 0)
+			if (getFileId(tmp->fileName) != m_currFileID)
 			{
-				m_currentPos = 4;//todo
+				m_currentPos = 4;//attach to next file
 				m_currFile = tmp->fileName;
 				m_currFileID = getFileId(tmp->fileName);
+				m_currentFileRotateCount = 0;
 				delete tmp;
 			}
 			else
 			{
-				binlogEvent = nullptr;
-				size = 0;
 				delete tmp;
-				return readBinlog(binlogEvent,size);
+				if(++m_currentFileRotateCount > 1) //this rotate is created by reconnect,not need to send it to parser
+					return readBinlog(binlogEvent,size);
 			}
 		}
 
@@ -458,8 +463,8 @@ namespace DATA_SOURCE {
 				return READ_CODE::READ_OK;
 			}
 		}
-		else
-			return READ_CODE::READ_OK;
+		m_currentFileRotateCount = 0;
+		return READ_CODE::READ_OK;
 	}
 
 	int mysqlBinlogReader::dumpBinlog(const char* file, uint64_t offset,
@@ -783,6 +788,7 @@ namespace DATA_SOURCE {
 			return ret;
 		if ((ret = seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick)) != READ_OK)
 			return ret;
+		m_currentFileRotateCount = 0;
 		LOG(INFO)<<"seek timestamp:"<<timestamp<<" in log pos:"<<m_currFile<<"."<<m_currentPos;
 		if ((ret = dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog)) != READ_OK)
 			return ret;

@@ -760,26 +760,28 @@ COLUMN_IS_STILL_UK:
 		m_uniqueKeysCount--;
 		return 0;
 	}
-#define ADD_KEY(count,indexs,indexNames,index,indexName) do{\
-	unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * ((count) + 1));\
-	std::string* newIndexNames = new std::string[(count) + 1];\
-	(newIndexs)[count] = (index);\
-	(newIndexNames)[count] = (indexName);\
-	if ((count) > 0)\
-	{\
-		for (int i = 0; i < (count); i++)\
-		{\
-			newIndexs[i] = m_indexs[i];\
-			newIndexNames[i] = m_indexNames[i];\
-		}\
-		free(indexs);\
-		delete[] (indexNames);\
-	}\
-	(indexs) = newIndexs;\
-	(indexNames) = newIndexNames;\
-	(count)++;\
-}while(0);
 
+	int tableMeta::_addIndex(uint16_t &count,unionKeyMeta** &indexs,std::string*& indexNames,unionKeyMeta*index,const char* indexName)
+	{
+		unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (count + 1));
+		std::string* newIndexNames = new std::string[count + 1];
+		newIndexs[count] = index;
+		newIndexNames[count] = indexName;
+		if ((count) > 0)
+		{
+			for (int i = 0; i < count; i++)
+			{
+				newIndexs[i] = indexs[i];
+				newIndexNames[i] = indexNames[i];
+			}
+			free(indexs);
+			delete[] indexNames;
+		}
+		indexs = newIndexs;
+		indexNames = newIndexNames;
+		count++;
+		return 0;
+	}
 	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns,KEY_TYPE keyType)
 	{
 		if (columns.size() >= 256 || columns.empty())
@@ -788,7 +790,7 @@ COLUMN_IS_STILL_UK:
 			return -1;
 		}
 
-		if(keyType!=KEY_TYPE::INDEX||keyType!=KEY_TYPE::UNIQUE_KEY)
+		if(keyType!=KEY_TYPE::INDEX && keyType!=KEY_TYPE::UNIQUE_KEY)
 		{
 			LOG(ERROR) << "add key failed for only support index and unique key";
 			return -1;
@@ -858,11 +860,11 @@ COLUMN_IS_STILL_UK:
 
 		if(keyType == KEY_TYPE::UNIQUE_KEY)
 		{
-			ADD_KEY(m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,index,indexName);
+			_addIndex(m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,index,indexName);
 		}
 		else if(keyType == KEY_TYPE::INDEX)
 		{
-			ADD_KEY(m_indexCount,m_indexs,m_indexNames,index,indexName);
+			_addIndex(m_indexCount,m_indexs,m_indexNames,index,indexName);
 		}
 		if(tmpName != nullptr)
 			free(tmpName);

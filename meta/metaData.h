@@ -274,6 +274,7 @@ namespace META {
 		int dropPrimaryKey();
 		int createPrimaryKey(const std::list<std::string> &columns);
 		int dropUniqueKey(const char *ukName);
+		int _addIndex(uint16_t &count,unionKeyMeta** &indexs,std::string*& indexNames,unionKeyMeta*index,const char* indexName);
 		int addIndex(const char* indexName, const std::list<std::string>& columns,KEY_TYPE keyType);
 		int _dropIndex(int idx,uint16_t& indexCount,unionKeyMeta** &indexs,std::string*& indexNames,KEY_TYPE keyType);
 		int dropIndex(const char* indexName);

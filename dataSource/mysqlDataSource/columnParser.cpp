@@ -315,29 +315,110 @@ namespace DATA_SOURCE {
 		data += 8;
 		return 0;
 	}
+	static char zeroBuffer[] = {'0','0','0','0','0','0','0','0','0','0'};
+	inline int32_t getPartNumberFromDecimal(uint8_t size,const char* data)
+	{
+		switch (size)
+		{
+		case 1:
+			return mi_sint1korr((const uint8_t*)data);
+		case 2:
+			return mi_sint2korr((const uint8_t*)data);
+		case 3:
+			return mi_sint3korr((const uint8_t*)data);
+		case 4:
+			return mi_sint4korr((const uint8_t*)data);
+		default:
+			abort();
+		}
+	}
 	int parse_MYSQL_TYPE_NEWDECIMAL(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		uint8_t prec = (colMeta->m_decimals == 0) ? (colMeta->m_precision - 1) : (colMeta->m_precision - 2);
-		if (!colMeta->m_signed)
-			prec++;
-		decimal_digit_t dec_buf[10];
-		decimal_t dec =
-		{ 0, 0, 10, colMeta->m_signed, dec_buf };
+		uint8_t prec = colMeta->m_precision - colMeta->m_decimals;
 		char* buffer;
 		if (newOrOld)
 			buffer = record->allocVarColumn();
 		else
 			buffer = record->allocVardUpdatedColumn();
-		int dataSize = 0;
-		bin2decimal((const uint8_t*)data, &dec, prec, colMeta->m_decimals);
-		decimal2string(&dec, buffer, &dataSize, 0, 0, 0);
-		buffer[dataSize] = '\0';
+		char * pos = buffer;
+
+		uint8_t intFullPartSize = prec/9,intFirstPartNumSize = prec - intFullPartSize*9,intFirstPartSize = dig2bytes[intFirstPartNumSize];
+		uint8_t fracFullPartSize = colMeta->m_decimals/9,fracFirstPartNumSize  = colMeta->m_decimals - fracFullPartSize*9,fracFirstPartSize = dig2bytes[fracFirstPartNumSize];
+		bool sign = !(data[0]&0x80);
+		((char*)data)[0] &= (~0x80);
+		if(sign)
+			*pos++ = '-';
+
+		int num = 0;
+		bool isZero = true;
+
+		if(intFirstPartSize>0)
+		{
+			num = getPartNumberFromDecimal(intFirstPartSize,data);
+			if(num != 0)
+			{
+				pos += i32toa_sse2(num, pos) - 1;
+				isZero = false;
+			}
+			data += intFirstPartSize;
+		}
+		for(uint8_t i=0 ; i < intFullPartSize ; i++)
+		{
+			if(0!=(num = mi_sint4korr((const uint8_t*)data)))
+			{
+				if(isZero)
+				{
+					pos += i32toa_sse2(num, pos) - 1;
+					isZero = false;
+				}
+				else
+				{
+					uint8_t len = i32toa_sse2b(num,pos+9) - 1;
+					if(len!=9&&(i>0||intFirstPartSize>0))
+						memcpy(pos,zeroBuffer,9-len);
+					pos += 9;
+				}
+			}
+			else if(!isZero)
+			{
+				memcpy(pos,zeroBuffer,9);
+				pos += 9;
+			}
+			data += 4;
+		}
+		if(isZero)
+			*pos++ = '0';
+		if(colMeta->m_decimals>0)
+		{
+			*pos++ ='.';
+			if(fracFirstPartSize>0)
+			{
+				pos += i32toa_sse2(getPartNumberFromDecimal(fracFirstPartSize,data), pos) - 1;
+				data += intFirstPartSize;
+			}
+			for(uint8_t i=0 ; i < fracFullPartSize ; i++)
+			{
+				if(0!=(num = mi_sint4korr((const uint8_t*)data)))
+				{
+					uint8_t len = i32toa_sse2b(mi_sint4korr((const uint8_t*)data),pos+9) - 1;
+					if(len!=9&&(i>0||fracFirstPartSize>0))
+						memcpy(pos,zeroBuffer,9-len);
+					pos += 9;
+				}
+				else
+				{
+					memcpy(pos,zeroBuffer,9);
+					pos += 9;
+				}
+				data += 4;
+			}
+		}
+		*pos++ = '\0';
 		if(newOrOld)
-			record->filledVarColumns(colMeta->m_columnIndex, dataSize + 1);
+			record->filledVarColumns(colMeta->m_columnIndex, pos-buffer);
 		else
-			record->filledVardUpdatedColumn(colMeta->m_columnIndex, dataSize + 1);
-		data += decimal_bin_size_inline(prec, colMeta->m_decimals);
+			record->filledVardUpdatedColumn(colMeta->m_columnIndex, pos-buffer);
 		return 0;
 	}
 	int parse_MYSQL_TYPE_TIMESTAMP(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,

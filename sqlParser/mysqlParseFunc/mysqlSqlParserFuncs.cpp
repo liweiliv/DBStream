@@ -217,14 +217,14 @@ namespace SQL_PARSER {
 		column->m_columnType = mysqlTypeMaps[MYSQL_TYPE_NEWDECIMAL];
 		column->m_srcColumnType = MYSQL_TYPE_NEWDECIMAL;
 		column->m_signed = true;
-		column->m_size = 10;
+		column->m_size = column->m_precision = 10;
 		column->m_decimals = 0;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue floatSize(handle* h, SQLValue * value)
 	{
 		META::columnMeta* column = getColumn(h);
-		column->m_size = static_cast<SQLIntNumberValue*>(value)->number;
+		column->m_size = column->m_precision = static_cast<SQLIntNumberValue*>(value)->number;
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue floatDigitsSize(handle* h, SQLValue * value)
@@ -240,7 +240,7 @@ namespace SQL_PARSER {
 		column->m_columnType = mysqlTypeMaps[MYSQL_TYPE_FLOAT];
 		column->m_srcColumnType = MYSQL_TYPE_FLOAT;
 		column->m_signed = true;
-		column->m_size = 12;
+		column->m_size = column->m_precision = 12;
 		column->m_decimals = NOT_FIXED_DEC;
 		return OK;
 	}
@@ -250,7 +250,7 @@ namespace SQL_PARSER {
 		column->m_columnType = mysqlTypeMaps[MYSQL_TYPE_DOUBLE];
 		column->m_srcColumnType = MYSQL_TYPE_DOUBLE;
 		column->m_signed = true;
-		column->m_size = 22;
+		column->m_size = column->m_precision = 22;
 		column->m_decimals = NOT_FIXED_DEC;
 		return OK;
 	}
@@ -562,13 +562,18 @@ namespace SQL_PARSER {
 		}
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
-			(*static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin()).columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			META::addKey &uk = *static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin();
+			uk.columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
 		}
 		else if(ddl->m_type == META::ALTER_TABLE)
 		{
 			alterTableHead * lastAlter = *static_cast<META::alterTable*>(ddl)->detail.rbegin();
 			if(lastAlter->type==META::ALTER_TABLE_ADD_UNIQUE_KEY)
-				static_cast<META::addKey*>(lastAlter)->name = static_cast<SQLNameValue*>(value)->name;
+			{
+
+				META::addKey* uk = static_cast<META::addKey*>(lastAlter);
+				uk->columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			}
 			else
 				return INVALID;
 		}

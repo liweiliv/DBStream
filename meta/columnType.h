@@ -70,7 +70,7 @@ namespace META {
 	{COLUMN_TYPE::T_BIG_NUMBER,4 ,false,false,false},
 	{COLUMN_TYPE::T_FLOAT,4,true,true,false},
 	{COLUMN_TYPE::T_DOUBLE,8,true,true,false},
-	{COLUMN_TYPE::T_DECIMAL,4,true,true,false},
+	{COLUMN_TYPE::T_DECIMAL,4,false,false,true},
 	{COLUMN_TYPE::T_TIMESTAMP,8 ,true,true,false},
 	{COLUMN_TYPE::T_DATETIME,8,true,true,false},
 	{COLUMN_TYPE::T_DATE,4,true,true,false},

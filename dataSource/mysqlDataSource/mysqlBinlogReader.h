@@ -41,6 +41,7 @@ namespace DATA_SOURCE
 		uint32_t  m_currFileID;
 		uint64_t m_currentPos;
 		std::string m_currFile;
+		int m_currentFileRotateCount;
 
 		bool m_isTypeNeedParse[ENUM_END_EVENT];
 		int initFmtDescEvent();
