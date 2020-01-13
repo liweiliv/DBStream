@@ -824,10 +824,10 @@ namespace META {
 				ret = newVersion->renameColumn(static_cast<const struct renameColumn*>(*iter)->srcColumnName.c_str(), static_cast<const struct renameColumn*>(*iter)->destColumnName.c_str());
 				break;
 			case ALTER_TABLE_MODIFY_COLUMN:
-				ret = newVersion->modifyColumn(&static_cast<const struct modifyColumn*>(*iter)->column, static_cast<const struct modifyColumn*>(*iter)->first, static_cast<const struct modifyColumn*>(*iter)->afterColumnName.empty() ? nullptr : static_cast<const struct modifyColumn*>(*iter)->afterColumnName.c_str());
+				ret = newVersion->modifyColumn(&static_cast<const struct addColumn*>(*iter)->column, static_cast<const struct addColumn*>(*iter)->first, static_cast<const struct addColumn*>(*iter)->afterColumnName.empty() ? nullptr : static_cast<const struct addColumn*>(*iter)->afterColumnName.c_str());
 				break;
 			case ALTER_TABLE_CHANGE_COLUMN:
-				ret = newVersion->changeColumn(&static_cast<const struct changeColumn*>(*iter)->newColumn, static_cast<const struct changeColumn*>(*iter)->srcColumnName.c_str(), static_cast<const struct changeColumn*>(*iter)->first,
+				ret = newVersion->changeColumn(&static_cast<const struct changeColumn*>(*iter)->column, static_cast<const struct changeColumn*>(*iter)->srcColumnName.c_str(), static_cast<const struct changeColumn*>(*iter)->first,
 					static_cast<const struct changeColumn*>(*iter)->afterColumnName.empty() ? nullptr : static_cast<const struct changeColumn*>(*iter)->afterColumnName.c_str());
 				break;
 			case ALTER_TABLE_DROP_COLUMN:

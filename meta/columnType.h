@@ -138,7 +138,7 @@ namespace META {
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
-				if (columnInfo[i].columnId<std::min<uint16_t>(from, to) || columnInfo[i].columnId > std::min<uint16_t>(from, to))
+				if (columnInfo[i].columnId<std::min<uint16_t>(from, to) || columnInfo[i].columnId > std::max<uint16_t>(from, to))
 				{
 					continue;
 				}
@@ -167,9 +167,9 @@ namespace META {
 				else
 				{
 					if (from > to)
-						columnInfo[i].columnId--;
-					else
 						columnInfo[i].columnId++;
+					else
+						columnInfo[i].columnId--;
 				}
 			}
 			if(varColumnCount>0&&fixed>0)

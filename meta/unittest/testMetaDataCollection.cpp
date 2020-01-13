@@ -136,6 +136,56 @@ int test()
 
 	if (*m.get("test", "test2") != *m1.get("test", "test2"))
 		FAILED;
+	m.processDDL("create table test.tm1(a int primary key,b char(20),c int,d int,unique key uk1(b,c))", nullptr, 7);
+	m.processDDL("alter table test.tm1 modify column d bigint first", nullptr, 8);
+	m1.processDDL("create table test.tm1(d bigint,a int primary key,b char(20),c int,unique key uk1(b,c))", nullptr, 9);
+	printf("%s\n", m.get("test", "tm1")->toString().c_str());
+	printf("%s\n", m1.get("test", "tm1")->toString().c_str());
+	if (*m.get("test", "tm1") != *m1.get("test", "tm1"))
+		FAILED;
+
+	m.processDDL("create table test.tm2(a int primary key,b char(20),c int,d int unique key,unique key uk1(b,c))", nullptr, 10);
+	m.processDDL("alter table test.tm2 modify column d bigint", nullptr, 11);
+	m1.processDDL("create table test.tm2(a int primary key,b char(20),c int,d bigint unique key,unique key uk1(b,c))", nullptr, 12);
+	printf("%s\n", m.get("test", "tm2")->toString().c_str());
+	printf("%s\n", m1.get("test", "tm2")->toString().c_str());
+	if (*m.get("test", "tm2") != *m1.get("test", "tm2"))
+		FAILED;
+
+	m.processDDL("create table test.tm3(a int primary key,b char(20),c int,d int unique key,e int,unique key uk1(b,c))", nullptr, 14);
+	m.processDDL("alter table test.tm3 modify column d bigint after e", nullptr, 15);
+	m1.processDDL("create table test.tm3(a int primary key,b char(20),c int,e int,d bigint unique key,unique key uk1(b,c))", nullptr, 16);
+	printf("%s\n", m.get("test", "tm3")->toString().c_str());
+	printf("%s\n", m1.get("test", "tm3")->toString().c_str());
+	if (*m.get("test", "tm3") != *m1.get("test", "tm3"))
+		FAILED;
+
+
+	m.processDDL("create table test.tc1(a int primary key,b char(20),c int,d int,unique key uk1(b,c))", nullptr, 17);
+	m.processDDL("alter table test.tc1 change column d d1 bigint first", nullptr, 18);
+	m1.processDDL("create table test.tc1(d1 bigint,a int primary key,b char(20),c int,unique key uk1(b,c))", nullptr, 19);
+	printf("%s\n", m.get("test", "tc1")->toString().c_str());
+	printf("%s\n", m1.get("test", "tc1")->toString().c_str());
+	if (*m.get("test", "tc1") != *m1.get("test", "tc1"))
+		FAILED;
+
+	m.processDDL("create table test.tc2(a int primary key,b char(20),c int,d int unique key,unique key uk1(b,c))", nullptr, 20);
+	m.processDDL("alter table test.tc2 change column d d1 bigint", nullptr, 21);
+	m1.processDDL("create table test.tc2(a int primary key,b char(20),c int,d1 bigint unique key,unique key uk1(b,c))", nullptr, 22);
+	printf("%s\n", m.get("test", "tc2")->toString().c_str());
+	printf("%s\n", m1.get("test", "tc2")->toString().c_str());
+	if (*m.get("test", "tc2") != *m1.get("test", "tc2"))
+		FAILED;
+
+	m.processDDL("create table test.tc3(a int primary key,b char(20),c int,d int unique key,e int,unique key uk1(b,c))", nullptr, 24);
+	m.processDDL("alter table test.tc3 change column d d1 bigint after e", nullptr, 25);
+	m1.processDDL("create table test.tc3(a int primary key,b char(20),c int,e int,d1 bigint unique key,unique key uk1(b,c))", nullptr, 26);
+	printf("%s\n", m.get("test", "tc3")->toString().c_str());
+	printf("%s\n", m1.get("test", "tc3")->toString().c_str());
+	if (*m.get("test", "tc3") != *m1.get("test", "tc3"))
+		FAILED;
+
+
 	return 0;
 }
 int main()

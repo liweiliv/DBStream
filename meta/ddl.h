@@ -175,23 +175,13 @@ namespace META {
 		renameColumn() :alterTableHead(ALTER_TABLE_RENAME_COLUMN) {}
 
 	};
-	struct modifyColumn :public alterTableHead
+	struct changeColumn :public addColumn
 	{
 		std::string srcColumnName;
-		columnMeta column;
-		bool first;
-		std::string afterColumnName;
-		modifyColumn() :alterTableHead(ALTER_TABLE_MODIFY_COLUMN), first(false){}
-
-	};
-	struct changeColumn :public alterTableHead
-	{
-		std::string srcColumnName;
-		columnMeta newColumn;
-		bool first;
-		std::string afterColumnName;
-		changeColumn() :alterTableHead(ALTER_TABLE_CHANGE_COLUMN), first(false) {}
-
+		changeColumn(DDL_TYPE type){
+			assert(type == ALTER_TABLE_MODIFY_COLUMN || type == ALTER_TABLE_CHANGE_COLUMN);
+			this->type = type;
+		}
 	};
 	struct alterRenameTable :public alterTableHead
 	{

@@ -1723,7 +1723,7 @@
 		"OPT": true,
 		"type": "ALTER_TABLE_MODIFY_COLUMN",
 		"C": [
-			{ "K": "_S_:MODIFY" },
+			{ "K": "_S_:MODIFY" ,"F":"alterTableModifyColumn"},
 			{
 				"OPT": true,
 				"K": "_S_:COLUMN"

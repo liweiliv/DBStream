@@ -62,13 +62,11 @@ namespace SQL_PARSER {
 			switch (alterInfo->type)
 			{
 			case META::ALTER_TABLE_ADD_COLUMN:
+			case META::ALTER_TABLE_MODIFY_COLUMN:
+			case META::ALTER_TABLE_CHANGE_COLUMN:
 				return &static_cast<META::addColumn*>(alterInfo)->column;
 			case META::ALTER_TABLE_ADD_COLUMNS:
 				return (*static_cast<META::addColumns*>(alterInfo)->columns.rbegin());
-			case META::ALTER_TABLE_CHANGE_COLUMN:
-				return &static_cast<META::changeColumn*>(alterInfo)->newColumn;
-			case META::ALTER_TABLE_MODIFY_COLUMN:
-				return &static_cast<META::modifyColumn*>(alterInfo)->column;
 			default:
 				return nullptr;
 			}
@@ -95,6 +93,8 @@ namespace SQL_PARSER {
 			switch (alterInfo->type)
 			{
 			case META::ALTER_TABLE_ADD_COLUMN:
+			case META::ALTER_TABLE_CHANGE_COLUMN:
+			case META::ALTER_TABLE_MODIFY_COLUMN:
 			{
 				static_cast<META::addColumn*>(alterInfo)->column.m_columnName.assign(name);
 				return &static_cast<META::addColumn*>(alterInfo)->column;
@@ -105,16 +105,6 @@ namespace SQL_PARSER {
 				column->m_columnName.assign(name);
 				static_cast<META::addColumns*>(alterInfo)->columns.push_back(column);
 				return column;
-			}
-			case META::ALTER_TABLE_CHANGE_COLUMN:
-			{
-				static_cast<META::changeColumn*>(alterInfo)->newColumn.m_columnName.assign(name);
-				return &static_cast<META::changeColumn*>(alterInfo)->newColumn;
-			}
-			case META::ALTER_TABLE_MODIFY_COLUMN:
-			{
-				static_cast<META::modifyColumn*>(alterInfo)->column.m_columnName.assign(name);
-				return &static_cast<META::modifyColumn*>(alterInfo)->column;
 			}
 			default:
 				return nullptr;
@@ -684,6 +674,14 @@ namespace SQL_PARSER {
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}
+	extern "C" DLL_EXPORT  parseValue  alterTableModifyColumn(handle* h, SQLValue * value)
+	{
+		META::addColumn* ddl = new META::addColumn();
+		ddl->type = META::ALTER_TABLE_MODIFY_COLUMN;
+		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
+		return OK;
+	}
+
 	extern "C" DLL_EXPORT  parseValue  AlterNewColumnAtFirst(handle* h, SQLValue * value)
 	{
 		static_cast<META::addColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->first = true;
@@ -704,9 +702,7 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  alterChangeColumn(handle* h, SQLValue * value)
 	{
-		META::changeColumn* ddl = new META::changeColumn;
-		ddl->first = false;
-		ddl->type = META::ALTER_TABLE_CHANGE_COLUMN;
+		META::changeColumn* ddl = new META::changeColumn(META::ALTER_TABLE_CHANGE_COLUMN);
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}

@@ -495,10 +495,24 @@ namespace META {
 			return -1;
 		}
 		int idx = old->m_columnIndex;
+
+		bool isPk = old->m_isPrimary,isUk = old->m_isUnique,isIndex = old->m_isIndex;
+		if(isPk||isUk||isIndex)
+		{
+			if(!columnInfos[static_cast<int>(column->m_columnType)].asIndex)
+			{
+				LOG(ERROR) << "modify column " << column->m_columnName << " failed for new column type " << static_cast<int>(column->m_columnType) << " can not use as index";
+				return -1;
+			}
+		}
+
 		if ((!first && addAfter == nullptr)||(first&& idx==0))
 		{
 			m_columns[idx] = *column;
 			m_columns[idx].m_columnIndex = idx;
+			m_columns[idx].m_isPrimary = isPk;
+			m_columns[idx].m_isUnique = isUk;
+			m_columns[idx].m_isIndex = isIndex;
 			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType&& m_columns[idx].m_charset == nullptr)
 			{
 				m_columns[idx].m_charset = m_charset;
@@ -526,22 +540,32 @@ namespace META {
 			if (idx < to)
 			{
 				for (int i = idx + 1; i <=to; i++)
+				{
 					m_columns[i-1] = m_columns[i];
+					m_columns[i-1].m_columnIndex = i-1;
+				}
 			}
 			else
 			{
 				for (int i = idx - 1; i >=to; i--)
+				{
 					m_columns[i+1] = m_columns[i];
+					m_columns[i+1].m_columnIndex = i+1;
+
+				}
 			}
 			m_columns[to] = *column;
 			m_columns[to].m_columnIndex = to;
+			m_columns[to].m_isPrimary = isPk;
+			m_columns[to].m_isUnique = isUk;
+			m_columns[to].m_isIndex = isIndex;
 			if (columnInfos[static_cast<int>(m_columns[to].m_columnType)].stringType&& m_columns[to].m_charset == nullptr)
 			{
 				m_columns[to].m_charset = m_charset;
 				if (m_columns[to].m_size > 0)
 					m_columns[to].m_size *= m_charset->byteSizePerChar;
 			}
-			updateKeysWhenColumnUpdate(idx, idx, column->m_columnType);
+			updateKeysWhenColumnUpdate(idx, to, column->m_columnType);
 			buildColumnOffsetList();
 		}
 		return 0;
@@ -560,10 +584,22 @@ namespace META {
 			return -1;
 		}
 		int idx = old->m_columnIndex;
+		bool isPk = old->m_isPrimary,isUk = old->m_isUnique,isIndex = old->m_isIndex;
+		if(isPk||isUk||isIndex)
+		{
+			if(!columnInfos[static_cast<int>(newColumn->m_columnType)].asIndex)
+			{
+				LOG(ERROR) << "change column " << newColumn->m_columnName << " failed for new column type " << static_cast<int>(newColumn->m_columnType) << " can not use as index";
+				return -1;
+			}
+		}
 		if ((!first && addAfter == nullptr) || (first && idx == 0))
 		{
 			m_columns[idx] = *newColumn;
 			m_columns[idx].m_columnIndex = idx;
+			m_columns[idx].m_isPrimary = isPk;
+			m_columns[idx].m_isUnique = isUk;
+			m_columns[idx].m_isIndex = isIndex;
 			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType&& m_columns[idx].m_charset == nullptr)
 			{
 				m_columns[idx].m_charset = m_charset;
@@ -591,22 +627,31 @@ namespace META {
 			if (idx < to)
 			{
 				for (int i = idx + 1; i <= to; i++)
+				{
 					m_columns[i - 1] = m_columns[i];
+					m_columns[i - 1].m_columnIndex = i - 1;
+				}
 			}
 			else
 			{
 				for (int i = idx - 1; i >= to; i--)
+				{
 					m_columns[i + 1] = m_columns[i];
+					m_columns[i + 1].m_columnIndex = i + 1;
+				}
 			}
 			m_columns[to] = *newColumn;
 			m_columns[to].m_columnIndex = to;
+			m_columns[to].m_isPrimary = isPk;
+			m_columns[to].m_isUnique = isUk;
+			m_columns[to].m_isIndex = isIndex;
 			if (columnInfos[static_cast<int>(m_columns[to].m_columnType)].stringType&& m_columns[to].m_charset == nullptr)
 			{
 				m_columns[to].m_charset = m_charset;
 				if (m_columns[to].m_size > 0)
 					m_columns[to].m_size *= m_charset->byteSizePerChar;
 			}
-			updateKeysWhenColumnUpdate(idx, idx, newColumn->m_columnType);
+			updateKeysWhenColumnUpdate(idx, to, newColumn->m_columnType);
 			buildColumnOffsetList();
 		}
 		return 0;

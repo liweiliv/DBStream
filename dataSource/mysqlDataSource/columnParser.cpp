@@ -10,7 +10,7 @@
 #include <float.h>
 #include <mysql.h>
 #include "columnParser.h"
-#include "mysql/decimal.h"
+//#include "mysql/decimal.h"
 #include "util/itoaSse.h"
 #include "util/dtoa.h"
 #include "util/likely.h"
@@ -193,6 +193,17 @@ namespace DATA_SOURCE {
 		}
 		}
 	}
+	#define NOT_FIXED_DEC 31
+
+	#define DIG_PER_DEC1 9
+
+	static const int dig2bytes[DIG_PER_DEC1 + 1] = { 0, 1, 1, 2, 2, 3, 3, 4, 4, 4 };
+
+	static const uint32_t digMasks[DIG_PER_DEC1 + 1] = { 0,0xff, 0xff, 0xffff, 0xffff, 0xffffff, 0xffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+
+	#define DATETIMEF_INT_OFS 0x8000000000LL
+
+
 
 
 	int parse_MYSQL_TYPE_TINY(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
@@ -332,21 +343,22 @@ namespace DATA_SOURCE {
 			abort();
 		}
 	}
-	int parse_MYSQL_TYPE_NEWDECIMAL(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
-		const char*& data, bool newOrOld)
-	{
-		uint8_t prec = colMeta->m_precision - colMeta->m_decimals;
-		char* buffer;
-		if (newOrOld)
-			buffer = record->allocVarColumn();
-		else
-			buffer = record->allocVardUpdatedColumn();
-		char * pos = buffer;
 
-		uint8_t intFullPartSize = prec/9,intFirstPartNumSize = prec - intFullPartSize*9,intFirstPartSize = dig2bytes[intFirstPartNumSize];
-		uint8_t fracFullPartSize = colMeta->m_decimals/9,fracFirstPartNumSize  = colMeta->m_decimals - fracFullPartSize*9,fracFirstPartSize = dig2bytes[fracFirstPartNumSize];
+	static inline int  parseDecimalToString(const char*& data,char * to,uint8_t prec,uint8_t scale)
+	{
+
+		int32_t mask = ((*(uint8_t*)data) & 0x80) ? 0 : -1;
+		uint8_t intSize = prec - scale;
+		char * pos = to;
+		uint8_t intFullPartSize = intSize/9,intFirstPartNumSize = intSize - intFullPartSize*9,intFirstPartSize = dig2bytes[intFirstPartNumSize];
+		uint8_t fracFullPartSize = scale/9,fracFirstPartNumSize  = scale - fracFullPartSize*9,fracFirstPartSize = dig2bytes[fracFirstPartNumSize];
 		bool sign = !(data[0]&0x80);
-		((char*)data)[0] &= (~0x80);
+
+		if(!sign)
+			((uint8_t*)data)[0] &= (~0x80);
+		else
+			((uint8_t*)data)[0] |= 0x80;
+
 		if(sign)
 			*pos++ = '-';
 
@@ -355,7 +367,7 @@ namespace DATA_SOURCE {
 
 		if(intFirstPartSize>0)
 		{
-			num = getPartNumberFromDecimal(intFirstPartSize,data);
+			num = (getPartNumberFromDecimal(intFirstPartSize,data)^mask)&digMasks[intFirstPartNumSize];
 			if(num != 0)
 			{
 				pos += i32toa_sse2(num, pos) - 1;
@@ -365,7 +377,7 @@ namespace DATA_SOURCE {
 		}
 		for(uint8_t i=0 ; i < intFullPartSize ; i++)
 		{
-			if(0!=(num = mi_sint4korr((const uint8_t*)data)))
+			if(0!=(num = (mi_sint4korr((const uint8_t*)data))^ mask))
 			{
 				if(isZero)
 				{
@@ -389,36 +401,55 @@ namespace DATA_SOURCE {
 		}
 		if(isZero)
 			*pos++ = '0';
-		if(colMeta->m_decimals>0)
+		if(scale > 0)
 		{
 			*pos++ ='.';
-			if(fracFirstPartSize>0)
-			{
-				pos += i32toa_sse2(getPartNumberFromDecimal(fracFirstPartSize,data), pos) - 1;
-				data += intFirstPartSize;
-			}
 			for(uint8_t i=0 ; i < fracFullPartSize ; i++)
 			{
-				if(0!=(num = mi_sint4korr((const uint8_t*)data)))
+				if(0!=(num = (mi_sint4korr((const uint8_t*)data)^ mask)))
 				{
-					uint8_t len = i32toa_sse2b(mi_sint4korr((const uint8_t*)data),pos+9) - 1;
-					if(len!=9&&(i>0||fracFirstPartSize>0))
-						memcpy(pos,zeroBuffer,9-len);
-					pos += 9;
+					uint8_t len = i32toa_sse2b(num,pos+9) - 1;
+					memcpy(pos,zeroBuffer,9-len);
 				}
 				else
 				{
 					memcpy(pos,zeroBuffer,9);
-					pos += 9;
 				}
+				pos += 9;
 				data += 4;
+			}
+			if(fracFirstPartSize>0)
+			{
+				if(0!=(num = (getPartNumberFromDecimal(fracFirstPartSize,data)^mask)&digMasks[intFirstPartNumSize]))
+				{
+					uint8_t len = i32toa_sse2b(num,pos+fracFirstPartNumSize) - 1;
+					memcpy(pos,zeroBuffer,fracFirstPartNumSize-len);
+				}
+				else
+				{
+					memcpy(pos,zeroBuffer,fracFirstPartNumSize);
+				}
+				pos += fracFirstPartNumSize;
+				data += fracFirstPartSize;
 			}
 		}
 		*pos++ = '\0';
-		if(newOrOld)
-			record->filledVarColumns(colMeta->m_columnIndex, pos-buffer);
+		return pos - to;
+	}
+	int parse_MYSQL_TYPE_NEWDECIMAL(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+		const char*& data, bool newOrOld)
+	{
+
+		char* buffer;
+		if (newOrOld)
+			buffer = record->allocVarColumn();
 		else
-			record->filledVardUpdatedColumn(colMeta->m_columnIndex, pos-buffer);
+			buffer = record->allocVardUpdatedColumn();
+		uint16_t length = parseDecimalToString(data,buffer,colMeta->m_precision,colMeta->m_decimals);
+		if(newOrOld)
+			record->filledVarColumns(colMeta->m_columnIndex, length);
+		else
+			record->filledVardUpdatedColumn(colMeta->m_columnIndex, length);
 		return 0;
 	}
 	int parse_MYSQL_TYPE_TIMESTAMP(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
@@ -881,14 +912,8 @@ namespace DATA_SOURCE {
 		{
 			uint8_t prec = data[1+n];
 			int decim = data[1 + n + 1];
-			decimal_digit_t dec_buf[10];
-			decimal_t dec =
-			{ 0, 0, 10, 0, dec_buf };
-			int valueSize = 0;
-			bin2decimal((const uint8_t*)(data + 1 + n + 2), &dec, prec, decim);
-			decimal2string(&dec, jsonStr, &valueSize, 0, 0, 0);
-			jsonStr[valueSize] = '\0';
-			return valueSize + 1;
+			data += 1 + n + 2;
+			return parseDecimalToString(data,jsonStr,prec,decim);
 		}
 
 		case MYSQL_TYPE_DATETIME:
