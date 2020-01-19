@@ -12,7 +12,7 @@ namespace META {
 			T* meta;
 			uint64_t startPos;
 			MetaInfo* prev;
-			MetaInfo():meta(nullptr),startPos(0),prev(nullptr)
+			MetaInfo() :meta(nullptr), startPos(0), prev(nullptr)
 			{
 			}
 		};
@@ -21,8 +21,8 @@ namespace META {
 		uint16_t m_version;
 		std::string m_name;
 	public:
-		MetaTimeline(uint64_t id,const char *name) :
-			m_current(nullptr), m_id(id), m_version(0),m_name(name)
+		MetaTimeline(uint64_t id, const char* name) :
+			m_current(nullptr), m_id(id), m_version(0), m_name(name)
 		{
 		}
 		~MetaTimeline()
@@ -32,12 +32,12 @@ namespace META {
 		void setID(uint64_t id) {
 			m_id = id;
 		}
-		const std::string & getName()
+		const std::string& getName()
 		{
 			return m_name;
 		}
 		/*can be concurrent*/
-		inline T* get(uint64_t originCheckPoint= 0xffffffffffffffffULL)
+		inline T* get(uint64_t originCheckPoint = 0xffffffffffffffffULL)
 		{
 			MetaInfo* current = m_current;
 			barrier;
@@ -73,7 +73,7 @@ namespace META {
 			MetaInfo* m = new MetaInfo;
 			m->startPos = originCheckPoint;
 			m->meta = meta;
-			if(meta!=nullptr)
+			if (meta != nullptr)
 				meta->m_id = tableMeta::genTableId(m_id, m_version++);
 			if (m_current == nullptr)
 			{

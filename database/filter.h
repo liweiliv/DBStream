@@ -64,8 +64,4 @@ namespace DATABASE {
 		}
 	};
 }
-
-
-
-
 #endif /* FILTER_H_ */

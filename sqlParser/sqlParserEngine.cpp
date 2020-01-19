@@ -32,7 +32,7 @@ using namespace std;
 //#define DEBUG
 namespace SQL_PARSER
 {
-	bool sqlParser::getLoopCondition(const jsonValue* loop,SQLWord *& condition)
+	bool sqlParser::getLoopCondition(const jsonValue* loop, SQLWord*& condition)
 	{
 		if (loop->t == jsonValue::J_STRING)
 		{
@@ -43,7 +43,7 @@ namespace SQL_PARSER
 			}
 			else
 			{
-				condition = SQLSingleWord::create(false, static_cast<const jsonString*>(loop)->m_value,m_quote);
+				condition = SQLSingleWord::create(false, static_cast<const jsonString*>(loop)->m_value, m_quote);
 				if (condition != nullptr)
 					return true;
 				else
@@ -61,28 +61,28 @@ namespace SQL_PARSER
 		else
 			return false;
 	}
-	parserFuncType sqlParser::getFunc(const jsonString* json )
+	parserFuncType sqlParser::getFunc(const jsonString* json)
 	{
 		parserFuncType func = nullptr;
 #ifdef OS_LINUX
 		if (nullptr
 			== (func =
-			(parserFuncType) dlsym(
+			(parserFuncType)dlsym(
 				m_funcsHandle,
 				json->m_value.c_str())))
 #endif
 #ifdef OS_WIN
-		if (nullptr
-			== (func =(parserFuncType) GetProcAddress(
-				m_funcsHandle,json->m_value.c_str())))
+			if (nullptr
+				== (func = (parserFuncType)GetProcAddress(
+					m_funcsHandle, json->m_value.c_str())))
 #endif
-		{
+			{
 				LOG(ERROR) << "can not get func:" << json->m_value << " in funcs,occurred in [" << json->toString() << "]";
 				return nullptr;
-		}
+			}
 		return func;
 	}
-	bool sqlParser::forwardDeclare(const jsonArray * value)
+	bool sqlParser::forwardDeclare(const jsonArray* value)
 	{
 		for (std::list<jsonValue*>::const_iterator iter = value->m_values.begin(); iter != value->m_values.end(); iter++)
 		{
@@ -116,7 +116,7 @@ namespace SQL_PARSER
 			static_cast<const jsonString*>(value)->m_value);
 		if (iter == m_parseTree.end())
 		{
-			LOG(ERROR) << "can not find INCLUDE WORD: [" << static_cast<const jsonString*>(value)->m_value << "]" ;
+			LOG(ERROR) << "can not find INCLUDE WORD: [" << static_cast<const jsonString*>(value)->m_value << "]";
 			return nullptr;
 		}
 		iter->second->include(); //it will not be free by parent when destroy
@@ -155,7 +155,7 @@ namespace SQL_PARSER
 			LOG(ERROR) << "expect key value pair :\"K\":\"type info\" by string type in [" << json->toString() << "]";
 			return nullptr;
 		}
-		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<const jsonString*>(value)->m_value,m_quote);
+		SQLSingleWord* v = SQLSingleWord::create(optional, static_cast<const jsonString*>(value)->m_value, m_quote);
 		if (v == nullptr)
 		{
 			LOG(ERROR) << "create SQLSingleWord failed in [" << json->toString() << "]";
@@ -165,9 +165,9 @@ namespace SQL_PARSER
 		v->m_comment = json->toString();
 		return v;
 	}
-	SQLWordArray*sqlParser::loadWordArrayFromJson(const jsonObject* json, const char* name, SQLWordArray *top)
+	SQLWordArray* sqlParser::loadWordArrayFromJson(const jsonObject* json, const char* name, SQLWordArray* top)
 	{
-		const jsonValue* value ;
+		const jsonValue* value;
 		bool optional = false; //default  false
 		bool OR = false;
 		bool loop = false;
@@ -235,18 +235,18 @@ namespace SQL_PARSER
 				array = static_cast<SQLWordArray*>(miter->second);
 				if (!array->m_forwardDeclare)
 				{
-					LOG(ERROR) << "redefine "<<name<<" in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
+					LOG(ERROR) << "redefine " << name << " in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 					return nullptr;
 				}
 				array->m_optional = optional;
-				array->m_or = OR ;
+				array->m_or = OR;
 				array->m_loop = loop;
 				array->m_loopCondition = loopCondition;
 				array->m_forwardDeclare = false;
 			}
 		}
 
-		if(array==nullptr)
+		if (array == nullptr)
 		{
 			array = new SQLWordArray(optional, OR, loop, loopCondition);
 		}
@@ -268,7 +268,7 @@ namespace SQL_PARSER
 			{
 				child = loadSingleWordFromJson(static_cast<jsonObject*>(*iter));
 			}
-			else if(static_cast<jsonObject*>(*iter)->get("C") != nullptr)
+			else if (static_cast<jsonObject*>(*iter)->get("C") != nullptr)
 			{
 				child = loadWordArrayFromJson(static_cast<jsonObject*>(*iter), name, top);
 			}
@@ -294,7 +294,7 @@ namespace SQL_PARSER
 		return array;
 	}
 	DLL_EXPORT sqlParser::sqlParser() :
-		m_funcsHandle(nullptr),m_quote(0), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
+		m_funcsHandle(nullptr), m_quote(0), m_initUserDataFunc(nullptr), m_destroyUserDataFunc(
 			nullptr)
 	{
 	}
@@ -380,10 +380,10 @@ namespace SQL_PARSER
 	{
 		if (m_funcsHandle != NULL)
 			FreeLibrary(m_funcsHandle);
-		m_funcsHandle = LoadLibraryEx(fileName,0, LOAD_WITH_ALTERED_SEARCH_PATH);
+		m_funcsHandle = LoadLibraryEx(fileName, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 		if (m_funcsHandle == NULL)
 		{
-			LOG(ERROR)<<"load "<< fileName <<" failed for "<< GetLastError()<<","<<strerror(GetLastError());
+			LOG(ERROR) << "load " << fileName << " failed for " << GetLastError() << "," << strerror(GetLastError());
 			return -3;
 		}
 		m_initUserDataFunc = (void(*)(handle*)) GetProcAddress(m_funcsHandle, "createUserData");
@@ -413,7 +413,7 @@ namespace SQL_PARSER
 		{
 			if (iter->second->m_forwardDeclare)
 			{
-				if (iter->second->m_refs > 0 )
+				if (iter->second->m_refs > 0)
 				{
 					LOG(ERROR) << "word :" << iter->first << " has been forward declare ,and used by other words,but can not find implementation code";
 					ok = false;
@@ -461,7 +461,7 @@ namespace SQL_PARSER
 				const jsonValue* value;
 				bool head = false;
 
-				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t!= jsonValue::J_ARRAY)
+				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t != jsonValue::J_ARRAY)
 				{
 					delete segment;
 					LOG(ERROR) << "expect \"C\":[child info ] as array type in [" << static_cast<jsonObject*>(sentence)->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
@@ -478,7 +478,7 @@ namespace SQL_PARSER
 					head = static_cast<const jsonBool*>(value)->m_value;
 				}
 
-				SQLWordArray* s = loadWordArrayFromJson(sentence, (*iter).key.c_str(),nullptr);
+				SQLWordArray* s = loadWordArrayFromJson(sentence, (*iter).key.c_str(), nullptr);
 				if (s == nullptr)
 				{
 					delete segment;
@@ -509,7 +509,7 @@ namespace SQL_PARSER
 		fileHandle fd = openFile(file, true, false, false);
 		if (!fileHandleValid(fd))
 		{
-			LOG(ERROR)<<"open parse tree file:"<<file<<" failed for "<< errno<<","<<strerror(errno);
+			LOG(ERROR) << "open parse tree file:" << file << " failed for " << errno << "," << strerror(errno);
 			return -1;
 		}
 		long size = seekFile(fd, 0, SEEK_END);
@@ -574,7 +574,7 @@ namespace SQL_PARSER
 		*(dest - 1) = '\0';
 		return newSql;
 	}
-	DLL_EXPORT parseValue sqlParser::parse(handle*& h,const char * database, const char* sql)
+	DLL_EXPORT parseValue sqlParser::parse(handle*& h, const char* database, const char* sql)
 	{
 		h = new handle;
 		if (database != nullptr)
@@ -604,7 +604,7 @@ namespace SQL_PARSER
 			delete h;
 			h = nullptr;
 			return parseValue::NOT_MATCH;
-PARSE_SUCCESS:
+		PARSE_SUCCESS:
 			if (m_initUserDataFunc)
 				m_initUserDataFunc(h);
 
@@ -652,7 +652,7 @@ int main(int argc, char* argv[])
 	}
 	char* sql = NULL;
 	if (argc == 1)
-		sql = (char*) "rename table `mp_time_limit20` to `mp_time_limit_20`";
+		sql = (char*)"rename table `mp_time_limit20` to `mp_time_limit_20`";
 	else
 	{
 		fileHandle fd = openFile(argv[1], true, false, false);
@@ -670,7 +670,7 @@ int main(int argc, char* argv[])
 		sql[size] = '\0';
 	}
 #if 0
-	sqlParser::handle * h;
+	sqlParser::handle* h;
 	p.parse(h, sql);
 	string s;
 	getFullStackLog(s);

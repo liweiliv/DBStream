@@ -102,8 +102,10 @@ namespace DATABASE {
 		uint16_t m_pageCount;
 		uint32_t m_solidBlockHeadPageRawSize;
 		uint32_t m_solidBlockHeadPageSize;
+		uint32_t m_rawSize;
+		uint32_t m_fileSize;
 		uint32_t m_crc;
-		block(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :m_database(db),next(nullptr),prev(nullptr), m_metaDataCollection(metaDataCollection),m_version(1),m_flag(flag)
+		block(uint32_t blockId, database* db, META::metaDataBaseCollection* metaDataCollection, uint32_t flag) :m_database(db), next(nullptr), prev(nullptr), m_metaDataCollection(metaDataCollection), m_version(1), m_flag(flag)
 		{
 			m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_UNLOAD), std::memory_order_relaxed);
 			memset(&m_blockID, 0, sizeof(block) - offsetof(block, m_blockID));
@@ -117,11 +119,11 @@ namespace DATABASE {
 		virtual ~block() {}
 		inline bool use()
 		{
-			return m_ref.use()>=0;
+			return m_ref.use() >= 0;
 		}
 		inline void unuse()
 		{
-			if (m_ref.unuse()<0)//no user now,and blockManager wants to delete it
+			if (m_ref.unuse() < 0)//no user now,and blockManager wants to delete it
 				delete this;
 		}
 		//call it after loading 
@@ -129,13 +131,13 @@ namespace DATABASE {
 		{
 			return m_minRecordId + m_recordCount - 1;
 		}
-		int loadBlockInfo(fileHandle h,uint32_t id);
-		static block* loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection=nullptr);
+		int loadBlockInfo(fileHandle h, uint32_t id);
+		static block* loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection = nullptr);
 	};
 #pragma pack()
 	class blockIndexIterator :public iterator {
 	public:
-		blockIndexIterator(uint32_t flag, filter* filter,uint32_t blockId) :iterator(flag, filter),m_blockId(blockId) {}
+		blockIndexIterator(uint32_t flag, filter* filter, uint32_t blockId) :iterator(flag, filter), m_blockId(blockId) {}
 		virtual ~blockIndexIterator() {}
 		uint32_t getBlockId()const { return m_blockId; }
 	protected:

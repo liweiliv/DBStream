@@ -42,7 +42,7 @@ namespace META {
 		std::string database;
 		std::string table;
 		tableName() {}
-		tableName(const tableName& cp):database(cp.database),table(cp.table){}
+		tableName(const tableName& cp) :database(cp.database), table(cp.table) {}
 		tableName& operator=(const tableName& cp)
 		{
 			database = cp.database;
@@ -54,8 +54,8 @@ namespace META {
 		DDL_TYPE m_type;
 		const char* rawDdl;
 		std::string usedDb;
-		ddl(DDL_TYPE type= UNKNOW_DDL_TYPE):m_type(type), rawDdl(nullptr){}
-		ddl& operator=(const ddl& cp) 
+		ddl(DDL_TYPE type = UNKNOW_DDL_TYPE) :m_type(type), rawDdl(nullptr) {}
+		ddl& operator=(const ddl& cp)
 		{
 			m_type = cp.m_type;
 			rawDdl = cp.rawDdl;
@@ -91,7 +91,7 @@ namespace META {
 	struct alterTableHead {
 		DDL_TYPE type;
 		alterTableHead(DDL_TYPE type = UNKNOW_DDL_TYPE) :type(type) {}
-		virtual ~alterTableHead(){}
+		virtual ~alterTableHead() {}
 	};
 	struct addKey :public alterTableHead
 	{
@@ -109,14 +109,14 @@ namespace META {
 			std::copy(key.columnNames.begin(), key.columnNames.end(), std::back_inserter(columnNames));
 			return *this;
 		}
-	};	
-	struct createTableDDL:public tableDdl
+	};
+	struct createTableDDL :public tableDdl
 	{
 		tableMeta tableDef;
 		addKey primaryKey;
 		std::list<addKey> uniqueKeys;
 		std::list<addKey> indexs;
-		createTableDDL() :tableDdl(CREATE_TABLE),tableDef(true){}
+		createTableDDL() :tableDdl(CREATE_TABLE), tableDef(true) {}
 	};
 	struct createTableLike :public tableDdl
 	{
@@ -130,7 +130,7 @@ namespace META {
 		renameTable() :ddl(RENAME_TABLE) {}
 	};
 
-	struct createIndex :public tableDdl 
+	struct createIndex :public tableDdl
 	{
 		addKey index;
 		createIndex() :tableDdl(CREATE_INDEX) {}
@@ -155,7 +155,7 @@ namespace META {
 		columnMeta column;
 		bool first;
 		std::string afterColumnName;
-		addColumn() :alterTableHead(ALTER_TABLE_ADD_COLUMN),first(false) {}
+		addColumn() :alterTableHead(ALTER_TABLE_ADD_COLUMN), first(false) {}
 	};
 	struct addColumns :public alterTableHead
 	{
@@ -163,8 +163,8 @@ namespace META {
 		addColumns() :alterTableHead(ALTER_TABLE_ADD_COLUMNS) {}
 		~addColumns()
 		{
-			for(std::list<columnMeta*>::iterator iter = columns.begin();iter!=columns.end();iter++)
-				delete *iter;
+			for (std::list<columnMeta*>::iterator iter = columns.begin(); iter != columns.end(); iter++)
+				delete* iter;
 			columns.clear();
 		}
 	};
@@ -178,7 +178,7 @@ namespace META {
 	struct changeColumn :public addColumn
 	{
 		std::string srcColumnName;
-		changeColumn(DDL_TYPE type){
+		changeColumn(DDL_TYPE type) {
 			assert(type == ALTER_TABLE_MODIFY_COLUMN || type == ALTER_TABLE_CHANGE_COLUMN);
 			this->type = type;
 		}
@@ -211,6 +211,6 @@ namespace META {
 	{
 		const charsetInfo* charset;
 		std::string collate;
-		defaultCharset() :alterTableHead(ALTER_TABLE_DEFAULT_CHARSET), charset(nullptr){}
+		defaultCharset() :alterTableHead(ALTER_TABLE_DEFAULT_CHARSET), charset(nullptr) {}
 	};
 }

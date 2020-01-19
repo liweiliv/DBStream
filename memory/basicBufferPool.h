@@ -8,6 +8,7 @@
 #include "util/linkList.h"
 #include "thread/threadLocal.h"
 #include "util/winDll.h"
+#include "buffer.h"
 #define getCache(c,tc) if(unlikely(nullptr==(((c)=(tc).get())))){(tc).set((c)=new cache(this));}
 #define getCacheWithDeclare(c,tc) cache *c ;getCache(c,tc)
 class basicBufferPool
@@ -36,14 +37,14 @@ private:
 		block * next;//for nonBlockLinkList
 		basicBufferPool * pool;
 		dualLinkListNode dlNode;
-		char * startPos;
+		bufferBase * startPos;
 		char * alignedStartPos;
 		spinlock lock;
 		nonBlockStack<basicBlock> basicBlocks;
 		uint64_t basicBlockSize;
 		uint32_t basicBlockCount;
 		uint64_t blockSize;
-		DLL_EXPORT block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
+		DLL_EXPORT block(basicBufferPool * pool,bufferBase * buffer,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize);
 		DLL_EXPORT ~block();
 		inline basicBlock* getBasicBlock()
 		{
@@ -70,8 +71,10 @@ private:
 	uint64_t maxBlocks;
 	std::atomic<int32_t> blockCount;
 	std::atomic<int32_t> starvation;
+
+	bufferBaseAllocer* nodeAllocer;
 public:
-	DLL_EXPORT basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem);
+	DLL_EXPORT basicBufferPool(bufferBaseAllocer* nodeAllocer,uint64_t _basicBlockSize, uint64_t _maxMem);
 	DLL_EXPORT ~basicBufferPool();
 private:
 	DLL_EXPORT void fillCache(basicBlock* basic);
@@ -114,7 +117,6 @@ public:
 	}
 	inline void freeMem(void *_block)
 	{
-
 		basicBlock * basic = (basicBlock*)(((char*)_block) - offsetof(basicBlock, mem));
 		getCacheWithDeclare(localCache, m_cache2);
 		if (localCache->caches.m_count.load(std::memory_order_relaxed) < (int32_t)basicBlockCount * 2)

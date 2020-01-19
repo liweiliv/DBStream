@@ -24,7 +24,7 @@ namespace DATABASE {
 		} while (1);
 		int readSize = 0;
 		int headSize = sizeof(m_crc) + offsetof(solidBlock, m_crc) - offsetof(solidBlock, m_version);
-		if (headSize != (readSize = readFile(h, (char*)& m_version, headSize)))
+		if (headSize != (readSize = readFile(h, (char*)&m_version, headSize)))
 		{
 			LOG(ERROR) << "load block file " << id << " failed for read head failed ";
 			if (errno != 0)
@@ -38,13 +38,13 @@ namespace DATABASE {
 			LOG(ERROR) << "load block file " << id << " failed for id check failed,id in block is:" << m_blockID;
 			return -1;
 		}
-		uint32_t crc = hwCrc32c(0, (const char*)& m_version, headSize - sizeof(m_crc));
+		uint32_t crc = hwCrc32c(0, (const char*)&m_version, headSize - sizeof(m_crc));
 		if (crc != m_crc)
 		{
 			LOG(ERROR) << "load block file " << id << " failed for crc check failed";
 			return -1;
 		}
-		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD),std::memory_order_release);
+		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD), std::memory_order_release);
 		return 0;
 	}
 	block* block::loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection)
@@ -57,7 +57,7 @@ namespace DATABASE {
 			LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
 			return nullptr;
 		}
-		solidBlock* b = new solidBlock(id,db, metaDataCollection,0);
+		solidBlock* b = new solidBlock(id, db, metaDataCollection, 0);
 		if (0 != b->loadBlockInfo(h, id))
 		{
 			closeFile(h);

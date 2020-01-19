@@ -7,39 +7,39 @@
 #include "appendingIndex.h"
 #include "solidIndex.h"
 namespace DATABASE {
-	void appendingIndex::appendBinaryIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id,bool keyUpdate)
+	void appendingIndex::appendBinaryIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate)
 	{
 		KeyTemplate<META::binaryType> c;
 		c.key.data = r->column(index->m_ukMeta->columnInfo[0].columnId);
 		c.key.size = r->varColumnSize(index->m_ukMeta->columnInfo[0].columnId);
-		if(appendIndex(index, r, &c, id, false))
+		if (appendIndex(index, r, &c, id, false))
 			index->m_varSize += c.key.size;
 		if (keyUpdate)
 		{
 			c.key.data = r->oldColumnOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
 			c.key.size = r->oldVarColumnSizeOfUpdateType(index->m_ukMeta->columnInfo[0].columnId);
-			if(appendIndex(index, r, &c, id, true))
+			if (appendIndex(index, r, &c, id, true))
 				index->m_varSize += c.key.size;
 		}
 
 	}
-	void appendingIndex::appendUnionIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id,bool keyUpdate)
+	void appendingIndex::appendUnionIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate)
 	{
 		KeyTemplate<META::unionKey> c;
 		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
-		c.key.key = index->m_arena->Allocate(size + (index->m_ukMeta->fixed?0:sizeof(uint16_t)));
+		c.key.key = index->m_arena->Allocate(size + (index->m_ukMeta->fixed ? 0 : sizeof(uint16_t)));
 		META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, false);
 		c.key.meta = index->m_ukMeta;
-		if(appendIndex(index, r, &c, id, false)&&!index->m_ukMeta->fixed)
+		if (appendIndex(index, r, &c, id, false) && !index->m_ukMeta->fixed)
 		{
 			index->m_varSize += *(uint16_t*)c.key.key - index->m_ukMeta->size;
 		}
-		if(keyUpdate)
+		if (keyUpdate)
 		{
 			size = META::unionKey::memSize(r, index->m_ukMeta, true);
 			c.key.key = index->m_arena->Allocate(size);
 			META::unionKey::initKey((char*)c.key.key, size, index->m_ukMeta, r, true);
-			if(appendIndex(index, r, &c, id, true)&&!index->m_ukMeta->fixed)
+			if (appendIndex(index, r, &c, id, true) && !index->m_ukMeta->fixed)
 				index->m_varSize += *(uint16_t*)c.key.key - index->m_ukMeta->size;
 		}
 	}
@@ -190,22 +190,22 @@ namespace DATABASE {
 	DLL_EXPORT void  appendingIndex::append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
 	{
 		if ((r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) ||
-				r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE))&&r->isKeyUpdated(m_ukMeta)
-				)
+			r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) && r->isKeyUpdated(m_ukMeta)
+			)
 		{
-			m_appendIndexFuncs[TID(m_type)](this, r, id,true);
+			m_appendIndexFuncs[TID(m_type)](this, r, id, true);
 			m_allCount += 2;
 		}
 		else
 		{
-			m_appendIndexFuncs[TID(m_type)](this, r, id,false);
+			m_appendIndexFuncs[TID(m_type)](this, r, id, false);
 			m_allCount++;
 		}
 	}
 	template<>
 	void appendingIndex::createFixedSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter, uint16_t keySize)
 	{
-		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + (keySize +sizeof(uint32_t)) * (m_keyCount+1);
+		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + (keySize + sizeof(uint32_t)) * (m_keyCount + 1);
 		((solidIndexHead*)(data))->flag = SOLID_INDEX_FLAG_FIXED;
 		((solidIndexHead*)(data))->length = keySize;
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
@@ -231,16 +231,16 @@ namespace DATABASE {
 					externCurretPos += sizeof(uint32_t);
 				}
 				memcpy(externCurretPos, k->subArray, sizeof(uint32_t) * k->count);
-				externCurretPos+=sizeof(uint32_t) * k->count;
+				externCurretPos += sizeof(uint32_t) * k->count;
 			}
 			indexPos += keySize + sizeof(uint32_t);
 		} while (iter.nextKey());
-		((solidIndexHead*)(data))->size = externCurretPos-data;
+		((solidIndexHead*)(data))->size = externCurretPos - data;
 	}
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter)
 	{
-		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + +sizeof(uint32_t) * (m_keyCount+1);
+		char* indexPos = data + sizeof(struct solidIndexHead), * externCurretPos = indexPos + +sizeof(uint32_t) * (m_keyCount + 1);
 		((solidIndexHead*)(data))->flag = 0;
 		((solidIndexHead*)(data))->length = sizeof(uint32_t);
 		((solidIndexHead*)(data))->keyCount = m_keyCount;
@@ -250,14 +250,14 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			memcpy(externCurretPos, static_cast<const META::unionKey*>(iter.key())->key, sizeof(uint16_t)+*(const uint16_t*)(static_cast<const META::unionKey*>(iter.key())->key));
+			memcpy(externCurretPos, static_cast<const META::unionKey*>(iter.key())->key, sizeof(uint16_t) + *(const uint16_t*)(static_cast<const META::unionKey*>(iter.key())->key));
 			externCurretPos += sizeof(uint16_t) + *(uint16_t*)externCurretPos;
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;
 		} while (iter.nextKey());
 		*(uint32_t*)indexPos = externCurretPos - data;
-		((solidIndexHead*)(data))->size = externCurretPos-data;
+		((solidIndexHead*)(data))->size = externCurretPos - data;
 	}
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
@@ -280,7 +280,7 @@ namespace DATABASE {
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;
 		} while (iter.nextKey());
 		*(uint32_t*)indexPos = externCurretPos - data;
-		((solidIndexHead*)(data))->size = externCurretPos-data;
+		((solidIndexHead*)(data))->size = externCurretPos - data;
 	}
 
 

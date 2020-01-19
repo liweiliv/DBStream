@@ -5,8 +5,8 @@
 #include "sqlParserUtil.h"
 #include "sqlValue.h"
 namespace SQL_PARSER {
-	#define NOT_MATCH_PTR  ((SQL_PARSER::SQLValue*)0xffffffffffffffffULL)
-	#define MATCH  nullptr
+#define NOT_MATCH_PTR  ((SQL_PARSER::SQLValue*)0xffffffffffffffffULL)
+#define MATCH  nullptr
 	class SQLWord
 	{
 	public:
@@ -16,10 +16,10 @@ namespace SQL_PARSER {
 		bool m_forwardDeclare;
 		enum SQLWordType
 		{
-			SQL_ARRAY, SQL_SIGNLE_WORD,SQL_FUNCTION,SQL_EXPRESSION
+			SQL_ARRAY, SQL_SIGNLE_WORD, SQL_FUNCTION, SQL_EXPRESSION
 		};
 		SQLWordType m_type;
-		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql,bool needValue = false) = 0;
+		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false) = 0;
 		void include()
 		{
 			m_refs++;
@@ -57,12 +57,12 @@ namespace SQL_PARSER {
 		sqlSingleWordType m_wtype;
 		parserFuncType m_parser;
 		SQLSingleWord(bool optional, sqlSingleWordType type) :
-			SQLWord(SQL_SIGNLE_WORD, optional),m_wtype(type), m_parser(nullptr)
+			SQLWord(SQL_SIGNLE_WORD, optional), m_wtype(type), m_parser(nullptr)
 		{
 		}
 		virtual ~SQLSingleWord() {}
 		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false) = 0;
-		static SQLSingleWord* create(bool optional, const std::string& str,char quote);
+		static SQLSingleWord* create(bool optional, const std::string& str, char quote);
 	};
 
 	class SQLCharWord : public SQLSingleWord
@@ -72,7 +72,7 @@ namespace SQL_PARSER {
 		SQLCharWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_CHAR)
 		{
 			m_word = word.c_str()[0];
-			if(m_word>='A'&&m_word<='Z')
+			if (m_word >= 'A' && m_word <= 'Z')
 				m_word += 'a' - 'A';
 		}
 		virtual ~SQLCharWord() {}
@@ -90,7 +90,7 @@ namespace SQL_PARSER {
 	class SQLTableNameWord :public SQLSingleWord
 	{
 	public:
-		SQLTableNameWord(bool optional,bool hasAlias=false, char quote = 0) :SQLSingleWord(optional, S_TABLE_NAME), hasAlias(hasAlias), quote(quote)
+		SQLTableNameWord(bool optional, bool hasAlias = false, char quote = 0) :SQLSingleWord(optional, S_TABLE_NAME), hasAlias(hasAlias), quote(quote)
 		{
 		}
 		bool hasAlias;
@@ -100,7 +100,7 @@ namespace SQL_PARSER {
 	};
 	class SQLColumnNameWord :public SQLSingleWord {
 	public:
-		SQLColumnNameWord(bool optional, char quote=0) :SQLSingleWord(optional, S_COLUMN_NAME),quote(quote)
+		SQLColumnNameWord(bool optional, char quote = 0) :SQLSingleWord(optional, S_COLUMN_NAME), quote(quote)
 		{
 		}
 		char quote;
@@ -120,7 +120,7 @@ namespace SQL_PARSER {
 	{
 	public:
 		std::string m_word;
-		SQLStringWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_STRING),m_word(word)
+		SQLStringWord(bool optional, const std::string& word) :SQLSingleWord(optional, S_STRING), m_word(word)
 		{
 		}
 		virtual ~SQLStringWord() {}
@@ -156,7 +156,7 @@ namespace SQL_PARSER {
 	class SQLBracketsWord :public SQLSingleWord
 	{
 	public:
-		SQLBracketsWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD){}
+		SQLBracketsWord(bool optional) :SQLSingleWord(optional, S_ANY_WORD) {}
 		virtual ~SQLBracketsWord() {}
 		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
@@ -191,7 +191,7 @@ namespace SQL_PARSER {
 						delete (*iter);
 				}
 			}
-			if(m_loopCondition != nullptr)
+			if (m_loopCondition != nullptr)
 				delete m_loopCondition;
 		}
 		SQLWordArray(const SQLWordArray& s) :
@@ -222,7 +222,7 @@ namespace SQL_PARSER {
 		SQLArrayWord strWord;
 		SQLColumnNameWord nameWord;
 		SQLValueListWord* valueList;
-		DLL_EXPORT SQLWordExpressions(bool optional,bool logicOrMath,char quote);
+		DLL_EXPORT SQLWordExpressions(bool optional, bool logicOrMath, char quote);
 		DLL_EXPORT ~SQLWordExpressions();
 		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
@@ -234,7 +234,7 @@ namespace SQL_PARSER {
 		SQLColumnNameWord nameWord;
 		SQLAnyStringWord asWord;
 	public:
-		SQLWordFunction(bool optional, char quote) :SQLSingleWord(optional, S_FUNC), intWord(false), floatWord(false), strWord(false), nameWord(false,quote),asWord(false){}
+		SQLWordFunction(bool optional, char quote) :SQLSingleWord(optional, S_FUNC), intWord(false), floatWord(false), strWord(false), nameWord(false, quote), asWord(false) {}
 		DLL_EXPORT virtual SQLValue* match(handle* h, const char*& sql, bool needValue = false);
 	};
 	class SQLValueListWord :public SQLSingleWord

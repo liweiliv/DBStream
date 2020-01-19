@@ -24,14 +24,14 @@ namespace SQL_PARSER {
 
 		SQLValueType type;
 		int32_t ref;
-		SQLValue(SQLValueType type) :type(type), ref(0){}
+		SQLValue(SQLValueType type) :type(type), ref(0) {}
 		virtual ~SQLValue() {}
 	};
 	class SQLIntNumberValue :public SQLValue
 	{
 	public:
 		int64_t number;
-		SQLIntNumberValue(int64_t number):SQLValue(SQLValueType::INT_NUMBER_TYPE), number(number){}
+		SQLIntNumberValue(int64_t number) :SQLValue(SQLValueType::INT_NUMBER_TYPE), number(number) {}
 	};
 	class SQLFloatNumberValue :public SQLValue
 	{
@@ -70,7 +70,7 @@ namespace SQL_PARSER {
 		uint32_t size;
 		uint32_t volumn;
 		bool quote;
-		SQLStringValue(SQLValueType type) :SQLValue(type), value(nullptr),size(0), volumn(0), quote(false){}
+		SQLStringValue(SQLValueType type) :SQLValue(type), value(nullptr), size(0), volumn(0), quote(false) {}
 		inline const char* assign(const char* src, uint32_t size)
 		{
 			if (!quote && volumn > size)
@@ -130,14 +130,14 @@ namespace SQL_PARSER {
 	public:
 		SQLValue** valueStack;
 		uint16_t count;
-		SQLExpressionValue() :SQLValue(SQLValueType::EXPRESSION_TYPE), valueStack(nullptr), count(0){}
+		SQLExpressionValue() :SQLValue(SQLValueType::EXPRESSION_TYPE), valueStack(nullptr), count(0) {}
 		~SQLExpressionValue()
 		{
 			if (valueStack != nullptr)
 			{
 				for (int idx = 0; idx < count; idx++)
 				{
-					if (valueStack[idx]!=nullptr&&--valueStack[idx]->ref <= 0)
+					if (valueStack[idx] != nullptr && --valueStack[idx]->ref <= 0)
 						delete valueStack[idx];
 				}
 				delete[]valueStack;

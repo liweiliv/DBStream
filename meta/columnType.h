@@ -111,14 +111,14 @@ namespace META {
 		{
 			return sizeof(unionKeyMeta) + sizeof(uniqueKeyTypePair) * (keyCount - 1);
 		}
-		unionKeyMeta() 
+		unionKeyMeta()
 		{
 		}
 		unionKeyMeta(const unionKeyMeta& dest)
 		{
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
 		}
-		unionKeyMeta &operator=(const unionKeyMeta& dest)
+		unionKeyMeta& operator=(const unionKeyMeta& dest)
 		{
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
 			return *this;
@@ -134,7 +134,7 @@ namespace META {
 		{
 			return !(*this == dest);
 		}
-		void columnUpdate(uint16_t from, uint16_t to,COLUMN_TYPE newType)
+		void columnUpdate(uint16_t from, uint16_t to, COLUMN_TYPE newType)
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
@@ -152,7 +152,7 @@ namespace META {
 					}
 					else if (!columnInfos[columnInfo[i].type].fixed && columnInfos[static_cast<int>(newType)].fixed)
 					{
-						size -= sizeof(uint16_t) ;
+						size -= sizeof(uint16_t);
 						size += columnInfos[TID(newType)].columnTypeSize;
 						varColumnCount--;
 					}
@@ -172,12 +172,12 @@ namespace META {
 						columnInfo[i].columnId--;
 				}
 			}
-			if(varColumnCount>0&&fixed>0)
+			if (varColumnCount > 0 && fixed > 0)
 			{
 				size += sizeof(uint16_t);
 				fixed = 0;
 			}
-			else if(varColumnCount==0&&fixed==0)
+			else if (varColumnCount == 0 && fixed == 0)
 			{
 				size -= sizeof(uint16_t);
 				fixed = 1;
@@ -240,7 +240,7 @@ namespace META {
 		{
 			return meta->fixed ? 0 : sizeof(uint16_t);
 		}
-		inline uint16_t appendValue(const void * value,uint16_t length,uint16_t columnId,uint16_t offset)
+		inline uint16_t appendValue(const void* value, uint16_t length, uint16_t columnId, uint16_t offset)
 		{
 			if (columnInfos[meta->columnInfo[columnId].type].fixed)
 			{
@@ -267,8 +267,8 @@ namespace META {
 		{
 			/*Little-Endian */
 			struct {
-				uint32_t nanoSeconds:30;
-				uint64_t seconds:34;
+				uint32_t nanoSeconds : 30;
+				uint64_t seconds : 34;
 			};
 			uint64_t time;
 		};
@@ -333,15 +333,15 @@ namespace META {
 		{
 			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month];
+			*(uint16_t*)&str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
+			*(uint16_t*)&str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = ' ';
-			*(uint16_t*)& str[yearLength + 6] = numToStrMap[hour];
+			*(uint16_t*)&str[yearLength + 6] = numToStrMap[hour];
 			str[yearLength + 8] = ':';
-			*(uint16_t*)& str[yearLength + 9] = numToStrMap[min];
+			*(uint16_t*)&str[yearLength + 9] = numToStrMap[min];
 			str[yearLength + 11] = ':';
-			*(uint16_t*)& str[yearLength + 12] = numToStrMap[sec];
+			*(uint16_t*)&str[yearLength + 12] = numToStrMap[sec];
 			if (usec != 0)
 			{
 				str[yearLength + 14] = '.';
@@ -361,9 +361,9 @@ namespace META {
 		{
 			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month];
+			*(uint16_t*)&str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
+			*(uint16_t*)&str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = '\0';
 			return yearLength + 6;
 		}
@@ -377,9 +377,9 @@ namespace META {
 			}
 			hourLength += u32toa_sse2(hour, str + hourLength);
 			str[hourLength - 1] = ':';
-			*(uint16_t*)& str[hourLength] = numToStrMap[min];
+			*(uint16_t*)&str[hourLength] = numToStrMap[min];
 			str[hourLength + 2] = ':';
-			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec];
+			*(uint16_t*)&str[hourLength + 3] = numToStrMap[sec];
 			if (usec != 0)
 			{
 				str[hourLength + 5] = '.';
@@ -399,7 +399,7 @@ namespace META {
 	/*[24 bit usc][8 bit second][8 bit min][24 bit hour]*/
 	struct Time
 	{
-		union 
+		union
 		{
 			int64_t time;
 			struct
@@ -430,15 +430,15 @@ namespace META {
 		{
 			uint8_t hourLength = u32toa_sse2(hour, str);
 			str[hourLength - 1] = ':';
-			*(uint16_t*)& str[hourLength] = numToStrMap[min];
+			*(uint16_t*)&str[hourLength] = numToStrMap[min];
 			str[hourLength + 2] = ':';
-			*(uint16_t*)& str[hourLength + 3] = numToStrMap[sec];
+			*(uint16_t*)&str[hourLength + 3] = numToStrMap[sec];
 			if (nsec != 0)
 			{
 				str[hourLength + 5] = '.';
 				char usecBuffer[8];
 				*(uint64_t*)(str + hourLength + 6) = 3458817497345568816ull;//{'0','0','0','0','0','0','\0','0'}
-				uint8_t secLen = u32toa_sse2(nsec/1000, usecBuffer);
+				uint8_t secLen = u32toa_sse2(nsec / 1000, usecBuffer);
 				memcpy(str + hourLength + 6 + 6 - secLen + 1, usecBuffer, secLen);
 				return hourLength + 6 + 6 + 1;
 			}
@@ -479,9 +479,9 @@ namespace META {
 		{
 			uint8_t yearLength = i32toa_sse2(year, str);
 			str[yearLength - 1] = '-';
-			*(uint16_t*)& str[yearLength] = numToStrMap[month];
+			*(uint16_t*)&str[yearLength] = numToStrMap[month];
 			str[yearLength + 2] = '-';
-			*(uint16_t*)& str[yearLength + 3] = numToStrMap[day];
+			*(uint16_t*)&str[yearLength + 3] = numToStrMap[day];
 			str[yearLength + 5] = '\0';
 			return yearLength + 6;
 		}

@@ -98,7 +98,7 @@ namespace DATABASE
 			switch (type)
 			{
 			case META::KEY_TYPE::PRIMARY_KEY:
-				return table->m_primaryKey!=nullptr ? tableInfo->primaryKey : nullptr;
+				return table->m_primaryKey != nullptr ? tableInfo->primaryKey : nullptr;
 			case META::KEY_TYPE::UNIQUE_KEY:
 				return table->m_uniqueKeysCount > 0 ? (table->m_uniqueKeysCount > keyId ? (tableInfo->uniqueKeys[keyId]) : nullptr) : nullptr;
 			default:
@@ -111,9 +111,9 @@ namespace DATABASE
 			return m_pages[pageId(offset)]->pageData + offsetInPage(offset);
 		}
 	public:
-		appendingBlock(uint32_t blockId,uint32_t flag,
+		appendingBlock(uint32_t blockId, uint32_t flag,
 			uint32_t bufSize, int32_t redoFlushDataSize,
-			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(blockId,db, metaDataCollection, flag),
+			int32_t redoFlushPeriod, uint64_t startID, database* db, META::metaDataBaseCollection* metaDataCollection) :block(blockId, db, metaDataCollection, flag),
 			m_size(0), m_maxSize(bufSize), m_status(appendingBlockStaus::B_OK), m_defaultData(
 				m_blockID, nullptr, &m_arena, 4096),
 			m_redoFd(0), m_redoUnflushDataSize(0), m_redoFlushDataSize(
@@ -125,7 +125,7 @@ namespace DATABASE
 			m_maxPageCount = m_maxSize / (32 * 1204);
 			m_pages = (page**)m_database->allocMem(
 				sizeof(page*) * m_maxPageCount);
-			memset(m_pages,0,sizeof(page*) * m_maxPageCount);
+			memset(m_pages, 0, sizeof(page*) * m_maxPageCount);
 			m_minTime = m_maxTime = 0;
 			m_minLogOffset = m_maxLogOffset = 0;
 			m_minRecordId = startID;
@@ -135,7 +135,7 @@ namespace DATABASE
 		}
 		~appendingBlock()
 		{
-			if(m_recordCount>0)
+			if (m_recordCount > 0)
 				assert(m_flag & BLOCK_FLAG_FINISHED);
 			bufferPool::free(m_recordIDs);
 			bufferPool::free(m_pages);
@@ -220,7 +220,7 @@ namespace DATABASE
 				return riter->second;
 			}
 		}
-		inline tableData*  getPrevVersion(uint64_t tableId)
+		inline tableData* getPrevVersion(uint64_t tableId)
 		{
 			std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.lower_bound(tableId);
 			if (iter != m_tableDatas.end())
@@ -258,7 +258,7 @@ namespace DATABASE
 			else
 				return &m_defaultData;
 		}
-		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId,const void * key)
+		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key)
 		{
 			tableData* tableInfo = getTableData(table->m_id);
 			if (tableInfo == nullptr)
@@ -274,42 +274,42 @@ namespace DATABASE
 			switch (index->getType())
 			{
 			case META::COLUMN_TYPE::T_UNION:
-				recordId =  index->find<META::unionKey>(key);
+				recordId = index->find<META::unionKey>(key);
 				break;
 			case META::COLUMN_TYPE::T_INT8:
-				recordId =  index->find<int8_t>(key);
+				recordId = index->find<int8_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_UINT8:
-				recordId =  index->find<uint8_t>(key);
+				recordId = index->find<uint8_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_INT16:
-				recordId =  index->find<int16_t>(key);
+				recordId = index->find<int16_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
-				recordId =  index->find<uint16_t>(key);
+				recordId = index->find<uint16_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_INT32:
-				recordId =  index->find<int32_t>(key);
+				recordId = index->find<int32_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_UINT32:
-				recordId =  index->find<uint32_t>(key);
+				recordId = index->find<uint32_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_INT64:
-				recordId =  index->find<int64_t>(key);
+				recordId = index->find<int64_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			case META::COLUMN_TYPE::T_UINT64:
-				recordId =  index->find<uint64_t>(key);
+				recordId = index->find<uint64_t>(key);
 				break;
 			case META::COLUMN_TYPE::T_FLOAT:
-				recordId =  index->find<float>(key);
+				recordId = index->find<float>(key);
 				break;
 			case META::COLUMN_TYPE::T_DOUBLE:
-				recordId =  index->find<double>(key);
+				recordId = index->find<double>(key);
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				recordId =  index->find<META::binaryType>(key);
+				recordId = index->find<META::binaryType>(key);
 				break;
 			default:
 				abort();
@@ -328,9 +328,9 @@ namespace DATABASE
 		{
 			return allocMemForRecord(getTableData(table), size, mem);
 		}
-		inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record* &record);
+		inline appendingBlockStaus copyRecord(const DATABASE_INCREASE::record*& record);
 		appendingBlockStaus append(const DATABASE_INCREASE::record* record);
-		page* createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta);
+		page* createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta* ukMeta, const META::tableMeta* meta);
 		solidBlock* toSolidBlock();
 		inline void commit()
 		{
@@ -346,7 +346,7 @@ namespace DATABASE
 		{
 
 		}
-		blockIndexIterator* createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId);
+		blockIndexIterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 	};
 
 	class appendingBlockIterator : public iterator
@@ -358,9 +358,9 @@ namespace DATABASE
 		uint64_t m_realRecordId;
 		uint32_t m_seekedId;
 	public:
-		appendingBlockIterator(appendingBlock* block, filter* filter,uint32_t flag = 0) :
+		appendingBlockIterator(appendingBlock* block, filter* filter, uint32_t flag = 0) :
 			iterator(flag, filter), m_block(block), m_filter(filter), m_recordId(
-				0), m_realRecordId(0),m_seekedId(0)
+				0), m_realRecordId(0), m_seekedId(0)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 			begin();
@@ -436,7 +436,7 @@ namespace DATABASE
 						return  m_status = status::BLOCKED;
 				}
 				m_seekedId++;
-			} while (m_filter!=nullptr&&!m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
+			} while (m_filter != nullptr && !m_filter->filterByRecord(m_block->getRecord(m_seekedId)));
 			m_recordId = m_seekedId;
 			m_realRecordId = m_recordId + m_block->m_minRecordId;
 			return  m_status = status::OK;
@@ -559,13 +559,13 @@ namespace DATABASE
 			}
 			if (e < 0)
 				m = 0;
-			if (s >_e)
+			if (s > _e)
 				m = _e;
 			if (likely(!(m_flag & ITER_FLAG_DESC)))
 			{
-				if(((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset>= logOffset)
+				if (((const DATABASE_INCREASE::recordHead*)m_block->getRecord(m))->logOffset >= logOffset)
 					goto FIND;
-				if(m!=_e&& ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(++m))->logOffset >= logOffset)
+				if (m != _e && ((const DATABASE_INCREASE::recordHead*)m_block->getRecord(++m))->logOffset >= logOffset)
 					goto FIND;
 			}
 			else
@@ -632,16 +632,16 @@ namespace DATABASE
 		appendingIndex* m_index;
 		appendingBlock* m_block;
 		appendingBlock::tableData* m_table;
-		indexIterator<appendingIndex> * indexIter;
+		indexIterator<appendingIndex>* indexIter;
 	public:
-		appendingBlockIndexIterator(uint32_t flag,appendingBlock* block, appendingIndex* index);
+		appendingBlockIndexIterator(uint32_t flag, appendingBlock* block, appendingIndex* index);
 		virtual ~appendingBlockIndexIterator()
 		{
 			if (indexIter != nullptr)
 				delete indexIter;
 			m_block->unuse();
 		}
-		bool seek(const void * key)
+		bool seek(const void* key)
 		{
 			return indexIter->seek(key);
 		}
@@ -652,7 +652,7 @@ namespace DATABASE
 		virtual status next()
 		{
 			if (m_flag & ITER_FLAG_DESC)
-				return indexIter->prevKey()? status::OK: status::ENDED;
+				return indexIter->prevKey() ? status::OK : status::ENDED;
 			else
 				return indexIter->nextKey() ? status::OK : status::ENDED;
 		}

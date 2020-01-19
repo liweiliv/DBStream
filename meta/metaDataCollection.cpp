@@ -45,11 +45,11 @@ namespace META {
 		std::string name;
 		const charsetInfo* charset;
 		std::string collate;
-		dbInfo(nameCompare& comp) :tables(0, comp, comp), m_id(0), charset(nullptr){}
+		dbInfo(nameCompare& comp) :tables(0, comp, comp), m_id(0), charset(nullptr) {}
 		dbInfo& operator = (const dbInfo& db)
 		{
 			for (tbTree::iterator iter = db.tables.begin(); iter != db.tables.end(); iter++)
-				tables.insert(std::pair<const char*, MetaTimeline<tableMeta>*>(iter->first,iter->second));
+				tables.insert(std::pair<const char*, MetaTimeline<tableMeta>*>(iter->first, iter->second));
 			m_id = db.m_id;
 			name = db.name;
 			charset = db.charset;
@@ -58,17 +58,17 @@ namespace META {
 		}
 		~dbInfo()
 		{
-			for(tbTree::iterator iter = tables.begin();iter!=tables.end();iter++)
+			for (tbTree::iterator iter = tables.begin(); iter != tables.end(); iter++)
 				delete iter->second;
 			tables.clear();
 		}
 	};
-	void initVirtualConf(config * conf)
+	void initVirtualConf(config* conf)
 	{
 
 	}
-	DLL_EXPORT metaDataCollection::metaDataCollection(const char * defaultCharset, bool caseSensitive,CLIENT::client *client,const char * savePath) :metaDataBaseCollection(caseSensitive, getCharset(defaultCharset)),m_dbs(0, m_nameCompare, m_nameCompare),m_sqlParser(nullptr),m_client(client),
-		 m_maxTableId(1),m_maxDatabaseId(0), m_metaFile(nullptr), m_bufferPool(nullptr)
+	DLL_EXPORT metaDataCollection::metaDataCollection(const char* defaultCharset, bool caseSensitive, CLIENT::client* client, const char* savePath) :metaDataBaseCollection(caseSensitive, getCharset(defaultCharset)), m_dbs(0, m_nameCompare, m_nameCompare), m_sqlParser(nullptr), m_client(client),
+		m_maxTableId(1), m_maxDatabaseId(0), m_metaFile(nullptr), m_bufferPool(nullptr)
 	{
 		if (savePath != nullptr)
 		{
@@ -79,16 +79,16 @@ namespace META {
 		for (uint16_t i = 0; i < MAX_CHARSET; i++)
 			m_charsetSizeList.insert(std::pair<const char*, const charsetInfo*>(charsets[i].name, &charsets[i]));
 	}
-	DLL_EXPORT int metaDataCollection::initSqlParser(const char * sqlParserTreeFile,const char * sqlParserFunclibFile)
+	DLL_EXPORT int metaDataCollection::initSqlParser(const char* sqlParserTreeFile, const char* sqlParserFunclibFile)
 	{
 		m_sqlParser = new sqlParser();
-		if(0!=m_sqlParser->LoadFuncs(sqlParserFunclibFile))
+		if (0 != m_sqlParser->LoadFuncs(sqlParserFunclibFile))
 		{
 			delete m_sqlParser;
 			m_sqlParser = nullptr;
 			return -1;
 		}
-		if(0!=m_sqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
+		if (0 != m_sqlParser->LoadParseTreeFromFile(sqlParserTreeFile))
 		{
 			delete m_sqlParser;
 			m_sqlParser = nullptr;
@@ -100,18 +100,18 @@ namespace META {
 	{
 		if (m_sqlParser != nullptr)
 			delete m_sqlParser;
-		for(dbTree::iterator iter = m_dbs.begin();iter!=m_dbs.end();iter++)
+		for (dbTree::iterator iter = m_dbs.begin(); iter != m_dbs.end(); iter++)
 			delete iter->second;
 		m_dbs.clear();
 	}
-	DLL_EXPORT tableMeta * metaDataCollection::get(const char * database, const char * table,
+	DLL_EXPORT tableMeta* metaDataCollection::get(const char* database, const char* table,
 		uint64_t originCheckPoint)
 	{
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
 		if (db == nullptr)
 			return nullptr;
-		dbInfo * currentDB = db->get(originCheckPoint);
+		dbInfo* currentDB = db->get(originCheckPoint);
 		if (currentDB == nullptr)
 			return nullptr;
 		MetaTimeline<tableMeta>* metas;
@@ -133,74 +133,74 @@ namespace META {
 		return currentDB->charset;
 	}
 
-	DLL_EXPORT tableMeta *metaDataCollection::getTableMetaFromRemote(uint64_t tableID) {
-		const char * metaRecord = nullptr;
+	DLL_EXPORT tableMeta* metaDataCollection::getTableMetaFromRemote(uint64_t tableID) {
+		const char* metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(tableID)); i++)
 		{
-			if (m_client->getStatus() ==CLIENT::client::IDLE)
+			if (m_client->getStatus() == CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
+			else if (m_client->getStatus() == CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
 		if (metaRecord == nullptr)
 			return nullptr;
 		DATABASE_INCREASE::TableMetaMessage msg(metaRecord);
-		tableMeta * meta = new tableMeta(&msg);
+		tableMeta* meta = new tableMeta(&msg);
 		put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, msg.head->logOffset);
 		return meta;
 	}
-	DLL_EXPORT tableMeta *metaDataCollection::getTableMetaFromRemote(const char * database, const char * table, uint64_t originCheckPoint) {
-		const char * metaRecord = nullptr;
-		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database, table,originCheckPoint)); i++)
+	DLL_EXPORT tableMeta* metaDataCollection::getTableMetaFromRemote(const char* database, const char* table, uint64_t originCheckPoint) {
+		const char* metaRecord = nullptr;
+		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askTableMeta(database, table, originCheckPoint)); i++)
 		{
-			if (m_client->getStatus() ==CLIENT::client::IDLE)
+			if (m_client->getStatus() == CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
+			else if (m_client->getStatus() == CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
 		if (metaRecord == nullptr)
 			return nullptr;
 		TableMetaMessage msg(metaRecord);
-		tableMeta * meta = new tableMeta(&msg);
+		tableMeta* meta = new tableMeta(&msg);
 		put(meta->m_dbName.c_str(), meta->m_tableName.c_str(), meta, msg.head->logOffset);
 		return meta;
 	}
-	dbInfo *metaDataCollection::getDatabaseMetaFromRemote(uint64_t databaseID) {
-		const char * metaRecord = nullptr;
+	dbInfo* metaDataCollection::getDatabaseMetaFromRemote(uint64_t databaseID) {
+		const char* metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askDatabaseMeta(databaseID)); i++)
 		{
-			if (m_client->getStatus() ==CLIENT::client::IDLE)
+			if (m_client->getStatus() == CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
+			else if (m_client->getStatus() == CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
 		if (metaRecord == nullptr)
 			return nullptr;
 		DATABASE_INCREASE::DatabaseMetaMessage msg(metaRecord);
-		dbInfo * meta = new dbInfo(m_nameCompare);
+		dbInfo* meta = new dbInfo(m_nameCompare);
 		meta->charset = &charsets[msg.charsetID];
 		meta->name = msg.dbName;
 		meta->m_id = msg.id;
 		put(meta->name.c_str(), msg.head->logOffset, meta);
 		return meta;
 	}
-	dbInfo *metaDataCollection::getDatabaseMetaFromRemote(const char * dbName, uint64_t offset) {
-		const char * metaRecord = nullptr;
+	dbInfo* metaDataCollection::getDatabaseMetaFromRemote(const char* dbName, uint64_t offset) {
+		const char* metaRecord = nullptr;
 		for (int i = 0; i < 10 && nullptr == (metaRecord = m_client->askDatabaseMeta(dbName, offset)); i++)
 		{
-			if (m_client->getStatus() ==CLIENT::client::IDLE)
+			if (m_client->getStatus() == CLIENT::client::IDLE)
 				return nullptr;
-			else if (m_client->getStatus() ==CLIENT::client::DISCONNECTED)
+			else if (m_client->getStatus() == CLIENT::client::DISCONNECTED)
 				m_client->connect();
 			std::this_thread::yield();
 		}
 		if (metaRecord == nullptr)
 			return nullptr;
 		DATABASE_INCREASE::DatabaseMetaMessage msg(metaRecord);
-		dbInfo * meta = new dbInfo(m_nameCompare);
+		dbInfo* meta = new dbInfo(m_nameCompare);
 		meta->charset = &charsets[msg.charsetID];
 		meta->name = msg.dbName;
 		meta->m_id = msg.id;
@@ -250,9 +250,9 @@ namespace META {
 				return currentDB;
 		}
 	}
-	DLL_EXPORT tableMeta *metaDataCollection::get(uint64_t tableID) {
-		tableMeta * meta = m_allTables.get(tableID);
-		if (meta!=nullptr)
+	DLL_EXPORT tableMeta* metaDataCollection::get(uint64_t tableID) {
+		tableMeta* meta = m_allTables.get(tableID);
+		if (meta != nullptr)
 			return meta;
 		if (m_client)
 		{
@@ -267,14 +267,14 @@ namespace META {
 	DLL_EXPORT tableMeta* metaDataCollection::getPrevVersion(uint64_t tableID) {
 		return m_allTables.getPrevVersion(tableID);
 	}
-	int metaDataCollection::put(const char * database, uint64_t offset, dbInfo *dbmeta)
+	int metaDataCollection::put(const char* database, uint64_t offset, dbInfo* dbmeta)
 	{
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
 		if (db == nullptr)
 		{
-			db = new MetaTimeline<dbInfo>(offset,database);
-			db->put(dbmeta,offset);
+			db = new MetaTimeline<dbInfo>(offset, database);
+			db->put(dbmeta, offset);
 			barrier;
 			if (!m_dbs.insert(std::pair<const char*, MetaTimeline<dbInfo>*>(db->getName().c_str(), db)).second)
 			{
@@ -305,10 +305,10 @@ namespace META {
 		return 0;
 	}
 
-	DLL_EXPORT int metaDataCollection::put(const char * database, const char * table,
-		tableMeta * meta, uint64_t originCheckPoint)
+	DLL_EXPORT int metaDataCollection::put(const char* database, const char* table,
+		tableMeta* meta, uint64_t originCheckPoint)
 	{
-		dbInfo * currentDB = nullptr;
+		dbInfo* currentDB = nullptr;
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(database, db);
 		bool newMeta = false;
@@ -324,7 +324,7 @@ namespace META {
 			}
 			else
 			{
-				LOG(ERROR) << "unknown database:"<< database;
+				LOG(ERROR) << "unknown database:" << database;
 				return -1;
 			}
 		}
@@ -335,7 +335,7 @@ namespace META {
 		if (metas == nullptr)
 		{
 			newMeta = true;
-			metas = new MetaTimeline<tableMeta>(m_maxTableId++,table);
+			metas = new MetaTimeline<tableMeta>(m_maxTableId++, table);
 		}
 		if (meta == nullptr)
 		{
@@ -359,7 +359,7 @@ namespace META {
 		}
 		return 0;
 	}
-	int metaDataCollection::createDatabase(const ddl* database,uint64_t originCheckPoint)
+	int metaDataCollection::createDatabase(const ddl* database, uint64_t originCheckPoint)
 	{
 		if (getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint) != nullptr)
 		{
@@ -394,7 +394,7 @@ namespace META {
 			return 0;
 		}
 	}
-	int metaDataCollection::dropDatabase(const ddl* database,uint64_t originCheckPoint)
+	int metaDataCollection::dropDatabase(const ddl* database, uint64_t originCheckPoint)
 	{
 		MetaTimeline<dbInfo>* db;
 		getDbInfo(static_cast<const dataBaseDDL*>(database)->name.c_str(), db);
@@ -424,7 +424,7 @@ namespace META {
 			}
 			meta->m_dbName = table->usedDb;
 		}
-		dbInfo* currentDb = getDatabase(meta->m_dbName.c_str(),originCheckPoint);
+		dbInfo* currentDb = getDatabase(meta->m_dbName.c_str(), originCheckPoint);
 		if (currentDb == nullptr)
 		{
 			LOG(ERROR) << "unknown database :" << meta->m_dbName;
@@ -456,7 +456,7 @@ namespace META {
 			{
 				std::list<std::string> uk;
 				uk.push_back(meta->m_columns[idx].m_columnName);
-				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(),uk,KEY_TYPE::UNIQUE_KEY))
+				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), uk, KEY_TYPE::UNIQUE_KEY))
 				{
 					delete meta;
 					LOG(ERROR) << "create table failed for add unique key failed";
@@ -467,14 +467,14 @@ namespace META {
 			{
 				std::list<std::string> index;
 				index.push_back(meta->m_columns[idx].m_columnName);
-				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), index,KEY_TYPE::INDEX))
+				if (0 != meta->addIndex(meta->m_columns[idx].m_columnName.c_str(), index, KEY_TYPE::INDEX))
 				{
 					delete meta;
 					LOG(ERROR) << "create table failed for add index failed";
 					return -1;
 				}
 			}
-			if (columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].stringType && meta->m_columns[idx].m_charset == nullptr)
+			if (columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].stringType&& meta->m_columns[idx].m_charset == nullptr)
 				meta->m_columns[idx].m_charset = meta->m_charset;
 		}
 		if (!table->primaryKey.columnNames.empty())
@@ -488,7 +488,7 @@ namespace META {
 		}
 		for (std::list<addKey>::const_iterator iter = table->uniqueKeys.begin(); iter != table->uniqueKeys.end(); iter++)
 		{
-			if (0 != meta->addIndex((*iter).name.c_str(),(*iter).columnNames,KEY_TYPE::UNIQUE_KEY))
+			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames, KEY_TYPE::UNIQUE_KEY))
 			{
 				delete meta;
 				LOG(ERROR) << "create table failed for add unique key failed";
@@ -497,7 +497,7 @@ namespace META {
 		}
 		for (std::list<addKey>::const_iterator iter = table->indexs.begin(); iter != table->indexs.end(); iter++)
 		{
-			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames,KEY_TYPE::INDEX))
+			if (0 != meta->addIndex((*iter).name.c_str(), (*iter).columnNames, KEY_TYPE::INDEX))
 			{
 				delete meta;
 				LOG(ERROR) << "create table failed for add index failed";
@@ -517,7 +517,7 @@ namespace META {
 	int metaDataCollection::createTableLike(const ddl* tableDDL, uint64_t originCheckPoint)
 	{
 		const struct createTableLike* table = static_cast<const struct createTableLike*>(tableDDL);
-		const char* db = table->likedTable.database.empty()?(table->usedDb.empty()?nullptr: table->usedDb.c_str()): table->likedTable.database.c_str();
+		const char* db = table->likedTable.database.empty() ? (table->usedDb.empty() ? nullptr : table->usedDb.c_str()) : table->likedTable.database.c_str();
 		if (db == nullptr)
 		{
 			LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
@@ -541,7 +541,7 @@ namespace META {
 			return -1;
 		}
 
-		tableMeta *meta = new tableMeta(srcTable->m_nameCompare.caseSensitive);
+		tableMeta* meta = new tableMeta(srcTable->m_nameCompare.caseSensitive);
 		*meta = *srcTable;
 		meta->m_dbName.assign(db);
 		meta->m_tableName.assign(table->table.table);
@@ -569,7 +569,7 @@ namespace META {
 		return 0;
 	}
 
-	int metaDataCollection::dropTable(const char * database,const char * table,uint64_t originCheckPoint)
+	int metaDataCollection::dropTable(const char* database, const char* table, uint64_t originCheckPoint)
 	{
 		if (database == nullptr)
 		{
@@ -578,12 +578,12 @@ namespace META {
 		}
 		if (get(database, table, originCheckPoint) == nullptr)
 		{
-			LOG(ERROR) << "drop table failed for :" << database << "." << table<<" not exists";
+			LOG(ERROR) << "drop table failed for :" << database << "." << table << " not exists";
 			return -1;
 		}
 		if (put(database, table, nullptr, originCheckPoint) != 0)
 		{
-			LOG(ERROR) << "drop table " << database << "." << table<< " failed";
+			LOG(ERROR) << "drop table " << database << "." << table << " failed";
 			return -1;
 		}
 		return 0;
@@ -597,7 +597,7 @@ namespace META {
 			return -1;
 		}
 		if (m_nameCompare.compare(srcDatabase, destDatabase) == 0 &&
-			m_nameCompare.compare(srcTable, destTable) != 0&&
+			m_nameCompare.compare(srcTable, destTable) != 0 &&
 			get(destDatabase, destTable) != nullptr)
 		{
 			LOG(ERROR) << "rename table failed for dest table exist";
@@ -623,7 +623,7 @@ namespace META {
 		assert(tables->src.size() == tables->dest.size());
 		std::list<tableName>::const_iterator src = tables->src.begin(), dest = tables->dest.begin();
 
-		for (;src!=tables->src.end(); src++)
+		for (; src != tables->src.end(); src++)
 		{
 			const char* db, * destDb;
 			if ((*src).database.empty())
@@ -652,7 +652,7 @@ namespace META {
 
 			if (get(db, (*src).table.c_str()) == nullptr)
 			{
-				LOG(ERROR) << "rename table failed for "<< (*src).table <<" not exist,ddl:" << tableDDL->rawDdl;
+				LOG(ERROR) << "rename table failed for " << (*src).table << " not exist,ddl:" << tableDDL->rawDdl;
 				return -1;
 			}
 			if (getDatabase(destDb) == nullptr)
@@ -680,7 +680,7 @@ namespace META {
 				destDb = tables->usedDb.c_str();
 			else
 				destDb = (*dest).database.c_str();
-			renameTable(db, (*src).table.c_str(), destDb, (*dest).table.c_str(),originCheckPoint);
+			renameTable(db, (*src).table.c_str(), destDb, (*dest).table.c_str(), originCheckPoint);
 			dest++;
 		}
 		return 0;
@@ -703,9 +703,9 @@ namespace META {
 		tableMeta* newVersion = new tableMeta(meta->m_nameCompare.caseSensitive);
 		int ret = 0;
 		if (table->index.type == ALTER_TABLE_ADD_UNIQUE_KEY)
-			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames,KEY_TYPE::UNIQUE_KEY);
+			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames, KEY_TYPE::UNIQUE_KEY);
 		else
-			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames,KEY_TYPE::INDEX);
+			ret = newVersion->addIndex(table->index.name.c_str(), table->index.columnNames, KEY_TYPE::INDEX);
 		if (ret != 0)
 		{
 			delete newVersion;
@@ -739,14 +739,14 @@ namespace META {
 		int ret = 0;
 		if (newVersion->getIndex(table->name.c_str()) != nullptr)
 			ret = newVersion->dropIndex(table->name.c_str());
-		else if(newVersion->getUniqueKey(table->name.c_str()) != nullptr)
+		else if (newVersion->getUniqueKey(table->name.c_str()) != nullptr)
 			ret = newVersion->dropUniqueKey(table->name.c_str());
 		else
 		{
 			LOG(ERROR) << "drop index failed for index not exist";
 			delete newVersion;
 			return -1;
-		}		
+		}
 		if (ret != 0)
 		{
 			delete newVersion;
@@ -787,7 +787,7 @@ namespace META {
 			case ALTER_TABLE_RENAME:
 			{
 				const alterRenameTable* dest = static_cast<const alterRenameTable*>(*iter);
-				const char* destDatabase = dest->destTable.database.empty() ? (table->usedDb.empty()?nullptr: table->usedDb.c_str()) : dest->destTable.database.c_str();
+				const char* destDatabase = dest->destTable.database.empty() ? (table->usedDb.empty() ? nullptr : table->usedDb.c_str()) : dest->destTable.database.c_str();
 				if (destDatabase == nullptr)
 				{
 					LOG(ERROR) << "no database selected for ddl:" << tableDDL->rawDdl;
@@ -834,7 +834,7 @@ namespace META {
 				ret = newVersion->dropColumn(static_cast<const struct dropColumn*>(*iter)->columnName.c_str());
 				break;
 			case ALTER_TABLE_ADD_INDEX:
-				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames,KEY_TYPE::INDEX);
+				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames, KEY_TYPE::INDEX);
 				break;
 			case ALTER_TABLE_DROP_INDEX:
 				ret = newVersion->dropIndex(static_cast<const struct dropKey*>(*iter)->name.c_str());
@@ -843,7 +843,7 @@ namespace META {
 				ret = newVersion->renameIndex(static_cast<const struct renameKey*>(*iter)->srcKeyName.c_str(), static_cast<const struct renameKey*>(*iter)->destKeyName.c_str());
 				break;
 			case ALTER_TABLE_ADD_UNIQUE_KEY:
-				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames,KEY_TYPE::UNIQUE_KEY);
+				ret = newVersion->addIndex(static_cast<const struct addKey*>(*iter)->name.c_str(), static_cast<const struct addKey*>(*iter)->columnNames, KEY_TYPE::UNIQUE_KEY);
 				break;
 			case ALTER_TABLE_DROP_UNIQUE_KEY:
 				ret = newVersion->dropUniqueKey(static_cast<const struct dropKey*>(*iter)->name.c_str());
@@ -867,7 +867,7 @@ namespace META {
 			if (ret != 0)
 				break;
 		}
-			
+
 		if (ret == 0)
 		{
 			if (0 != put(newVersion->m_dbName.c_str(), newVersion->m_tableName.c_str(), newVersion, originCheckPoint))
@@ -926,25 +926,25 @@ namespace META {
 		}
 		default:
 		{
-			LOG(ERROR) << "unknown ddl type:"<<ddl->m_type<<",query is:"<<ddl->rawDdl;
+			LOG(ERROR) << "unknown ddl type:" << ddl->m_type << ",query is:" << ddl->rawDdl;
 			return -1;
 		}
 		}
 	}
 
-	DLL_EXPORT int metaDataCollection::processDDL(const char * ddl, const char * database,uint64_t originCheckPoint)
+	DLL_EXPORT int metaDataCollection::processDDL(const char* ddl, const char* database, uint64_t originCheckPoint)
 	{
-		handle * h = nullptr;
-		if (OK != m_sqlParser->parse(h, database,ddl))
+		handle* h = nullptr;
+		if (OK != m_sqlParser->parse(h, database, ddl))
 		{
-			LOG(ERROR)<<"parse ddl :"<<ddl<<" failed";
+			LOG(ERROR) << "parse ddl :" << ddl << " failed";
 			return -1;
 		}
-		handle * currentHandle = h;
+		handle* currentHandle = h;
 		while (currentHandle != nullptr)
 		{
 			const struct ddl* ddlInfo = static_cast<const struct ddl*>(currentHandle->userData);
-			if(ddlInfo!=nullptr)
+			if (ddlInfo != nullptr)
 				processDDL(ddlInfo, originCheckPoint);
 			currentHandle = currentHandle->next;
 		}
@@ -953,16 +953,16 @@ namespace META {
 	}
 	DLL_EXPORT int metaDataCollection::purge(uint64_t originCheckPoint)
 	{
-		for (dbTree::iterator iter = m_dbs.begin(); iter!=m_dbs.end(); iter++)
+		for (dbTree::iterator iter = m_dbs.begin(); iter != m_dbs.end(); iter++)
 		{
 			MetaTimeline<dbInfo>* db = iter->second;
 			if (db == nullptr)
 				continue;
 			db->purge(originCheckPoint);
-			dbInfo * dbMeta = db->get(0xffffffffffffffffULL);
+			dbInfo* dbMeta = db->get(0xffffffffffffffffULL);
 			if (dbMeta == nullptr)
 				continue;
-			for (tbTree::iterator titer = dbMeta->tables.begin(); titer!=dbMeta->tables.begin(); titer++)
+			for (tbTree::iterator titer = dbMeta->tables.begin(); titer != dbMeta->tables.begin(); titer++)
 			{
 				MetaTimeline<tableMeta>* table = titer->second;
 				if (table == nullptr)

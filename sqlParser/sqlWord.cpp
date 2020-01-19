@@ -199,7 +199,7 @@ namespace SQL_PARSER {
 		const char* nameEnd;
 		uint16_t nameSize[3] = { 0 };
 		SQLColumnNameValue* value = MATCH;
-		if (!getName(p, nameStart[0], nameSize[0], nameEnd,quote))
+		if (!getName(p, nameStart[0], nameSize[0], nameEnd, quote))
 		{
 #ifdef DEBUG
 			LOG(ERROR) << m_comment << " do not match " << sql;
@@ -212,7 +212,7 @@ namespace SQL_PARSER {
 			if (!getName(p, nameStart[1], nameSize[1], nameEnd, quote))
 			{
 #ifdef DEBUG
-			LOG(ERROR) << m_comment << " do not match " << sql;
+				LOG(ERROR) << m_comment << " do not match " << sql;
 #endif
 				return NOT_MATCH_PTR;
 			}
@@ -889,7 +889,7 @@ namespace SQL_PARSER {
 	SQLValue* SQLWordExpressions::matchValue(const char*& sql, bool needValue, std::stack<SQLOperatorValue*>& opStack, std::list<SQLValue*>& valueList)
 	{
 		SQLValue* value;
-		if (opStack.size()>0&& (opStack.top()->opera== IN_|| opStack.top()->opera == NOT_IN)&&(value = this->valueList->match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
+		if (opStack.size() > 0 && (opStack.top()->opera == IN_ || opStack.top()->opera == NOT_IN) && (value = this->valueList->match(nullptr, sql, needValue)) != NOT_MATCH_PTR)
 		{
 			if (opStack.empty() || (opStack.top()->opera != IN_ && opStack.top()->opera != NOT_IN))
 			{
@@ -955,7 +955,7 @@ namespace SQL_PARSER {
 			if (operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
 				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 			{
-				while (!opStack.empty() && operationInfos[opStack.top()->opera].type != LEFT_BRACKET&&operationInfos[opStack.top()->opera].priority <= operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
+				while (!opStack.empty() && operationInfos[opStack.top()->opera].type != LEFT_BRACKET && operationInfos[opStack.top()->opera].priority <= operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
 				{
 					valueList.push_back(opStack.top());
 					opStack.pop();
@@ -1047,11 +1047,11 @@ namespace SQL_PARSER {
 					else
 						goto NOT_MATCH;
 				}
-				else if(*pos==')'&& bracketCount > 0)
+				else if (*pos == ')' && bracketCount > 0)
 				{
 					if (matchRBrac(pos, needValue, opStack, valueList) != NOT_MATCH_PTR)
 						bracketCount--;
-					else 
+					else
 						goto NOT_MATCH;
 				}
 				else
@@ -1083,12 +1083,12 @@ namespace SQL_PARSER {
 			((operationInfos[static_cast<SQLOperatorValue*>(value->valueStack[value->count - 1])->opera].optType == LOGIC) ^ logicOrMath)
 			|| !value->check())
 		{
-			LOG(ERROR)<<"exp check failed";
+			LOG(ERROR) << "exp check failed";
 			delete value;
 			return NOT_MATCH_PTR;
 		}
 		sql = pos;
-		if(needValue)
+		if (needValue)
 			value->ref++;
 		if (m_parser != nullptr)
 			value->ref++;
@@ -1159,7 +1159,7 @@ namespace SQL_PARSER {
 			{
 				if (sfv != nullptr)
 					sfv->argvs.push_back(value);
-				else if(value!=nullptr)
+				else if (value != nullptr)
 					delete value;
 			}
 			else

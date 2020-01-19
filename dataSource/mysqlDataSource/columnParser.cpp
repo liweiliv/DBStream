@@ -10,7 +10,6 @@
 #include <float.h>
 #include <mysql.h>
 #include "columnParser.h"
-//#include "mysql/decimal.h"
 #include "util/itoaSse.h"
 #include "util/dtoa.h"
 #include "util/likely.h"
@@ -44,9 +43,9 @@ namespace DATA_SOURCE {
 			: (((int32_t)A[2]) << 16) | (((int32_t)A[1]) << 8) |
 			((int32_t)A[0])));
 	}
-	#define MAX_DECPT_FOR_F_FORMAT DBL_DIG
+#define MAX_DECPT_FOR_F_FORMAT DBL_DIG
 
-	#define MY_GCVT_MAX_FIELD_WIDTH \
+#define MY_GCVT_MAX_FIELD_WIDTH \
 		(DBL_DIG + 4 + (5>MAX_DECPT_FOR_F_FORMAT?5:MAX_DECPT_FOR_F_FORMAT))
 
 
@@ -97,7 +96,7 @@ namespace DATA_SOURCE {
 			((uint32_t)(A[1]) << 8) | ((uint32_t)(A[2]))));
 	}
 	static inline uint32_t mi_uint3korr(const uint8_t* A) {
-		 return (uint32_t)((uint32_t)A[2] + ((uint32_t)A[1] << 8) + ((uint32_t)A[0] << 16));
+		return (uint32_t)((uint32_t)A[2] + ((uint32_t)A[1] << 8) + ((uint32_t)A[0] << 16));
 	}
 
 	static inline int32_t mi_sint4korr(const uint8_t* A) {
@@ -127,7 +126,7 @@ namespace DATA_SOURCE {
   @param   dec  Precision.
   @return       Packed numeric time representation.
 */
-	void my_time_packed_from_binary(const uint8_t* ptr, uint32_t dec,int64_t &intpart,int & frac) {
+	void my_time_packed_from_binary(const uint8_t* ptr, uint32_t dec, int64_t& intpart, int& frac) {
 		assert(dec <= DATETIME_MAX_DECIMALS);
 		intpart = 0;
 		frac = 0;
@@ -139,8 +138,8 @@ namespace DATA_SOURCE {
 		}
 		case 1:
 		case 2: {
-			 intpart = mi_uint3korr(ptr) - TIMEF_INT_OFS;
-			 frac = static_cast<uint32_t>(ptr[3]);
+			intpart = mi_uint3korr(ptr) - TIMEF_INT_OFS;
+			frac = static_cast<uint32_t>(ptr[3]);
 			if (intpart < 0 && frac) {
 				/*
 				   Negative values are stored with
@@ -193,15 +192,15 @@ namespace DATA_SOURCE {
 		}
 		}
 	}
-	#define NOT_FIXED_DEC 31
+#define NOT_FIXED_DEC 31
 
-	#define DIG_PER_DEC1 9
+#define DIG_PER_DEC1 9
 
 	static const int dig2bytes[DIG_PER_DEC1 + 1] = { 0, 1, 1, 2, 2, 3, 3, 4, 4, 4 };
 
 	static const uint32_t digMasks[DIG_PER_DEC1 + 1] = { 0,0xff, 0xff, 0xffff, 0xffff, 0xffffff, 0xffffff, 0xffffffff, 0xffffffff, 0xffffffff };
 
-	#define DATETIMEF_INT_OFS 0x8000000000LL
+#define DATETIMEF_INT_OFS 0x8000000000LL
 
 
 
@@ -326,8 +325,8 @@ namespace DATA_SOURCE {
 		data += 8;
 		return 0;
 	}
-	static char zeroBuffer[] = {'0','0','0','0','0','0','0','0','0','0'};
-	inline int32_t getPartNumberFromDecimal(uint8_t size,const char* data)
+	static char zeroBuffer[] = { '0','0','0','0','0','0','0','0','0','0' };
+	inline int32_t getPartNumberFromDecimal(uint8_t size, const char* data)
 	{
 		switch (size)
 		{
@@ -344,90 +343,90 @@ namespace DATA_SOURCE {
 		}
 	}
 
-	static inline int  parseDecimalToString(const char*& data,char * to,uint8_t prec,uint8_t scale)
+	static inline int  parseDecimalToString(const char*& data, char* to, uint8_t prec, uint8_t scale)
 	{
 
 		int32_t mask = ((*(uint8_t*)data) & 0x80) ? 0 : -1;
 		uint8_t intSize = prec - scale;
-		char * pos = to;
-		uint8_t intFullPartSize = intSize/9,intFirstPartNumSize = intSize - intFullPartSize*9,intFirstPartSize = dig2bytes[intFirstPartNumSize];
-		uint8_t fracFullPartSize = scale/9,fracFirstPartNumSize  = scale - fracFullPartSize*9,fracFirstPartSize = dig2bytes[fracFirstPartNumSize];
-		bool sign = !(data[0]&0x80);
+		char* pos = to;
+		uint8_t intFullPartSize = intSize / 9, intFirstPartNumSize = intSize - intFullPartSize * 9, intFirstPartSize = dig2bytes[intFirstPartNumSize];
+		uint8_t fracFullPartSize = scale / 9, fracFirstPartNumSize = scale - fracFullPartSize * 9, fracFirstPartSize = dig2bytes[fracFirstPartNumSize];
+		bool sign = !(data[0] & 0x80);
 
-		if(!sign)
+		if (!sign)
 			((uint8_t*)data)[0] &= (~0x80);
 		else
 			((uint8_t*)data)[0] |= 0x80;
 
-		if(sign)
+		if (sign)
 			*pos++ = '-';
 
 		int num = 0;
 		bool isZero = true;
 
-		if(intFirstPartSize>0)
+		if (intFirstPartSize > 0)
 		{
-			num = (getPartNumberFromDecimal(intFirstPartSize,data)^mask)&digMasks[intFirstPartNumSize];
-			if(num != 0)
+			num = (getPartNumberFromDecimal(intFirstPartSize, data) ^ mask) & digMasks[intFirstPartNumSize];
+			if (num != 0)
 			{
 				pos += i32toa_sse2(num, pos) - 1;
 				isZero = false;
 			}
 			data += intFirstPartSize;
 		}
-		for(uint8_t i=0 ; i < intFullPartSize ; i++)
+		for (uint8_t i = 0; i < intFullPartSize; i++)
 		{
-			if(0!=(num = (mi_sint4korr((const uint8_t*)data))^ mask))
+			if (0 != (num = (mi_sint4korr((const uint8_t*)data)) ^ mask))
 			{
-				if(isZero)
+				if (isZero)
 				{
 					pos += i32toa_sse2(num, pos) - 1;
 					isZero = false;
 				}
 				else
 				{
-					uint8_t len = i32toa_sse2b(num,pos+9) - 1;
-					if(len!=9&&(i>0||intFirstPartSize>0))
-						memcpy(pos,zeroBuffer,9-len);
+					uint8_t len = i32toa_sse2b(num, pos + 9) - 1;
+					if (len != 9 && (i > 0 || intFirstPartSize > 0))
+						memcpy(pos, zeroBuffer, 9 - len);
 					pos += 9;
 				}
 			}
-			else if(!isZero)
+			else if (!isZero)
 			{
-				memcpy(pos,zeroBuffer,9);
+				memcpy(pos, zeroBuffer, 9);
 				pos += 9;
 			}
 			data += 4;
 		}
-		if(isZero)
+		if (isZero)
 			*pos++ = '0';
-		if(scale > 0)
+		if (scale > 0)
 		{
-			*pos++ ='.';
-			for(uint8_t i=0 ; i < fracFullPartSize ; i++)
+			*pos++ = '.';
+			for (uint8_t i = 0; i < fracFullPartSize; i++)
 			{
-				if(0!=(num = (mi_sint4korr((const uint8_t*)data)^ mask)))
+				if (0 != (num = (mi_sint4korr((const uint8_t*)data) ^ mask)))
 				{
-					uint8_t len = i32toa_sse2b(num,pos+9) - 1;
-					memcpy(pos,zeroBuffer,9-len);
+					uint8_t len = i32toa_sse2b(num, pos + 9) - 1;
+					memcpy(pos, zeroBuffer, 9 - len);
 				}
 				else
 				{
-					memcpy(pos,zeroBuffer,9);
+					memcpy(pos, zeroBuffer, 9);
 				}
 				pos += 9;
 				data += 4;
 			}
-			if(fracFirstPartSize>0)
+			if (fracFirstPartSize > 0)
 			{
-				if(0!=(num = (getPartNumberFromDecimal(fracFirstPartSize,data)^mask)&digMasks[intFirstPartNumSize]))
+				if (0 != (num = (getPartNumberFromDecimal(fracFirstPartSize, data) ^ mask) & digMasks[intFirstPartNumSize]))
 				{
-					uint8_t len = i32toa_sse2b(num,pos+fracFirstPartNumSize) - 1;
-					memcpy(pos,zeroBuffer,fracFirstPartNumSize-len);
+					uint8_t len = i32toa_sse2b(num, pos + fracFirstPartNumSize) - 1;
+					memcpy(pos, zeroBuffer, fracFirstPartNumSize - len);
 				}
 				else
 				{
-					memcpy(pos,zeroBuffer,fracFirstPartNumSize);
+					memcpy(pos, zeroBuffer, fracFirstPartNumSize);
 				}
 				pos += fracFirstPartNumSize;
 				data += fracFirstPartSize;
@@ -445,8 +444,8 @@ namespace DATA_SOURCE {
 			buffer = record->allocVarColumn();
 		else
 			buffer = record->allocVardUpdatedColumn();
-		uint16_t length = parseDecimalToString(data,buffer,colMeta->m_precision,colMeta->m_decimals);
-		if(newOrOld)
+		uint16_t length = parseDecimalToString(data, buffer, colMeta->m_precision, colMeta->m_decimals);
+		if (newOrOld)
 			record->filledVarColumns(colMeta->m_columnIndex, length);
 		else
 			record->filledVardUpdatedColumn(colMeta->m_columnIndex, length);
@@ -455,10 +454,10 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_TIMESTAMP(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if(newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data,0));
+		if (newOrOld)
+			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data, 0));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data,0));
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data, 0));
 		data += 4;
 		return 0;
 	}
@@ -471,7 +470,7 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_TIMESTAMP2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		uint32_t seconds,nanoSeconds = 0;
+		uint32_t seconds, nanoSeconds = 0;
 		assert(colMeta->m_precision <= DATETIME_MAX_DECIMALS);
 		seconds = mi_uint4korr((const uint8_t*)data);
 		switch (colMeta->m_precision) {
@@ -491,9 +490,9 @@ namespace DATA_SOURCE {
 			nanoSeconds = mi_sint3korr((uint8_t*)data + 4) * 1000;
 		}
 		if (newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds,nanoSeconds));
+			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds, nanoSeconds));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds,nanoSeconds));
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds, nanoSeconds));
 
 		data += my_timestamp_binary_length(colMeta->m_precision);
 		return 0;
@@ -554,7 +553,7 @@ namespace DATA_SOURCE {
 		int64_t intpart;
 		int frac;
 		my_time_packed_from_binary((const uint8_t*)data, colMeta->m_decimals, intpart, frac);
-		bool neg = intpart < 0 ? (intpart = -intpart, true): false;
+		bool neg = intpart < 0 ? (intpart = -intpart, true) : false;
 		int32_t hour = (intpart >> 12) % (1 << 10);
 		if (neg)
 			hour = -hour;
@@ -591,21 +590,21 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_STRING(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if(colMeta->m_size>=0xffu)
+		if (colMeta->m_size >= 0xffu)
 		{
 			if (newOrOld)
-				record->setVarColumn(colMeta->m_columnIndex, data+2, *(uint16_t*)data);
+				record->setVarColumn(colMeta->m_columnIndex, data + 2, *(uint16_t*)data);
 			else
-				record->setVardUpdatedColumn(colMeta->m_columnIndex, data+2, *(uint16_t*)data);
-			data += (*(uint16_t*)data)+2;
+				record->setVardUpdatedColumn(colMeta->m_columnIndex, data + 2, *(uint16_t*)data);
+			data += (*(uint16_t*)data) + 2;
 		}
 		else
 		{
 			if (newOrOld)
-				record->setVarColumn(colMeta->m_columnIndex, data+1, *(uint8_t*)data);
+				record->setVarColumn(colMeta->m_columnIndex, data + 1, *(uint8_t*)data);
 			else
-				record->setVardUpdatedColumn(colMeta->m_columnIndex, data+1, *(uint8_t*)data);
-			data += (*(uint8_t*)data)+1;
+				record->setVardUpdatedColumn(colMeta->m_columnIndex, data + 1, *(uint8_t*)data);
+			data += (*(uint8_t*)data) + 1;
 		}
 		return 0;
 	}
@@ -622,7 +621,7 @@ namespace DATA_SOURCE {
 		uint8_t bitSize = (colMeta->m_size + 7) >> 3;
 		memcpy(&bitValue, data, bitSize);
 		bitValue >>= (64 - colMeta->m_size);
-		if(newOrOld)
+		if (newOrOld)
 			record->setFixedColumn(colMeta->m_columnIndex, bitValue);
 		else
 			record->setFixedUpdatedColumn(colMeta->m_columnIndex, bitValue);
@@ -665,7 +664,7 @@ namespace DATA_SOURCE {
 			data += 2;
 			break;
 		case MYSQL_TYPE_MEDIUM_BLOB:
-			size = uint3korr((const uint8_t * )data);
+			size = uint3korr((const uint8_t*)data);
 			data += 3;
 			break;
 		case MYSQL_TYPE_LONG_BLOB:
@@ -728,7 +727,7 @@ namespace DATA_SOURCE {
 			enumValueIndex = *(data);
 			data++;
 		}
-		if(newOrOld)
+		if (newOrOld)
 			record->setFixedColumn(colMeta->m_columnIndex, enumValueIndex);
 		else
 			record->setFixedUpdatedColumn(colMeta->m_columnIndex, enumValueIndex);
@@ -737,8 +736,8 @@ namespace DATA_SOURCE {
 	int parse_MYSQL_TYPE_GEOMETRY(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if(newOrOld)
-			record->setVarColumn(colMeta->m_columnIndex, data+sizeof(uint32_t), *(const uint32_t*)(data));
+		if (newOrOld)
+			record->setVarColumn(colMeta->m_columnIndex, data + sizeof(uint32_t), *(const uint32_t*)(data));
 		else
 			record->setVardUpdatedColumn(colMeta->m_columnIndex, data + sizeof(uint32_t), *(const uint32_t*)(data));
 		data += *(const uint32_t*)(data)+sizeof(uint32_t);
@@ -798,13 +797,13 @@ namespace DATA_SOURCE {
 	  @return  false on success, true on error
 	*/
 	static inline bool read_variable_length(const char* data, size_t data_length,
-		size_t * length, size_t * num)
+		size_t* length, size_t* num)
 	{
 		/*
 		  It takes five bytes to represent UINT_MAX32, which is the largest
 		  supported length, so don't look any further.
 		*/
-		const size_t max_bytes = data_length > 5 ? 5 : data_length; 
+		const size_t max_bytes = data_length > 5 ? 5 : data_length;
 
 		size_t len = 0;
 		for (size_t i = 0; i < max_bytes; i++)
@@ -910,16 +909,16 @@ namespace DATA_SOURCE {
 		{
 		case MYSQL_TYPE_NEWDECIMAL:
 		{
-			uint8_t prec = data[1+n];
+			uint8_t prec = data[1 + n];
 			int decim = data[1 + n + 1];
 			data += 1 + n + 2;
-			return parseDecimalToString(data,jsonStr,prec,decim);
+			return parseDecimalToString(data, jsonStr, prec, decim);
 		}
 
 		case MYSQL_TYPE_DATETIME:
 		case MYSQL_TYPE_TIMESTAMP:
 		{
-			uint64_t intpart = (*(uint64_t*)(data + 1 + n))>>24;
+			uint64_t intpart = (*(uint64_t*)(data + 1 + n)) >> 24;
 			int frac = (*(uint64_t*)(data + 1 + n)) & 0xffffff;
 			int64_t ymd = intpart >> 17;
 			int64_t hms = intpart % (1 << 17);
@@ -930,7 +929,7 @@ namespace DATA_SOURCE {
 			jsonStr[0] = '"'; /* purecov: inspected */
 			uint8_t size = tm.toString(jsonStr);
 			jsonStr[size] = '"';/* purecov: inspected */
-			return size+1;
+			return size + 1;
 		}
 		case MYSQL_TYPE_DATE:
 		{
@@ -951,7 +950,7 @@ namespace DATA_SOURCE {
 			int frac = (*(uint64_t*)(data + 1 + n)) & 0xffffff;
 			int64_t hms = intpart % (1 << 17);
 			META::dateTime tm;
-			tm.set(intpart>0?0:-1, 0, 0, static_cast<uint32_t>(hms >> 12),
+			tm.set(intpart > 0 ? 0 : -1, 0, 0, static_cast<uint32_t>(hms >> 12),
 				(hms >> 6) % (1 << 6), hms % (1 << 6), frac);
 			jsonStr[0] = '"'; /* purecov: inspected */
 			uint8_t size = tm.toTimeString(jsonStr);
@@ -1095,7 +1094,7 @@ namespace DATA_SOURCE {
 			jsonStrSize += 2;
 			if (object.values[i].type >= JSONB_TYPE_LITERAL && object.values[i].type <= maxInlineType)
 			{
-				if (0 > (subLength = parseJsonType[object.values[i].type]((const char*)& object.values[i].offset, sizeof(SIZE_TYPE), jsonStr + jsonStrSize)))
+				if (0 > (subLength = parseJsonType[object.values[i].type]((const char*)&object.values[i].offset, sizeof(SIZE_TYPE), jsonStr + jsonStrSize)))
 					return -1;
 				jsonStrSize += subLength;
 			}
@@ -1131,7 +1130,7 @@ namespace DATA_SOURCE {
 		{
 			if (array.values[i].type >= JSONB_TYPE_LITERAL && array.values[i].type <= maxInlineType)
 			{
-				if (0 > (subLength = parseJsonType[array.values[i].type]((const char*)& array.values[i].offset, sizeof(SIZE_TYPE), jsonStr + jsonStrSize)))
+				if (0 > (subLength = parseJsonType[array.values[i].type]((const char*)&array.values[i].offset, sizeof(SIZE_TYPE), jsonStr + jsonStrSize)))
 					return -1;
 				jsonStrSize += subLength;
 			}

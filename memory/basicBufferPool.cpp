@@ -2,13 +2,13 @@
 #ifndef ALIGN
 #define ALIGN(x, a)   (((x)+(a)-1)&~(a - 1))
 #endif
-DLL_EXPORT basicBufferPool::block::block(basicBufferPool * pool,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :next(nullptr),pool(pool),basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
+DLL_EXPORT basicBufferPool::block::block(basicBufferPool * pool,bufferBase * buffer,uint64_t _basicBlockSize, uint32_t _basicBlockCount, uint64_t _blockSize) :next(nullptr),pool(pool),basicBlockSize(_basicBlockSize + sizeof(basicBlock) - 1),
 	basicBlockCount(_basicBlockCount), blockSize(_blockSize)
 {
-	startPos = (char*)malloc(blockSize + 8);
-	alignedStartPos = (char*)ALIGN((uint64_t)startPos, 8);
+	startPos = buffer;
+	alignedStartPos = (char*)ALIGN((uint64_t)startPos->buffer, 8);
 	char* p = alignedStartPos;
-	while (p+basicBlockSize < startPos + blockSize)
+	while (p+basicBlockSize < startPos->buffer + blockSize)
 	{
 		basicBlock * b = (basicBlock*)p;
 		b->_block = this;
@@ -20,9 +20,9 @@ DLL_EXPORT basicBufferPool::block::block(basicBufferPool * pool,uint64_t _basicB
 }
 DLL_EXPORT basicBufferPool::block::~block()
 {
-	::free(startPos);
+	pool->nodeAllocer->free(startPos);
 }
-DLL_EXPORT basicBufferPool::basicBufferPool(uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize+sizeof(basicBlock)-1), maxMem(_maxMem), blockCount(0), starvation(0)
+DLL_EXPORT basicBufferPool::basicBufferPool(bufferBaseAllocer * nodeAllocer, uint64_t _basicBlockSize, uint64_t _maxMem) :basicBlockSize(_basicBlockSize+sizeof(basicBlock)-1), maxMem(_maxMem), blockCount(0), starvation(0), nodeAllocer(nodeAllocer)
 {
 	if (basicBlockSize <= 4096)
 	{
@@ -95,6 +95,7 @@ DLL_EXPORT void basicBufferPool::fillCache(basicBlock* basic)
 		m_globalCache.push(wrap);
 	}
 }
+
 DLL_EXPORT void basicBufferPool::cleanCache(cache * c)
 {
 	basicBlock* basic = c->caches.popAll();
@@ -183,7 +184,10 @@ DLL_EXPORT void * basicBufferPool::allocNewMem()
 		}
 		else
 		{
-			block * b = new block(this,basicBlockSize, basicBlockCount, blockSize);
+			bufferBase* buffer = nodeAllocer->alloc(basicBlockSize + 8);
+			if (buffer == nullptr)
+				return nullptr;
+			block * b = new block(this, buffer,basicBlockSize, basicBlockCount, blockSize);
 			b->pool = this;
 			basic = b->getBasicBlock();
 			fillCache(basic->next);

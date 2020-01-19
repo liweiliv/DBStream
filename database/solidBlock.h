@@ -45,7 +45,7 @@ namespace DATABASE
 		uint32_t* m_recordIdOrderyTable;
 		tableFullData* m_tables;
 		uint64_t* pageOffsets;
-		char * pageInfo;
+		char* pageInfo;
 		page** pages;
 		page* firstPage;
 		std::mutex m_fileLock;
@@ -56,31 +56,16 @@ namespace DATABASE
 		template <class T>
 		friend class solidBlockIndexIterator;
 	public:
-		solidBlock(uint32_t blockId,database* db, META::metaDataBaseCollection* metaDataCollection,uint32_t flag) :block(blockId,db, metaDataCollection,flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
-			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr),pages(nullptr), firstPage(nullptr)
+		solidBlock(uint32_t blockId, database* db, META::metaDataBaseCollection* metaDataCollection, uint32_t flag) :block(blockId, db, metaDataCollection, flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 		}
-		solidBlock(block * b) :block(b), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
-			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr),pages(nullptr), firstPage(nullptr)
+		solidBlock(block* b) :block(b), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 
 		}
-		~solidBlock()
-		{
-			assert(m_flag & BLOCK_FLAG_FLUSHED);
-			if(pages!=nullptr)
-			{
-				for (uint32_t i = 0; i < m_pageCount; i++)
-				{
-					if (pages[i] != nullptr)
-						m_database->freePage(pages[i]);
-				}
-				basicBufferPool::free(pages);
-			}
-			m_database->freePage(firstPage);
-			if (fileHandleValid(m_fd))
-				closeFile(m_fd);
-		}
+		~solidBlock();
 	public:
 		int load(int id = 0);
 	private:
@@ -93,7 +78,7 @@ namespace DATABASE
 		{
 			page* p = pages[pageId];
 			p->use();
-RETRY:
+		RETRY:
 			if (p->pageData == nullptr)
 			{
 				if (!p->_ref.own())
@@ -101,11 +86,11 @@ RETRY:
 					p->_ref.waitForShare();
 					goto RETRY;
 				}
-				if (unlikely(0 != loadPage(p,  pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512),ALIGN(pageOffsets[pageId], 512))))
+				if (unlikely(0 != loadPage(p, pageOffsets[pageId + 1] - ALIGN(pageOffsets[pageId], 512), ALIGN(pageOffsets[pageId], 512))))
 				{
 					p->_ref.share();
 					p->unuse();
-					LOG(ERROR)<<"load page "<<pageId<<" from block "<<m_blockID<<" at offset "<<ALIGN(pageOffsets[pageId], 512) <<" failed";
+					LOG(ERROR) << "load page " << pageId << " from block " << m_blockID << " at offset " << ALIGN(pageOffsets[pageId], 512) << " failed";
 					return nullptr;
 				}
 				else
@@ -118,34 +103,21 @@ RETRY:
 			return pageId(m_recordInfos[recordId].offset);
 		}
 		page* getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		inline char* getRecordByInnerId(uint32_t recordId)
-		{
-			if (recordId >= m_recordCount)
-				return nullptr;
-			uint16_t pId = pageId(m_recordInfos[recordId].offset);
-			page* p = getPage(pId);
-			if (unlikely(p == nullptr))
-				return nullptr;
-			const char * v =  getRecordFromPage(p,recordId);
-			char* newRecord = (char*)m_database->allocMem(((const DATABASE_INCREASE::minRecordHead*)v)->size);
-			memcpy(newRecord, v, ((const DATABASE_INCREASE::minRecordHead*)v)->size);
-			p->unuse();
-			return newRecord;
-		}
-		inline const char * getRecordFromPage(page* p,uint32_t recordId)
+		inline char* getRecordByInnerId(uint32_t recordId);
+		inline const char* getRecordFromPage(page* p, uint32_t recordId)
 		{
 			return p->pageData + offsetInPage(m_recordInfos[recordId].offset);
 		}
-public:
+	public:
 		inline const char* getRecord(uint64_t recordId)
 		{
 			return getRecordByInnerId(recordId - m_minRecordId - 1);
 		}
 		int writeToFile();
 		int loadFromFile();
-		int getTableIndexPageId(const tableDataInfo* tableInfo,const META::tableMeta* table, META::KEY_TYPE type, int keyId);
+		int getTableIndexPageId(const tableDataInfo* tableInfo, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 		int gc();
-		blockIndexIterator* createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId);
+		blockIndexIterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};
 #pragma pack()
@@ -159,15 +131,15 @@ public:
 	public:
 		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block)
 		{
-			memset(m_pageCache,0,sizeof(m_pageCache));
+			memset(m_pageCache, 0, sizeof(m_pageCache));
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 			begin();
 		}
 		~solidBlockIterator()
 		{
-			for(int i=0;i<SOLID_ITER_PAGE_CACHE_SIZE;i++)
+			for (int i = 0; i < SOLID_ITER_PAGE_CACHE_SIZE; i++)
 			{
-				if(m_pageCache[i]!=nullptr)
+				if (m_pageCache[i] != nullptr)
 				{
 					m_pageCache[i]->unuse();
 					m_pageCache[i] = nullptr;
@@ -219,24 +191,24 @@ public:
 	private:
 		inline const void* value(uint32_t rid)
 		{
-			uint32_t pageId = m_block->getPageId(rid),cacheId = pageId&SOLID_ITER_PAGE_CACHE_MASK;
-			if(likely(m_pageCache[cacheId] != nullptr))
+			uint32_t pageId = m_block->getPageId(rid), cacheId = pageId & SOLID_ITER_PAGE_CACHE_MASK;
+			if (likely(m_pageCache[cacheId] != nullptr))
 			{
-				if(m_pageCache[cacheId]->pageId != pageId)
+				if (m_pageCache[cacheId]->pageId != pageId)
 				{
 					m_pageCache[cacheId]->unuse();
-					if(nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
-							return nullptr;
+					if (nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
+						return nullptr;
 					m_pageCache[cacheId]->use();
 				}
 			}
 			else
 			{
-				if(nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
-						return nullptr;
+				if (nullptr == (m_pageCache[cacheId] = m_block->getPage(pageId)))
+					return nullptr;
 				m_pageCache[cacheId]->use();
 			}
-			return m_block->getRecordFromPage(m_pageCache[cacheId],rid);
+			return m_block->getRecordFromPage(m_pageCache[cacheId], rid);
 		}
 	public:
 		inline const void* value()
@@ -306,49 +278,49 @@ public:
 		page* m_currentPage;
 
 	public:
-		solidBlockIndexIterator(uint32_t flag,solidBlock* block, INDEX_TYPE &index):blockIndexIterator(flag, nullptr, block->m_blockID),m_block(block), m_index(index), m_currentPage(nullptr)
+		solidBlockIndexIterator(uint32_t flag, solidBlock* block, INDEX_TYPE& index) :blockIndexIterator(flag, nullptr, block->m_blockID), m_block(block), m_index(index), m_currentPage(nullptr)
 		{
 			switch (index.getType())
 			{
 			case META::COLUMN_TYPE::T_UNION:
 			{
-				indexIter = new solidIndexIterator<META::unionKey, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<META::unionKey, INDEX_TYPE>(flag, &m_index);
 				break;
 			}
 			case META::COLUMN_TYPE::T_INT8:
-				indexIter = new solidIndexIterator<int8_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<int8_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT8:
-				indexIter = new solidIndexIterator<uint8_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<uint8_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT16:
-				indexIter = new solidIndexIterator<int16_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<int16_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
-				indexIter = new solidIndexIterator<uint16_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<uint16_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT32:
-				indexIter = new solidIndexIterator<int32_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<int32_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_UINT32:
-				indexIter = new solidIndexIterator<uint32_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<uint32_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_INT64:
-				indexIter = new solidIndexIterator<int64_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<int64_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			case META::COLUMN_TYPE::T_UINT64:
-				indexIter = new solidIndexIterator<uint64_t, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<uint64_t, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_FLOAT:
-				indexIter = new solidIndexIterator<float, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<float, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_DOUBLE:
-				indexIter = new solidIndexIterator<double, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<double, INDEX_TYPE>(flag, &m_index);
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				indexIter = new solidIndexIterator<META::binaryType, INDEX_TYPE>(flag,&m_index);
+				indexIter = new solidIndexIterator<META::binaryType, INDEX_TYPE>(flag, &m_index);
 				break;
 			default:
 				abort();
@@ -375,7 +347,7 @@ public:
 		};
 		virtual status next()
 		{
-			if(increase())
+			if (increase())
 				return indexIter->prevKey() ? status::OK : status::ENDED;
 			else
 				return indexIter->nextKey() ? status::OK : status::ENDED;
@@ -384,7 +356,7 @@ public:
 		{
 			return indexIter->key();
 		}
-		virtual const void* value() 
+		virtual const void* value()
 		{
 			uint32_t recordId = indexIter->value();
 			uint32_t pageId = m_block->getPageId(recordId);
@@ -401,7 +373,7 @@ public:
 				m_currentPage = m_block->getPage(pageId);
 			if (m_currentPage == nullptr)
 				return nullptr;
-			return m_block->getRecordFromPage(m_currentPage,recordId);
+			return m_block->getRecordFromPage(m_currentPage, recordId);
 		}
 		virtual bool end()
 		{

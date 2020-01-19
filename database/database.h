@@ -24,6 +24,7 @@
 #include "thread/threadPool.h"
 #include "globalInfo/global.h"
 #include "util/valgrindTestUtil.h"
+#include "statistic.h"
 namespace DATABASE
 {
 	constexpr auto C_STORE_SCTION = "store";
@@ -98,12 +99,14 @@ namespace DATABASE
 		std::atomic_int m_currentFlushThreadCount;
 		uint64_t m_recordId;
 		uint64_t m_tnxId;
+
+		statistic m_statistic;
 	public:
 		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
 		DLL_EXPORT ~database();
 		DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 	private:
-		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t,block*> &recoveried);
+		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t, block*>& recoveried);
 		int pickRedo(std::map<uint32_t, block*>& recoveried, block* from, block* to);
 		block* getBlock(uint32_t blockId);
 		int checkSolidBlock(block* b);
@@ -118,6 +121,7 @@ namespace DATABASE
 		int removeBlock(block* b);
 		static void purgeThread(database* m);
 	public:
+		DLL_EXPORT const statistic* getStatistic();
 		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
 		DLL_EXPORT inline void begin()
 		{
@@ -125,9 +129,9 @@ namespace DATABASE
 				m_tnxId++;
 		}
 		DLL_EXPORT void commit();
-		DLL_EXPORT inline void genBlockFileName(uint64_t id,char *fileName)
+		DLL_EXPORT inline void genBlockFileName(uint64_t id, char* fileName)
 		{
-			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix,id);
+			sprintf(fileName, "%s%s%s.%lu", m_logDir, separatorChar, m_logPrefix, id);
 		}
 		DLL_EXPORT int start()
 		{
@@ -152,9 +156,9 @@ namespace DATABASE
 			p->createTime = GLOBAL::currentTime.time;
 			p->pageSize = size;
 			p->pageUsedSize = 0;
-			p->_ref.m_ref.store(0,std::memory_order_relaxed);
+			p->_ref.m_ref.store(0, std::memory_order_relaxed);
 			p->lruNode.init();
-			vSave((char*)p,sizeof(page));
+			vSave((char*)p, sizeof(page));
 			return p;
 		}
 		DLL_EXPORT inline void* allocMem(size_t size)
@@ -172,9 +176,9 @@ namespace DATABASE
 			m_pool->free(p);
 		}
 		DLL_EXPORT void* allocMemForRecord(META::tableMeta* table, size_t size);
-		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t &logOffset);
+		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t& logOffset);
 		DLL_EXPORT int compection(bool (*reduce)(const char*));
-		DLL_EXPORT iterator* createIndexIterator(uint32_t flag,const META::tableMeta * table,META::KEY_TYPE type,int keyId );
+		DLL_EXPORT iterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 		DLL_EXPORT char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};
 	class databaseIterator : public iterator
@@ -190,7 +194,7 @@ namespace DATABASE
 		database* m_database;
 		DB_ITER_TYPE m_iterType;
 	public:
-		DLL_EXPORT databaseIterator(uint32_t flag, DB_ITER_TYPE type,filter* filter, database* db);
+		DLL_EXPORT databaseIterator(uint32_t flag, DB_ITER_TYPE type, filter* filter, database* db);
 		DLL_EXPORT virtual ~databaseIterator();
 		DLL_EXPORT inline bool valid()
 		{
@@ -207,7 +211,7 @@ namespace DATABASE
 		}
 		DLL_EXPORT inline bool end()
 		{
-			return m_blockIter==nullptr?true:m_blockIter->end();
+			return m_blockIter == nullptr ? true : m_blockIter->end();
 		}
 	};
 	class databaseTimestampIterator :public databaseIterator

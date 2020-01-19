@@ -4,150 +4,150 @@
 namespace META {
 	std::string columnMeta::toString()const
 	{
-			std::string sql("`");
-			sql.append(m_columnName).append("` ");
-			char numBuf[40] = { 0 };
-			switch (m_columnType)
+		std::string sql("`");
+		sql.append(m_columnName).append("` ");
+		char numBuf[40] = { 0 };
+		switch (m_columnType)
+		{
+		case COLUMN_TYPE::T_DECIMAL:
+			sql.append("DECIMAL").append("(");
+			sprintf(numBuf, "%u", m_size);
+			sql.append(numBuf).append(",");
+			sprintf(numBuf, "%u", m_decimals);
+			sql.append(numBuf).append(")");
+			break;
+		case COLUMN_TYPE::T_DOUBLE:
+			sql.append("DOUBLE").append("(");
+			sprintf(numBuf, "%u", m_size);
+			sql.append(numBuf).append(",");
+			sprintf(numBuf, "%u", m_decimals);
+			sql.append(numBuf).append(")");
+			break;
+		case COLUMN_TYPE::T_FLOAT:
+			sql.append("FLOAT").append("(");
+			sprintf(numBuf, "%u", m_size);
+			sql.append(numBuf).append(",");
+			sprintf(numBuf, "%u", m_decimals);
+			sql.append(numBuf).append(")");
+			break;
+		case COLUMN_TYPE::T_BYTE:
+			sql.append("BIT").append("(");
+			sprintf(numBuf, "%u", m_size);
+			sql.append(numBuf).append(")");
+			break;
+		case COLUMN_TYPE::T_UINT8:
+			sql.append("TINY UNSIGNED");
+			break;
+		case COLUMN_TYPE::T_INT8:
+			sql.append("TINY");
+			break;
+		case COLUMN_TYPE::T_UINT16:
+			sql.append("SMALLINT UNSIGNED");
+			break;
+		case COLUMN_TYPE::T_INT16:
+			sql.append("SMALLINT");
+			break;
+		case COLUMN_TYPE::T_UINT32:
+			sql.append("INT UNSIGNED");
+			break;
+		case COLUMN_TYPE::T_INT32:
+			sql.append("INT");
+			break;
+		case COLUMN_TYPE::T_UINT64:
+			sql.append("BIGINT UNSIGNED");
+			break;
+		case COLUMN_TYPE::T_INT64:
+			sql.append("BIGINT");
+			break;
+		case COLUMN_TYPE::T_DATETIME:
+			sql.append("DATETIME");
+			if (m_precision > 0)
 			{
-			case COLUMN_TYPE::T_DECIMAL:
-				sql.append("DECIMAL").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case COLUMN_TYPE::T_DOUBLE:
-				sql.append("DOUBLE").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case COLUMN_TYPE::T_FLOAT:
-				sql.append("FLOAT").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(",");
-				sprintf(numBuf, "%u", m_decimals);
-				sql.append(numBuf).append(")");
-				break;
-			case COLUMN_TYPE::T_BYTE:
-				sql.append("BIT").append("(");
-				sprintf(numBuf, "%u", m_size);
-				sql.append(numBuf).append(")");
-				break;
-			case COLUMN_TYPE::T_UINT8:
-				sql.append("TINY UNSIGNED");
-				break;
-			case COLUMN_TYPE::T_INT8:
-				sql.append("TINY");
-				break;
-			case COLUMN_TYPE::T_UINT16:
-				sql.append("SMALLINT UNSIGNED");
-				break;
-			case COLUMN_TYPE::T_INT16:
-				sql.append("SMALLINT");
-				break;
-			case COLUMN_TYPE::T_UINT32:
-				sql.append("INT UNSIGNED");
-				break;
-			case COLUMN_TYPE::T_INT32:
-				sql.append("INT");
-				break;
-			case COLUMN_TYPE::T_UINT64:
-				sql.append("BIGINT UNSIGNED");
-				break;
-			case COLUMN_TYPE::T_INT64:
-				sql.append("BIGINT");
-				break;
-			case COLUMN_TYPE::T_DATETIME:
-				sql.append("DATETIME");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case COLUMN_TYPE::T_TIMESTAMP:
-				sql.append("TIMESTAMP");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case COLUMN_TYPE::T_DATE:
-				sql.append("DATE");
-				break;
-			case COLUMN_TYPE::T_TIME:
-				sql.append("TIME");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case COLUMN_TYPE::T_YEAR:
-				sql.append("YEAR");
-				if (m_precision > 0)
-				{
-					sprintf(numBuf, "%u", m_precision);
-					sql.append("(").append(numBuf).append(")");
-				}
-				break;
-			case COLUMN_TYPE::T_STRING:
-				sprintf(numBuf, "%u", m_size / m_charset->byteSizePerChar);
-				sql.append("CHAR").append("(").append(numBuf).append(") CHARACTER SET ").append(m_charset->name);
-				break;
-			case COLUMN_TYPE::T_TEXT:
-				sql.append("TEXT").append(" CHARACTER SET ").append(m_charset->name);
-				break;
-			case COLUMN_TYPE::T_BLOB:
-				sql.append("BLOB");
-				break;
-			case COLUMN_TYPE::T_ENUM:
+				sprintf(numBuf, "%u", m_precision);
+				sql.append("(").append(numBuf).append(")");
+			}
+			break;
+		case COLUMN_TYPE::T_TIMESTAMP:
+			sql.append("TIMESTAMP");
+			if (m_precision > 0)
 			{
-				sql.append("ENUM (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
-				{
-					if (idx > 0)
-						sql.append(",");
-					sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
-				}
-				sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
-				break;
+				sprintf(numBuf, "%u", m_precision);
+				sql.append("(").append(numBuf).append(")");
 			}
-			case COLUMN_TYPE::T_SET:
+			break;
+		case COLUMN_TYPE::T_DATE:
+			sql.append("DATE");
+			break;
+		case COLUMN_TYPE::T_TIME:
+			sql.append("TIME");
+			if (m_precision > 0)
 			{
-				sql.append("SET (");
-				for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
-				{
-					if (idx > 0)
-						sql.append(",");
-					sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
-				}
-				sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
-				break;
+				sprintf(numBuf, "%u", m_precision);
+				sql.append("(").append(numBuf).append(")");
 			}
-			case COLUMN_TYPE::T_GEOMETRY:
-				sql.append("GEOMETRY");
-				break;
-			case COLUMN_TYPE::T_JSON:
-				sql.append("JSON");
-				break;
-			default:
-				abort();
+			break;
+		case COLUMN_TYPE::T_YEAR:
+			sql.append("YEAR");
+			if (m_precision > 0)
+			{
+				sprintf(numBuf, "%u", m_precision);
+				sql.append("(").append(numBuf).append(")");
 			}
-			return sql;
-		
+			break;
+		case COLUMN_TYPE::T_STRING:
+			sprintf(numBuf, "%u", m_size / m_charset->byteSizePerChar);
+			sql.append("CHAR").append("(").append(numBuf).append(") CHARACTER SET ").append(m_charset->name);
+			break;
+		case COLUMN_TYPE::T_TEXT:
+			sql.append("TEXT").append(" CHARACTER SET ").append(m_charset->name);
+			break;
+		case COLUMN_TYPE::T_BLOB:
+			sql.append("BLOB");
+			break;
+		case COLUMN_TYPE::T_ENUM:
+		{
+			sql.append("ENUM (");
+			for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
+			{
+				if (idx > 0)
+					sql.append(",");
+				sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
+			}
+			sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
+			break;
+		}
+		case COLUMN_TYPE::T_SET:
+		{
+			sql.append("SET (");
+			for (uint32_t idx = 0; idx < m_setAndEnumValueList.m_count; idx++)
+			{
+				if (idx > 0)
+					sql.append(",");
+				sql.append("'").append(m_setAndEnumValueList.m_array[idx]).append("'");
+			}
+			sql.append(")").append(" CHARACTER SET ").append(m_charset->name);
+			break;
+		}
+		case COLUMN_TYPE::T_GEOMETRY:
+			sql.append("GEOMETRY");
+			break;
+		case COLUMN_TYPE::T_JSON:
+			sql.append("JSON");
+			break;
+		default:
+			abort();
+		}
+		return sql;
+
 	}
-	tableMeta::tableMeta(bool caseSensitive) :m_charset(nullptr), m_columns(nullptr),  m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
-		m_columnsCount(0), m_id(0), m_primaryKey(nullptr), m_uniqueKeysCount(0),m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr),m_indexNames(nullptr), m_nameCompare(caseSensitive),userData(nullptr)
+	tableMeta::tableMeta(bool caseSensitive) :m_charset(nullptr), m_columns(nullptr), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
+		m_columnsCount(0), m_id(0), m_primaryKey(nullptr), m_uniqueKeysCount(0), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_nameCompare(caseSensitive), userData(nullptr)
 	{
 	}
-	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage * msg) :m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""),
-			m_charset(&charsets[msg->metaHead.charsetId]), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr),m_fixedColumnCount(0), m_varColumnCount(0),
-			 m_columnsCount(msg->metaHead.columnCount),
-		m_id(msg->metaHead.tableMetaID), m_primaryKey(nullptr),m_uniqueKeysCount(msg->metaHead.uniqueKeyCount), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_nameCompare(msg->metaHead.caseSensitive>0)
+	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage* msg) : m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""),
+		m_charset(&charsets[msg->metaHead.charsetId]), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
+		m_columnsCount(msg->metaHead.columnCount),
+		m_id(msg->metaHead.tableMetaID), m_primaryKey(nullptr), m_uniqueKeysCount(msg->metaHead.uniqueKeyCount), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_nameCompare(msg->metaHead.caseSensitive > 0)
 	{
 		m_columns = new columnMeta[m_columnsCount];
 		for (uint32_t i = 0; i < m_columnsCount; i++)
@@ -162,16 +162,16 @@ namespace META {
 			m_columns[i].m_srcColumnType = msg->columns[i].srcType;
 			m_columns[i].m_decimals = msg->columns[i].decimals;
 			m_columns[i].m_precision = msg->columns[i].precision;
-			m_columns[i].m_generated = msg->columns[i].flag&COLUMN_FLAG_VIRTUAL;
-			m_columns[i].m_signed = msg->columns[i].flag&COLUMN_FLAG_SIGNED;
+			m_columns[i].m_generated = msg->columns[i].flag & COLUMN_FLAG_VIRTUAL;
+			m_columns[i].m_signed = msg->columns[i].flag & COLUMN_FLAG_SIGNED;
 			m_columns[i].m_size = msg->columns[i].size;
 			if (msg->columns[i].setOrEnumInfoOffset != 0)
 			{
-				const char * base;
-				uint16_t *valueList, valueListSize;
+				const char* base;
+				uint16_t* valueList, valueListSize;
 				msg->setOrEnumValues(i, base, valueList, valueListSize);
 				m_columns[i].m_setAndEnumValueList.m_count = valueListSize;
-				m_columns[i].m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*)*valueListSize);
+				m_columns[i].m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*) * valueListSize);
 				for (uint16_t j = 0; j < valueListSize; j++)
 				{
 					m_columns[i].m_setAndEnumValueList.m_array[j] = (char*)malloc(valueList[j + 1] - valueList[j]);
@@ -191,7 +191,7 @@ namespace META {
 		}
 		if (msg->metaHead.uniqueKeyCount > 0)
 		{
-			m_uniqueKeys =   (unionKeyMeta**)malloc(sizeof(unionKeyMeta*)*msg->metaHead.uniqueKeyCount);
+			m_uniqueKeys = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * msg->metaHead.uniqueKeyCount);
 			m_uniqueKeyNames = new std::string[msg->metaHead.uniqueKeyCount];
 			for (uint16_t i = 0; i < msg->metaHead.uniqueKeyCount; i++)
 			{
@@ -203,9 +203,8 @@ namespace META {
 			m_uniqueKeysCount = msg->metaHead.uniqueKeyCount;
 		}
 	}
-	const char * tableMeta::createTableMetaRecord()const
+	const char* tableMeta::createTableMetaRecord()const
 	{
-
 		return nullptr;//todo
 	}
 	void tableMeta::clean()
@@ -269,7 +268,7 @@ namespace META {
 	{
 		clean();
 	}
-	tableMeta &tableMeta::operator =(const tableMeta &t)
+	tableMeta& tableMeta::operator =(const tableMeta& t)
 	{
 		clean();
 		m_tableName = t.m_tableName;
@@ -294,7 +293,7 @@ namespace META {
 		m_uniqueKeysCount = t.m_uniqueKeysCount;
 		if (t.m_uniqueKeys != nullptr)
 		{
-			m_uniqueKeys = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*)* t.m_uniqueKeysCount);
+			m_uniqueKeys = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * t.m_uniqueKeysCount);
 			m_uniqueKeyNames = new std::string[t.m_uniqueKeysCount];
 			for (int i = 0; i < m_uniqueKeysCount; i++)
 			{
@@ -318,10 +317,10 @@ namespace META {
 		m_fixedColumnCount = t.m_fixedColumnCount;
 		m_varColumnCount = t.m_varColumnCount;
 		m_realIndexInRowFormat = new uint16_t[m_columnsCount];
-		memcpy(m_realIndexInRowFormat,t.m_realIndexInRowFormat,sizeof(uint16_t)*m_columnsCount);
-		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount+1];
-		memcpy(m_fixedColumnOffsetsInRecord,t.m_fixedColumnOffsetsInRecord,sizeof(uint16_t)*(m_fixedColumnCount+1));
-		
+		memcpy(m_realIndexInRowFormat, t.m_realIndexInRowFormat, sizeof(uint16_t) * m_columnsCount);
+		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount + 1];
+		memcpy(m_fixedColumnOffsetsInRecord, t.m_fixedColumnOffsetsInRecord, sizeof(uint16_t) * (m_fixedColumnCount + 1));
+
 		return *this;
 	}
 	unionKeyMeta* tableMeta::createUnionKey(uint16_t keyId, KEY_TYPE keyType, const uint16_t* columnIds, uint16_t columnCount)
@@ -335,7 +334,7 @@ namespace META {
 		uk->varColumnCount = 0;
 		for (int i = 0; i < columnCount; i++)
 		{
-			if (columnIds[i] >= m_columnsCount|| !columnInfos[TID(m_columns[columnIds[i]].m_columnType)].asIndex)
+			if (columnIds[i] >= m_columnsCount || !columnInfos[TID(m_columns[columnIds[i]].m_columnType)].asIndex)
 			{
 				LOG(ERROR) << "create key failed for column is not in column list or column type can not used as index";
 				free(uk);
@@ -370,7 +369,7 @@ namespace META {
 		m_realIndexInRowFormat = new uint16_t[m_columnsCount];
 		if (m_fixedColumnOffsetsInRecord)
 			delete[]m_fixedColumnOffsetsInRecord;
-		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount+1];
+		m_fixedColumnOffsetsInRecord = new uint16_t[m_fixedColumnCount + 1];
 		m_fixedColumnCount = m_varColumnCount = 0;
 		uint32_t fixedOffset = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
@@ -392,7 +391,7 @@ namespace META {
 	{
 		if (m_primaryKey != nullptr)
 			m_primaryKey->columnUpdate(from, to, newType);
-		for(int i=0;i<m_uniqueKeysCount;i++)
+		for (int i = 0; i < m_uniqueKeysCount; i++)
 			m_uniqueKeys[i]->columnUpdate(from, to, newType);
 		for (int i = 0; i < m_indexCount; i++)
 			m_indexs[i]->columnUpdate(from, to, newType);
@@ -402,7 +401,7 @@ namespace META {
 	{
 		if (columnIndex >= m_columnsCount)
 			return -1;
-		columnMeta * columns = new columnMeta[m_columnsCount - 1];
+		columnMeta* columns = new columnMeta[m_columnsCount - 1];
 		for (uint32_t idx = 0; idx < columnIndex; idx++)
 			columns[idx] = m_columns[idx];
 		for (uint32_t idx = m_columnsCount - 1; idx > columnIndex; idx--)
@@ -422,7 +421,7 @@ namespace META {
 					{
 						if (!columnInfos[m_uniqueKeys[idx]->columnInfo[i].type].fixed)
 							m_uniqueKeys[idx]->varColumnCount--;
-						memcpy(&m_uniqueKeys[idx]->columnInfo[i].columnId, &m_uniqueKeys[idx]->columnInfo[i + 1], sizeof(uniqueKeyTypePair)*(m_uniqueKeys[idx]->columnCount - i - 1));
+						memcpy(&m_uniqueKeys[idx]->columnInfo[i].columnId, &m_uniqueKeys[idx]->columnInfo[i + 1], sizeof(uniqueKeyTypePair) * (m_uniqueKeys[idx]->columnCount - i - 1));
 						m_uniqueKeys[idx]->columnCount--;
 
 						continue;//do not do [i++]
@@ -460,9 +459,9 @@ namespace META {
 		buildColumnOffsetList();
 		return 0;
 	}
-	int tableMeta::dropColumn(const char *column)
+	int tableMeta::dropColumn(const char* column)
 	{
-		const columnMeta * d = getColumn(column);
+		const columnMeta* d = getColumn(column);
 		if (d == nullptr)
 		{
 			LOG(ERROR) << "drop column " << column << " failed for column not exist";
@@ -478,7 +477,7 @@ namespace META {
 			LOG(ERROR) << "rename column " << oldName << " failed for column not exist";
 			return -1;
 		}
-		if (m_nameCompare.compare(oldName, newName) != 0&& getColumn(newName) != nullptr)
+		if (m_nameCompare.compare(oldName, newName) != 0 && getColumn(newName) != nullptr)
 		{
 			LOG(ERROR) << "rename column " << oldName << " failed for new column name " << newName << " exist";
 			return -1;
@@ -486,7 +485,7 @@ namespace META {
 		m_columns[c->m_columnIndex].m_columnName.assign(newName);
 		return 0;
 	}
-	int tableMeta::modifyColumn(const columnMeta* column,bool first, const char* addAfter)
+	int tableMeta::modifyColumn(const columnMeta* column, bool first, const char* addAfter)
 	{
 		const columnMeta* old = getColumn(column->m_columnName.c_str());
 		if (old == nullptr)
@@ -496,17 +495,17 @@ namespace META {
 		}
 		int idx = old->m_columnIndex;
 
-		bool isPk = old->m_isPrimary,isUk = old->m_isUnique,isIndex = old->m_isIndex;
-		if(isPk||isUk||isIndex)
+		bool isPk = old->m_isPrimary, isUk = old->m_isUnique, isIndex = old->m_isIndex;
+		if (isPk || isUk || isIndex)
 		{
-			if(!columnInfos[static_cast<int>(column->m_columnType)].asIndex)
+			if (!columnInfos[static_cast<int>(column->m_columnType)].asIndex)
 			{
 				LOG(ERROR) << "modify column " << column->m_columnName << " failed for new column type " << static_cast<int>(column->m_columnType) << " can not use as index";
 				return -1;
 			}
 		}
 
-		if ((!first && addAfter == nullptr)||(first&& idx==0))
+		if ((!first && addAfter == nullptr) || (first && idx == 0))
 		{
 			m_columns[idx] = *column;
 			m_columns[idx].m_columnIndex = idx;
@@ -532,25 +531,25 @@ namespace META {
 				const columnMeta* after = getColumn(addAfter);
 				if (after == nullptr)
 				{
-					LOG(ERROR) << "modify column " << column->m_columnName << " failed for after column :"<< addAfter <<" not exist";
+					LOG(ERROR) << "modify column " << column->m_columnName << " failed for after column :" << addAfter << " not exist";
 					return -1;
 				}
 				to = after->m_columnIndex;
 			}
 			if (idx < to)
 			{
-				for (int i = idx + 1; i <=to; i++)
+				for (int i = idx + 1; i <= to; i++)
 				{
-					m_columns[i-1] = m_columns[i];
-					m_columns[i-1].m_columnIndex = i-1;
+					m_columns[i - 1] = m_columns[i];
+					m_columns[i - 1].m_columnIndex = i - 1;
 				}
 			}
 			else
 			{
-				for (int i = idx - 1; i >=to; i--)
+				for (int i = idx - 1; i >= to; i--)
 				{
-					m_columns[i+1] = m_columns[i];
-					m_columns[i+1].m_columnIndex = i+1;
+					m_columns[i + 1] = m_columns[i];
+					m_columns[i + 1].m_columnIndex = i + 1;
 
 				}
 			}
@@ -578,16 +577,16 @@ namespace META {
 			LOG(ERROR) << "change column " << columnName << " failed for column not exist";
 			return -1;
 		}
-		if (m_nameCompare.compare(columnName, newColumn->m_columnName.c_str()) != 0&& getColumn(newColumn->m_columnName.c_str()) != nullptr)
+		if (m_nameCompare.compare(columnName, newColumn->m_columnName.c_str()) != 0 && getColumn(newColumn->m_columnName.c_str()) != nullptr)
 		{
 			LOG(ERROR) << "change column " << columnName << " failed for new column name " << newColumn->m_columnName << " exist";
 			return -1;
 		}
 		int idx = old->m_columnIndex;
-		bool isPk = old->m_isPrimary,isUk = old->m_isUnique,isIndex = old->m_isIndex;
-		if(isPk||isUk||isIndex)
+		bool isPk = old->m_isPrimary, isUk = old->m_isUnique, isIndex = old->m_isIndex;
+		if (isPk || isUk || isIndex)
 		{
-			if(!columnInfos[static_cast<int>(newColumn->m_columnType)].asIndex)
+			if (!columnInfos[static_cast<int>(newColumn->m_columnType)].asIndex)
 			{
 				LOG(ERROR) << "change column " << newColumn->m_columnName << " failed for new column type " << static_cast<int>(newColumn->m_columnType) << " can not use as index";
 				return -1;
@@ -656,11 +655,11 @@ namespace META {
 		}
 		return 0;
 	}
-	int tableMeta::addColumn(const columnMeta* column,const char * addAfter, bool first)
+	int tableMeta::addColumn(const columnMeta* column, const char* addAfter, bool first)
 	{
 		if (getColumn(column->m_columnName.c_str()) != nullptr)
 		{
-			LOG(ERROR) << "add column "<< column->m_columnName <<" failed for column exist";
+			LOG(ERROR) << "add column " << column->m_columnName << " failed for column exist";
 			return -1;
 		}
 		uint16_t idx = 0;
@@ -669,7 +668,7 @@ namespace META {
 			const columnMeta* after = getColumn(addAfter);
 			if (after == nullptr)
 			{
-				LOG(ERROR) << "add column " << column->m_columnName << " failed for after column "<< addAfter <<" not exist";
+				LOG(ERROR) << "add column " << column->m_columnName << " failed for after column " << addAfter << " not exist";
 				return -1;
 			}
 			idx = after->m_columnIndex;
@@ -682,7 +681,7 @@ namespace META {
 			newColumns[i + 1] = m_columns[i];
 			newColumns[i + 1].m_columnIndex++;
 		}
-		for(uint16_t i = 0; i < idx; i++)
+		for (uint16_t i = 0; i < idx; i++)
 			newColumns[i] = m_columns[i];
 		newColumns[idx] = *column;
 		newColumns[idx].m_columnIndex = idx;
@@ -695,7 +694,7 @@ namespace META {
 		delete[]m_columns;
 		m_columns = newColumns;
 		m_columnsCount++;
-		if(idx!=m_columnsCount-1)
+		if (idx != m_columnsCount - 1)
 			updateKeysWhenColumnUpdate(idx, idx, column->m_columnType);
 		buildColumnOffsetList();
 		return 0;
@@ -711,11 +710,11 @@ namespace META {
 		}
 		return 0;
 	}
-	int tableMeta::createPrimaryKey(const std::list<std::string> &columns)
+	int tableMeta::createPrimaryKey(const std::list<std::string>& columns)
 	{
 		if (columns.size() >= 256 || columns.empty())
 		{
-			LOG(ERROR) << "create primary key failed column count "<< columns.size() <<" is illegal";
+			LOG(ERROR) << "create primary key failed column count " << columns.size() << " is illegal";
 			return -1;
 		}
 		if (m_primaryKey != nullptr)
@@ -745,7 +744,7 @@ namespace META {
 		else
 			return -1;
 	}
-	int tableMeta::dropUniqueKey(const char *ukName)
+	int tableMeta::dropUniqueKey(const char* ukName)
 	{
 		int idx = 0;
 		for (; idx < m_uniqueKeysCount; idx++)
@@ -768,7 +767,7 @@ namespace META {
 			return 0;
 		}
 
-		unionKeyMeta** newUks = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*)*(m_uniqueKeysCount - 1));
+		unionKeyMeta** newUks = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (m_uniqueKeysCount - 1));
 		std::string* newUkNames = new std::string[m_uniqueKeysCount - 1];
 		for (int i = 0; i < idx; i++)
 		{
@@ -794,7 +793,7 @@ namespace META {
 				}
 			}
 			((columnMeta*)getColumn(m_uniqueKeys[idx]->columnInfo[i].columnId))->m_isUnique = false;
-COLUMN_IS_STILL_UK:
+		COLUMN_IS_STILL_UK:
 			continue;
 		}
 		free(m_uniqueKeys[idx]);
@@ -806,7 +805,7 @@ COLUMN_IS_STILL_UK:
 		return 0;
 	}
 
-	int tableMeta::_addIndex(uint16_t &count,unionKeyMeta** &indexs,std::string*& indexNames,unionKeyMeta*index,const char* indexName)
+	int tableMeta::_addIndex(uint16_t& count, unionKeyMeta**& indexs, std::string*& indexNames, unionKeyMeta* index, const char* indexName)
 	{
 		unionKeyMeta** newIndexs = (unionKeyMeta**)malloc(sizeof(unionKeyMeta*) * (count + 1));
 		std::string* newIndexNames = new std::string[count + 1];
@@ -827,7 +826,7 @@ COLUMN_IS_STILL_UK:
 		count++;
 		return 0;
 	}
-	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns,KEY_TYPE keyType)
+	int tableMeta::addIndex(const char* indexName, const std::list<std::string>& columns, KEY_TYPE keyType)
 	{
 		if (columns.size() >= 256 || columns.empty())
 		{
@@ -835,13 +834,13 @@ COLUMN_IS_STILL_UK:
 			return -1;
 		}
 
-		if(keyType!=KEY_TYPE::INDEX && keyType!=KEY_TYPE::UNIQUE_KEY)
+		if (keyType != KEY_TYPE::INDEX && keyType != KEY_TYPE::UNIQUE_KEY)
 		{
 			LOG(ERROR) << "add key failed for only support index and unique key";
 			return -1;
 		}
 
-		if(indexName!=nullptr&&strlen(indexName)!=0)
+		if (indexName != nullptr && strlen(indexName) != 0)
 		{
 			if (getIndex(indexName) != nullptr || getUniqueKey(indexName) != nullptr)
 			{
@@ -860,28 +859,28 @@ COLUMN_IS_STILL_UK:
 				LOG(ERROR) << "add key failed for column " << (*iter) << " not exist";
 				return -1;
 			}
-			if(keyType == KEY_TYPE::UNIQUE_KEY)
+			if (keyType == KEY_TYPE::UNIQUE_KEY)
 				c->m_isUnique = true;
-			else if(keyType == KEY_TYPE::INDEX)
+			else if (keyType == KEY_TYPE::INDEX)
 				c->m_isIndex = true;
 			columnIds[columnCount++] = c->m_columnIndex;
 		}
 
-		char * tmpName = nullptr;
+		char* tmpName = nullptr;
 
-		if(indexName == nullptr || strlen(indexName) == 0)
+		if (indexName == nullptr || strlen(indexName) == 0)
 		{
-			if(getIndex(columns.begin()->c_str()) == nullptr&&getUniqueKey(columns.begin()->c_str()) == nullptr)
+			if (getIndex(columns.begin()->c_str()) == nullptr && getUniqueKey(columns.begin()->c_str()) == nullptr)
 			{
 				indexName = columns.begin()->c_str();
 			}
 			else
 			{
-				tmpName = (char*)malloc(columns.begin()->size()+6);
-				for(int i=2;;i++)
+				tmpName = (char*)malloc(columns.begin()->size() + 6);
+				for (int i = 2;; i++)
 				{
-					sprintf(tmpName,"%s_%d",columns.begin()->c_str(),i);
-					if(getIndex(tmpName) == nullptr&&getUniqueKey(tmpName) == nullptr)
+					sprintf(tmpName, "%s_%d", columns.begin()->c_str(), i);
+					if (getIndex(tmpName) == nullptr && getUniqueKey(tmpName) == nullptr)
 					{
 						indexName = tmpName;
 						break;
@@ -898,20 +897,20 @@ COLUMN_IS_STILL_UK:
 		}
 		else
 		{
-			if(tmpName != nullptr)
+			if (tmpName != nullptr)
 				free(tmpName);
 			return -1;
 		}
 
-		if(keyType == KEY_TYPE::UNIQUE_KEY)
+		if (keyType == KEY_TYPE::UNIQUE_KEY)
 		{
-			_addIndex(m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,index,indexName);
+			_addIndex(m_uniqueKeysCount, m_uniqueKeys, m_uniqueKeyNames, index, indexName);
 		}
-		else if(keyType == KEY_TYPE::INDEX)
+		else if (keyType == KEY_TYPE::INDEX)
 		{
-			_addIndex(m_indexCount,m_indexs,m_indexNames,index,indexName);
+			_addIndex(m_indexCount, m_indexs, m_indexNames, index, indexName);
 		}
-		if(tmpName != nullptr)
+		if (tmpName != nullptr)
 			free(tmpName);
 		return 0;
 	}
@@ -927,14 +926,14 @@ COLUMN_IS_STILL_UK:
 		{
 			if (nullptr != getIndex(newName))
 			{
-				LOG(ERROR) << "rename index " << oldName << " failed for new name "<< newName <<" exist";
+				LOG(ERROR) << "rename index " << oldName << " failed for new name " << newName << " exist";
 				return -1;
 			}
 			m_indexNames[k->keyId].assign(newName);
 		}
 		return 0;
 	}
-	int tableMeta::_dropIndex(int idx,uint16_t& indexCount,unionKeyMeta** &indexs,std::string*& indexNames,KEY_TYPE keyType)
+	int tableMeta::_dropIndex(int idx, uint16_t& indexCount, unionKeyMeta**& indexs, std::string*& indexNames, KEY_TYPE keyType)
 	{
 		if (indexCount == 1)
 		{
@@ -972,11 +971,11 @@ COLUMN_IS_STILL_UK:
 						goto COLUMN_IS_STILL_INDEX;
 				}
 			}
-			if(keyType == KEY_TYPE::UNIQUE_KEY)
+			if (keyType == KEY_TYPE::UNIQUE_KEY)
 				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isUnique = false;
-			else if(keyType == KEY_TYPE::INDEX)
+			else if (keyType == KEY_TYPE::INDEX)
 				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
-COLUMN_IS_STILL_INDEX:
+		COLUMN_IS_STILL_INDEX:
 			continue;
 		}
 		free(indexs[idx]);
@@ -992,12 +991,12 @@ COLUMN_IS_STILL_INDEX:
 		for (int idx = 0; idx < m_indexCount; idx++)
 		{
 			if (m_nameCompare.compare(m_indexNames[idx].c_str(), indexName) == 0)
-				return _dropIndex(idx,m_indexCount,m_indexs,m_indexNames,KEY_TYPE::INDEX);
+				return _dropIndex(idx, m_indexCount, m_indexs, m_indexNames, KEY_TYPE::INDEX);
 		}
 		for (int idx = 0; idx < m_uniqueKeysCount; idx++)
 		{
 			if (m_nameCompare.compare(m_uniqueKeyNames[idx].c_str(), indexName) == 0)
-				return _dropIndex(idx,m_uniqueKeysCount,m_uniqueKeys,m_uniqueKeyNames,KEY_TYPE::UNIQUE_KEY);
+				return _dropIndex(idx, m_uniqueKeysCount, m_uniqueKeys, m_uniqueKeyNames, KEY_TYPE::UNIQUE_KEY);
 		}
 		LOG(ERROR) << "drop index " << indexName << " failed for index not exist";
 		return -1;
@@ -1032,7 +1031,7 @@ COLUMN_IS_STILL_INDEX:
 		if (m_nameCompare.caseSensitive != dest.m_nameCompare.caseSensitive)
 			return false;
 		if (m_nameCompare.compare(m_dbName.c_str(), dest.m_dbName.c_str()) != 0 ||
-			m_nameCompare.compare(m_tableName.c_str(), dest.m_tableName.c_str()) != 0||
+			m_nameCompare.compare(m_tableName.c_str(), dest.m_tableName.c_str()) != 0 ||
 			m_charset != dest.m_charset ||
 			m_collate != dest.m_collate ||
 			m_fixedColumnCount != dest.m_fixedColumnCount ||
@@ -1071,11 +1070,11 @@ COLUMN_IS_STILL_INDEX:
 		sql.append(m_tableName).append("` (");
 		for (uint32_t idx = 0; idx < m_columnsCount; idx++)
 		{
-			if(idx!=0)
+			if (idx != 0)
 				sql.append(",");
 			sql.append("\n\t").append(m_columns[idx].toString());
 		}
-		if (m_primaryKey!=nullptr)
+		if (m_primaryKey != nullptr)
 		{
 			sql.append(",\n");
 			sql.append("\tPRIMARY KEY (");

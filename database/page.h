@@ -14,20 +14,20 @@ namespace DATABASE {
 		uint64_t createTime;
 		::ref _ref;
 		dualLinkListNode lruNode;
-		char *pageData;
-		
+		char* pageData;
+
 		inline void use()
 		{
 			for (uint8_t i = 0; i < 10; i++)
 			{
-				if (_ref.use()>0)
+				if (_ref.use() > 0)
 					return;
 			}
-			for(;!_ref.use();std::this_thread::sleep_for(std::chrono::nanoseconds(100)));
+			for (; !_ref.use(); std::this_thread::sleep_for(std::chrono::nanoseconds(100)));
 		}
 		inline void unuse()
 		{
-			if (_ref.unuse()<0)
+			if (_ref.unuse() < 0)
 			{
 				if (likely(pageData != nullptr))
 				{

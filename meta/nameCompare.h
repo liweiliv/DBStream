@@ -5,8 +5,8 @@ namespace META {
 	class nameCompare {
 	public:
 		bool caseSensitive;
-		nameCompare(bool caseSensitive=false):caseSensitive(caseSensitive){}
-		nameCompare(const nameCompare &c) :caseSensitive(c.caseSensitive) {}
+		nameCompare(bool caseSensitive = false) :caseSensitive(caseSensitive) {}
+		nameCompare(const nameCompare& c) :caseSensitive(c.caseSensitive) {}
 		nameCompare& operator=(const nameCompare c) { caseSensitive = c.caseSensitive; return *this; }
 		inline int compare(const char* src, const char* dest)const
 		{

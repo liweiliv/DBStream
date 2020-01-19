@@ -10,7 +10,7 @@ namespace DATABASE
 		[IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
 		[IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
 	*/
-	DLL_EXPORT bool databaseTimestampIterator::seek(const void * key)//timestamp not increase strictly,so we have to check all block
+	DLL_EXPORT bool databaseTimestampIterator::seek(const void* key)//timestamp not increase strictly,so we have to check all block
 	{
 		uint64_t timestamp = *(const uint64_t*)key;
 		m_status = status::UNINIT;
@@ -64,13 +64,13 @@ namespace DATABASE
 		m_status = status::OK;
 		return true;
 	}
-	DLL_EXPORT bool databaseCheckpointIterator::seek(const void * key)
+	DLL_EXPORT bool databaseCheckpointIterator::seek(const void* key)
 	{
 		uint64_t logOffset = *(const uint64_t*)key;
 		m_status = status::UNINIT;
 		m_errInfo.clear();
-		int64_t _s, s, _e, e,m;
-RESEEK:
+		int64_t _s, s, _e, e, m;
+	RESEEK:
 		_s = m_database->m_firstBlockId.load(std::memory_order_relaxed);
 		_e = m_database->m_lastBlockId.load(std::memory_order_relaxed);
 		s = _s;
@@ -142,7 +142,7 @@ RESEEK:
 			}
 		}
 	FIND:
-		if ((m_current->m_flag & BLOCK_FLAG_SOLID)&&static_cast<solidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed)<= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
+		if ((m_current->m_flag & BLOCK_FLAG_SOLID) && static_cast<solidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed) <= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
 		{
 			if (0 != static_cast<solidBlock*>(m_current)->load())
 			{
@@ -173,7 +173,7 @@ RESEEK:
 		m_status = status::OK;
 		return true;
 	}
-	DLL_EXPORT bool databaseRecordIdIterator::seek(const void *key)
+	DLL_EXPORT bool databaseRecordIdIterator::seek(const void* key)
 	{
 		uint64_t recordId = *(const uint64_t*)key;
 		m_status = status::UNINIT;
@@ -256,14 +256,14 @@ RESEEK:
 				{
 					if (!(m_flag & ITER_FLAG_DESC))
 					{
-						if(nullptr==(nextBlock = m_current->next.load(std::memory_order_relaxed)))
-							return m_status=status::BLOCKED;
+						if (nullptr == (nextBlock = m_current->next.load(std::memory_order_relaxed)))
+							return m_status = status::BLOCKED;
 
 					}
 					else
 					{
 						if (nullptr == (nextBlock = m_current->prev.load(std::memory_order_relaxed)))
-							return m_status=status::ENDED;
+							return m_status = status::ENDED;
 					}
 					if (nextBlock->use())
 						break;
@@ -278,7 +278,7 @@ RESEEK:
 					else
 					{
 						appendingBlockIterator* iter;
-						switch(m_iterType)
+						switch (m_iterType)
 						{
 						case DB_ITER_TYPE::TIMESTAMP_TYPE:
 							iter = new appendingBlockRecordIdIterator(static_cast<appendingBlock*>(nextBlock), m_filter, m_flag);
@@ -305,7 +305,7 @@ RESEEK:
 					}
 					else
 					{
-						solidBlockIterator* iter ;
+						solidBlockIterator* iter;
 						switch (m_iterType)
 						{
 						case DB_ITER_TYPE::TIMESTAMP_TYPE:

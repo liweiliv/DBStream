@@ -18,7 +18,7 @@ namespace DATABASE {
 	struct varSolidIndex {
 		page* p;
 		solidIndexHead* head;
-		varSolidIndex(page* p) :p(p),head((solidIndexHead*)p->pageData) {}
+		varSolidIndex(page* p) :p(p), head((solidIndexHead*)p->pageData) {}
 		varSolidIndex(const varSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
 		varSolidIndex& operator=(const varSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
 		virtual ~varSolidIndex()
@@ -81,10 +81,10 @@ namespace DATABASE {
 	{
 		page* p;
 		solidIndexHead* head;
-		fixedSolidIndex(page * p) : p(p),head((solidIndexHead*)p->pageData) {}
+		fixedSolidIndex(page* p) : p(p), head((solidIndexHead*)p->pageData) {}
 		fixedSolidIndex(const fixedSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
 		fixedSolidIndex& operator=(const fixedSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
-		virtual ~fixedSolidIndex() 
+		virtual ~fixedSolidIndex()
 		{
 			if (p != nullptr)
 				p->unuse();
@@ -193,7 +193,7 @@ namespace DATABASE {
 	private:
 		uint32_t indexId;
 	public:
-		solidIndexIterator(uint32_t flag,INDEX_TYPE *index) :indexIterator<INDEX_TYPE>(flag,index, static_cast<META::COLUMN_TYPE>(index->head->type)),indexId(0)
+		solidIndexIterator(uint32_t flag, INDEX_TYPE* index) :indexIterator<INDEX_TYPE>(flag, index, static_cast<META::COLUMN_TYPE>(index->head->type)), indexId(0)
 		{
 		}
 		virtual ~solidIndexIterator()
@@ -227,7 +227,7 @@ namespace DATABASE {
 				{
 					if (0 == (_indexId = this->index->getKeyCount()))
 						return false;
-					_indexId --;
+					_indexId--;
 					const void* _key = this->index->getKey(_indexId);
 					if (*(const T*)(_key) > * (const T*)(key))
 						return false;
@@ -236,7 +236,7 @@ namespace DATABASE {
 			else
 			{
 				const void* _key = this->index->getKey(_indexId);
-				if ((this->flag & ITER_FLAG_DESC)&&*(const T*)(_key) > * (const T*)(key))
+				if ((this->flag & ITER_FLAG_DESC) && *(const T*)(_key) > * (const T*)(key))
 				{
 					if (_indexId == 0)
 						return false;
