@@ -91,7 +91,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 #global 
 aux_source_directory(globalInfo globalDir)
-add_library(globalInfo SHARED ${globalDir})
+add_library(globalInfo  ${globalDir})
 TARGET_LINK_LIBRARIES(globalInfo util)
 
 #thread

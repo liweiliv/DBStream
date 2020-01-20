@@ -35,7 +35,9 @@ private:
 	inline buddyBuffer* getBuddyFromHead(uint8_t level)
 	{
 		assert(m_levelHeads[level] != nullptr);
-		removeFromList(m_levelHeads[level]->bprev);
+		buddyBuffer* buffer = m_levelHeads[level]->bprev;
+		removeFromList(buffer);
+		return buffer;
 	}
 	inline void addToLevelCache(buddyBuffer* b)
 	{
@@ -198,21 +200,21 @@ public:
 	}
 	inline uint8_t highPosOfUchar(uint8_t c)
 	{
-		if (c & 0x80 == 0x80)
+		if ((c & 0x80) == 0x80)
 			return 8;
-		if (c & 0x40 == 0x40)
+		if ((c & 0x40) == 0x40)
 			return 7;
-		if (c & 0x20 == 0x20)
+		if ((c & 0x20) == 0x20)
 			return 6;
-		if (c & 0x10 == 0x10)
+		if ((c & 0x10) == 0x10)
 			return 5;
-		if (c & 0x8 == 0x8)
+		if ((c & 0x8) == 0x8)
 			return 4;
-		if (c & 0x4 == 0x4)
+		if ((c & 0x4) == 0x4)
 			return 3;
-		if (c & 0x2 == 0x2)
+		if ((c & 0x2) == 0x2)
 			return 2;
-		if (c & 0x1 == 0x1)
+		if ((c & 0x1) == 0x1)
 			return 1;
 		return 0;
 	}

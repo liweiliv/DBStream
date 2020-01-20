@@ -1,7 +1,8 @@
-#include "global.h"
+#include "util/timer.h"
+#include "util/winDll.h"
 namespace GLOBAL
 {
-	DLL_EXPORT timer::timestamp currentTime;
+	timer::timestamp currentTime;
 	DLL_EXPORT timer globalTimer;
 	static void timerAction (uint64_t nowTime, void* nptr)
 	{
@@ -17,5 +18,4 @@ namespace GLOBAL
 	{
 		globalTimer.stop();
 	}
-
 }

@@ -31,7 +31,8 @@ void t(basicBufferPool *p,int size)
  }
 void test(int size)
 {
-	basicBufferPool pool(size,1024*1024*1024);
+	defaultBufferBaseAllocer allocer;
+	basicBufferPool pool(&allocer,size,1024*1024*1024);
 	std::thread tl[10];
 	for (int i = 0; i < 10; i++)
 	{

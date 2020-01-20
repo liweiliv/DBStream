@@ -210,6 +210,25 @@ namespace DATABASE {
 			return -1;
 		return 0;
 	}
+	DLL_EXPORT page* database::allocPage(uint64_t size)
+	{
+#ifdef VLGRIND_TEST
+		page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
+		p->pageData = (char*)basicBufferPool::allocDirect(size);
+#else
+		page* p = (page*)m_pool->allocByLevel(0);
+		p->pageData = (char*)m_pool->alloc(size);
+#endif
+		p->pageId = 0;
+		p->crc = 0;
+		p->createTime = GLOBAL::currentTime.time;
+		p->pageSize = size;
+		p->pageUsedSize = 0;
+		p->_ref.m_ref.store(0, std::memory_order_relaxed);
+		p->lruNode.init();
+		vSave((char*)p, sizeof(page));
+		return p;
+	}
 	bool database::createNewBlock()
 	{
 		appendingBlock* tmp = m_current, * newBlock = new appendingBlock(m_current->m_blockID + 1, BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0),
@@ -815,7 +834,6 @@ namespace DATABASE {
 		{
 			for (std::set<uint64_t>::iterator iter = ids.begin(); iter != ids.end(); iter++)
 			{
-
 				block* b = block::loadFromFile(*iter, this, m_metaDataCollection);
 				if (nullptr == b)
 				{

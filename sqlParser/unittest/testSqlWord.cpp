@@ -11,7 +11,7 @@ int testSQLCharWord()
 		const char* s = &str[0];
 		SQL_PARSER::SQLCharWord word(false, str);
 		SQL_PARSER::SQLValue* value;
-		if (idx == ' ' || idx == '\t' || idx == '\n')
+		if (idx == ' ' || idx == '\t' || idx == '\n' ||idx=='\r')
 			continue;
 		if ((value = word.match(&h, s,true)) == NOT_MATCH_PTR ||static_cast<SQL_PARSER::SQLCharValue*>(value)->value!= word.m_word||s!=&str[1])
 		{
@@ -377,7 +377,7 @@ int testSQLColumnNameWord1()
 	MATCH_ASSERT_FAIL("`name2`.");
 	return 0;
 }
-#define checkArray(svalue,str) do{\
+#define checkArray_(svalue,str) do{\
 	if(svalue->type!=SQL_PARSER::SQLValueType::STRING_TYPE)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
@@ -393,6 +393,9 @@ int testSQLColumnNameWord1()
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
 	}\
+}while(0);
+#define checkArray(svalue,str) do{\
+	checkArray_(svalue,str);\
 	delete svalue;\
 }while(0);
 int testSQLArrayWord()
@@ -699,7 +702,8 @@ int testSQLWordExpressions()
 		return -1;
 	}
 	std::list<SQL_PARSER::SQLValue*>::iterator iter = f->argvs.begin();
-	checkArray((*iter), "dwad");
+
+	checkArray_((*iter), "dwad");
 	iter++;
 	checkColumn((*iter), "", "b", "c");
 	checkOpt(exp->valueStack[6], SQL_PARSER::PLUS);

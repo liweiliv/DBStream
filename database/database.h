@@ -142,25 +142,7 @@ namespace DATABASE
 		DLL_EXPORT int stop();
 		DLL_EXPORT int load();
 		DLL_EXPORT int flushLogs();
-		DLL_EXPORT inline page* allocPage(uint64_t size)
-		{
-#ifdef VLGRIND_TEST
-			page* p = (page*)basicBufferPool::allocDirect(sizeof(page));
-			p->pageData = (char*)basicBufferPool::allocDirect(size);
-#else
-			page* p = (page*)m_pool->allocByLevel(0);
-			p->pageData = (char*)m_pool->alloc(size);
-#endif
-			p->pageId = 0;
-			p->crc = 0;
-			p->createTime = GLOBAL::currentTime.time;
-			p->pageSize = size;
-			p->pageUsedSize = 0;
-			p->_ref.m_ref.store(0, std::memory_order_relaxed);
-			p->lruNode.init();
-			vSave((char*)p, sizeof(page));
-			return p;
-		}
+		DLL_EXPORT page* allocPage(uint64_t size);
 		DLL_EXPORT inline void* allocMem(size_t size)
 		{
 #ifdef VLGRIND_TEST
