@@ -184,7 +184,7 @@ DLL_EXPORT void * basicBufferPool::allocNewMem()
 		}
 		else
 		{
-			bufferBase* buffer = nodeAllocer->alloc(basicBlockSize + 8);
+			bufferBase* buffer = nodeAllocer->alloc(blockSize + 8);
 			if (buffer == nullptr)
 				return nullptr;
 			block * b = new block(this, buffer,basicBlockSize, basicBlockCount, blockSize);

@@ -11,7 +11,7 @@ private:
 	std::atomic_int m_ref;
 	buddySystem m_byddy;
 public:
-	bufferPool():m_ref(0), m_byddy(1024*1024*1024*4,4096,14)
+	bufferPool():m_ref(0), m_byddy(1024ULL*1024u*1024u*4u,4096,14)
 	{
 		for (uint8_t i = 0; i < sizeof(m_pools) / sizeof(basicBufferPool*); i++)
 		{

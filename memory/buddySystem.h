@@ -127,7 +127,7 @@ private:
 	{
 		if (m_topSize > m_topUsedSize)
 		{
-			for (int i = 0; i < m_topSize; i++)
+			for (uint32_t i = 0; i < m_topSize; i++)
 			{
 				if (m_top[i] != nullptr)
 				{
@@ -218,19 +218,20 @@ public:
 			return 1;
 		return 0;
 	}
+	/*only used in little endian*/
 	bufferBase* alloc(uint32_t size)
 	{
 		const uint8_t* array = (const uint8_t*)&size;
 		uint8_t level;
-		if (array[0] != 0)
-			level = 24 + highPosOfUchar(array[0]);
-		else if (array[1] != 0)
-			level = 16 + highPosOfUchar(array[1]);
+		if (array[3] != 0)
+			level = 24 + highPosOfUchar(array[3]);
 		else if (array[2] != 0)
-			level = 8 + highPosOfUchar(array[2]);
-		else if (array[3] != 0)
-			level = highPosOfUchar(array[3]);
-		return allocLevel(((1 << level) == size) ? level : level + 1);
+			level = 16 + highPosOfUchar(array[2]);
+		else if (array[1] != 0)
+			level = 8 + highPosOfUchar(array[1]);
+		else if (array[0] != 0)
+			level = highPosOfUchar(array[0]);
+		return allocLevel(((1U << level) == size) ? level : level + 1);
 	}
 
 	void free(bufferBase* b)

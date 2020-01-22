@@ -1,11 +1,13 @@
 #pragma once
 #include <stdint.h>
+#include <stdlib.h>
 struct bufferBase {
 	char* buffer;
 };
 
 class bufferBaseAllocer {
 public:
+	virtual ~bufferBaseAllocer(){}
 	virtual bufferBase* alloc(uint32_t size) = 0;
 	virtual void free(bufferBase* buf) = 0;
 };

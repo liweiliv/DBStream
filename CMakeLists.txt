@@ -91,7 +91,11 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 #global 
 aux_source_directory(globalInfo globalDir)
-add_library(globalInfo  ${globalDir})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	add_library(globalInfo SHARED ${globalDir})
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	add_library(globalInfo  ${globalDir})
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 TARGET_LINK_LIBRARIES(globalInfo util)
 
 #thread
@@ -183,7 +187,7 @@ add_library(oracleDataSource SHARED ${oracleDataSourceDir})
 target_include_directories(oracleDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	target_include_directories(oracleDataSource PRIVATE thirdparty/oracle/linux/include)
-    TARGET_LINK_LIBRARIES(oracleDataSource thirdparty/oracle/linux/lib/libclntsh.so thirdparty/oracle/linux/lib/libocci.so thirdparty/oracle/linux/lib/libnnz19.so)
+TARGET_LINK_LIBRARIES(oracleDataSource thirdparty/oracle/linux/lib/libclntsh.so thirdparty/oracle/linux/lib/libocci.so thirdparty/oracle/linux/lib/libnnz19.so)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
@@ -323,6 +327,10 @@ TARGET_LINK_LIBRARIES(testRingFixedQueue util)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testRingFixedQueue pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testBuddy  memory/unittest/testBuddy.cpp)
+TARGET_LINK_LIBRARIES(testBuddy util memory)
+
 
 ADD_EXECUTABLE(testMysqlDataCreater dataSource/mysqlDataSource/unittest/mysqlDataCreater.cpp)
 target_include_directories(testMysqlDataCreater PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
