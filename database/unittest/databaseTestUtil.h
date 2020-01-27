@@ -18,7 +18,7 @@
 #ifdef OS_WIN
 #include <windows.h>
 #define mysqlFuncLib "mysqlParserFuncs.dll"
-#define mysqlParserTree "D:\\git\\DBStream\\sqlParser\\ParseTree"
+#define mysqlParserTree "ParseTree"
 #endif
 #ifdef OS_LINUX
 #define mysqlFuncLib "lib/libmysqlParserFuncs.so"

@@ -20,6 +20,7 @@ int testBasicAllocAndFree()
 		for (int j = 0; j < 128 / sizeof(int); j++)
 			assert(((int*)b->buffer)[j] ==  iter->first);
 	}
+	buddy.check();
 	assert(buddy.alloc(128) == nullptr);
 	buddy.free(bmap.find(0)->second);
 	bmap.erase(0);
@@ -27,10 +28,15 @@ int testBasicAllocAndFree()
 	bmap.erase(1);
 	bufferBase* b = buddy.alloc(256);
 	assert(b != nullptr);
-	for (int j = 0; j < 128 / sizeof(int); j++)
-		assert(((int*)b->buffer)[j] == 0);
-	for (int j = 128 / sizeof(int); j < 256 / sizeof(int); j++)
-		assert(((int*)b->buffer)[j] == 1);
+	for (int i = 2; i < 4; i++)
+	{
+		buddy.free(bmap.find(i)->second);
+		bmap.erase(i);
+	}
+	buddy.free(b);
+	b = buddy.alloc(512);
+	assert(b != nullptr);
+
 	return 0;
 }
 int main()

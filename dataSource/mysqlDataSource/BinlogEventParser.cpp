@@ -389,7 +389,12 @@ namespace DATA_SOURCE {
 						record->setFixedColumnNull(idx);
 				}
 				else
-					record->setUpdatedColumnNull(idx);
+				{
+					if (!META::columnInfos[TID(columnMeta->m_columnType)].fixed)
+						record->setUpdatedVarColumnNull(idx);
+					else
+						record->setUpdatedFixedColumnNull(idx);
+				}
 				metaIndex += m_columnInfo[ctype].metaLength;
 				continue;
 			}

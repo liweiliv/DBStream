@@ -347,10 +347,15 @@ namespace DATABASE_INCREASE
 			((uint32_t*)oldVarLengthColumns)[meta->m_varColumnCount] = (char*)&oldVarLengthColumns[meta->m_varColumnCount+1] - oldColumns;
 
 		}
-		inline void setUpdatedColumnNull(uint16_t id)
+		inline void setUpdatedVarColumnNull(uint16_t idx)
 		{
-			SET_BITMAP((uint8_t*)updatedBitmap, id);
-			SET_BITMAP((uint8_t*)updatedNullBitmap, id);
+			UNSET_BITMAP((uint8_t*)updatedNullBitmap, idx);
+			((uint32_t*)oldVarLengthColumns)[meta->m_realIndexInRowFormat[idx]] = varLengthColumns[meta->m_varColumnCount];
+		}
+		inline void setUpdatedFixedColumnNull(uint16_t idx)
+		{
+			UNSET_BITMAP((uint8_t*)updatedNullBitmap, idx);
+			memset((char*)oldColumns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[idx]], 0, META::columnInfos[TID(meta->m_columns[idx].m_columnType)].columnTypeSize);
 		}
 		template<class T>
 		inline void setFixedUpdatedColumn(uint16_t id, T value)
@@ -367,7 +372,7 @@ namespace DATABASE_INCREASE
 		{
 			((uint32_t*)oldVarLengthColumns)[meta->m_realIndexInRowFormat[id]] = oldVarLengthColumns[meta->m_varColumnCount];
 			((uint32_t*)oldVarLengthColumns)[meta->m_varColumnCount] += size;
-			SET_BITMAP((uint8_t*)nullBitmap, id);
+			SET_BITMAP((uint8_t*)updatedNullBitmap, id);
 		}
 		inline void setVardUpdatedColumn(uint16_t id, const char* value, size_t size)
 		{

@@ -917,6 +917,11 @@ namespace DATABASE {
 			m_recordId = last->m_minRecordId + last->m_recordCount;
 			if (m_current != nullptr)
 				return 0;
+			for (int bid = m_firstBlockId.load(std::memory_order_relaxed); bid <= m_lastBlockId.load(std::memory_order_relaxed); bid++)
+			{
+				block* b = getBasciBlock(bid);
+				m_statistic.loadFile(b);
+			}
 		}
 		else //empty block dir
 		{
@@ -925,11 +930,7 @@ namespace DATABASE {
 			m_firstBlockId.store(0, std::memory_order_relaxed);
 			m_lastBlockId.store(0, std::memory_order_relaxed);
 		}
-		for (int bid = m_firstBlockId.load(std::memory_order_relaxed); bid <= m_lastBlockId.load(std::memory_order_relaxed); bid++)
-		{
-			block* b = getBasciBlock(bid);
-			m_statistic.loadFile(b);
-		}
+
 	CREATE_CURRENT:
 		m_current = new appendingBlock(m_lastBlockId.load(std::memory_order_relaxed) + 1, BLOCK_FLAG_APPENDING | (m_redo ? BLOCK_FLAG_HAS_REDO : 0) | (m_compress ? BLOCK_FLAG_COMPRESS : 0), m_blockDefaultSize,
 			m_redoFlushDataSize, m_redoFlushPeriod, m_recordId, this, m_metaDataCollection);

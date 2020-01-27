@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "basicBufferPool.h"
 #include "util/likely.h"
+#include "util/bitUtil.h"
 struct buddyBuffer :public bufferBase {
 	buddyBuffer* next;
 	buddyBuffer* prev;
@@ -17,12 +18,13 @@ struct buddyBuffer :public bufferBase {
 class buddySystem :public bufferBaseAllocer
 {
 private:
-	void** m_top;
+	buddyBuffer** m_topLevelHeads;
 	uint32_t m_topSize;
 	uint32_t m_topUsedSize;
 	buddyBuffer** m_levelHeads;
 	uint8_t m_levels;
 	uint32_t m_baseLevelSize;
+	uint8_t m_baseLevelOff;
 	defaultBufferBaseAllocer m_buddyStructAllocer;
 	basicBufferPool m_buddyStructPool;
 	inline void removeFromList(buddyBuffer* b)
@@ -63,21 +65,21 @@ private:
 		{
 			if (b->mask & (((uint32_t)1) << b->level))//right
 			{
-				assert(nullptr != (right = b->prev));
-				if (!right->isFree)
-					return;
-				left = b;
-			}
-			else//right
-			{
 				assert(nullptr != (left = b->prev));
 				if (!left->isFree)
 					return;
 				right = b;
 			}
+			else//left
+			{
+				assert(nullptr != (right = b->next));
+				if (!right->isFree)
+					return;
+				left = b;
+			}
 			removeFromList(right);
 			removeFromList(left);
-			left->mask |= (~(((uint32_t)1) << b->level));
+			left->mask &= (~(((uint32_t)1) << b->level));
 			left->level++;
 
 			left->next = right->next;
@@ -129,15 +131,15 @@ private:
 		{
 			for (uint32_t i = 0; i < m_topSize; i++)
 			{
-				if (m_top[i] != nullptr)
+				if (m_topLevelHeads[i] == nullptr)
 				{
 					buddyBuffer* node = (buddyBuffer*)m_buddyStructPool.alloc();
-					m_top[i] = malloc(m_baseLevelSize << m_levels);
-					node->buffer = (char*)m_top[i];
+					node->buffer = (char*)malloc(m_baseLevelSize << m_levels);
 					node->isFree = true;
 					node->mask = 1 << m_levels;
 					node->level = m_levels;
-					node->prev = node->next = nullptr;
+					node->prev = node->next = node;
+					m_topLevelHeads[i] = node;
 					addToLevelCache(node);
 					return true;
 				}
@@ -155,11 +157,14 @@ private:
 			else
 				goto GET;
 		}
-		if(!allocTopLevel())
+		if (!allocTopLevel())
 			return false;
+
 	GET:
-		while (--cl > level)
+		do
+		{
 			split(getBuddyFromHead(cl));
+		} while (--cl > level);
 		return true;
 	}
 	buddyBuffer* allocLevel(uint8_t level)
@@ -178,69 +183,56 @@ private:
 public:
 	buddySystem(uint64_t maxMemory, uint32_t baseSize, uint32_t level) :m_levels(level), m_buddyStructPool(&m_buddyStructAllocer, sizeof(buddyBuffer), 256 * 1024 * 1024)
 	{
-		for (m_baseLevelSize = 1; m_baseLevelSize < baseSize; m_baseLevelSize <<= 1);
+		m_baseLevelOff = 0;
+		for (m_baseLevelSize = 1; m_baseLevelSize < baseSize; m_baseLevelSize <<= 1, m_baseLevelOff++);
 		uint32_t topNodeVolumn = m_baseLevelSize << level;
-		m_topSize = maxMemory / topNodeVolumn + (maxMemory % topNodeVolumn > 0) ? 1 : 0;
+		m_topSize = maxMemory / topNodeVolumn + ((maxMemory % topNodeVolumn > 0) ? 1 : 0);
 		m_topUsedSize = 0;
-		m_top = (void**)malloc(sizeof(void*) * m_topSize);
-		memset(m_top, 0, sizeof(void*) * m_topSize);
-		m_levelHeads = (buddyBuffer**)malloc(sizeof(buddyBuffer*) * level);
-		memset(m_levelHeads, 0, sizeof(buddyBuffer*) * level);
+		m_topLevelHeads = (buddyBuffer**)malloc(sizeof(buddyBuffer*) * (m_topSize + 1));
+		memset(m_topLevelHeads, 0, sizeof(buddyBuffer*) * (m_topSize + 1));
+		m_levelHeads = (buddyBuffer**)malloc(sizeof(buddyBuffer*) * (1 + level));
+		memset(m_levelHeads, 0, sizeof(buddyBuffer*) * (1 + level));
 	}
 	~buddySystem()
 	{
 		for (uint32_t i = 0; i < m_topSize; i++)
 		{
-			if (m_top[i] != nullptr)
+			if (m_topLevelHeads[i] != nullptr)
 			{
-				::free(m_top[i]);
-				m_top[i] = nullptr;
+				::free(m_topLevelHeads[i]->buffer);
+				m_topLevelHeads[i] = nullptr;
 			}
 		}
 	}
-	inline uint8_t highPosOfUchar(uint8_t c)
-	{
-		if ((c & 0x80) == 0x80)
-			return 8;
-		if ((c & 0x40) == 0x40)
-			return 7;
-		if ((c & 0x20) == 0x20)
-			return 6;
-		if ((c & 0x10) == 0x10)
-			return 5;
-		if ((c & 0x8) == 0x8)
-			return 4;
-		if ((c & 0x4) == 0x4)
-			return 3;
-		if ((c & 0x2) == 0x2)
-			return 2;
-		if ((c & 0x1) == 0x1)
-			return 1;
-		return 0;
-	}
+
 	/*only used in little endian*/
 	bufferBase* alloc(uint32_t size)
 	{
-		const uint8_t* array = (const uint8_t*)&size;
-		uint8_t level;
-		if (array[3] != 0)
-			level = 24 + highPosOfUchar(array[3]);
-		else if (array[2] != 0)
-			level = 16 + highPosOfUchar(array[2]);
-		else if (array[1] != 0)
-			level = 8 + highPosOfUchar(array[1]);
-		else if (array[0] != 0)
-			level = highPosOfUchar(array[0]);
-		return allocLevel(((1U << level) == size) ? level : level + 1);
+		uint8_t level = highPosOfUint(size>> m_baseLevelOff);
+		return allocLevel(((m_baseLevelSize << (level - 1)) == size) ? level - 1 : level);
 	}
 
 	void free(bufferBase* b)
 	{
 		buddyBuffer* buffer = static_cast<buddyBuffer*>(b);
 		buffer->isFree = true;
-		uint8_t level = buffer->level;
 		merge(buffer);
-		if (buffer->level != level)
-			addToLevelCache(buffer);
+	}
+	bool check()
+	{
+		for (uint32_t i = 0; i < m_topSize; i++)
+		{
+			if (m_topLevelHeads[i] != nullptr)
+			{
+				buddyBuffer* buffer = m_topLevelHeads[i];
+				do {
+					if (buffer->next != m_topLevelHeads[i] && buffer->next->buffer < buffer->buffer)
+					{
+						abort();
+					}
+					buffer = buffer->next;
+				} while (buffer != m_topLevelHeads[i]);
+			}
+		}
 	}
 };
