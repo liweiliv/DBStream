@@ -10,17 +10,16 @@ int testBasicAllocAndFree()
 	for (int i = 0; i < 1024 * 1024; i++)
 	{
 		bufferBase* b = buddy.alloc(128);
-		for (int j = 0; j < 128 / sizeof(int); j++)
+		for (uint32_t j = 0; j < 128 / sizeof(int); j++)
 			((int*)b->buffer)[j] = i;
 		bmap.insert(std::pair<int, bufferBase*>(i, b));
 	}
 	for (std::map<int, bufferBase*>::iterator iter = bmap.begin(); iter != bmap.end(); iter++)
 	{
 		bufferBase* b = iter->second;
-		for (int j = 0; j < 128 / sizeof(int); j++)
+		for (uint32_t j = 0; j < 128 / sizeof(int); j++)
 			assert(((int*)b->buffer)[j] ==  iter->first);
 	}
-	buddy.check();
 	assert(buddy.alloc(128) == nullptr);
 	buddy.free(bmap.find(0)->second);
 	bmap.erase(0);

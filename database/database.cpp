@@ -917,7 +917,7 @@ namespace DATABASE {
 			m_recordId = last->m_minRecordId + last->m_recordCount;
 			if (m_current != nullptr)
 				return 0;
-			for (int bid = m_firstBlockId.load(std::memory_order_relaxed); bid <= m_lastBlockId.load(std::memory_order_relaxed); bid++)
+			for (uint32_t bid = m_firstBlockId.load(std::memory_order_relaxed); bid <= m_lastBlockId.load(std::memory_order_relaxed); bid++)
 			{
 				block* b = getBasciBlock(bid);
 				m_statistic.loadFile(b);

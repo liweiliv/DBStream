@@ -23,7 +23,7 @@ int testAppend()
 			int op = abs(rand()) % 3;
 			DATABASE_INCREASE::DMLRecord* r;
 			int pk = i + (rand()%100);
-			LOG(INFO)<<pk<<" "<<tid;
+			//LOG(INFO)<<pk<<" "<<tid;
 			allrecords.push_back(pk);
 			switch (op)
 			{

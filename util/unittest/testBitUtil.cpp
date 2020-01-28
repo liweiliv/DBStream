@@ -1,4 +1,4 @@
-#include "util/bitutil.h"
+#include "util/bitUtil.h"
 #include <assert.h>
 int test()
 {

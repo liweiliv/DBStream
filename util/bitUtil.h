@@ -24,8 +24,7 @@ static inline uint8_t highPosOfUchar(uint8_t c)
 		if ((c & 0x1) == 0x1)
 			return 1;
 	}
-	else
-		return 0;
+	return 0;
 }
 static inline uint8_t highPosOfUShort(uint16_t s)
 {

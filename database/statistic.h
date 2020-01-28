@@ -49,8 +49,6 @@ namespace DATABASE
 				tpsNow = 0;
 				iopsNow = 0;
 			}
-			if (unlikely(record == nullptr))
-				return;
 			recordCount++;
 			rpsNow ++;
 			iopsNow += record->head->minHead.size;

@@ -199,7 +199,8 @@ namespace META {
 				else
 				{
 					const char* v = r->oldColumnOfUpdateType(keyMeta->columnInfo[i].columnId);
-					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(i);
+					*(uint16_t*)ptr = r->oldVarColumnSizeOfUpdateType(keyMeta->columnInfo[i].columnId);
+					assert(*(uint16_t*)ptr<size);
 					memcpy(ptr + sizeof(uint16_t), v, *(uint16_t*)ptr);
 					ptr += sizeof(uint16_t) + *(uint16_t*)ptr;
 				}

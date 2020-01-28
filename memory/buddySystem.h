@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <mutex>
 #include "buffer.h"
 #include "basicBufferPool.h"
 #include "util/likely.h"
@@ -27,6 +28,7 @@ private:
 	uint8_t m_baseLevelOff;
 	defaultBufferBaseAllocer m_buddyStructAllocer;
 	basicBufferPool m_buddyStructPool;
+	std::mutex m_lock;
 	inline void removeFromList(buddyBuffer* b)
 	{
 		b->bnext->bprev = b->bprev;
@@ -54,38 +56,38 @@ private:
 		{
 			head->bprev->bnext = b;
 			b->bnext = head;
-			b->prev = head->bprev;
+			b->bprev = head->bprev;
 			head->bprev = b;
 		}
 	}
 	inline void merge(buddyBuffer* b)
 	{
 		buddyBuffer* right, * left;
+		std::lock_guard<std::mutex> guard(m_lock);
 		do
 		{
 			if (b->mask & (((uint32_t)1) << b->level))//right
 			{
 				assert(nullptr != (left = b->prev));
-				if (!left->isFree)
+				if (left->level != b->level || !left->isFree)
 					return;
 				right = b;
 			}
 			else//left
 			{
 				assert(nullptr != (right = b->next));
-				if (!right->isFree)
+				if (right->level != b->level || !right->isFree)
 					return;
 				left = b;
 			}
 			removeFromList(right);
 			removeFromList(left);
-			left->mask &= (~(((uint32_t)1) << b->level));
-			left->level++;
 
 			left->next = right->next;
 			right->next->prev = left;
 
 			m_buddyStructPool.free(right);
+			left->level++;
 			addToLevelCache(left);
 			b = left;
 		} while (b->level < m_levels);
@@ -106,6 +108,7 @@ private:
 		next->buffer = b->buffer + size(b->level);
 		next->mask = b->mask | (((uint32_t)1) << b->level);
 		next->level = b->level;
+		next->isFree = true;
 
 		next->bprev = b;
 		b->bnext = next;
@@ -169,14 +172,17 @@ private:
 	}
 	buddyBuffer* allocLevel(uint8_t level)
 	{
+		m_lock.lock();
 		if (unlikely(m_levelHeads[level] == nullptr))
 		{
-			if (unlikely(level >= m_levels))
+			if (unlikely(level >= m_levels)||unlikely(!allocNewLevel(level)))
+			{
+				m_lock.unlock();
 				return nullptr;
-			if (unlikely(!allocNewLevel(level)))
-				return nullptr;
+			}
 		}
 		buddyBuffer* b = getBuddyFromHead(level);
+		m_lock.unlock();
 		b->isFree = false;
 		return b;
 	}
@@ -217,22 +223,5 @@ public:
 		buddyBuffer* buffer = static_cast<buddyBuffer*>(b);
 		buffer->isFree = true;
 		merge(buffer);
-	}
-	bool check()
-	{
-		for (uint32_t i = 0; i < m_topSize; i++)
-		{
-			if (m_topLevelHeads[i] != nullptr)
-			{
-				buddyBuffer* buffer = m_topLevelHeads[i];
-				do {
-					if (buffer->next != m_topLevelHeads[i] && buffer->next->buffer < buffer->buffer)
-					{
-						abort();
-					}
-					buffer = buffer->next;
-				} while (buffer != m_topLevelHeads[i]);
-			}
-		}
 	}
 };
