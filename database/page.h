@@ -7,13 +7,12 @@
 namespace DATABASE {
 #pragma pack(1)
 	struct page {
-		uint64_t pageId;
-		uint64_t pageUsedSize;
-		uint64_t pageSize;
+		uint32_t pageId;
+		uint32_t pageUsedSize;
+		uint32_t pageSize;
 		uint32_t crc;
-		uint64_t createTime;
+		uint64_t lastAccessTime;
 		::ref _ref;
-		dualLinkListNode lruNode;
 		char* pageData;
 
 		inline void use()
@@ -40,6 +39,20 @@ namespace DATABASE {
 				else
 					_ref.reset();
 			}
+		}
+		inline bool freeWhenNoUser()
+		{
+			if (_ref.tryUnuseIfZero())
+			{
+				char* data = pageData;
+				pageData = nullptr;
+				_ref.reset();
+				barrier;
+				basicBufferPool::free(data);
+				return true;
+			}
+			else
+				return false;
 		}
 	};
 #pragma pack()

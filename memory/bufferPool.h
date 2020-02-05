@@ -9,18 +9,18 @@ class bufferPool {
 private:
 	basicBufferPool *m_pools[sizeof(pageSizeList) / sizeof(uint32_t)];
 	std::atomic_int m_ref;
-	buddySystem m_byddy;
+	bufferBaseAllocer * m_allocer;
 public:
-	bufferPool():m_ref(0), m_byddy(1024ULL*1024u*1024u*4u,4096,14)
+	bufferPool(bufferBaseAllocer *allocer):m_ref(0), m_allocer(allocer)
 	{
 		for (uint8_t i = 0; i < sizeof(m_pools) / sizeof(basicBufferPool*); i++)
 		{
 			if(pageSizeList[i]<4096)
-				m_pools[i] = new basicBufferPool(&m_byddy,pageSizeList[i], pageSizeList[i] * 1024 * 64);
+				m_pools[i] = new basicBufferPool(m_allocer,pageSizeList[i], pageSizeList[i] * 1024 * 64);
 			else if (pageSizeList[i] < 4096*16)
-				m_pools[i] = new basicBufferPool(&m_byddy,pageSizeList[i], pageSizeList[i] * 1024 * 16);
+				m_pools[i] = new basicBufferPool(m_allocer,pageSizeList[i], pageSizeList[i] * 1024 * 16);
 			else
-				m_pools[i] = new basicBufferPool(&m_byddy,pageSizeList[i], 1024ull*1024ull*1024ull*4ull);
+				m_pools[i] = new basicBufferPool(m_allocer,pageSizeList[i], 1024ull*1024ull*1024ull*4ull);
 		}
 	}
 	~bufferPool()

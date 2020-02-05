@@ -7,10 +7,12 @@
 
 #ifndef STORE_H_
 #define STORE_H_
+#include <thread>
 #include "util/config.h"
 #include "glog/logging.h"
 #include "util/winDll.h"
 class bufferPool;
+class bufferBaseAllocer;
 namespace META{
 class metaDataCollection;
 }
@@ -21,8 +23,6 @@ namespace DATABASE {
 	class database;
 }
 namespace STORE{
-#define MAIN_STREAM "mainStream"
-#define GENERATED_STREAM "generatedStream"
 class schedule;
 DLL_EXPORT class store{
 private:
@@ -32,6 +32,10 @@ private:
 	META::metaDataCollection* m_metaDataCollection;
 	config * m_conf;
 	bufferPool* m_bufferPool;
+	bufferBaseAllocer* m_allocer;
+	static void highMemUsageCallback(void* handle,uint16_t usage);
+	std::thread m_monitorThread;
+	static void monitor(store* s);
 public:
 	DLL_EXPORT store(config* conf);
 	DLL_EXPORT ~store();

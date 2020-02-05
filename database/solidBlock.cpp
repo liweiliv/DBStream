@@ -447,11 +447,18 @@ namespace DATABASE
 			return -1;
 		}
 	}
-	int solidBlock::gc()
+	int solidBlock::gc(uint64_t deadLine)
 	{
+		uint16_t freedPageCount = 0;
 		for (int i = 0; i < m_pageCount; i++)
-			pages[i]->unuse();
-		return 0;
+		{
+			if (pages[i] != nullptr && pages[i]->lastAccessTime < deadLine)
+			{
+				if (pages[i]->freeWhenNoUser())
+					freedPageCount++;
+			}
+		}
+		return freedPageCount;
 	}
 	page* solidBlock::getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId)
 	{

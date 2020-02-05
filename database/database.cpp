@@ -221,11 +221,10 @@ namespace DATABASE {
 #endif
 		p->pageId = 0;
 		p->crc = 0;
-		p->createTime = GLOBAL::currentTime.time;
+		p->lastAccessTime = GLOBAL::currentTime.time;
 		p->pageSize = size;
 		p->pageUsedSize = 0;
 		p->_ref.m_ref.store(0, std::memory_order_relaxed);
-		p->lruNode.init();
 		vSave((char*)p, sizeof(page));
 		return p;
 	}
@@ -610,7 +609,7 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	int database::gc()//todo
+	DLL_EXPORT int database::gc()//todo
 	{
 		for (block* b = static_cast<block*>(m_blocks.begin()); b != nullptr; b = static_cast<block*>(m_blocks.get(b->m_blockID + 1)))
 		{
@@ -693,7 +692,7 @@ namespace DATABASE {
 			if (++activeCount > 4)
 			{
 				std::map<uint32_t, struct block*>::iterator lastActive = recoveried.find(lastActiveId);
-				static_cast<solidBlock*>(lastActive->second)->gc();
+				static_cast<solidBlock*>(lastActive->second)->gc(0);
 				lastActive++;
 				lastActiveId = lastActive->first;
 				activeCount--;

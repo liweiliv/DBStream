@@ -40,6 +40,7 @@ namespace DATABASE
 	constexpr auto C_FILESYS_PAGE_SIZE = ".fileSysPageSize";
 	constexpr auto C_MAX_FLUSH_THREAD = ".maxFlushThread";
 
+
 #ifdef OS_WIN
 	constexpr auto separatorChar = "\\";
 #endif
@@ -117,10 +118,10 @@ namespace DATABASE
 		int flush(appendingBlock* block);
 		void flushThread();
 		int purge();
-		int gc();
 		int removeBlock(block* b);
 		static void purgeThread(database* m);
 	public:
+		DLL_EXPORT int gc();
 		DLL_EXPORT const statistic* getStatistic();
 		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
 		DLL_EXPORT inline void begin()

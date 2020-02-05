@@ -48,6 +48,18 @@ public:
 		}
 		m_sections.clear();
 	}
+	static bool checkNumberString(const char* num, int64_t max, int64_t min)
+	{
+		for (int idx = strlen(num) - 1; idx >= 0; idx--)
+		{
+			if (num[idx] > '9' || num[idx] < '0')
+				return false;
+		}
+		int64_t _num = atol(num);
+		if (_num > max || _num < min)
+			return false;
+		return true;
+	}
 	int64_t getLong(const char* section, const char* key, int64_t defaultValue, int64_t min, int64_t max)
 	{
 		assert(defaultValue <= max && defaultValue >= min && min <= max);

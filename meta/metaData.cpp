@@ -216,8 +216,6 @@ namespace META {
 		m_fixedColumnCount = 0;
 		m_varColumnCount = 0;
 		m_id = 0;
-		m_indexCount = 0;
-		m_indexCount = 0;
 		if (m_primaryKey != nullptr)
 		{
 			free(m_primaryKey);
@@ -232,6 +230,7 @@ namespace META {
 		{
 			for (int i = 0; i < m_uniqueKeysCount; i++)
 				free(m_uniqueKeys[i]);
+			m_uniqueKeysCount = 0;
 			free(m_uniqueKeys);
 			m_uniqueKeys = nullptr;
 		}
@@ -245,6 +244,7 @@ namespace META {
 			for (int i = 0; i < m_indexCount; i++)
 				free(m_indexs[i]);
 			free(m_indexs);
+			m_indexCount = 0;
 			m_indexs = nullptr;
 		}
 		if (m_indexNames != nullptr)
