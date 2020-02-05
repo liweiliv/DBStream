@@ -67,7 +67,6 @@ namespace STORE {
 	}
 	void store::monitor(store* s)
 	{
-		bool is
 	}
 
 	DLL_EXPORT int store::start()

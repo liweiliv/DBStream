@@ -28,6 +28,7 @@ namespace DATABASE {
 	class blockManager;
 }
 class bufferPool;
+class bufferBaseAllocer;
 class config;
 typedef std::unordered_map<const char*, const  charsetInfo*, StrHash, StrCompare> CharsetTree;
 namespace META {
@@ -53,6 +54,7 @@ namespace META {
 
 		DATABASE::blockManager* m_metaFile;
 		bufferPool* m_bufferPool;
+		bufferBaseAllocer *m_allocer;
 		config* m_virtualConf;
 	public:
 		DLL_EXPORT metaDataCollection(const char* defaultCharset, bool caseSensitive = true, CLIENT::client* client = nullptr, const char* savePath = nullptr);
