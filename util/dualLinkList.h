@@ -2,19 +2,20 @@
 #include <atomic>
 #include <mutex>
 #include <assert.h>
-#include "spinlock.h"
 #include "shared_mutex.h"
 #include <stddef.h>
 #include <string.h>
+#include "likely.h"
 #include "shared_mutex.h"
+template<typename LOCK>
 struct dualLinkListNode
 {
-	dualLinkListNode *prev;
+	dualLinkListNode* prev;
 	dualLinkListNode* next;
-	spinlock lock;
+	LOCK lock;
 	inline void init()
 	{
-		memset(&prev,0,sizeof(dualLinkListNode));
+		memset(&prev, 0, sizeof(dualLinkListNode));
 	}
 };
 #ifndef container_of
@@ -27,10 +28,11 @@ struct dualLinkListNode
 #define container_of(ptr, type, member)  (type *)( ((char *)ptr) - offsetof(type,member) )
 #endif
 #endif
+template<typename LOCK>
 struct dualLinkList
 {
-	dualLinkListNode head;
-	dualLinkListNode end;
+	dualLinkListNode<LOCK> head;
+	dualLinkListNode<LOCK> end;
 	std::atomic<int32_t> count;
 	dualLinkList()
 	{
@@ -48,21 +50,21 @@ struct dualLinkList
 			newCount = _count + c;
 		} while (!count.compare_exchange_weak(_count, newCount, std::memory_order_acquire));
 	}
-	inline void insertAfter(dualLinkListNode* a, dualLinkListNode * n)
+	inline void insertAfter(dualLinkListNode<LOCK>* a, dualLinkListNode<LOCK>* n)
 	{
-		dualLinkListNode * next;
+		dualLinkListNode<LOCK>* next;
 		n->prev = a;
 		n->lock.lock();
 		do
 		{
 			a->lock.lock();
 			next = a->next;
-			if (likely(next->lock.trylock()))
+			if (likely(next->lock.try_lock()))
 			{
 				n->next = next;
 				a->next = n;
 				next->prev = n;
-				assert(next->prev!=next);
+				assert(next->prev != next);
 				next->lock.unlock();
 				a->lock.unlock();
 				n->lock.unlock();
@@ -73,20 +75,20 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	inline void insertAfterForHandleLock(dualLinkListNode* a, dualLinkListNode * n)
+	inline void insertAfterForHandleLock(dualLinkListNode<LOCK>* a, dualLinkListNode<LOCK>* n)
 	{
-		dualLinkListNode * next;
+		dualLinkListNode<LOCK>* next;
 		n->prev = a;
 		do
 		{
 			a->lock.lock();
 			next = a->next;
-			if (likely(next->lock.trylock()))
+			if (likely(next->lock.try_lock()))
 			{
 				n->next = next;
 				a->next = n;
 				next->prev = n;
-				assert(next->prev!=next);
+				assert(next->prev != next);
 				next->lock.unlock();
 				a->lock.unlock();
 				n->lock.unlock();
@@ -97,25 +99,25 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	inline void insertForHandleLock(dualLinkListNode * n)
+	inline void insertForHandleLock(dualLinkListNode<LOCK>* n)
 	{
 		return insertAfterForHandleLock(&head, n);
 	}
-	inline void insert(dualLinkListNode * n)
+	inline void insert(dualLinkListNode<LOCK>* n)
 	{
 		return insertAfter(&head, n);
 	}
-	inline void erase(dualLinkListNode * n)
+	inline void erase(dualLinkListNode<LOCK>* n)
 	{
 		do
 		{
 			n->lock.lock();
-			if (likely(n->prev->lock.trylock()))
+			if (likely(n->prev->lock.try_lock()))
 			{
 				n->next->lock.lock();
 				n->prev->next = n->next;
 				n->next->prev = n->prev;
-				assert(n->next->prev!=n->next);
+				assert(n->next->prev != n->next);
 				n->next->lock.unlock();
 				n->prev->lock.unlock();
 				n->lock.unlock();
@@ -126,17 +128,17 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	inline void eraseWithHandleLock(dualLinkListNode * n)
+	inline void eraseWithHandleLock(dualLinkListNode<LOCK>* n)
 	{
 		do
 		{
 			n->lock.lock();
-			if (likely(n->prev->lock.trylock()))
+			if (likely(n->prev->lock.try_lock()))
 			{
 				n->next->lock.lock();
 				n->prev->next = n->next;
 				n->next->prev = n->prev;
-				assert(n->next->prev!=n->next);
+				assert(n->next->prev != n->next);
 				n->next->lock.unlock();
 				n->prev->lock.unlock();
 				changeCount(-1);
@@ -146,14 +148,14 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	inline bool tryEraseForHandleLock(dualLinkListNode * n)
+	inline bool tryEraseForHandleLock(dualLinkListNode<LOCK>* n)
 	{
-		if (likely(n->prev->lock.trylock()))
+		if (likely(n->prev->lock.try_lock()))
 		{
 			n->next->lock.lock();
 			n->prev->next = n->next;
 			n->next->prev = n->prev;
-			assert(n->next->prev!=n->next);
+			assert(n->next->prev != n->next);
 			n->next->lock.unlock();
 			n->prev->lock.unlock();
 			changeCount(-1);
@@ -161,10 +163,10 @@ struct dualLinkList
 		}
 		return true;
 	}
-	inline dualLinkListNode* getFirst()
+	inline dualLinkListNode<LOCK>* getFirst()
 	{
 		head.lock.lock();
-		dualLinkListNode * next = head.next;
+		dualLinkListNode* next = head.next;
 		if (next == &end)
 		{
 			head.lock.unlock();
@@ -173,20 +175,20 @@ struct dualLinkList
 		head.lock.unlock();
 		return next;
 	}
-	inline dualLinkListNode* popFirst()
+	inline dualLinkListNode<LOCK>* popFirst()
 	{
 		do
 		{
-			if (likely(head.lock.trylock()))
+			if (likely(head.lock.try_lock()))
 			{
-				dualLinkListNode * n = head.next;
+				dualLinkListNode* n = head.next;
 				if (n == &end)
 				{
 					head.lock.unlock();
 					return nullptr;
 				}
 
-				if (likely(n->lock.trylock()))
+				if (likely(n->lock.try_lock()))
 				{
 					n->next->lock.lock();
 					head.next = n->next;
@@ -202,10 +204,10 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	inline dualLinkListNode* getLast()
+	inline dualLinkListNode<LOCK>* getLast()
 	{
 		end.lock.lock();
-		dualLinkListNode * prev = end.prev;
+		dualLinkListNode* prev = end.prev;
 		if (prev == &head)
 		{
 			end.lock.unlock();
@@ -214,22 +216,22 @@ struct dualLinkList
 		end.lock.unlock();
 		return prev;
 	}
-	inline dualLinkListNode* popLastAndHandleLock()
+	inline dualLinkListNode<LOCK>* popLastAndHandleLock()
 	{
 		do
 		{
-			if (likely(end.lock.trylock()))
+			if (likely(end.lock.try_lock()))
 			{
-				dualLinkListNode * n = end.prev;
+				dualLinkListNode<LOCK>* n = end.prev;
 				if (n == &head)
 				{
 					end.lock.unlock();
 					return nullptr;
 				}
 
-				if (likely(n->lock.trylock()))
+				if (likely(n->lock.try_lock()))
 				{
-					if (likely(n->prev->lock.trylock()))
+					if (likely(n->prev->lock.try_lock()))
 					{
 						end.prev = n->prev;
 						n->prev->next = &end;
@@ -246,19 +248,19 @@ struct dualLinkList
 			std::this_thread::sleep_for(std::chrono::nanoseconds(100));
 		} while (1);
 	}
-	
-	inline dualLinkListNode* popLast()
+
+	inline dualLinkListNode<LOCK>* popLast()
 	{
-		dualLinkListNode* n = popLastAndHandleLock();
-		if (nullptr!=n)
+		dualLinkListNode<LOCK>* n = popLastAndHandleLock();
+		if (nullptr != n)
 			n->lock.unlock();
 		return n;
 	}
 };
 struct globalLockDualLinkListNode
 {
-	globalLockDualLinkListNode * prev;
-	globalLockDualLinkListNode * next;
+	globalLockDualLinkListNode* prev;
+	globalLockDualLinkListNode* next;
 };
 struct globalLockDualLinkList
 {
@@ -269,21 +271,21 @@ struct globalLockDualLinkList
 		head.next = &head;
 		head.prev = &head;
 	}
-	inline void insertAfter(globalLockDualLinkListNode* a, globalLockDualLinkListNode * n)
+	inline void insertAfter(globalLockDualLinkListNode* a, globalLockDualLinkListNode* n)
 	{
 		n->prev = a;
 		lock.lock();
-		globalLockDualLinkListNode * next = a->next;
+		globalLockDualLinkListNode* next = a->next;
 		n->next = next;
 		a->next = n;
 		next->prev = n;
 		lock.unlock();
 	}
-	inline void insert(globalLockDualLinkListNode * n)
+	inline void insert(globalLockDualLinkListNode* n)
 	{
 		return insertAfter(&head, n);
 	}
-	inline void erase(globalLockDualLinkListNode * n)
+	inline void erase(globalLockDualLinkListNode* n)
 	{
 		lock.lock();
 		n->next->prev = n->prev;
@@ -291,9 +293,9 @@ struct globalLockDualLinkList
 		lock.unlock();
 	}
 	struct iterator {
-		globalLockDualLinkListNode *m_node;
-		globalLockDualLinkList *m_list;
-		iterator(globalLockDualLinkList * list):m_list(list)
+		globalLockDualLinkListNode* m_node;
+		globalLockDualLinkList* m_list;
+		iterator(globalLockDualLinkList* list) :m_list(list)
 		{
 			m_list->lock.lock_shared();
 			m_node = m_list->head.next;

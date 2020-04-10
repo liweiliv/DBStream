@@ -55,7 +55,7 @@ DLL_EXPORT basicBufferPool::~basicBufferPool()
 {
 	m_cache1.clear();
 	m_cache2.clear();
-	dualLinkListNode* n;
+	dualLinkListNode<qspinlock>* n;
 	do {
 		nonBlockStackWrap* wrap = m_globalCache.pop();
 		if (wrap == nullptr)
@@ -129,7 +129,7 @@ DLL_EXPORT void basicBufferPool::cleanCache(cache * c)
 				m_freeBlocks.insertForHandleLock(&b->dlNode);
 				while (m_freeBlocks.count.load(std::memory_order_relaxed) > 3)
 				{
-					dualLinkListNode* n = m_freeBlocks.popLast();
+					dualLinkListNode<qspinlock>* n = m_freeBlocks.popLast();
 					if (n != nullptr)
 					{
 						b = container_of(n, block, dlNode);

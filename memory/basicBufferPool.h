@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "util/nonBlockStack.h"
-#include "util/spinlock.h"
+#include "thread/qspinlock.h"
 #include "util/dualLinkList.h"
 #include "util/linkList.h"
 #include "thread/threadLocal.h"
@@ -36,10 +36,10 @@ private:
 	struct block {
 		block * next;//for nonBlockLinkList
 		basicBufferPool * pool;
-		dualLinkListNode dlNode;
+		dualLinkListNode<qspinlock> dlNode;
 		bufferBase * startPos;
 		char * alignedStartPos;
-		spinlock lock;
+		qspinlock lock;
 		nonBlockStack<basicBlock> basicBlocks;
 		uint64_t basicBlockSize;
 		uint32_t basicBlockCount;
@@ -60,9 +60,9 @@ private:
 	threadLocal<cache> m_cache2;
 	/*global cache*/
 	linkList<nonBlockStackWrap> m_globalCache;
-	dualLinkList m_activeBlocks;
-	dualLinkList m_freeBlocks;
-	dualLinkList m_usedOutBlocks;
+	dualLinkList<qspinlock> m_activeBlocks;
+	dualLinkList<qspinlock> m_freeBlocks;
+	dualLinkList<qspinlock> m_usedOutBlocks;
 	std::mutex m_lock;
 	uint64_t basicBlockSize;
 	uint32_t basicBlockCount;
@@ -79,11 +79,11 @@ public:
 private:
 	DLL_EXPORT void fillCache(basicBlock* basic);
 	DLL_EXPORT void * allocNewMem();
-	inline basicBlock *getMemFromExistBlock(dualLinkList& list)
+	inline basicBlock *getMemFromExistBlock(dualLinkList<qspinlock>& list)
 	{
 		do
 		{
-			dualLinkListNode* n = list.popLastAndHandleLock();
+			dualLinkListNode<qspinlock>* n = list.popLastAndHandleLock();
 			if (n == nullptr)
 				return nullptr;
 			block* b = container_of(n, block, dlNode);

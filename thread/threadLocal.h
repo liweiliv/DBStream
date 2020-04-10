@@ -2,6 +2,7 @@
 #include <string.h>
 #include "util/likely.h"
 #include "util/winDll.h"
+static constexpr int maxThreadCount = 256;
 class threadLocalWrap {
 public:
 	threadLocalWrap(); //we use this function to init threadid
@@ -17,7 +18,6 @@ extern thread_local threadLocalWrap _threadLocalWrap;
 #define  getThreadId() threadid
 #define getThreadLocalWrap() _threadLocalWrap
 #endif
-static constexpr int maxThreadCount = 256;
 
 DLL_EXPORT void registerThreadLocalVar(void (*_unset)(void* v), void* v);
 DLL_EXPORT void destroyThreadLocalVar(void* v);
