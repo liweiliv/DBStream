@@ -43,7 +43,7 @@ enum tableType
 static config conf(nullptr);
 static DATABASE::database* db;
 static META::metaDataCollection* dbs;
-static bufferPool pool;
+static bufferPool *pool;
 static char mod1RecordBuf[1024];
 static uint64_t ckp = 1;
 META::tableMeta* createTable_INT_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
@@ -261,6 +261,8 @@ bool mod1ValueCheck(DATABASE_INCREASE::DMLRecord * dml,int id)
 int init()
 {
 	initKeyWords();
+	defaultBufferBaseAllocer * allocer = new defaultBufferBaseAllocer();
+	pool = new bufferPool(allocer);
 	dbs = new META::metaDataCollection("utf8");
 	if (0 != dbs->initSqlParser(mysqlParserTree, mysqlFuncLib))
 	{
@@ -268,7 +270,7 @@ int init()
 		return -1;
 	}
 	removeDir("data");
-	db = new DATABASE::database("test", &conf, &pool, dbs);
+	db = new DATABASE::database("test", &conf, pool, dbs);
 	if (0 != db->load())
 		return -1;
 	if (0 != db->start())

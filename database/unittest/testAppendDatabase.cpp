@@ -82,7 +82,7 @@ int testAppend()
 	db->stop();
 	delete db;
 
-	db = new DATABASE::database("test", &conf, &pool, dbs);
+	db = new DATABASE::database("test", &conf, pool, dbs);
 	if (0 != db->load())
 		return -1;
 	if (0 != db->start())

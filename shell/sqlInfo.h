@@ -23,14 +23,14 @@ namespace SHELL {
 		uint32_t size;
 		inline void init()
 		{
-			list = (T*)shellGlobalBufferPool.alloc(sizeof(T) * (volumn = 16));
+			list = (T*)shellGlobalBufferPool->alloc(sizeof(T) * (volumn = 16));
 			size = 0;
 		}
 		inline void add(T v)
 		{
 			if (unlikely(size >= volumn))
 			{
-				T* newList = (T*)shellGlobalBufferPool.alloc(sizeof(T) * (volumn = volumn << 1));
+				T* newList = (T*)shellGlobalBufferPool->alloc(sizeof(T) * (volumn = volumn << 1));
 				memcpy(newList, list, sizeof(T) * size);
 			}
 			list[size++] = v;

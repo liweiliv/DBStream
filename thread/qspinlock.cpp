@@ -113,7 +113,7 @@ queue:
 	 * attempt the trylock once more in the hope someone let go while we
 	 * weren't watching.
 	 */
-	if (tryLock())
+	if (try_lock())
 		goto release;
 
 	/*

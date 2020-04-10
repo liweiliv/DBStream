@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <thread>
 #include <mutex>
 #include <assert.h>
 #include "shared_mutex.h"
@@ -166,7 +167,7 @@ struct dualLinkList
 	inline dualLinkListNode<LOCK>* getFirst()
 	{
 		head.lock.lock();
-		dualLinkListNode* next = head.next;
+		dualLinkListNode<LOCK>* next = head.next;
 		if (next == &end)
 		{
 			head.lock.unlock();
@@ -181,7 +182,7 @@ struct dualLinkList
 		{
 			if (likely(head.lock.try_lock()))
 			{
-				dualLinkListNode* n = head.next;
+				dualLinkListNode<LOCK>* n = head.next;
 				if (n == &end)
 				{
 					head.lock.unlock();
@@ -207,7 +208,7 @@ struct dualLinkList
 	inline dualLinkListNode<LOCK>* getLast()
 	{
 		end.lock.lock();
-		dualLinkListNode* prev = end.prev;
+		dualLinkListNode<LOCK>* prev = end.prev;
 		if (prev == &head)
 		{
 			end.lock.unlock();

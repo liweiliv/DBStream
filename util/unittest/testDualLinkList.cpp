@@ -7,7 +7,7 @@ struct s
 	dualLinkListNode<qspinlock> node;
 	int id;
 };
-void t(dualLinkListNode<qspinlock>* l, int id)
+void t(dualLinkList<qspinlock>* l, int id)
 {
 	for (int i = 0; i < 100000; i++)
 	{
@@ -27,7 +27,7 @@ void t(dualLinkListNode<qspinlock>* l, int id)
 void test()
 {
 	std::thread tl[10];
-	dualLinkListNode<qspinlock> l;
+	dualLinkList<qspinlock> l;
 	for (int i = 0; i < 10; i++)
 	{
 		tl[i] = std::thread(t, &l, i);

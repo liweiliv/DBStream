@@ -1390,11 +1390,11 @@ namespace SHELL {
 		if (lv->size == rv->size)
 			ret = memcmp(lv->value, rv->value, lv->size) == 0;
 		if (lv->alloced)
-			shellGlobalBufferPool.free((char*)lv->value);
+			shellGlobalBufferPool->free((char*)lv->value);
 		if (rv->alloced)
-			shellGlobalBufferPool.free((char*)rv->value);
-		shellGlobalBufferPool.free(rv);
-		shellGlobalBufferPool.free(lv);
+			shellGlobalBufferPool->free((char*)rv->value);
+		shellGlobalBufferPool->free(rv);
+		shellGlobalBufferPool->free(lv);
 		return ret;
 	}
 
@@ -1532,11 +1532,11 @@ namespace SHELL {
 		if (lv->size == rv->size)
 			ret = memcmp(lv->value, rv->value, lv->size) != 0;
 		if (lv->alloced)
-			shellGlobalBufferPool.free((char*)lv->value);
+			shellGlobalBufferPool->free((char*)lv->value);
 		if (rv->alloced)
-			shellGlobalBufferPool.free((char*)rv->value);
-		shellGlobalBufferPool.free(rv);
-		shellGlobalBufferPool.free(lv);
+			shellGlobalBufferPool->free((char*)rv->value);
+		shellGlobalBufferPool->free(rv);
+		shellGlobalBufferPool->free(lv);
 		return ret;
 	}
 

@@ -23,18 +23,18 @@ namespace SHELL {
 		{
 			varLenValue* src = static_cast<varLenValue*>(valueList[0]->getValue(row));
 			varLenValue* dest = static_cast<varLenValue*>(valueList[1]->getValue(row));
-			varLenValue* newStr = (varLenValue*)shellGlobalBufferPool.allocByLevel(0);
-			newStr->value = (char*)shellGlobalBufferPool.alloc(src->size + dest->size);
+			varLenValue* newStr = (varLenValue*)shellGlobalBufferPool->allocByLevel(0);
+			newStr->value = (char*)shellGlobalBufferPool->alloc(src->size + dest->size);
 			memcpy((char*)newStr->value, src->value, src->size);
 			memcpy((char*)newStr->value + src->size, dest->value, dest->size);
 			newStr->alloced = true;
 			newStr->size = src->size + dest->size;
 			if (src->alloced)
-				shellGlobalBufferPool.free((char*)src->value);
+				shellGlobalBufferPool->free((char*)src->value);
 			if (dest->alloced)
-				shellGlobalBufferPool.free((char*)dest->value);
-			shellGlobalBufferPool.free(src);
-			shellGlobalBufferPool.free(dest);
+				shellGlobalBufferPool->free((char*)dest->value);
+			shellGlobalBufferPool->free(src);
+			shellGlobalBufferPool->free(dest);
 			return newStr;
 		}
 	};
@@ -251,7 +251,7 @@ namespace SHELL {
 		} while (true);
 		va_end(vl);
 	end:
-		realString = (char*)shellGlobalBufferPool.alloc(chars.size());
+		realString = (char*)shellGlobalBufferPool->alloc(chars.size());
 		for (std::list<uint8_t>::const_iterator iter = chars.begin(); iter != chars.end(); iter++)
 			realString[realStringSize++] = (char)*iter;
 		return realString;

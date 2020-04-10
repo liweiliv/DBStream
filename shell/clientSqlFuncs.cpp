@@ -41,7 +41,7 @@ namespace SHELL {
 	inline void createSelectSqlInfo(SQL_PARSER::handle* h)
 	{
 		assert(h->userData == nullptr);
-		selectSqlInfo* sql = (selectSqlInfo*)shellGlobalBufferPool.alloc(sizeof(selectSqlInfo));
+		selectSqlInfo* sql = (selectSqlInfo*)shellGlobalBufferPool->alloc(sizeof(selectSqlInfo));
 		sql->init();
 		h->userData = sql;
 	}
@@ -63,8 +63,8 @@ namespace SHELL {
 	}
 	static inline rawField* SQLValue2String(SQL_PARSER::SQLValue* value)
 	{
-		rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
-		varLenValue* v = (varLenValue*)shellGlobalBufferPool.alloc(sizeof(varLenValue));
+		rawField* field = (rawField*)shellGlobalBufferPool->alloc(sizeof(rawField));
+		varLenValue* v = (varLenValue*)shellGlobalBufferPool->alloc(sizeof(varLenValue));
 		v->size = static_cast<SQL_PARSER::SQLStringValue*>(value)->size;
 		v->value = static_cast<SQL_PARSER::SQLStringValue*>(value)->value;
 		v->alloced = false;
@@ -73,13 +73,13 @@ namespace SHELL {
 	}
 	static inline rawField* SQLValue2Int(SQL_PARSER::SQLValue* value)
 	{
-		rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
+		rawField* field = (rawField*)shellGlobalBufferPool->alloc(sizeof(rawField));
 		field->init(*(void**) & static_cast<SQL_PARSER::SQLIntNumberValue*>(value)->number, META::COLUMN_TYPE::T_INT64);
 		return field;
 	}
 	static inline rawField* SQLValue2Float(SQL_PARSER::SQLValue* value)
 	{
-		rawField* field = (rawField*)shellGlobalBufferPool.alloc(sizeof(rawField));
+		rawField* field = (rawField*)shellGlobalBufferPool->alloc(sizeof(rawField));
 		field->init(*(void**) & static_cast<SQL_PARSER::SQLFloatNumberValue*>(value)->number, META::COLUMN_TYPE::T_DOUBLE);
 		return field;
 	}
@@ -113,7 +113,7 @@ namespace SHELL {
 			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::tableMeta::tableID(sql->table->m_id)))
 				return nullptr;
 
-			field = (columnFiled*)shellGlobalBufferPool.alloc(sizeof(columnFiled*));
+			field = (columnFiled*)shellGlobalBufferPool->alloc(sizeof(columnFiled*));
 			field->init(sql->table, columnMeta, tableId);
 		}
 		else
@@ -122,7 +122,7 @@ namespace SHELL {
 				return nullptr;
 			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::tableMeta::tableID(sql->joinedTables.list[tableId]->m_id)))
 				return nullptr;
-			field = (columnFiled*)shellGlobalBufferPool.alloc(sizeof(columnFiled*));
+			field = (columnFiled*)shellGlobalBufferPool->alloc(sizeof(columnFiled*));
 			field->init(sql->joinedTables.list[tableId], columnMeta, tableId);
 		}
 		return field;
@@ -132,7 +132,7 @@ namespace SHELL {
 		SQL_PARSER::SQLFunctionValue* funcValue = static_cast<SQL_PARSER::SQLFunctionValue*>(value);
 		uint8_t* argvTypeList = getTypeListBuf();
 		uint16_t argvListSize = 0;
-		Field** argvs = (Field**)shellGlobalBufferPool.alloc(sizeof(Field*) * funcValue->argvs.size());
+		Field** argvs = (Field**)shellGlobalBufferPool->alloc(sizeof(Field*) * funcValue->argvs.size());
 		for (decltype(funcValue->argvs)::const_iterator iter = funcValue->argvs.begin(); iter != funcValue->argvs.end(); iter++)
 		{
 			argvs[argvListSize] = createFieldFromSqlValue(*iter, sql, isSelectedColumn);
@@ -150,14 +150,14 @@ namespace SHELL {
 		const rowFunction* rowFunc = getRowFunction(funcValue->funcName.c_str(), (char*)argvTypeList);
 		if (rowFunc != nullptr)
 		{
-			rowFunctionFiled* field = (rowFunctionFiled*)shellGlobalBufferPool.alloc(sizeof(rowFunctionFiled));
+			rowFunctionFiled* field = (rowFunctionFiled*)shellGlobalBufferPool->alloc(sizeof(rowFunctionFiled));
 			field->init(argvs, rowFunc);
 			return field;
 		}
 		const groupFunction* groupFunc = getGroupFunction(funcValue->funcName.c_str(), (char*)argvTypeList);
 		if (groupFunc != nullptr)
 		{
-			groupFunctionFiled* field = (groupFunctionFiled*)shellGlobalBufferPool.alloc(sizeof(groupFunctionFiled));
+			groupFunctionFiled* field = (groupFunctionFiled*)shellGlobalBufferPool->alloc(sizeof(groupFunctionFiled));
 			field->init(argvs, groupFunc);
 			return field;
 		}
@@ -170,7 +170,7 @@ namespace SHELL {
 		SQL_PARSER::SQLExpressionValue* expValue = static_cast<SQL_PARSER::SQLExpressionValue*>(value);
 		if (expValue->count <= 1)
 			return nullptr;
-		Field** fields = (Field**)shellGlobalBufferPool.alloc(sizeof(Field*) * expValue->count);
+		Field** fields = (Field**)shellGlobalBufferPool->alloc(sizeof(Field*) * expValue->count);
 		uint8_t* typeBuffer = getTypeListBuf();
 		uint16_t typeBufferSize = 0;
 		bool group = false;
@@ -216,7 +216,7 @@ namespace SHELL {
 						continue;
 					}
 				}
-				shellGlobalBufferPool.free(fields);
+				shellGlobalBufferPool->free(fields);
 				return nullptr;
 			}
 			else
@@ -229,11 +229,11 @@ namespace SHELL {
 		}
 		if (typeBufferSize != 1)
 		{
-			shellGlobalBufferPool.free(fields);
+			shellGlobalBufferPool->free(fields);
 			return nullptr;
 		}
 
-		expressionField* exp = (expressionField*)shellGlobalBufferPool.alloc(sizeof(expressionField));
+		expressionField* exp = (expressionField*)shellGlobalBufferPool->alloc(sizeof(expressionField));
 		exp->init(fields, expValue->count, false, group, typeBuffer[0]);
 		return exp;
 	}
@@ -286,7 +286,7 @@ namespace SHELL {
 		if (exp->group || static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
-			shellGlobalBufferPool.free(exp);
+			shellGlobalBufferPool->free(exp);
 			return SQL_PARSER::INVALID;
 		}
 		sql->selectFields.add(exp);
@@ -334,7 +334,7 @@ namespace SHELL {
 		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
-			shellGlobalBufferPool.free(exp);
+			shellGlobalBufferPool->free(exp);
 			return SQL_PARSER::INVALID;
 		}
 		sql->joinedCondition = exp;
@@ -364,7 +364,7 @@ namespace SHELL {
 			if (exp->valueType == META::COLUMN_TYPE::T_BOOL)
 			{
 				exp->clean();
-				shellGlobalBufferPool.free(exp);
+				shellGlobalBufferPool->free(exp);
 				return SQL_PARSER::INVALID;
 			}
 			sql->groupBy.add(exp);
@@ -378,7 +378,7 @@ namespace SHELL {
 			if (field->fieldType == GROUP_FUNCTION_FIELD)
 			{
 				field->clean();
-				shellGlobalBufferPool.free(field);
+				shellGlobalBufferPool->free(field);
 				return SQL_PARSER::INVALID;
 			}
 			sql->groupBy.add(field);
@@ -398,7 +398,7 @@ namespace SHELL {
 		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
-			shellGlobalBufferPool.free(exp);
+			shellGlobalBufferPool->free(exp);
 			return SQL_PARSER::INVALID;
 		}
 		sql->havCondition = exp;
@@ -415,7 +415,7 @@ namespace SHELL {
 		if (static_cast<const operatorFuncInfo*>((void*)(((uint64_t)exp->list[exp->listSize - 1]) & ~FUNC_ARGV_MASK))->returnType != META::COLUMN_TYPE::T_BOOL)
 		{
 			exp->clean();
-			shellGlobalBufferPool.free(exp);
+			shellGlobalBufferPool->free(exp);
 			return SQL_PARSER::INVALID;
 		}
 		sql->havCondition = exp;

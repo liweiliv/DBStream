@@ -11,7 +11,7 @@ namespace SHELL {
 #define DUAL_ARGV_LOGIC_OP_FUNC_TYPE 0x2000000000000000ULL
 #define SINGLE_ARGV_LOGIC_OP_FUNC_TYPE 0x1000000000000000ULL
 #define FUNC_ARGV_MASK 0xF000000000000000ULL
-	extern bufferPool shellGlobalBufferPool;
+	extern bufferPool * shellGlobalBufferPool;
 	extern META::metaDataCollection* shellMetaCenter;
 	extern STORE::store* shellStore;
 	static constexpr int MAX_EXPRESSION_LENGTH = 1024;
@@ -124,7 +124,7 @@ namespace SHELL {
 					return (void*)value;
 				else
 				{
-					varLenValue* v = (varLenValue*)shellGlobalBufferPool.allocByLevel(0);
+					varLenValue* v = (varLenValue*)shellGlobalBufferPool->allocByLevel(0);
 					v->alloced = false;
 					v->size = row[selectField->tableJoinId]->varColumnSize(selectField->column->m_columnIndex);
 					v->value = value;

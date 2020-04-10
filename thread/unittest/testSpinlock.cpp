@@ -45,8 +45,8 @@ void test()
 }
 int main()
 {
-	test<std::mutex>();
-	test<spinlock>();
-	test<mcsSpinlock>();
+//	test<std::mutex>();
+//	test<spinlock>();
+//	test<mcsSpinlock>();
 	test<qspinlock>();
 }

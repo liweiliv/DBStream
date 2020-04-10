@@ -4,7 +4,7 @@
 #include "thread/threadLocal.h"
 #include "util/likely.h"
 namespace SHELL {
-	bufferPool shellGlobalBufferPool;
+	bufferPool * shellGlobalBufferPool = nullptr;
 	static threadLocal<Field*> localFieldStack;
 	static threadLocal<void*> localValueStack;
 
@@ -77,10 +77,10 @@ namespace SHELL {
 			else
 			{
 				exp->list[idx]->clean();
-				shellGlobalBufferPool.free(exp->list[idx]);
+				shellGlobalBufferPool->free(exp->list[idx]);
 			}
 		}
-		shellGlobalBufferPool.free(exp->list);
+		shellGlobalBufferPool->free(exp->list);
 	}
 	void* expressionField::_getValue(Field* field, const DATABASE_INCREASE::DMLRecord** const row)
 	{
