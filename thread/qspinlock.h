@@ -1,5 +1,7 @@
 #pragma once
 #include <stdint.h>
+#include <atomic>
+#include <assert.h>
 #if defined OS_LINUX
 #include "rawAtomic.h"
 #elif defined OS_WIN
@@ -11,7 +13,8 @@
 /*
  * Bitfields in the atomic value:
  *  0- 7: locked byte
- *  8-15: pending
+ *     8: pending
+ *  9-15: not used
  * 16-17: tail index
  * 18-31: tail cpu (+1)
  */
@@ -45,124 +48,60 @@
 #pragma pack(4)
 struct qspinlock
 {
-	union {
-		uint32_t val;
-#ifdef OS_LINUX
-		atomic_t aval;
-#endif
-		struct {
-			uint8_t	locked;
-			uint8_t	pending;
-		};
-		struct {
-			uint16_t	locked_pending;
-			uint16_t	tail;
-		};
-	};
-	qspinlock():val(0)
+	std::atomic<int32_t> val;
+	qspinlock() :val(0)
 	{
 	}
 	inline bool isLocked()
 	{
-		return *(volatile uint32_t*)&val > 0;
+		return val.load(std::memory_order_relaxed) > 0;
 	}
 	inline bool try_lock()
 	{
-		uint32_t _val = *(volatile uint32_t*)&val;
+		int32_t _val = val.load(std::memory_order_relaxed);
 		if (unlikely(_val))
 			return false;
-#if defined OS_WIN
-		return InterlockedCompareExchange(&val, _Q_LOCKED_VAL, _val) == _val;
-#elif defined OS_LINUX
-		return atomicCmpxchg(&aval, _val, _Q_LOCKED_VAL) == _val;
-#endif
+		return val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_release);
 	}
 	inline void lock()
 	{
-		uint32_t _val;
-#if defined OS_WIN
-		if (likely((_val = InterlockedCompareExchange(&val, _Q_LOCKED_VAL, 0)) == 0))
-#elif defined OS_LINUX
-		if (likely((_val = atomicCmpxchg(&aval, 0, _Q_LOCKED_VAL)) == 0))
-#endif
-		{
+		int32_t _val = 0;
+		if (val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_release))
 			return;
-		}
 		queuedSpinlockSlowpath(_val);
 	}
 	inline void unlock()
 	{
-		*(volatile uint16_t*)&locked = 0;
+		val.store(0, std::memory_order_release);
 	}
-	DLL_EXPORT void queuedSpinlockSlowpath(uint32_t val);
-	inline uint32_t setPendingAndGetOldValue()
+	DLL_EXPORT void queuedSpinlockSlowpath(int32_t val);
+	inline int32_t setPendingAndGetOldValue()
 	{
-		uint32_t _val = *(volatile uint32_t*)&val, ov;
-		do {
-#if defined OS_WIN
-			if (likely((ov = InterlockedCompareExchange(&val, _Q_PENDING_VAL | _val, _val)) == _val))
-#elif defined OS_LINUX
-			if (likely((ov = atomicCmpxchg(&aval, _val, _Q_PENDING_VAL | _val)) == _val))
-#endif
-			{
-				return _val;
-			}
-			_val = ov;
-		} while (true);
+		return val.fetch_or(_Q_PENDING_VAL, std::memory_order_release);
 	}
 	inline void unsetPending()
 	{
-#if _Q_PENDING_BITS < 8
-		uint32_t _val = *(volatile uint32_t*)&val, ov;
-		do {
-#if defined OS_WIN
-			if (likely((ov = InterlockedCompareExchange(&val, (~_Q_PENDING_VAL) & _val, _val)) == _val))
-#elif defined OS_LINUX
-			if (likely((ov = atomicCmpxchg(&aval, _val, (~_Q_PENDING_VAL) & _val)) == _val))
-#endif
-			{
-				return;
-			}
-			_val = ov;
-		} while (true);
-#else
-		* (volatile uint8_t*)&this->pending = 0;
-#endif
+		val.fetch_and(~_Q_PENDING_VAL,std::memory_order_release);
 	}
 	inline void clearPendingSetLocked()
 	{
-#if _Q_PENDING_BITS < 8
-#if defined OS_WIN
-		InterlockedAdd((long*)&val, -_Q_PENDING_VAL + _Q_LOCKED_VAL);
-#elif defined OS_LINUX
-		atomicAdd(-_Q_PENDING_VAL + _Q_LOCKED_VAL, &aval);
-#endif
-#else
-		* (volatile uint16_t*)&this->locked_pending = _Q_LOCKED_VAL;
-#endif
-
+		int32_t v = val.fetch_add(-_Q_PENDING_VAL + _Q_LOCKED_VAL);
+		assert(v & _Q_PENDING_VAL);
+		assert(!(v & _Q_LOCKED_VAL));
 	}
 	inline uint32_t xchgTail(int tail)
 	{
-#if defined OS_WIN
-		uint32_t old, _new, val = *(volatile uint32_t*)&this->val;
+		int32_t _val = val.load(std::memory_order_relaxed);
 		for (;;)
 		{
-			_new = (val & _Q_LOCKED_PENDING_MASK) | tail;
 			/*
 			 * We can use relaxed semantics since the caller ensures that
 			 * the MCS node is properly initialized before updating the
 			 * tail.
 			 */
-			old = InterlockedCompareExchange(&this->val, _new, val);
-			if (old == val)
-				break;
-			val = old;
+			if (val.compare_exchange_weak(_val, (_val & _Q_LOCKED_PENDING_MASK) | tail, std::memory_order_release))
+				return _val;
 		}
-		return old;
-#elif defined OS_LINUX
-		return ((uint32_t)atomicXchgI16Relaxed((int16_t*)&this->tail, tail >> _Q_TAIL_OFFSET)) << _Q_TAIL_OFFSET;
-#endif
 	}
 };
 #pragma pack()

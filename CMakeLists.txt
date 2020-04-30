@@ -342,6 +342,14 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testSpinlock pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+ADD_EXECUTABLE(testLinuxAtomic  thread/unittest/testLinuxAtomic.cpp)
+TARGET_LINK_LIBRARIES(testLinuxAtomic util thread)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testLinuxAtomic pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
+
 ADD_EXECUTABLE(testMysqlDataCreater dataSource/mysqlDataSource/unittest/mysqlDataCreater.cpp)
 target_include_directories(testMysqlDataCreater PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
 TARGET_LINK_LIBRARIES(testMysqlDataCreater  util ${GLOG} ${MYSQL_CLIENT})

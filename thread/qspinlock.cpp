@@ -24,10 +24,10 @@ static inline struct mcsSpinlockNode* decodeTail(uint32_t tail)
 	int idx = (tail & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
 	return &perThreadMcsLockNode[thread][idx];
 }
-DLL_EXPORT void qspinlock::queuedSpinlockSlowpath(uint32_t _val)
+DLL_EXPORT void qspinlock::queuedSpinlockSlowpath(int32_t _val)
 {
 	struct mcsSpinlockNode* prev, * next, * node;
-	uint32_t old, tail;
+	int32_t old, tail;
 	int idx;
 
 	/*
@@ -37,7 +37,7 @@ DLL_EXPORT void qspinlock::queuedSpinlockSlowpath(uint32_t _val)
 	 * 0,1,0 -> 0,0,1
 	 */
 	if (_val == _Q_PENDING_VAL) {
-		while ((_val = *(volatile uint32_t*)(&this->val)) == _Q_PENDING_VAL)
+		while ((_val = val.load(std::memory_order_acquire)) == _Q_PENDING_VAL)
 			yield();
 	}
 
@@ -84,7 +84,7 @@ DLL_EXPORT void qspinlock::queuedSpinlockSlowpath(uint32_t _val)
 	 */
 	if (_val & _Q_LOCKED_MASK)
 	{
-		while ((*(volatile uint32_t*)(&this->val)) & _Q_LOCKED_MASK)
+		while (val.load(std::memory_order_acquire) & _Q_LOCKED_MASK)
 			yield();
 	}
 	/*
@@ -157,7 +157,7 @@ queue:
 	 * sequentiality; this is because the set_locked() function below
 	 * does not imply a full barrier.
 	 */
-	while ((_val = (*(volatile uint32_t*)&this->val)) & _Q_LOCKED_PENDING_MASK)
+	while ((_val=val.load(std::memory_order_acquire)) & _Q_LOCKED_PENDING_MASK)
 		yield();
 	/*
 	 * claim the lock:
@@ -182,11 +182,7 @@ queue:
 	  */
 	if ((_val & _Q_TAIL_MASK) == tail)
 	{
-#if defined OS_WIN
-		if(InterlockedCompareExchange(&this->val, _Q_LOCKED_VAL, _val) == _val)
-#elif defined OS_LINUX
-		if(atomicCmpxchg(&this->aval, val, _Q_LOCKED_VAL) ==_val)
-#endif
+		if(val.compare_exchange_strong(_val, _Q_LOCKED_VAL,std::memory_order_release))
 			goto release; /* No contention */
 	}
 
@@ -195,7 +191,11 @@ queue:
 	 * which will then detect the remaining tail and queue behind us
 	 * ensuring we'll see a @next.
 	 */
-	*(volatile uint8_t*)&this->locked = _Q_LOCKED_VAL;
+	do {
+		if (val.compare_exchange_weak(_val, _val | _Q_LOCKED_VAL, std::memory_order_release))
+			break;
+	} while (true);
+
 	/*
 	 * contended path; wait for next if not observed yet, release.
 	 */

@@ -31,7 +31,6 @@ void test()
 	idx = 0;
 	LOCK lock;
 	int maxCountPerThread = 10000000;
-	int threadCount = 2;
 	std::thread t[THREAD_COUNT];
 	for (int i = 0; i < THREAD_COUNT; i++)
 	{
@@ -41,6 +40,7 @@ void test()
 	{
 		t[i].join();
 	}
+	printf("%ld\n",idx);
 	assert(idx == THREAD_COUNT * maxCountPerThread);
 }
 int main()
