@@ -11,7 +11,9 @@ template<typename LOCK>
 void testLock(LOCK* lock,int cnt)
 {
 	timer::timestamp t, t1;
+	_threadLocalWrap.idle();
 	t.time = timer::getNowTimestamp();
+	int64_t i;
 	for (int i = 0; i < cnt; i++)
 	{
 		lock->lock();
@@ -24,7 +26,7 @@ void testLock(LOCK* lock,int cnt)
 	printf("%lu.%lu\n", t1.seconds, t1.nanoSeconds);
 	printf("%lu\n", (t1.seconds - 1 - t.seconds) * 1000000000 + 1000000000 - t.nanoSeconds + t1.nanoSeconds);
 }
-#define THREAD_COUNT  2
+#define THREAD_COUNT  10
 template<typename LOCK>
 void test()
 {
@@ -40,13 +42,21 @@ void test()
 	{
 		t[i].join();
 	}
-	printf("%ld\n",idx);
+	//printf("%ld\n",idx);
 	assert(idx == THREAD_COUNT * maxCountPerThread);
 }
 int main()
 {
-//	test<std::mutex>();
-//	test<spinlock>();
-//	test<mcsSpinlock>();
+/*
+	printf("mutex\n");
+test<std::mutex>();
+printf("spinlock\n");
+
+	test<spinlock>();
+	printf("mcsSpinlock\n");
+test<mcsSpinlock>();
+*/
+printf("qspinlock\n");
+
 	test<qspinlock>();
 }

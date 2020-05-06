@@ -24,82 +24,11 @@ static inline struct mcsSpinlockNode* decodeTail(uint32_t tail)
 	int idx = (tail & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
 	return &perThreadMcsLockNode[thread][idx];
 }
-DLL_EXPORT void qspinlock::queuedSpinlockSlowpath(int32_t _val)
+void qspinlock::queued()
 {
 	struct mcsSpinlockNode* prev, * next, * node;
 	int32_t old, tail;
-	int idx;
-
-	/*
-	 * Wait for in-progress pending->locked hand-overs with a bounded
-	 * number of spins so that we guarantee forward progress.
-	 *
-	 * 0,1,0 -> 0,0,1
-	 */
-	if (_val == _Q_PENDING_VAL) {
-		while ((_val = val.load(std::memory_order_acquire)) == _Q_PENDING_VAL)
-			yield();
-	}
-
-	/*
-	 * If we observe any contention; queue.
-	 */
-	if (_val & ~_Q_LOCKED_MASK)
-		goto queue;
-
-	/*
-	 * trylock || pending
-	 *
-	 * 0,0,* -> 0,1,* -> 0,0,1 pending, trylock
-	 */
-
-	_val = setPendingAndGetOldValue();
-
-	/*
-	 * If we observe contention, there is a concurrent locker.
-	 *
-	 * Undo and queue; our setting of PENDING might have made the
-	 * n,0,0 -> 0,0,0 transition fail and it will now be waiting
-	 * on @next to become !NULL.
-	 */
-	if (unlikely(_val & ~_Q_LOCKED_MASK)) {
-
-		/* Undo PENDING if we set it. */
-		if (!(_val & _Q_PENDING_MASK))
-			unsetPending();
-
-		goto queue;
-	}
-
-	/*
-	 * We're pending, wait for the owner to go away.
-	 *
-	 * 0,1,1 -> 0,1,0
-	 *
-	 * this wait loop must be a load-acquire such that we match the
-	 * store-release that clears the locked bit and create lock
-	 * sequentiality; this is because not all
-	 * clear_pending_set_locked() implementations imply full
-	 * barriers.
-	 */
-	if (_val & _Q_LOCKED_MASK)
-	{
-		while (val.load(std::memory_order_acquire) & _Q_LOCKED_MASK)
-			yield();
-	}
-	/*
-	 * take ownership and clear the pending bit.
-	 *
-	 * 0,1,0 -> 0,0,1
-	 */
-	clearPendingSetLocked();
-	return;
-
-	/*
-	 * End of pending bit optimistic spinning and beginning of MCS
-	 * queuing.
-	 */
-queue:
+	int idx,_val;
 	idx = getMcsNodeIndex();
 	tail = encodeTail(getThreadId(), idx);
 	node = &perThreadMcsLockNode[getThreadId()][idx];

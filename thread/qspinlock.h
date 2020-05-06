@@ -9,6 +9,7 @@
 #endif
 #include "util/likely.h"
 #include "util/winDll.h"
+#include "yield.h"
 
 /*
  * Bitfields in the atomic value:
@@ -61,33 +62,101 @@ struct qspinlock
 		int32_t _val = val.load(std::memory_order_relaxed);
 		if (unlikely(_val))
 			return false;
-		return val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_release);
+		return val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_relaxed);
 	}
 	inline void lock()
 	{
 		int32_t _val = 0;
-		if (val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_release))
+		if (val.compare_exchange_strong(_val, _Q_LOCKED_VAL, std::memory_order_relaxed))
 			return;
 		queuedSpinlockSlowpath(_val);
 	}
 	inline void unlock()
 	{
-		val.store(0, std::memory_order_release);
+		val.fetch_and(~_Q_LOCKED_VAL,std::memory_order_release);
 	}
-	DLL_EXPORT void queuedSpinlockSlowpath(int32_t val);
+	void queued();
+	inline void queuedSpinlockSlowpath(int32_t _val)
+	{
+			/*
+			 * Wait for in-progress pending->locked hand-overs with a bounded
+			 * number of spins so that we guarantee forward progress.
+			 *
+			 * 0,1,0 -> 0,0,1
+			 */
+			if (_val == _Q_PENDING_VAL) {
+				while ((_val = val.load(std::memory_order_relaxed)) == _Q_PENDING_VAL)
+					yield();
+			}
+
+			/*
+			 * If we observe any contention; queue.
+			 */
+			if (_val & ~_Q_LOCKED_MASK)
+			{
+				queued();
+				return;
+			}
+
+			/*
+			 * trylock || pending
+			 *
+			 * 0,0,* -> 0,1,* -> 0,0,1 pending, trylock
+			 */
+
+			_val = setPendingAndGetOldValue();
+
+			/*
+			 * If we observe contention, there is a concurrent locker.
+			 *
+			 * Undo and queue; our setting of PENDING might have made the
+			 * n,0,0 -> 0,0,0 transition fail and it will now be waiting
+			 * on @next to become !NULL.
+			 */
+			if (unlikely(_val & ~_Q_LOCKED_MASK)) {
+
+				/* Undo PENDING if we set it. */
+				if (!(_val & _Q_PENDING_MASK))
+					unsetPending();
+
+				queued();
+				return;
+			}
+			/*
+			 * We're pending, wait for the owner to go away.
+			 *
+			 * 0,1,1 -> 0,1,0
+			 *
+			 * this wait loop must be a load-acquire such that we match the
+			 * store-release that clears the locked bit and create lock
+			 * sequentiality; this is because not all
+			 * clear_pending_set_locked() implementations imply full
+			 * barriers.
+			 */
+			if (_val & _Q_LOCKED_MASK)
+			{
+				while (val.load(std::memory_order_relaxed) & _Q_LOCKED_MASK)
+					yield();
+			}
+			/*
+			 * take ownership and clear the pending bit.
+			 *
+			 * 0,1,0 -> 0,0,1
+			 */
+			clearPendingSetLocked();
+			return;
+	}
 	inline int32_t setPendingAndGetOldValue()
 	{
-		return val.fetch_or(_Q_PENDING_VAL, std::memory_order_release);
+		return val.fetch_or(_Q_PENDING_VAL, std::memory_order_relaxed);
 	}
 	inline void unsetPending()
 	{
-		val.fetch_and(~_Q_PENDING_VAL,std::memory_order_release);
+		val.fetch_and(~_Q_PENDING_VAL,std::memory_order_relaxed);
 	}
 	inline void clearPendingSetLocked()
 	{
-		int32_t v = val.fetch_add(-_Q_PENDING_VAL + _Q_LOCKED_VAL);
-		assert(v & _Q_PENDING_VAL);
-		assert(!(v & _Q_LOCKED_VAL));
+		val.fetch_add(-_Q_PENDING_VAL + _Q_LOCKED_VAL,std::memory_order_relaxed);
 	}
 	inline uint32_t xchgTail(int tail)
 	{
@@ -99,7 +168,7 @@ struct qspinlock
 			 * the MCS node is properly initialized before updating the
 			 * tail.
 			 */
-			if (val.compare_exchange_weak(_val, (_val & _Q_LOCKED_PENDING_MASK) | tail, std::memory_order_release))
+			if (val.compare_exchange_weak(_val, (_val & _Q_LOCKED_PENDING_MASK) | tail, std::memory_order_relaxed))
 				return _val;
 		}
 	}
