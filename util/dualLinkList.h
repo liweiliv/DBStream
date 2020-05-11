@@ -257,6 +257,13 @@ struct dualLinkList
 			n->lock.unlock();
 		return n;
 	}
+	inline void lru(dualLinkListNode<LOCK>* n)
+	{
+		if (head.next == n)
+			return;
+		eraseWithHandleLock(n);
+		insertAfterForHandleLock(&head, n);
+	}
 };
 struct globalLockDualLinkListNode
 {
@@ -289,21 +296,31 @@ struct globalLockDualLinkList
 	inline void erase(globalLockDualLinkListNode* n)
 	{
 		lock.lock();
-		n->next->prev = n->prev;
-		n->prev->next = n->next;
+		if (likely(n->next != nullptr))
+		{
+			n->next->prev = n->prev;
+			n->prev->next = n->next;
+		}
 		lock.unlock();
 	}
 	struct iterator {
 		globalLockDualLinkListNode* m_node;
 		globalLockDualLinkList* m_list;
-		iterator(globalLockDualLinkList* list) :m_list(list)
+		bool m_rw;
+		iterator(globalLockDualLinkList* list,bool rw) :m_list(list),m_rw(rw)
 		{
-			m_list->lock.lock_shared();
+			if(rw)
+				m_list->lock.lock();
+			else
+				m_list->lock.lock_shared();
 			m_node = m_list->head.next;
 		}
 		~iterator()
 		{
-			m_list->lock.unlock_shared();
+			if(m_rw)
+				m_list->lock.unlock();
+			else
+				m_list->lock.unlock_shared();
 		}
 		inline globalLockDualLinkListNode* value()
 		{
@@ -319,6 +336,14 @@ struct globalLockDualLinkList
 				return false;
 			m_node = m_node->next;
 			return true;
+		}
+		inline void erase()
+		{
+			globalLockDualLinkListNode* prev = m_node->prev;
+			m_node->next->prev = m_node->prev;
+			m_node->prev->next = m_node->next;
+			m_node->prev = m_node->next = nullptr;
+			m_node = prev;
 		}
 	};
 

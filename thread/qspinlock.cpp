@@ -24,7 +24,7 @@ static inline struct mcsSpinlockNode* decodeTail(uint32_t tail)
 	int idx = (tail & _Q_TAIL_IDX_MASK) >> _Q_TAIL_IDX_OFFSET;
 	return &perThreadMcsLockNode[thread][idx];
 }
-void qspinlock::queued()
+DLL_EXPORT void qspinlock::queued()
 {
 	struct mcsSpinlockNode* prev, * next, * node;
 	int32_t old, tail;

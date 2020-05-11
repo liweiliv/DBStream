@@ -4,6 +4,9 @@
 #include "thread/threadLocal.h"
 #include "util/ref.h"
 #include "util/barrier.h"
+#include "util/dualLinkList.h"
+#include "thread/yield.h"
+#include "thread/spinlock.h"
 namespace DATABASE {
 #pragma pack(1)
 	struct page {
@@ -11,33 +14,68 @@ namespace DATABASE {
 		uint32_t pageUsedSize;
 		uint32_t pageSize;
 		uint32_t crc;
-		uint64_t lastAccessTime;
+		globalLockDualLinkListNode lruNode;
+		globalLockDualLinkList* lru;
 		::ref _ref;
 		char* pageData;
 
 		inline void use()
 		{
+			int ref = 0;
 			for (uint8_t i = 0; i < 10; i++)
 			{
-				if (_ref.use() > 0)
-					return;
+				if ((ref = _ref.use()) > 0)
+					goto LRU;
 			}
-			for (; !_ref.use(); std::this_thread::sleep_for(std::chrono::nanoseconds(100)));
+			for (; !(ref = _ref.use()); yield());
+		LRU:
+			if (ref == 1 && lru != nullptr)
+			{
+				if (lruNode.next != nullptr)
+				{
+					lru->erase(&lruNode);
+				}
+			}
 		}
 		inline void unuse()
 		{
-			if (_ref.unuse() < 0)
+			if (lru != nullptr)
 			{
-				if (likely(pageData != nullptr))
+				int ref = _ref.unuseForLru();
+				if (ref == 0)
 				{
-					char* data = pageData;
-					pageData = nullptr;
+					lru->insert(&lruNode);
 					_ref.reset();
-					barrier;
-					basicBufferPool::free(data);
 				}
-				else
-					_ref.reset();
+				else if (ref < 0)
+				{
+					if (likely(pageData != nullptr))
+					{
+						char* data = pageData;
+						pageData = nullptr;
+						_ref.reset();
+						barrier;
+						basicBufferPool::free(data);
+					}
+					else
+						_ref.reset();
+				}
+			}
+			else
+			{
+				if (_ref.unuse() < 0)
+				{
+					if (likely(pageData != nullptr))
+					{
+						char* data = pageData;
+						pageData = nullptr;
+						_ref.reset();
+						barrier;
+						basicBufferPool::free(data);
+					}
+					else
+						_ref.reset();
+				}
 			}
 		}
 		inline bool freeWhenNoUser()

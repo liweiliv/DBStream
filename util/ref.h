@@ -13,28 +13,37 @@ struct ref {
 	}
 	inline int use()
 	{
-		int ref = m_ref.load(std::memory_order_relaxed);
-		do {
-			if (unlikely(ref < 0))
-				return ref;
-			if (m_ref.compare_exchange_weak(ref, ref + 1, std::memory_order_release, std::memory_order_relaxed))
-				return ref + 1 ;
-		} while (1);
+		return m_ref.fetch_add(1, std::memory_order_relaxed);
 	}
 	inline int unuse()
 	{
-		int ref = m_ref.load(std::memory_order_relaxed);
-		do {
-			if (m_ref.compare_exchange_weak(ref, ref - 1, std::memory_order_release, std::memory_order_relaxed))
-				return ref -1;
-		} while (1);
+		return m_ref.fetch_add(-1, std::memory_order_relaxed);
 	}
 	inline bool own()//call use before own
 	{
 		int ref = m_ref.load(std::memory_order_relaxed);
-		if (ref < 0)
-			return false;
-		return m_ref.compare_exchange_strong(ref, -ref, std::memory_order_release, std::memory_order_relaxed);
+		do {
+			if (ref < 0)
+				return false;
+			if (m_ref.compare_exchange_weak(ref, -ref, std::memory_order_relaxed, std::memory_order_relaxed))
+				return true;
+		} while (true);
+	}
+	inline int unuseForLru()
+	{
+		int ref = m_ref.load(std::memory_order_relaxed);
+		do {
+			if (ref == 1)
+			{
+				if (m_ref.compare_exchange_weak(ref, -ref, std::memory_order_relaxed, std::memory_order_relaxed))
+					return 0;
+			}
+			else
+			{
+				if (m_ref.compare_exchange_weak(ref, ref -1, std::memory_order_relaxed, std::memory_order_relaxed))
+					return ref - 1;
+			}
+		} while (true);
 	}
 	inline void waitForShare()//call use before own
 	{

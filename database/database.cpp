@@ -221,9 +221,10 @@ namespace DATABASE {
 #endif
 		p->pageId = 0;
 		p->crc = 0;
-		p->lastAccessTime = GLOBAL::currentTime.time;
 		p->pageSize = size;
 		p->pageUsedSize = 0;
+		p->lruNode.next = p->lruNode.prev = nullptr;
+		p->lru = &m_pageLru;
 		p->_ref.m_ref.store(0, std::memory_order_relaxed);
 		vSave((char*)p, sizeof(page));
 		return p;
@@ -392,7 +393,7 @@ namespace DATABASE {
 		{
 			if (!b->use())
 			{
-				if (prev == nullptr)
+				if (prev != nullptr)
 					b = prev->prev.load(std::memory_order_relaxed);
 				else
 					b = m_current;
@@ -609,12 +610,16 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	DLL_EXPORT int database::gc()//todo
+	DLL_EXPORT int database::gc()
 	{
-		for (block* b = static_cast<block*>(m_blocks.begin()); b != nullptr; b = static_cast<block*>(m_blocks.get(b->m_blockID + 1)))
-		{
-		}
-		return 0;
+		globalLockDualLinkList::iterator iter(&m_pageLru,true);
+		if (!iter.valid())
+			return 0;
+		do {
+			page* p = container_of(iter.value(), page, lruNode);
+			p->freeWhenNoUser();
+			iter.erase();
+		} while (iter.next());
 	}
 	int database::removeBlock(block* b)
 	{
@@ -692,7 +697,7 @@ namespace DATABASE {
 			if (++activeCount > 4)
 			{
 				std::map<uint32_t, struct block*>::iterator lastActive = recoveried.find(lastActiveId);
-				static_cast<solidBlock*>(lastActive->second)->gc(0);
+				static_cast<solidBlock*>(lastActive->second)->clear();
 				lastActive++;
 				lastActiveId = lastActive->first;
 				activeCount--;

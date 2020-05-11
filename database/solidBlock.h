@@ -96,7 +96,6 @@ namespace DATABASE
 				else
 					p->_ref.share();
 			}
-			p->lastAccessTime = GLOBAL::currentTime.time;
 			return p;
 		}
 		inline uint32_t getPageId(uint32_t recordId)
@@ -117,7 +116,7 @@ namespace DATABASE
 		int writeToFile();
 		int loadFromFile();
 		int getTableIndexPageId(const tableDataInfo* tableInfo, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		int gc(uint64_t deadLine);
+		void clear();
 		blockIndexIterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};

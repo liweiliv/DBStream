@@ -24,6 +24,7 @@
 #include "thread/threadPool.h"
 #include "globalInfo/global.h"
 #include "util/valgrindTestUtil.h"
+#include "util/dualLinkList.h"
 #include "statistic.h"
 namespace DATABASE
 {
@@ -100,7 +101,7 @@ namespace DATABASE
 		std::atomic_int m_currentFlushThreadCount;
 		uint64_t m_recordId;
 		uint64_t m_tnxId;
-
+		globalLockDualLinkList m_pageLru;
 		statistic m_statistic;
 	public:
 		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
