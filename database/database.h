@@ -122,7 +122,7 @@ namespace DATABASE
 		int removeBlock(block* b);
 		static void purgeThread(database* m);
 	public:
-		DLL_EXPORT int gc();
+		DLL_EXPORT int fullGc();
 		DLL_EXPORT const statistic* getStatistic();
 		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
 		DLL_EXPORT inline void begin()

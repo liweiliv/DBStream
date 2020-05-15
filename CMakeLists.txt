@@ -359,4 +359,8 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testMysqlDataCreater pthread ssl crypto rt z dl)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-
+ADD_EXECUTABLE(testMemChannel  bus/unittest/testMemChannel.cpp)
+TARGET_LINK_LIBRARIES(testMemChannel util thread memory)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testMemChannel pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

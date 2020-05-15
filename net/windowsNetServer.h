@@ -41,13 +41,15 @@ namespace NET {
 					}
 					else
 					{
+
 					}
 				}
 				else
 				{
 					if (handle->status == netHandleStatus::RECV_HEAD)
 					{
-						int ret = WSARecv(handle->fd, &handle->currentReadMsg->msg, 1, 4, 0, ol, nullptr);
+						DWORD size = 0;
+						int ret = WSARecv(handle->fd, &handle->currentReadMsg->msg, 1, &size, 0, ol, nullptr);
 
 					}
 					else if (handle->status == netHandleStatus::RECV_DATA)

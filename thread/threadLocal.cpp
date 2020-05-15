@@ -59,7 +59,7 @@ void registerThreadLocalVar(void (*_unset)(void* v), void* v)
 }
 void destroyThreadLocalVar(void* v)
 {
-	globalLockDualLinkList::iterator* iter = new globalLockDualLinkList::iterator(&threadLocalList);
+	globalLockDualLinkList::iterator* iter = new globalLockDualLinkList::iterator(&threadLocalList,true);
 	if (!iter->valid())
 		return;
 	do {
@@ -81,7 +81,7 @@ threadLocalWrap::threadLocalWrap()
 }
 threadLocalWrap::~threadLocalWrap()
 {
-	globalLockDualLinkList::iterator iter(&threadLocalList);
+	globalLockDualLinkList::iterator iter(&threadLocalList,true);
 	if (iter.valid())
 	{
 		do {

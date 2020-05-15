@@ -4,7 +4,7 @@
 class runable
 {
 public:
-	enum runableStatus {
+	enum class runableStatus {
 		WAIT_NEXT,
 		READY_FOR_PROCESS,
 		KILLED,
@@ -14,7 +14,7 @@ public:
 	runable* next;
 	runableStatus status;
 	int threadId;
-	runable():next(nullptr), status(READY_FOR_PROCESS){}
+	runable():next(nullptr), status(runableStatus::READY_FOR_PROCESS), threadId(0){}
 	virtual ~runable() {}
 	virtual void action() = 0;
 	DLL_EXPORT static runable*& currentRunable();

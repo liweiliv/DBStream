@@ -73,7 +73,7 @@ namespace NET
 		{
 			return 0;
 		}
-		netHandle(const char* host, uint16_t port, const char* lockSocketFile):fd(-1),host(host), lockSocketFile(lockSocketFile == nullptr ? "" : lockSocketFile), port(port), flowLimit(0), rpsLimit(0), currentWriteMsg(nullptr)
+		netHandle(const char* host, uint16_t port, const char* lockSocketFile):connId(0),fd(-1),host(host), lockSocketFile(lockSocketFile == nullptr ? "" : lockSocketFile), port(port), flowLimit(0), rpsLimit(0), currentWriteMsg(nullptr), userDate(nullptr)
 		{
 
 		}

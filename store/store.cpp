@@ -54,10 +54,10 @@ namespace STORE {
 	}
 	void store::highMemUsageCallback(void* handle,uint16_t usages)
 	{
-		if (usages >= 99)
+		if (usages >= 95)
 		{
-			static_cast<store*>(handle)->m_mainStream->gc();
-			static_cast<store*>(handle)->m_genratedStream->gc();
+			static_cast<store*>(handle)->m_mainStream->fullGc();
+			static_cast<store*>(handle)->m_genratedStream->fullGc();
 		}
 		else
 		{

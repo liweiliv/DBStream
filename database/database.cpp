@@ -610,7 +610,7 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	DLL_EXPORT int database::gc()
+	DLL_EXPORT int database::fullGc()
 	{
 		globalLockDualLinkList::iterator iter(&m_pageLru,true);
 		if (!iter.valid())

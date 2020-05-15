@@ -47,16 +47,16 @@ namespace STORE {
 		clock_t now, begin = clock();
 		while (m_running)
 		{
-			if (unlikely(j->status == runable::KILLED))//todo
+			if (unlikely(j->status == runable::runableStatus::KILLED))//todo
 				return;
 			if (!j->m_process->process())//todo
 				return;
-			if (j->status == runable::WAIT_NEXT)
+			if (j->status == runable::runableStatus::WAIT_NEXT)
 				return;
 			now = clock();
 			if (now - begin >= CLOCKS_PER_SEC >>8)//work 4 ms
 			{
-				if (j->status == job::READY_FOR_PROCESS)
+				if (j->status == job::runableStatus::READY_FOR_PROCESS)
 					putJobToRunning(j);
 				return;
 			}
