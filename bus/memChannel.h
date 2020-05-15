@@ -1,10 +1,11 @@
 #pragma once
 #include "channel.h"
 #include "stdint.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "memory/bufferPool.h"
 #include <mutex>
 #include <atomic>
+#include <stdio.h>
 namespace BUS {
 	class memChannel :public channel {
 	private:
@@ -14,6 +15,7 @@ namespace BUS {
 			FULL
 		};
 		struct memNode {
+			int id;
 			uint32_t volumn;
 			uint32_t head;
 			uint32_t tail;
@@ -40,13 +42,14 @@ namespace BUS {
 			node->head = node->tail = 0;
 			node->next = nullptr;
 			node->status = nodeStatus::APPENDING;
+			node->id = m_nodeCount.load(std::memory_order_relaxed);
 			return node;
 		}
 		inline memNode* tryAddNode()
 		{
 			if (m_nodeCount.load(std::memory_order_relaxed) < maxNodeCountPerChannel)
 			{
-				m_nodeCount.fetch_add(1,std::memory_order_relaxed);
+				m_nodeCount.fetch_add(1, std::memory_order_relaxed);
 				return allocNode();
 			}
 			else
@@ -65,7 +68,7 @@ namespace BUS {
 		inline bool updateHeadNode(int& outtimeMs)
 		{
 			do {
-				if (m_head->next == m_head || m_head->next->status != nodeStatus::FREE)
+				if (m_head->next->status != nodeStatus::FREE)
 				{
 					memNode* next = tryAddNode();
 					if (next == nullptr)
@@ -80,8 +83,8 @@ namespace BUS {
 						next->next = m_head->next;
 						memNode* head = m_head;
 						m_head->next = next;
-						barrier;
-						m_head = m_head->next;
+						wmb();
+						m_head = next;
 						head->status = nodeStatus::FULL;
 						return true;
 					}
@@ -91,12 +94,25 @@ namespace BUS {
 					memNode* head = m_head;
 					m_head = m_head->next;
 					m_head->status = nodeStatus::APPENDING;
-					barrier;
+					wmb();
 					head->status = nodeStatus::FULL;
 					return true;
 				}
 			} while (true);
 			return false;
+		}
+		inline void tryAttachToNextNode()
+		{
+			assert(m_tail->status != nodeStatus::FREE);
+			rmb();
+			if (m_tail->tail == m_tail->head)
+			{
+				m_tail->head = m_tail->tail = 0;
+				wmb();
+				m_tail->status = nodeStatus::FREE;
+				m_tail = m_tail->next;
+				notify();
+			}
 		}
 	public:
 		memChannel(bufferPool* pool = nullptr) :m_pool(pool), m_nodeCount(1)
@@ -125,15 +141,15 @@ namespace BUS {
 		{
 			int32_t sendSize = 0, nSize;
 			do {
-				nSize = (memNodeSize - m_head->head >= size) ? size : (memNodeSize - m_head->head);
-				memcpy(&m_head->buf[m_head->head], data, nSize);
+				if ((nSize = memNodeSize - m_head->head) > size)
+					nSize = size;
+				memcpy(&m_head->buf[m_head->head], data + sendSize, nSize);
 				sendSize += nSize;
-				barrier;
+				wmb();
 				m_head->head += nSize;
 				notify();
-				if (likely(nSize == size))
+				if (likely((size -= nSize) == 0))
 					break;
-				size -= nSize;
 				if (!updateHeadNode(outtimeMs))
 					break;
 			} while (true);
@@ -143,30 +159,23 @@ namespace BUS {
 		{
 			int32_t recvSize = 0, nSize;
 			do {
-				nSize = (m_tail->head - m_tail->tail >= size) ? size : (m_tail->head - m_tail->tail);
-				memcpy(data + recvSize, &m_head->buf[m_tail->tail], nSize);
+				if ((nSize = m_tail->head - m_tail->tail) > size)
+					nSize = size;
+				rmb();
+				memcpy(data + recvSize, &m_tail->buf[m_tail->tail], nSize);
 				recvSize += nSize;
-				barrier;
 				if ((m_tail->tail += nSize) == m_tail->head)
 				{
 					if (m_tail->status == nodeStatus::FULL)
-					{
-						barrier;
-						if (m_tail->tail == m_tail->head)
-						{
-							m_tail->status = nodeStatus::FREE;
-							m_tail = m_tail->next;
-						}
-					}
+						tryAttachToNextNode();
 				}
 
-				if (likely(nSize == size))
+				if (likely(0 == (size -= nSize)))
 					break;
-				size -= nSize;
-				if (m_tail->status == nodeStatus::APPENDING)
+
+				if (m_tail->head == m_tail->tail)
 				{
-					barrier;
-					if (m_tail->head == m_tail->tail)
+					if (m_tail->status == nodeStatus::APPENDING)
 					{
 						if (outtimeMs > 0)
 						{
@@ -177,22 +186,9 @@ namespace BUS {
 							break;
 					}
 					else
-						continue;
-				}
-				else
-				{
-					assert(m_tail->status != nodeStatus::FREE);
-					barrier;
-					if (m_tail->head == m_tail->tail)
 					{
-						m_tail->status = nodeStatus::FREE;
-						m_tail->head = m_tail->tail = 0;
-						barrier;
-						m_tail = m_tail->next;
-						notify();
+						tryAttachToNextNode();
 					}
-					else
-						continue;
 				}
 			} while (true);
 			return recvSize;

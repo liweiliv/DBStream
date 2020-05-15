@@ -35,7 +35,7 @@ int testW()
 		if ((i & 0xfff) == 0)
 			length = (i % 64) * 1024 + 32 * 1024;
 		else
-			length = (i%100)*8;
+			length = (i % 100) * 8;
 		for (int j = 0; j < (length & (~0x3)); j += 4)
 			*(int*)(buffer + j) = i;
 		int sl = 0;

@@ -2,7 +2,7 @@
 #include "qspinlock.h"
 #include "mcsSpinlock.h"
 #include "threadLocal.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "yield.h"
 static struct mcsSpinlockNode perThreadMcsLockNode[maxThreadCount][MAX_LOCK_LOOP_PER_THREAD];
 static uint8_t perThreadMcsLockNodeUseInfo[maxThreadCount];
