@@ -14,7 +14,7 @@
 #include "charset.h"
 #include "metaTimeline.h"
 #include "message/record.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "util/likely.h"
 #include "util/config.h"
 #include "memory/bufferPool.h"

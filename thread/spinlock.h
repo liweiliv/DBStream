@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 #include "util/likely.h"
-#include "util/barrier.h"
+#include "barrier.h"
 #include "yield.h"
 #ifdef OS_WIN
 #include <winnt.h>

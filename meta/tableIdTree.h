@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <mutex>
 #include "metaData.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "util/winDll.h"
 namespace META {
 	class tableIdTree

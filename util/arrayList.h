@@ -1,6 +1,6 @@
 #pragma once
 #include "arena.h"
-#include "barrier.h"
+#include "thread/barrier.h"
 static constexpr int arrayListNodeSize = 32;
 template <class T>
 struct arrayList

@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "barrier.h"
+#include "thread/barrier.h"
 
 template<class T>
 class pageTable
