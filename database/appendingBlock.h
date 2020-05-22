@@ -20,7 +20,7 @@
 #include "meta/metaData.h"
 #include "appendingIndex.h"
 #include "util/arrayList.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "lz4/lib/lz4.h"
 #include "solidBlock.h"
 #include "thread/cond.h"

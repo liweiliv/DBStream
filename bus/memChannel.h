@@ -5,6 +5,7 @@
 #include "memory/bufferPool.h"
 #include <mutex>
 #include <atomic>
+#include <condition_variable>
 #include <stdio.h>
 namespace BUS {
 	class memChannel :public channel {

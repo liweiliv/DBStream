@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "util/likely.h"
 #include <atomic>
 #ifndef ALIGN

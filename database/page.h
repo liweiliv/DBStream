@@ -3,7 +3,7 @@
 #include "memory/bufferPool.h"
 #include "thread/threadLocal.h"
 #include "util/ref.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "util/dualLinkList.h"
 #include "thread/yield.h"
 #include "thread/spinlock.h"

@@ -15,7 +15,7 @@
 #include "lz4/lib/lz4.h"
 #include "meta/metaData.h"
 #include "meta/metaDataBaseCollection.h"
-#include "util/barrier.h"
+#include "thread/barrier.h"
 #include "database.h"
 #include "block.h"
 #include "thread/threadLocal.h"

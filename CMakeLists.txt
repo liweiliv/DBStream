@@ -3,8 +3,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 project (DBStream)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	ADD_DEFINITIONS(-DOS_LINUX)
-
-	set(CMAKE_CXX_FLAGS "-g -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++11 ${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS "-g -Wall -Wno-unused-function -Wno-invalid-offsetof -msse4.2 -std=c++14 ${CMAKE_CXX_FLAGS}")
 	SET(LIBRARY_OUTPUT_PATH lib)
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         ADD_DEFINITIONS(-DOS_WIN)
@@ -341,14 +340,7 @@ TARGET_LINK_LIBRARIES(testSpinlock util thread)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testSpinlock pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-ADD_EXECUTABLE(testLinuxAtomic  thread/unittest/testLinuxAtomic.cpp)
-TARGET_LINK_LIBRARIES(testLinuxAtomic util thread)
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testLinuxAtomic pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 
 

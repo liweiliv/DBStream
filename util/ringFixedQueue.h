@@ -2,7 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
-#include "barrier.h"
+#include "thread/barrier.h"
 #include "likely.h"
 template<class T>
 class ringFixedQueue
