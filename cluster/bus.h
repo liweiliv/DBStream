@@ -4,7 +4,7 @@
 #include <map>
 #include "database/database.h"
 #include "net/net.h"
-namespace BUS {
+namespace CLUSTER {
 	enum class role{
 		learner,
 		follower,

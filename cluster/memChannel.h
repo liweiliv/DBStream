@@ -4,10 +4,10 @@
 #include "thread/barrier.h"
 #include "memory/bufferPool.h"
 #include <mutex>
-#include <atomic>
 #include <condition_variable>
+#include <atomic>
 #include <stdio.h>
-namespace BUS {
+namespace CLUSTER {
 	class memChannel :public channel {
 	private:
 		enum class nodeStatus {
