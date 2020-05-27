@@ -109,7 +109,7 @@ DLL_EXPORT void qspinlock::queued()
 	  *       above wait condition, therefore any concurrent setting of
 	  *       PENDING will make the uncontended transition fail.
 	  */
-	if ((_val & _Q_TAIL_MASK) == tail)
+	if ((_val & _Q_TAIL_MASK) == (uint32_t)tail)
 	{
 		if(val.compare_exchange_strong(_val, _Q_LOCKED_VAL,std::memory_order_release))
 			goto release; /* No contention */

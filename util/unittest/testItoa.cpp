@@ -9,7 +9,7 @@
 #include <string.h>
 #include <assert.h>
 #define initBuffer(buffer)do{\
-		for(int i=0;i<sizeof(buffer)-1;i++)\
+		for(uint32_t i=0;i<sizeof(buffer)-1;i++)\
 			buffer[i] = '0';\
 		buffer[sizeof(buffer)-1]=1;\
 }while(0);

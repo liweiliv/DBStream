@@ -19,7 +19,7 @@ namespace DATABASE
 		if (fileHandleValid(m_fd))
 			closeFile(m_fd);
 	}
-	inline char* solidBlock::getRecordByInnerId(uint32_t recordId)
+	char* solidBlock::getRecordByInnerId(uint32_t recordId)
 	{
 		if (recordId >= m_recordCount)
 			return nullptr;

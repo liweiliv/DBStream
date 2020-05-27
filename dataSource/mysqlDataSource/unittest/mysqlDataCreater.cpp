@@ -15,7 +15,7 @@ int create(MYSQL *conn) {
 	mysql_query(conn, "select max(a) from test.test11");
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	int start = 0, max = 0;
+	int start = 0;
 	if (NULL != ((res) = mysql_store_result(conn))) {
 		if (NULL != (row = mysql_fetch_row(res))&&row[0]!=nullptr) {
 			start = atoi(row[0]);
@@ -74,6 +74,7 @@ int create(MYSQL *conn) {
 		}
 		mysql_query(conn,"commit");
 	}
+	return 0;
 }
 int main()
 {

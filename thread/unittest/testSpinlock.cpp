@@ -13,7 +13,6 @@ void testLock(LOCK* lock,int cnt)
 	timer::timestamp t, t1;
 	_threadLocalWrap.idle();
 	t.time = timer::getNowTimestamp();
-	int64_t i;
 	for (int i = 0; i < cnt; i++)
 	{
 		lock->lock();
@@ -22,8 +21,8 @@ void testLock(LOCK* lock,int cnt)
 	}
 	t1.time = timer::getNowTimestamp();
 	printf("---------%s--------\n", __func__);
-	printf("%lu.%lu\n", t.seconds, t.nanoSeconds);
-	printf("%lu.%lu\n", t1.seconds, t1.nanoSeconds);
+	printf("%lu.%u\n", t.seconds, t.nanoSeconds);
+	printf("%lu.%u\n", t1.seconds, t1.nanoSeconds);
 	printf("%lu\n", (t1.seconds - 1 - t.seconds) * 1000000000 + 1000000000 - t.nanoSeconds + t1.nanoSeconds);
 }
 #define THREAD_COUNT  10

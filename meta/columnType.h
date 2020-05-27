@@ -469,7 +469,7 @@ namespace META {
 			d.year = _year;
 			return d.time;
 		}
-		inline void set(int16_t _year, uint8_t _month, uint8_t _day)
+		inline void set(int32_t _year, uint8_t _month, uint8_t _day)
 		{
 			day = _day;
 			month = _month;

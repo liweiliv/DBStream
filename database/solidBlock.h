@@ -103,7 +103,7 @@ namespace DATABASE
 			return pageId(m_recordInfos[recordId].offset);
 		}
 		page* getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		inline char* getRecordByInnerId(uint32_t recordId);
+		char* getRecordByInnerId(uint32_t recordId);
 		inline const char* getRecordFromPage(page* p, uint32_t recordId)
 		{
 			return p->pageData + offsetInPage(m_recordInfos[recordId].offset);

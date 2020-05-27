@@ -26,7 +26,7 @@ namespace CLUSTER {
 		};
 		memNode* m_head;
 		memNode* m_tail;
-		std::atomic<int> m_nodeCount;
+		std::atomic<uint32_t> m_nodeCount;
 		std::mutex m_condLock;
 		std::condition_variable m_cond;
 		bufferPool* m_pool;
@@ -116,7 +116,7 @@ namespace CLUSTER {
 			}
 		}
 	public:
-		memChannel(bufferPool* pool = nullptr) :m_pool(pool), m_nodeCount(1)
+		memChannel(bufferPool* pool = nullptr) :m_nodeCount(1),m_pool(pool)
 		{
 			m_head = allocNode();
 			m_head->next = m_head;
@@ -142,7 +142,7 @@ namespace CLUSTER {
 		{
 			int32_t sendSize = 0, nSize;
 			do {
-				if ((nSize = memNodeSize - m_head->head) > size)
+				if ((nSize = memNodeSize - m_head->head) > (int32_t)size)
 					nSize = size;
 				memcpy(&m_head->buf[m_head->head], data + sendSize, nSize);
 				sendSize += nSize;
@@ -160,7 +160,7 @@ namespace CLUSTER {
 		{
 			int32_t recvSize = 0, nSize;
 			do {
-				if ((nSize = m_tail->head - m_tail->tail) > size)
+				if ((nSize = m_tail->head - m_tail->tail) > (int32_t)size)
 					nSize = size;
 				rmb();
 				memcpy(data + recvSize, &m_tail->buf[m_tail->tail], nSize);

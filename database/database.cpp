@@ -620,6 +620,7 @@ namespace DATABASE {
 			p->freeWhenNoUser();
 			iter.erase();
 		} while (iter.next());
+		return 0;
 	}
 	int database::removeBlock(block* b)
 	{

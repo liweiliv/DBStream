@@ -260,7 +260,7 @@ private:
 public:
 	buddySystem(uint64_t maxMemory, uint32_t baseSize, uint32_t level,
 		uint16_t highUsage = 90, uint16_t lowUsage = 10, void (*highUsageCallback)(void*,uint16_t) = nullptr, void (*lowUsageCallback)(void*, uint16_t) = nullptr, void* callbackHandle = nullptr) :
-		m_levels(level), m_topBuddyCount(0), m_buddyStructPool(&m_buddyStructAllocer, sizeof(topBuddyBuffer), 256 * 1024 * 1024),
+			m_topBuddyCount(0),m_allTopBuddyCount(0), m_freeTopCount(0),m_levels(level), m_allocedMem(0),m_usage(0),m_buddyStructPool(&m_buddyStructAllocer, sizeof(topBuddyBuffer), 256 * 1024 * 1024),
 		m_highUsage(highUsage), m_lowUsage(lowUsage), m_highUsageCallback(highUsageCallback), m_lowUsageCallback(lowUsageCallback), m_callbackHandle(callbackHandle)
 	{
 		m_baseLevelOff = 0;

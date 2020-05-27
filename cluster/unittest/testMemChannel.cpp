@@ -1,6 +1,6 @@
-#include "bus/memChannel.h"
+#include "cluster/memChannel.h"
 #include <thread>
-BUS::memChannel channel;
+CLUSTER::memChannel channel;
 int testR()
 {
 	char* buffer = new char[512 * 1024];

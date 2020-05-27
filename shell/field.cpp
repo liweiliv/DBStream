@@ -16,7 +16,11 @@ namespace SHELL {
 		if (unlikely(nullptr == (valueStack = localValueStack.get())))
 			localValueStack.set(valueStack = new void* [MAX_EXPRESSION_LENGTH]);
 	}
-#define getNextValueInStack valueStackSize>0?valueStack[--valueStackSize]:(fieldStackSize > 0?fieldStack[--valueStackSize]->getValue(row):(abort(),nullptr))
+	inline void * getNextValueInStack(int16_t &valueStackSize,void** valueStack,int16_t &fieldStackSize,Field** fieldStack,const DATABASE_INCREASE::DMLRecord** const row)
+	{
+		return valueStackSize>0?valueStack[--valueStackSize]:(fieldStackSize > 0?fieldStack[--fieldStackSize]->getValue(row):(abort(),nullptr));
+	}
+
 #define pullOneValue  if(valueTypeStackSize>0)valueTypeStackSize--;else if(fieldStackSize>0)fieldStackSize--;else return false;
 	void* twoArgvOperator(SQL_PARSER::OPERATOR op, void* argv)
 	{
@@ -82,6 +86,7 @@ namespace SHELL {
 		}
 		shellGlobalBufferPool->free(exp->list);
 	}
+	#define _getNextValueInStack getNextValueInStack(valueStackSize,valueStack,fieldStackSize,fieldStack,row)
 	void* expressionField::_getValue(Field* field, const DATABASE_INCREASE::DMLRecord** const row)
 	{
 		const expressionField* exp = static_cast<const expressionField*>(field);
@@ -95,26 +100,31 @@ namespace SHELL {
 			if (((uint64_t)exp->list[idx] & DUAL_ARGV_MATH_OP_FUNC_TYPE) != 0)
 			{
 				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)exp->list[idx]) & ~DUAL_ARGV_MATH_OP_FUNC_TYPE);
-				valueStack[valueStackSize++] = ((DualArgvMathOperater)(ofi->func))(getNextValueInStack, getNextValueInStack);
+				valueStack[valueStackSize] = ((DualArgvMathOperater)(ofi->func))(_getNextValueInStack, _getNextValueInStack);
+				valueStackSize++;
 			}
 			else if (((uint64_t)exp->list[idx] & SINGLE_ARGV_MATH_OP_FUNC_TYPE) != 0)
 			{
 				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)exp->list[idx]) & ~SINGLE_ARGV_MATH_OP_FUNC_TYPE);
-				valueStack[valueStackSize++] = ((SingleArgvMathOperater)(ofi->func))(getNextValueInStack);
+				valueStack[valueStackSize] = ((SingleArgvMathOperater)(ofi->func))(_getNextValueInStack);
+				valueStackSize++;
 			}
 			else if (((uint64_t)exp->list[idx] & DUAL_ARGV_LOGIC_OP_FUNC_TYPE) != 0)
 			{
 				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)exp->list[idx]) & ~DUAL_ARGV_LOGIC_OP_FUNC_TYPE);
-				valueStack[valueStackSize++] = ((SingleArgvLogicOperater)(ofi->func))(getNextValueInStack) ? (void*)0x01 : (void*)0x00;
+				valueStack[valueStackSize] = ((SingleArgvLogicOperater)(ofi->func))(_getNextValueInStack) ? (void*)0x01 : (void*)0x00;
+				valueStackSize++;
 			}
 			else if (((uint64_t)exp->list[idx] & SINGLE_ARGV_LOGIC_OP_FUNC_TYPE) != 0)
 			{
 				operatorFuncInfo* ofi = (operatorFuncInfo*)(void*)(((uint64_t)exp->list[idx]) & ~SINGLE_ARGV_LOGIC_OP_FUNC_TYPE);
-				valueStack[valueStackSize++] = ((SingleArgvLogicOperater)(ofi->func))(getNextValueInStack) ? (void*)0x01 : (void*)0x00;
+				valueStack[valueStackSize] = ((SingleArgvLogicOperater)(ofi->func))(_getNextValueInStack) ? (void*)0x01 : (void*)0x00;
+				valueStackSize++;
 			}
 			else
 			{
-				fieldStack[fieldStackSize++] = exp->list[idx];
+				fieldStack[fieldStackSize] = exp->list[idx];
+				fieldStackSize++;
 			}
 		}
 		assert(fieldStackSize == 0);
