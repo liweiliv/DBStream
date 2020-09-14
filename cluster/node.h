@@ -1,40 +1,50 @@
 #pragma once
 #include <string>
 #include <stdint.h>
+#include <boost/asio/ip/tcp.hpp>
 #include "util/sparsepp/spp.h"
-#include "net/net.h"
-struct event_base;
-struct event;
-
 namespace CLUSTER
 {
 	class processor;
 	class cluster;
 	typedef spp::sparse_hash_map<int32_t, processor*> processTree;
+	enum class clusterRole {
+		LEADER,
+		FOLLOWER,
+		LEARNER,
+		CANDIDATE
+	};
 	struct nodeInfo {
 		std::string m_ip;
-		uint16_t port;
+		uint16_t m_port;
 		int32_t m_id;
+		clusterRole m_role;
 		std::string m_name;
+		processTree m_procesors;
+		boost::asio::ip::tcp::socket * m_fd;
+		nodeInfo(const std::string & ip,uint16_t port,int32_t id): m_ip(ip), m_port(port), m_id(id), m_role(clusterRole::CANDIDATE), m_fd(nullptr)
+		{
+		}
+		~nodeInfo()
+		{
+			if (m_fd != nullptr)
+			{
+				m_fd->close();
+				delete m_fd;
+			}
+		}
 	};
 	class node
 	{
 	private:
 		int32_t m_clusterId;
 		nodeInfo m_nodeInfo;
-		struct event_base * m_baseEvent;
-		struct event* m_listenEvent;
-		SOCKET m_listenFd;
-
 		cluster* m_cluster;
-		processTree* m_procesors;
 		int clean();
-		int initNet();
-		int accept();
-		static void listenFdCallBack(int64_t fd, short ev, void* arg)
+	public:
+		const nodeInfo& getNodeInfo()
 		{
-			static_cast<node*>(arg)->accept();
+			return m_nodeInfo;
 		}
-
 	};
 }

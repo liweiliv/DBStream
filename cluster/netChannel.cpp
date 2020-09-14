@@ -1,5 +1,4 @@
 #include "netChannel.h"
-#include "net/net.h"
 namespace CLUSTER
 {
 	int32_t netChannel::recv(char* data, uint32_t size, int outtimeMs)//todo

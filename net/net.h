@@ -3,8 +3,10 @@
 #include <stdint.h>
 #include <mutex>
 #include <thread>
+#include <event2/event.h>
 #ifdef OS_WIN
 #include <winsock2.h>
+#pragma comment(lib,"ws2_32.lib")
 #endif
 #ifdef OS_LINUX
 #include <sys/socket.h>
@@ -17,6 +19,7 @@ typedef int SOCKET;
 #include "glog/logging.h"
 #include "util/sparsepp/spp.h"
 #include "util/ringFixedQueue.h"
+#include "util/winDll.h"
 namespace NET
 {
 #ifdef OS_LINUX
@@ -35,6 +38,7 @@ namespace NET
 		uint32_t volumn;
 	};
 	enum class netHandleStatus {
+		INIT,
 		RECV_HEAD,
 		RECV_DATA,
 		WRITE_DATA,
@@ -61,7 +65,7 @@ namespace NET
 		{
 			if (currentWriteMsg->volumn - currentWriteMsg->msg.len < size)
 			{
-				if (msg.size() >= 4) 
+				if (msg.size() >= 4)
 				{
 					return false;
 				}
@@ -73,31 +77,32 @@ namespace NET
 		{
 			return 0;
 		}
-		netHandle(const char* host, uint16_t port, const char* lockSocketFile):connId(0),fd(-1),host(host), lockSocketFile(lockSocketFile == nullptr ? "" : lockSocketFile), port(port), flowLimit(0), rpsLimit(0), currentWriteMsg(nullptr), userDate(nullptr)
+		netHandle(const char* host, uint16_t port, const char* lockSocketFile) :connId(0), fd(-1), host(host), lockSocketFile(lockSocketFile == nullptr ? "" : lockSocketFile), 
+			port(port), flowLimit(0), rpsLimit(0), currentReadMsg(nullptr),currentWriteMsg(nullptr), status(netHandleStatus::INIT), userDate(nullptr)
 		{
 
 		}
 		int listen()
 		{
+			if (0 > (fd = createListenSocket(host, port)))
+				return -1;
+			return 0;
+		}
+		DLL_EXPORT static SOCKET createListenSocket(const std::string& host, uint16_t port)
+		{
 #ifdef OS_WIN
 			WSADATA wsaData;
 			WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
-			if (fd >= 0)
-			{
-				LOG(INFO) << "listen socket is open,close it";
-				closesocket(fd);
-				fd = -1;
-			}
 #ifdef OS_LINUX
-			fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #endif
 #ifdef OS_WIN
-			fd = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
+			SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, 0, 0, WSA_FLAG_OVERLAPPED);
 #endif
-			if (fd < 0)
+			if (sock < 0)
 			{
-				LOG(INFO) << "create listen socket failed for:" << errno << "," << strerror(errno);
+				LOG(ERROR) << "create listen socket failed for:" << errno << "," << strerror(errno);
 				return -1;
 			}
 			sockaddr_in sockAddr;
@@ -105,24 +110,25 @@ namespace NET
 			sockAddr.sin_family = PF_INET;
 			sockAddr.sin_addr.s_addr = inet_addr(host.c_str());
 			sockAddr.sin_port = htons(port);
-			if (0 != ::bind(fd, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR)))
+			if (0 != ::bind(sock, (SOCKADDR*)&sockAddr, sizeof(SOCKADDR)))
 			{
-				LOG(INFO) << "bind listen socket to " << host << ":" << port << " failed for:" << errno << "," << strerror(errno);
-				closesocket(fd);
-				fd = -1;
+				LOG(ERROR) << "bind listen socket to " << host << ":" << port << " failed for:" << errno << "," << strerror(errno);
+				closesocket(sock);
 				return -1;
 			}
-			if (0 != ::listen(fd, 20))
+			evutil_make_listen_socket_reuseable(sock);
+			evutil_make_socket_nonblocking(sock);
+			if (0 != ::listen(sock, 5))
 			{
 				LOG(INFO) << "listen on " << host << ":" << port << " failed for:" << errno << "," << strerror(errno);
-				closesocket(fd);
-				fd = -1;
+				closesocket(sock);
 				return -1;
 			}
-			return 0;
+			LOG(INFO) << "create linsten socket:" << sock << " on:" << host << ":" << port << " success";
+			return sock;
 		}
 	};
-	class netServer{
+	class netServer {
 	protected:
 		netHandle m_listenHandle;
 		spp::sparse_hash_map<SOCKET, netHandle*> m_allConnects;

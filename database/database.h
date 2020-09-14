@@ -19,7 +19,7 @@
 #include "glog/logging.h"
 #include "message/record.h"
 #include "filter.h"
-#include "util/shared_mutex.h"
+#include "thread/shared_mutex.h"
 #include "util/ringFixedQueue.h"
 #include "thread/threadPool.h"
 #include "globalInfo/global.h"
@@ -120,6 +120,7 @@ namespace DATABASE
 		void flushThread();
 		int purge();
 		int removeBlock(block* b);
+		int compaction(uint64_t from,uint64_t to,bool keepHistory);
 		static void purgeThread(database* m);
 	public:
 		DLL_EXPORT int fullGc();
@@ -161,7 +162,6 @@ namespace DATABASE
 		}
 		DLL_EXPORT void* allocMemForRecord(META::tableMeta* table, size_t size);
 		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t& logOffset);
-		DLL_EXPORT int compection(bool (*reduce)(const char*));
 		DLL_EXPORT iterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
 		DLL_EXPORT char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};

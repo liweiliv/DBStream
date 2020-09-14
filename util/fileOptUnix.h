@@ -5,6 +5,7 @@
  *      Author: liwei
  */
 #pragma once
+#ifdef OS_LINUX
 #include <errno.h>
 #include <error.h>
 #include <fcntl.h>
@@ -120,6 +121,15 @@ static long getFileTime(const char * file)
 	closeFile(fd);
 	return st.st_mtime;
 }
+static int64_t getFileSize(fileHandle fd)
+{
+	struct stat stbuf;
+	if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode)))
+	{
+		return -1;
+	}
+	return stbuf.st_size;
+}
 static int64_t getFileSize(const char* fileName)
 {
 	struct stat stbuf;
@@ -192,3 +202,4 @@ static int removeDir(const char * dir)
 		}
 		return 0;
 }
+#endif

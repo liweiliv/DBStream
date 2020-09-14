@@ -3,11 +3,10 @@
 #include <thread>
 #include <mutex>
 #include <assert.h>
-#include "shared_mutex.h"
+#include "thread/shared_mutex.h"
 #include <stddef.h>
 #include <string.h>
 #include "likely.h"
-#include "shared_mutex.h"
 template<typename LOCK>
 struct dualLinkListNode
 {

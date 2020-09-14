@@ -1,4 +1,5 @@
 #pragma once
+#ifdef OS_WIN
 #include <windows.h>
 #include <stdint.h>
 #include <io.h>
@@ -115,6 +116,12 @@ static int fsync(fileHandle fd)
 {
 	return FlushFileBuffers(fd)?0:-1;
 }
+
+#define F_OK 0
+#define W_OK 2
+#define R_OK 4
+#define RW_OK 6
+
 static inline  int checkFileExist(const char* filename,int mode)
 {
 	return _access(filename, mode);
@@ -128,6 +135,15 @@ static long getFileTime(const char * file)
 	GetFileTime(fd, &creationTime, &lastAccessTime, &lastWriteTime);
 	closeFile(fd);
 	return lastWriteTime.dwLowDateTime;
+}
+
+static int64_t getFileSize(fileHandle fd)
+{
+	DWORD high = 0, size;
+	size = GetFileSize(fd, &high);
+	if (size == INVALID_FILE_SIZE)
+		return -1;
+	return (high << 32) + size;
 }
 static int64_t getFileSize(const char* fileName)
 {
@@ -190,3 +206,5 @@ static int removeDir(const char* dir)
 	}
 	return RemoveDirectory(dir) ? 0 : -1;
 }
+
+#endif

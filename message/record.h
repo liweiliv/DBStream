@@ -96,10 +96,10 @@ namespace DATABASE_INCREASE
 			this->data = data;
 			head = (recordHead*)data;
 		}
-		std::String toString()
+		String toString()
 		{
 			head->recordId=0;
-			std::String str;
+			String str;
 			str = str <<"type:"<<head->minHead.type;
 			str = str<<"\ntimestamp:"<<head->timestamp;
 			str = str<<"\nlogOffset:"<<head->logOffset;
@@ -165,7 +165,7 @@ namespace DATABASE_INCREASE
 		uint16_t** uniqueKeys;
 		/*-----------------------------------------------*/
 		TableMetaMessage(const char* data) :record(data) {
-			const char* ptr = data + +head->minHead.headSize;
+			const char* ptr = data + head->minHead.headSize;
 			memcpy(&metaHead, ptr, sizeof(metaHead));
 			ptr += sizeof(metaHead);
 			database = ptr + sizeof(uint8_t);
@@ -508,37 +508,37 @@ namespace DATABASE_INCREASE
 			return false;
 		}
 
-		std::String columnValue(const char* value,uint32_t length, const META::columnMeta* column)
+		String columnValue(const char* value,uint32_t length, const META::columnMeta* column)
 		{
-			std::String str;
+			String str;
 			if (value == nullptr)
 				return "null\n";
 			switch (column->m_columnType)
 			{
 			case META::COLUMN_TYPE::T_UINT8:
-				str = str << *(const uint8_t*)value << "\n";
+				str.append(*(const uint8_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_INT8:
-				str = str << *value << "\n";
+				str.append(*value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_INT16:
 			case META::COLUMN_TYPE::T_YEAR:
-				str = str << *(const int16_t*)value << "\n";
+				str.append(*(const int16_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_UINT16:
-				str = str << *(const uint16_t*)value << "\n";
+				str.append(*(const uint16_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_INT32:
-				str = str << *(const int32_t*)value << "\n";
+				str.append(*(const int32_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_UINT32:
-				str = str << *(const uint32_t*)value << "\n";
+				str.append(*(const uint32_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_INT64:
-				str = str << *(const int64_t*)value << "\n";
+				str.append(*(const int64_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_UINT64:
-				str = str << *(const uint64_t*)value << "\n";
+				str.append(*(const uint64_t*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_STRING:
 			case META::COLUMN_TYPE::T_DECIMAL:
@@ -549,10 +549,10 @@ namespace DATABASE_INCREASE
 				str.append(value, length).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_FLOAT:
-				str = str << *(float*)value << "\n";
+				str.append(*(float*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_DOUBLE:
-				str = str << *(double*)value << "\n";
+				str.append(*(double*)value).append("\n");
 				break;
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			{
@@ -634,14 +634,14 @@ namespace DATABASE_INCREASE
 			}
 			break;
 			default:
-				str = std::String("unknown type:") << static_cast<int>(column->m_columnType) << "\n";
+				str = String("unknown type:") << static_cast<int>(column->m_columnType) << "\n";
 				break;
 			}
 			return str;
 		}
-		std::String toString()
+		String toString()
 		{
-			std::String str = record::toString();
+			String str = record::toString();
 			str.append("database:").append(meta->m_dbName).append("\ntable:").append(meta->m_tableName).append("\n");
 			for (uint32_t idx = 0; idx < meta->m_columnsCount; idx++)
 			{
@@ -649,7 +649,7 @@ namespace DATABASE_INCREASE
 				str.append(c->m_columnName).append(":\n");
 				const char * value = column(idx);
 				uint32_t valueLength = META::columnInfos[static_cast<int>(c->m_columnType)].fixed ? META::columnInfos[static_cast<int>(c->m_columnType)].columnTypeSize : varColumnSize(idx);
-				std::String cv = columnValue(value, valueLength, c);
+				String cv = columnValue(value, valueLength, c);
 				str.append(cv.c_str());
 				if (head->minHead.type == static_cast<uint8_t>(RecordType::R_UPDATE)  || head->minHead.type == static_cast<uint8_t>(RecordType::R_REPLACE))
 				{
@@ -744,9 +744,9 @@ namespace DATABASE_INCREASE
 		{
 			return head->minHead.size-(ddl - data);
 		}
-		std::String toString()
+		String toString()
 		{
-			std::String str = record::toString();
+			String str = record::toString();
 			str = str<<"sqlMode:"<< sqlMode<<"\n"<<"charset:"<< charsets[charsetId].name<<"\n";
 			if (database != nullptr && *(const uint8_t*)(database - 1) > 0)
 			{
@@ -784,7 +784,7 @@ namespace DATABASE_INCREASE
 			return new record(data);
 		}
 	}
-	static std::String getString(record * r)
+	static String getString(record * r)
 	{
 		switch (static_cast<RecordType>(r->head->minHead.type))
 		{

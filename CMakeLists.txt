@@ -15,6 +15,7 @@ STRING( REGEX REPLACE ".*/(.*)" "\\1" CURRENT_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}
 SET(BASE_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "pwd: ${BASE_INCLUDE_PATH}")
 SET(EXECUTABLE_OUTPUT_PATH bin)
+ADD_DEFINITIONS(-DASIO_STANDALONE)
 
 #ADD_DEFINITIONS(-DDEBUG)
 
@@ -31,16 +32,8 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	endif()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-#gflags
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	find_package(GFLAGS REQUIRED)
-ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-		SET(GLFAG_INCLUDE_PATH  "D:\\code\\gflags-master\\out\\install\\x64-Debug\\include")
-        find_library(GFLAGS gflags_debug "D:\\code\\gflags-master\\out\\install\\x64-Debug\\lib")
-        if(NOT GFLAGS)
-        message(FATAL_ERROR "gflags library not found")
-        endif()
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+find_package(GFLAGS REQUIRED)
+
 #glog
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	find_package(GLOG REQUIRED)
@@ -50,6 +43,16 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	find_library(GLOG glogd "D:\\code\\glog-master\\out\\install\\x64-Debug\\lib")
 	if(NOT GLOG)
         message(FATAL_ERROR "glog library not found")
+	endif() 
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+#libevent
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	find_package(libevent REQUIRED)
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(LIBEVENT_INCLUDE_PATH "D:\\git\\libevent-2.1.10-stable\\out\\install\\x64-Debug\\include")
+	find_library(LIBEVENT event "D:\\git\\libevent-2.1.10-stable\\out\\install\\x64-Debug\\lib")
+	if(NOT LIBEVENT)
+        message(FATAL_ERROR "libevent library not found")
 	endif() 
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
@@ -69,6 +72,13 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
         message(FATAL_ERROR "mysqlclient library not found")
 	endif()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+#boost
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(BOOST_INCLUDE_PATH "D:\\boost\\boost_1_73_0")
+	LINK_DIRECTORIES("D:\\boost\\boost_1_73_0\\stage\\lib")
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
 
 
 #util
@@ -123,7 +133,7 @@ add_library(memory SHARED ${memoryDir})
 TARGET_LINK_LIBRARIES(memory util thread ${GLOG} ${GFLAGS})
 target_include_directories(memory PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
-#memory
+#net
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	add_library(net SHARED net/net.cpp)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -133,7 +143,17 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 
 TARGET_LINK_LIBRARIES(net util thread ${GLOG} ${GFLAGS})
-target_include_directories(net PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+target_include_directories(net PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${LIBEVENT_INCLUDE_PATH})
+
+#cluster
+aux_source_directory(cluster clusterDir)
+add_library(cluster SHARED ${clusterDir})
+TARGET_LINK_LIBRARIES(cluster util thread memory ${GLOG} ${GLFAGS} )
+target_include_directories(cluster PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${LIBEVENT_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	target_include_directories(cluster PUBLIC ${BOOST_INCLUDE_PATH})
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
 
 #database
 aux_source_directory(database databaseDir)
@@ -349,4 +369,10 @@ ADD_EXECUTABLE(testMemChannel  cluster/unittest/testMemChannel.cpp)
 TARGET_LINK_LIBRARIES(testMemChannel util thread memory)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testMemChannel pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testClusterLogFile  cluster/unittest/testClusterLogFile.cpp)
+TARGET_LINK_LIBRARIES(testClusterLogFile util thread memory)
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testClusterLogFile pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

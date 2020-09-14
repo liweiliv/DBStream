@@ -1,9 +1,14 @@
 #pragma once
-#ifdef OS_WIN
-#include <shared_mutex>
-typedef std::shared_mutex shared_mutex;
-#else
-#ifdef OS_LINUX
+#if defined OS_WIN
+	#if _MSVC_LANG >= 201402L
+	#include <shared_mutex>
+	typedef std::shared_mutex shared_mutex;
+	#endif
+#elif defined OS_LINUX
+	#if __cplusplus >= 201402L
+	#include <shared_mutex>
+	typedef std::shared_mutex shared_mutex;
+	#else
 #include <pthread.h>
 struct shared_mutex
 {
@@ -41,5 +46,5 @@ struct shared_mutex
 		return 0==pthread_rwlock_tryrdlock(&mlock);
 	}
 };
-#endif
+	#endif
 #endif

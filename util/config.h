@@ -5,14 +5,15 @@
  *	  Author: liwei
  */
 
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#pragma once
 #include <map>
 #include <string>
-#include "shared_mutex.h"
+#include "thread/shared_mutex.h"
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+#include <limits.h>
+#include "itoaSse.h"
 #include "glog/logging.h"
 #include "util/sparsepp/spp.h"
 #include "util/unorderMapUtil.h"
@@ -207,6 +208,154 @@ public:
 		fclose(fp);
 		return 0;
 	}
+private:
+	template<typename T>
+	static std::string getIntConf(const char* str, T& value,bool canBeNegative)
+	{
+		std::string conf = trim(str, strlen(str));
+		const char *pos = conf.c_str();
+		bool positive = str[0] != '-';
+		if (!positive)
+		{
+			if (canBeNegative)
+				pos++;
+			else
+				return conf + " is negative number";
+		}
+		T tmpValue = 0;
+		while (*pos != '\0')
+		{
+			if (*pos < '0' || *pos>'9')
+			{
+				if (*pos + 1 == '\0')
+				{
+					if (*pos == 'k' || *pos == 'K') 
+					{
+						//overflow
+						if(tmpValue * 1024 < tmpValue)
+							return conf + " is to large";
+						tmpValue *= 1024;
+						break;
+					}
+					else if (*pos == 'm' || *pos == 'M')
+					{
+						//overflow
+						if (tmpValue * 1024 * 1024 < tmpValue)
+							return conf + " is to large";
+						tmpValue *= 1024 * 1024;
+						break;
+					}
+					else if (*pos == 'g' || *pos == 'G')
+					{
+						//overflow
+						if (tmpValue * 1024 * 1024 * 1024 < tmpValue)
+							return conf + " is to large";
+						tmpValue *= 1024 * 1024 * 1024;
+						break;
+					}
+					else if (*pos == 't' || *pos == 'T')
+					{
+						//overflow
+						if (tmpValue * 1024LL * 1024LL * 1024LL * 1024LL < tmpValue)
+							return conf + " is to large";
+						tmpValue *= 1024LL * 1024LL * 1024LL * 1024LL;
+						break;
+					}
+					else if (*pos == 'p' || *pos == 'P')
+					{
+						//overflow
+						if (tmpValue * 1024LL * 1024LL * 1024LL * 1024LL * 1024LL < tmpValue)
+							return conf + " is to large";
+						tmpValue *= 1024LL * 1024LL * 1024LL * 1024LL * 1024LL;
+						break;
+					}
+				}
+				return conf + " is not number";
+			}
+			//overflow
+			if(tmpValue * 10 + (*pos) - '0' < tmpValue)
+				return conf + " is to large";
+			tmpValue = tmpValue * 10 + (*pos) - '0';
+		}
+		value = positive ? tmpValue : -tmpValue;
+		return "";
+	}
+public:
+	static std::string getInt32(const char* str, int32_t& value,int32_t min = INT32_MIN, int32_t max = INT32_MAX)
+	{
+		int32_t tmpValue;
+		std::string & rtv = getIntConf(str, tmpValue, true);
+		if (!rtv.empty())
+			return rtv;
+		if (tmpValue > max)
+		{
+			char buf[32];
+			i32toa_sse2(max, buf);
+			return std::string(str) + " is greater than max value " + buf;
+		}
+		if (tmpValue < min)
+		{
+			char buf[32];
+			i32toa_sse2(min, buf);
+			return std::string(str) + " is less than min value " + buf;
+		}
+	}
+	static std::string getUint32(const char* str, uint32_t& value, uint32_t min = 0, uint32_t max = UINT32_MAX)
+	{
+		uint32_t tmpValue;
+		std::string& rtv = getIntConf(str, tmpValue, false);
+		if (!rtv.empty())
+			return rtv;
+		if (tmpValue > max)
+		{
+			char buf[32];
+			u32toa_sse2(max, buf);
+			return std::string(str) + " is greater than max value " + buf;
+		}
+		if (tmpValue < min)
+		{
+			char buf[32];
+			u32toa_sse2(min, buf);
+			return std::string(str) + " is less than min value " + buf;
+		}
+	}
+	static std::string getInt64(const char* str, int64_t& value, int64_t min = INT64_MIN, int64_t max = INT64_MAX)
+	{
+		int64_t tmpValue;
+		std::string& rtv = getIntConf(str, tmpValue, true);
+		if (!rtv.empty())
+			return rtv;
+		if (tmpValue > max)
+		{
+			char buf[40];
+			i64toa_sse2(max, buf);
+			return std::string(str) + " is greater than max value " + buf;
+		}
+		if (tmpValue < min)
+		{
+			char buf[40];
+			i64toa_sse2(min, buf);
+			return std::string(str) + " is less than min value " + buf;
+		}
+	}
+	static std::string getUint64(const char* str, uint64_t& value, uint64_t min = 0, uint64_t max = UINT64_MAX)
+	{
+		uint64_t tmpValue;
+		std::string& rtv = getIntConf(str, tmpValue, false);
+		if (!rtv.empty())
+			return rtv;
+		if (tmpValue > max)
+		{
+			char buf[40];
+			u64toa_sse2(max, buf);
+			return std::string(str) + " is greater than max value " + buf;
+		}
+		if (tmpValue < min)
+		{
+			char buf[40];
+			u64toa_sse2(min, buf);
+			return std::string(str) + " is less than min value " + buf;
+		}
+	}
 };
-#endif /* CONFIG_H_ */
 

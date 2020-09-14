@@ -190,15 +190,15 @@ namespace META {
 		std::string* m_indexNames;
 		nameCompare m_nameCompare;
 		void * userData;
-		static inline uint16_t tableVersion(uint64_t tableIDInfo)
+		constexpr static inline uint16_t tableVersion(uint64_t tableIDInfo)
 		{
 			return tableIDInfo & 0xffff;
 		}
-		static inline uint64_t tableID(uint64_t tableIDInfo)
+		constexpr static inline uint64_t tableID(uint64_t tableIDInfo)
 		{
 			return (tableIDInfo & 0xffffffffffff0000ul)>>16;
 		}
-		static inline uint64_t genTableId(uint64_t tableid,uint16_t version)
+		constexpr static inline uint64_t genTableId(uint64_t tableid,uint16_t version)
 		{
 			return (tableid<<16)|version;
 		}
