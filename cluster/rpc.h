@@ -36,8 +36,8 @@ namespace CLUSTER {
 	};
 
 	struct authReq {
-		int32_t size;
-		int32_t crc;
+		uint32_t size;
+		uint32_t crc;
 		int32_t migicNum;
 		uint32_t clusterId;
 		uint32_t nodeId;
@@ -45,8 +45,8 @@ namespace CLUSTER {
 		char host[1];
 	};
 	struct authRsp {
-		int32_t size;
-		int32_t crc;
+		uint32_t size;
+		uint32_t crc;
 		int32_t migicNum;
 		int8_t success;
 		uint32_t nodeId;
@@ -64,7 +64,7 @@ namespace CLUSTER {
 		endOfFile
 	};
 	struct raftRpcHead {
-		int32_t size;
+		uint32_t size;
 		uint8_t recordType;
 		uint8_t version;
 	};

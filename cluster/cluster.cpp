@@ -12,7 +12,7 @@
 #include "snapshot.h"
 namespace CLUSTER
 {
-	constexpr static char* authRspMsgs[] = {
+	constexpr static const char* authRspMsgs[] = {
 		"auth sucess",//sucess
 		"server get an illegal auth package",//illegalPackage
 		"auth package crc check failed",//crcCheckFailed
@@ -76,7 +76,7 @@ namespace CLUSTER
 	constexpr static auto rollbackTableId = META::tableMeta::genTableId(6, 1);
 	struct authReq {
 		int32_t size;
-		int32_t crc;
+		uint32_t crc;
 		int32_t migicNum;
 		uint32_t clusterId;
 		uint32_t nodeId;
@@ -85,7 +85,7 @@ namespace CLUSTER
 	};
 	struct authRsp {
 		int32_t size;
-		int32_t crc;
+		uint32_t crc;
 		int32_t migicNum;
 		int8_t sucess;
 		uint32_t nodeId;
@@ -123,7 +123,11 @@ namespace CLUSTER
 						goto FAILED;
 					}
 					n = ni->m_fd->async_read_some(boost::asio::buffer((&data[0]) + 4, size), yield);
-					assert(n == size);
+					if(n != (size_t)size)
+					{
+						code = authReturnCode::illegalPackage;
+						goto FAILED;
+					}
 					if (req->crc != hwCrc32c(0, ((const char*)&req->crc) + sizeof(req->crc), req->size - offsetof(authReq, crc) - sizeof(req->crc)))
 					{
 						code = authReturnCode::crcCheckFailed;
@@ -184,6 +188,10 @@ namespace CLUSTER
 				uint32_t size = 0;
 				try {
 					size_t n = ni->m_fd->async_read_some(boost::asio::buffer((char*)&size, 4), yield);
+					if(n != sizeof(size))
+					{
+						LOG(ERROR) << "read package from " << ni->m_fd->remote_endpoint().address().to_string() << " failed";
+					}
 					char defaultBuf[256], * buf = defaultBuf;
 					if (unlikely(size > sizeof(defaultBuf)))
 					{

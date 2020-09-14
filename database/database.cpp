@@ -290,10 +290,6 @@ namespace DATABASE {
 		}
 		return false;
 	}
-	DLL_EXPORT int database::compection(bool (*reduce)(const char*))//todo
-	{
-		return 0;
-	}
 #define CREATE_KWEY_ITER(type,flag) do{\
 	if((flag)&ITER_FLAG_DESC){return new kWaySortIterator<type,decreaseCompare<type> >(iterArray,idx);}\
 	else {return new kWaySortIterator<type,increaseCompare<type> >(iterArray,idx);}\

@@ -9,9 +9,9 @@
 #include <assert.h>
 void test()
 {
-	std::String s("abcd");
+	String s("abcd");
 	assert(s=="abcd");
-	std::String s1 ;
+	String s1 ;
 	//s1 = s<<123;
 	//s1 = s1<<43254u << 5323ul<<432l<<std::string("dwad");
 	//assert(s1=="abcd123432545323432dwad");

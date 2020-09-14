@@ -5,14 +5,14 @@
 #include "rpc.h"
 #include "util/config.h"
 namespace CLUSTER {
-	constexpr static auto DEFAULT_BLOCK_SIZE = 128 * 1024;
-	constexpr static auto MAX_BLOCK_SIZE = 32 * 1024 * 1024;
+	constexpr static uint32_t DEFAULT_BLOCK_SIZE = 128 * 1024;
+	constexpr static uint32_t MAX_BLOCK_SIZE = 32 * 1024 * 1024;
 
-	constexpr static auto DEFAULT_LOG_FILE_SIZE = 512 * 1024 * 1024;
-	constexpr static auto MAX_LOG_FILE_SIZE = 4096 * 1024 * 1024;
+	constexpr static uint32_t DEFAULT_LOG_FILE_SIZE = 512 * 1024 * 1024;
+	constexpr static uint32_t MAX_LOG_FILE_SIZE = UINT32_MAX;
 
-	constexpr static auto DEFAULT_MAX_LOG_ENTRY_SIZE = 1 * 1024 * 1024;
-	constexpr static auto MAX_LOG_ENTRY_SIZE = 32 * 1024 * 1024;
+	constexpr static uint32_t DEFAULT_MAX_LOG_ENTRY_SIZE = 1 * 1024 * 1024;
+	constexpr static uint32_t MAX_LOG_ENTRY_SIZE = 32 * 1024 * 1024;
 
 
 	struct logConfig {

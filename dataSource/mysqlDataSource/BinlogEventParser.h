@@ -40,7 +40,7 @@ namespace DATA_SOURCE
 		DATABASE_INCREASE::record** m_parsedRecords;
 		int16_t m_parsedRecordCount;
 		int16_t m_parsedRecordBegin;
-		std::String m_error;
+		String m_error;
 	public:
 		enum ParseStatus {
 			OK,
@@ -90,7 +90,7 @@ namespace DATA_SOURCE
 		}
 		ParseStatus parser(const char * logEvent,size_t size);
 		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
-		std::String getError();
+		String getError();
 	};
 }
 #endif /* BINLOGEVENTPARSER_H_ */

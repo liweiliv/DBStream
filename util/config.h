@@ -284,7 +284,7 @@ public:
 	static std::string getInt32(const char* str, int32_t& value,int32_t min = INT32_MIN, int32_t max = INT32_MAX)
 	{
 		int32_t tmpValue;
-		std::string & rtv = getIntConf(str, tmpValue, true);
+		std::string  rtv = getIntConf(str, tmpValue, true);
 		if (!rtv.empty())
 			return rtv;
 		if (tmpValue > max)
@@ -303,7 +303,7 @@ public:
 	static std::string getUint32(const char* str, uint32_t& value, uint32_t min = 0, uint32_t max = UINT32_MAX)
 	{
 		uint32_t tmpValue;
-		std::string& rtv = getIntConf(str, tmpValue, false);
+		std::string rtv = getIntConf(str, tmpValue, false);
 		if (!rtv.empty())
 			return rtv;
 		if (tmpValue > max)
@@ -322,7 +322,7 @@ public:
 	static std::string getInt64(const char* str, int64_t& value, int64_t min = INT64_MIN, int64_t max = INT64_MAX)
 	{
 		int64_t tmpValue;
-		std::string& rtv = getIntConf(str, tmpValue, true);
+		std::string rtv = getIntConf(str, tmpValue, true);
 		if (!rtv.empty())
 			return rtv;
 		if (tmpValue > max)
@@ -341,7 +341,7 @@ public:
 	static std::string getUint64(const char* str, uint64_t& value, uint64_t min = 0, uint64_t max = UINT64_MAX)
 	{
 		uint64_t tmpValue;
-		std::string& rtv = getIntConf(str, tmpValue, false);
+		std::string rtv = getIntConf(str, tmpValue, false);
 		if (!rtv.empty())
 			return rtv;
 		if (tmpValue > max)

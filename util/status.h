@@ -17,6 +17,14 @@ public:
 		stackInfo(const char* file, const char* func, int line, const std::string& errInfo) :file(file), func(func), line(line), errInfo(errInfo) {}
 		stackInfo(const char* file, const char* func, int line, const char* errInfo) :file(file), func(func), line(line), errInfo(errInfo == nullptr ? "" : errInfo) {}
 		stackInfo(const  stackInfo& s) :file(s.file), func(s.func), line(s.line), errInfo(s.errInfo) {}
+		stackInfo& operator=(const  stackInfo& s)
+		{
+			file = s.file;
+			func = s.func;
+			line = s.line;
+			errInfo = s.errInfo;
+			return *this;
+		}
 		~stackInfo() {}
 	};
 	int code;
@@ -57,8 +65,8 @@ public:
 DLL_IMPORT extern dsStatus DS_OK;
 DLL_EXPORT dsStatus& getLocalStatus();
 DLL_EXPORT void setLocalStatus(dsStatus& s);
-DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo& stack);
-DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackInfo& stack);
+DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo stack);
+DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackInfo stack);
 
 #define currentStack(errInfo) dsStatus::stackInfo(basename(__FILE__),__func__,__LINE__,errInfo)
 /*use those*/
@@ -69,10 +77,10 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 #define dsReturnIfFailed(status) do{dsStatus& __s = (status);if(unlikely((&(__s)) != (&DS_OK))){(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
 
 #define dsReturn(status) do{dsStatus& __s = (status); if(likely((&(__s)) == (&DS_OK))){return (__s);}else{(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
-#define dsReturnForFailed(errInfo) do{getLocalStatus().addStack(currentStack(errInfo));return getLocalStatus();}while(0)
 #define dsReturnForFailedAndLogIt(errInfo) do{String __s;__s<<errInfo;LOG(logType)<<__s;getLocalStatus().addStack(currentStack(__s));return getLocalStatus();}while(0)
 
-#define dsReturnForFailed() do{getLocalStatus().addStack(currentStack(nullptr));return getLocalStatus();}while(0);
+//#define dsReturnForFailed() do{getLocalStatus().addStack(currentStack(nullptr));return getLocalStatus();}while(0);
+#define dsReturnForFailed(errInfo) do{getLocalStatus().addStack(currentStack(errInfo));return getLocalStatus();}while(0)
 
 
 #define dsFailed(code,errInfo)  do{setFailed((code),(errInfo),currentStack(errInfo));return getLocalStatus();}while(0)

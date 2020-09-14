@@ -33,7 +33,7 @@ dsStatus& rFunc(clusterLogFile* logFile)
 	}
 	dsOk();
 }
-dsStatus & test()
+void test()
 {
 	logConfig config;
 	remove("cluster_1.log");

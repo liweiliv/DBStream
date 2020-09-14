@@ -24,8 +24,6 @@ namespace CLUSTER
 		clusterLogConfig &m_logManagerConfig;
 		logConfig& m_logConfig;
 		std::map<logIndexInfo, clusterLogFile*> m_files;
-		friend class iterator;
-		std::map<int, iterator*> m_iterators;
 
 		dsStatus& rollback(const logIndexInfo& logIndex);
 		dsStatus& createNewFile(const logIndexInfo& logIndex);
@@ -49,7 +47,8 @@ namespace CLUSTER
 		}
 		dsStatus& init()
 		{
-
+			//todo
+			dsOk();
 		}
 		dsStatus& append(const logEntryRpcBase* logEntry)
 		{

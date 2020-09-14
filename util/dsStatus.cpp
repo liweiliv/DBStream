@@ -3,7 +3,7 @@ DLL_EXPORT dsStatus DS_OK;
 static thread_local dsStatus failed;
 static thread_local dsStatus * localStatus = &DS_OK;
 DLL_EXPORT dsStatus& getLocalStatus() { return *localStatus; }
-DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo& stack)
+DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo stack)
 {
 	failed.clear();
 	failed.code = code;
@@ -12,7 +12,7 @@ DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo& sta
 	failed.addStack(stack);
 	localStatus = &failed;
 }
-DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackInfo& stack)
+DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackInfo stack)
 {
 	failed.clear();
 	failed.code = code;
