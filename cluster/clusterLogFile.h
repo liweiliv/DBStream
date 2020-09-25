@@ -168,6 +168,12 @@ namespace CLUSTER
 					return INVALID_RESULT;
 				return ((const char*)logEntry) - data;
 			}
+			inline void append(const logEntryRpcBase* logEntry)
+			{
+				memcpy(data + size, logEntry, logEntry->size);
+				wmb();
+				size += logEntry->size;
+			}
 		};
 	private:
 		std::string m_filePath;
@@ -191,7 +197,7 @@ namespace CLUSTER
 	public:
 		DLL_EXPORT clusterLogFile(const char* filePath, uint64_t fileId, logConfig& config) :m_filePath(filePath), m_fileId(fileId),
 			m_blockCount(0), m_blocks(nullptr), m_currentBlock(nullptr),
-			m_config(config), m_maxBlockCount(m_config.m_maxLogEntrySize / m_config.m_defaultBlockSize),
+			m_config(config), m_maxBlockCount(m_config.m_defaultLogFileSize / m_config.m_defaultBlockSize),
 			m_next(nullptr),
 			m_blockLoadFunc(std::bind(&clusterLogFile::loadBlock, this, std::placeholders::_1)),
 			m_fileLoadFunc(std::bind(&clusterLogFile::loadFile, this, std::placeholders::_1)),
@@ -249,9 +255,9 @@ namespace CLUSTER
 		}
 		DLL_EXPORT dsStatus& recoveryIndexFromLastBlock(fileHandle fd,uint32_t offset, uint32_t dataFileSize,bool readOnly)
 		{
-			if (seekFile(fd, offset, SEEK_SET) != 0)
+			if (seekFile(fd, offset, SEEK_SET) != offset)
 				dsFailedAndLogIt(errorCode::ioError, "seek to " << offset << " of log file:" << m_filePath << " failed,error:" << errno << "," << strerror(errno), ERROR);
-			if (seekFile(m_indexFd, sizeof(index)*m_blockCount, SEEK_SET) != 0)
+			if (seekFile(m_indexFd, sizeof(index)*m_blockCount, SEEK_SET) != (int64_t)(sizeof(index)*m_blockCount))
 				dsFailedAndLogIt(errorCode::ioError, "seek to " << offset << " of log file:" << (m_filePath + INDEX_NAME) << " failed,error:" << errno << "," << strerror(errno), ERROR);
 			char* buffer;
 			uint32_t bufferSize = 0;
@@ -314,16 +320,25 @@ namespace CLUSTER
 			if (dataFileSize < 0)
 				dsFailedAndLogIt(errorCode::ioError, "get size of file:" << m_filePath << "failed,error:" << errno << "," << strerror(errno), ERROR);
 			int64_t indexFileSize;
+			int64_t readSize;
 			int indexCount;
 			char buf[sizeof(index) * INDEX_READ_BATCH];
-			if ((m_indexFd = openFile((m_filePath + INDEX_NAME).c_str(), true, true, false)) == INVALID_HANDLE_VALUE)
+			if(m_indexFd == INVALID_HANDLE_VALUE)
 			{
-				int err = errno;
-				if (checkFileExist((m_filePath + INDEX_NAME).c_str(), F_OK) == 0)
-					dsFailedAndLogIt(errorCode::ioError, "open file :" << (m_filePath + INDEX_NAME) << " failed for " << err << "," << strerror(err), ERROR);
-				if ((m_indexFd = openFile((m_filePath + INDEX_NAME).c_str(), true, true, true)) == INVALID_HANDLE_VALUE)
-					dsFailedAndLogIt(errorCode::ioError, "create file :" << (m_filePath + INDEX_NAME) << " failed for " << errno << "," << strerror(errno), ERROR);
-				goto CHECK_LAST_BLOCK;
+				if ((m_indexFd = openFile((m_filePath + INDEX_NAME).c_str(), true, true, false)) == INVALID_HANDLE_VALUE)
+				{
+					int err = errno;
+					if (checkFileExist((m_filePath + INDEX_NAME).c_str(), F_OK) == 0)
+						dsFailedAndLogIt(errorCode::ioError, "open file :" << (m_filePath + INDEX_NAME) << " failed for " << err << "," << strerror(err), ERROR);
+					if ((m_indexFd = openFile((m_filePath + INDEX_NAME).c_str(), true, true, true)) == INVALID_HANDLE_VALUE)
+						dsFailedAndLogIt(errorCode::ioError, "create file :" << (m_filePath + INDEX_NAME) << " failed for " << errno << "," << strerror(errno), ERROR);
+					goto CHECK_LAST_BLOCK;
+				}
+			}
+			else
+			{
+				if(0 != seekFile(m_indexFd, 0, SEEK_SET))
+					dsFailedAndLogIt(errorCode::ioError, "read cluster log index " << m_filePath << INDEX_NAME << " failed for:" << errno << "," << strerror(errno), ERROR);
 			}
 
 			indexFileSize = getFileSize(m_indexFd);
@@ -336,7 +351,7 @@ namespace CLUSTER
 				count = INDEX_READ_BATCH;
 				if (count > indexCount - readed)
 					count = indexCount - readed;
-				if (readFile(fd, buf, (count * sizeof(index))) != (int64_t)(count * sizeof(index)))
+				if ((readSize = readFile(m_indexFd, buf, (count * sizeof(index)))) != (int64_t)(count * sizeof(index)))
 					dsFailedAndLogIt(errorCode::ioError, "read index file:" << m_filePath << INDEX_NAME << " failed,error:" << errno << "," << strerror(errno), ERROR);
 				for (int i = 0; i < count; i++)
 					m_blocks[readed + i] = new block(m_blockLoadFunc,*(index*)(&buf[sizeof(index) * i]));
@@ -344,7 +359,7 @@ namespace CLUSTER
 			//check if last index only write part to file
 			if (indexFileSize % sizeof(index) != 0)
 			{
-				if (0 != truncateFile(fd, indexFileSize - indexFileSize % sizeof(index)))
+				if (0 != truncateFile(m_indexFd, indexFileSize - indexFileSize % sizeof(index)))
 				{
 					dsFailedAndLogIt(errorCode::ioError, "truncate index file:" << m_filePath << INDEX_NAME << "to new size:" << indexFileSize - indexFileSize % sizeof(index) << " failed,error:" << errno << "," << strerror(errno), ERROR);
 				}
@@ -387,7 +402,7 @@ namespace CLUSTER
 		DLL_EXPORT dsStatus& load()
 		{
 			m_readFd = openFile(m_filePath.c_str(), true, false, false);
-			if (m_fd == INVALID_HANDLE_VALUE)
+			if (m_readFd == INVALID_HANDLE_VALUE)
 			{
 				int err = errno;
 				if (checkFileExist(m_filePath.c_str(), F_OK) != 0)
@@ -408,7 +423,7 @@ namespace CLUSTER
 		}
 		DLL_EXPORT dsStatus& writeCurrentBlock()
 		{
-			if (writeFile(m_indexFd, m_currentBlock->data + m_currentBlock->writedSize, m_currentBlock->size - m_currentBlock->writedSize) !=
+			if (writeFile(m_fd, m_currentBlock->data + m_currentBlock->writedSize, m_currentBlock->size - m_currentBlock->writedSize) !=
 				(m_currentBlock->size - m_currentBlock->writedSize) || ::fsync(m_fd) != 0)
 			{
 				dsFailedAndLogIt(errorCode::ioError, "write cluster log " << m_filePath << " failed for:" << errno << "," << strerror(errno), ERROR);
@@ -421,21 +436,20 @@ namespace CLUSTER
 		{
 			if (unlikely(m_currentBlock == nullptr))
 			{
-				dsReturn(appendToNewBlock(logEntry));
+				dsReturnIfFailed(appendToNewBlock(logEntry));
 			}
 
 			if (unlikely(m_currentBlock->size + logEntry->size +sizeof(raftRpcHead) > m_currentBlock->volumn))
 			{
 				if (m_blockCount + 1 >= m_maxBlockCount)
 					dsFailed(errorCode::full, nullptr);
-				dsReturn(appendToNewBlock(logEntry));
+				dsReturnIfFailed(appendToNewBlock(logEntry));
 			}
 			else
 			{
-				memcpy(m_currentBlock->data + m_currentBlock->size, logEntry, logEntry->size);
-				wmb();
-				m_currentBlock->size += logEntry->size;
+				m_currentBlock->append(logEntry);
 			}
+			m_logIndex = logEntry->logIndex;
 			dsOk();
 		}
 		DLL_EXPORT dsStatus& appendToNewBlock(const logEntryRpcBase* logEntry)
@@ -444,6 +458,14 @@ namespace CLUSTER
 			if (m_currentBlock != nullptr)
 				dsReturnIfFailed(writeCurrentBlock());
 			block* newBlock = new block(m_blockLoadFunc, m_config.m_defaultBlockSize, m_offset, logEntry);
+
+			if(m_indexFd == INVALID_HANDLE_VALUE)
+			{
+				if ((m_indexFd = openFile((m_filePath + INDEX_NAME).c_str(), true, true, true)) == INVALID_HANDLE_VALUE)
+					dsFailedAndLogIt(errorCode::ioError, "open index file:" << m_filePath << ".idx failed for:" << errno << "," << strerror(errno), ERROR);
+				if (seekFile(m_indexFd, sizeof(index)*m_blockCount, SEEK_SET) != (int64_t)(sizeof(index)*m_blockCount))
+					dsFailedAndLogIt(errorCode::ioError, "seek index file:" << m_filePath << ".idx to " << sizeof(index)*m_blockCount << " failed for:" << errno << "," << strerror(errno), ERROR);
+			}
 			if (writeFile(m_indexFd, (char*)&newBlock->idx, sizeof(newBlock->idx)) != sizeof(newBlock->idx) || ::fsync(m_indexFd) != 0)
 			{
 				int err = errno;
@@ -579,6 +601,8 @@ namespace CLUSTER
 			}
 			m_logIndex = prevLogIndex;
 			m_beginLogIndex = beginLogIndex;
+			m_blocks = new block * [m_maxBlockCount];
+			memset(m_blocks, 0, sizeof(block*) * m_maxBlockCount);
 			dsOk();
 		}
 		DLL_EXPORT dsStatus& deleteFile()
@@ -596,6 +620,7 @@ namespace CLUSTER
 		}
 		DLL_EXPORT void close()
 		{
+			LOG(ERROR)<<"close log file";
 			if (m_fd != INVALID_HANDLE_VALUE)
 			{
 				closeFile(m_fd);
@@ -656,13 +681,6 @@ namespace CLUSTER
 		}
 		DLL_EXPORT dsStatus& clear()
 		{
-			if (truncateFile(m_indexFd, 0) != 0)
-			{
-				dsFailedAndLogIt(errorCode::ioError, "truncate index file " << m_filePath << " failed," << errno << "," << strerror(errno), ERROR);
-			}
-			if (truncateFile(m_fd, 0) != 0)
-			{
-			}
 			for (uint32_t i = 0; i < m_blockCount; i++)
 			{
 				delete m_blocks[i];

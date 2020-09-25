@@ -77,7 +77,7 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 #define dsReturnIfFailed(status) do{dsStatus& __s = (status);if(unlikely((&(__s)) != (&DS_OK))){(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
 
 #define dsReturn(status) do{dsStatus& __s = (status); if(likely((&(__s)) == (&DS_OK))){return (__s);}else{(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
-#define dsReturnForFailedAndLogIt(errInfo) do{String __s;__s<<errInfo;LOG(logType)<<__s;getLocalStatus().addStack(currentStack(__s));return getLocalStatus();}while(0)
+#define dsReturnForFailedAndLogIt(errInfo) do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;getLocalStatus().addStack(currentStack(__s));return getLocalStatus();}while(0)
 
 //#define dsReturnForFailed() do{getLocalStatus().addStack(currentStack(nullptr));return getLocalStatus();}while(0);
 #define dsReturnForFailed(errInfo) do{getLocalStatus().addStack(currentStack(errInfo));return getLocalStatus();}while(0)
@@ -85,12 +85,12 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 
 #define dsFailed(code,errInfo)  do{setFailed((code),(errInfo),currentStack(errInfo));return getLocalStatus();}while(0)
 
-#define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus();}while(0)
+#define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus();}while(0)
 
 
 /*function return value is not dsStatus&,use dsFailedReturn to save error info ,and return value*/
 #define dsFailedReturn(code,errInfo,returnValue) do{setFailed((code),(errInfo),currentStack(errInfo));return (returnValue);}while(0)
 /*errInfo must not be null*/
-#define dsFailedReturnAndLogIt(code,errInfo,logType,returnValue) do{String __s;__s<<errInfo;LOG(logType)<<__s;setFailed((code),(errInfo),currentStack(errInfo));return (returnValue);}while(0)
+#define dsFailedReturnAndLogIt(code,errInfo,logType,returnValue) do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),(errInfo),currentStack(errInfo));return (returnValue);}while(0)
 
 #define dsTest(status) do{dsStatus& __s = (status);if(unlikely(!dsCheck(__s))){LOG(ERROR)<<__s.toString();abort();}}while(0);
