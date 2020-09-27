@@ -12,7 +12,7 @@ static fileHandle openFile(const char *file,bool readFlag,bool writeFlag,bool cr
 		flag |= GENERIC_READ;
 	if (writeFlag)
 		flag |= GENERIC_WRITE;
-	fileHandle fd = CreateFile(file, flag, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+	fileHandle fd = CreateFile(file, flag, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (fd == INVALID_HANDLE_VALUE)
 	{
 		uint64_t errCode = GetLastError();
@@ -21,14 +21,16 @@ static fileHandle openFile(const char *file,bool readFlag,bool writeFlag,bool cr
 		{
 			if (createFlag)
 			{
-				fd = CreateFile(file, flag, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+				fd = CreateFile(file, flag, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
 				return fd;
 			}
 		}
 		return INVALID_HANDLE_VALUE;
 	}
 	else
+	{
 		return fd;
+	}
 }
 static int64_t seekFile(fileHandle fd, int64_t position, int seekType)
 {
