@@ -20,18 +20,12 @@ static fileHandle openFile(const char *file, bool readFlag, bool writeFlag, bool
 {
 	int fd = -1;
 	int flag = 0;
-	if (readFlag)
-	{
-		flag |= O_RDONLY;
-	}
-	if (writeFlag)
-	{
-		flag |= O_WRONLY;
-	}
+	if (readFlag && writeFlag)
+		flag = O_RDWR;
+	else if (writeFlag)
+		flag = O_WRONLY;
 	if (createFlag)
-	{
 		flag |= O_CREAT;
-	}
 	fd = open(file, flag, createFlag ? S_IRUSR | S_IWUSR | S_IRGRP : 0);
 	return fd;
 }
@@ -42,17 +36,18 @@ static bool fileHandleValid(fileHandle fd)
 }
 static inline int64_t readFile(fileHandle fd, char *buf, uint64_t count)
 {
-    uint64_t readbytes, save_count=0;
+    int64_t readbytes;
+    uint64_t  save_count=0;
     for (;;)
     {
         errno= 0;
         readbytes = read(fd, buf+save_count, count-save_count);
-        if (readbytes != count-save_count)
+        if (readbytes != (int64_t)(count-save_count))
         {
             if ((readbytes == 0 || (int) readbytes == -1)&&errno == EINTR)
                 continue; /* Interrupted */
 
-            if (readbytes == (size_t) -1)
+            if (readbytes == -1)
                 return -errno; /* Return with error */
             else if(readbytes==0)
                 return save_count;

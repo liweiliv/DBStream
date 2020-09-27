@@ -195,7 +195,7 @@ namespace CLUSTER
 		fileHandle m_indexFd;
 		fileHandle m_readFd;
 	public:
-		DLL_EXPORT clusterLogFile(const char* filePath, uint64_t fileId, logConfig& config) :m_filePath(filePath), m_fileId(fileId),
+		DLL_EXPORT clusterLogFile(const char* filePath, uint64_t fileId, logConfig& config) :m_filePath(filePath), m_fileId(fileId), m_offset(0),
 			m_blockCount(0), m_blocks(nullptr), m_currentBlock(nullptr),
 			m_config(config), m_maxBlockCount(m_config.m_defaultLogFileSize / m_config.m_defaultBlockSize),
 			m_next(nullptr),
@@ -261,7 +261,8 @@ namespace CLUSTER
 				dsFailedAndLogIt(errorCode::ioError, "seek to " << offset << " of log file:" << (m_filePath + INDEX_NAME) << " failed,error:" << errno << "," << strerror(errno), ERROR);
 			char* buffer;
 			uint32_t bufferSize = 0;
-			for (int64_t pos = offset; pos < dataFileSize;)
+			int64_t pos = offset;
+			while (pos < dataFileSize)
 			{
 				logEntryRpcBase head;
 				dsStatus &rtv = readRecordHead(fd,dataFileSize, pos, head, readOnly);
@@ -308,10 +309,20 @@ namespace CLUSTER
 							break;
 					}
 				}
-				m_blocks[m_blockCount++] = new block(m_blockLoadFunc, idx, buffer, bufferSize, off);
+				m_blocks[m_blockCount] = new block(m_blockLoadFunc, idx, buffer, bufferSize, off);
+				m_blocks[m_blockCount]->id = m_blockCount;
+				if(m_blockCount > 0)
+				{
+					m_blocks[m_blockCount - 1]->size = m_blocks[m_blockCount]->idx.offset - m_blocks[m_blockCount - 1]->idx.offset;
+					m_blocks[m_blockCount - 1]->next = m_blocks[m_blockCount];
+				}
+				m_blockCount++;
+				m_offset = pos;
 				if (sizeof(idx) != writeFile(m_indexFd, (char*)&idx, sizeof(idx)))
 					dsFailedAndLogIt(errorCode::ioError, "write index info to:" << (m_filePath + INDEX_NAME) << " failed,error:" << errno << "," << strerror(errno), ERROR);
 			}
+			if(m_blockCount > 0)
+				m_blocks[m_blockCount]->size = pos - m_blocks[m_blockCount]->idx.offset;
 			dsOk();
 		}
 		DLL_EXPORT dsStatus& loadIndex(fileHandle fd,bool readOnly)
@@ -354,7 +365,15 @@ namespace CLUSTER
 				if ((readSize = readFile(m_indexFd, buf, (count * sizeof(index)))) != (int64_t)(count * sizeof(index)))
 					dsFailedAndLogIt(errorCode::ioError, "read index file:" << m_filePath << INDEX_NAME << " failed,error:" << errno << "," << strerror(errno), ERROR);
 				for (int i = 0; i < count; i++)
+				{
 					m_blocks[readed + i] = new block(m_blockLoadFunc,*(index*)(&buf[sizeof(index) * i]));
+					m_blocks[readed + i]->id = readed + i;
+					if(readed + i > 0)
+					{
+						m_blocks[readed + i - 1]->next = m_blocks[readed + i];
+						m_blocks[readed + i - 1]->size = m_blocks[readed + i]->idx.offset - m_blocks[readed + i - 1]->idx.offset;
+					}
+				}
 			}
 			//check if last index only write part to file
 			if (indexFileSize % sizeof(index) != 0)
@@ -369,7 +388,11 @@ namespace CLUSTER
 			if (m_blockCount > 0)
 			{
 				if (dataFileSize - m_blocks[m_blockCount - 1]->idx.offset < m_config.m_defaultBlockSize)
+				{
+					m_blocks[m_blockCount - 1]->size = dataFileSize - m_blocks[m_blockCount - 1]->idx.offset;
+					m_offset = dataFileSize;
 					dsOk();
+				}
 				else
 					dsReturn(recoveryIndexFromLastBlock(fd,m_blocks[m_blockCount - 1]->idx.offset, dataFileSize, readOnly));
 			}
@@ -428,7 +451,6 @@ namespace CLUSTER
 			{
 				dsFailedAndLogIt(errorCode::ioError, "write cluster log " << m_filePath << " failed for:" << errno << "," << strerror(errno), ERROR);
 			}
-			m_offset += m_currentBlock->size - m_currentBlock->writedSize;
 			m_currentBlock->writedSize = m_currentBlock->size;
 			dsOk();
 		}
@@ -438,8 +460,7 @@ namespace CLUSTER
 			{
 				dsReturnIfFailed(appendToNewBlock(logEntry));
 			}
-
-			if (unlikely(m_currentBlock->size + logEntry->size +sizeof(raftRpcHead) > m_currentBlock->volumn))
+			else if (unlikely(m_currentBlock->size + logEntry->size +sizeof(raftRpcHead) > m_currentBlock->volumn))
 			{
 				if (m_blockCount + 1 >= m_maxBlockCount)
 					dsFailed(errorCode::full, nullptr);
@@ -450,6 +471,7 @@ namespace CLUSTER
 				m_currentBlock->append(logEntry);
 			}
 			m_logIndex = logEntry->logIndex;
+			m_offset += logEntry->size;
 			dsOk();
 		}
 		DLL_EXPORT dsStatus& appendToNewBlock(const logEntryRpcBase* logEntry)
@@ -474,6 +496,7 @@ namespace CLUSTER
 			}
 			wmb();
 			m_blocks[m_blockCount] = newBlock;
+			newBlock->id = m_blockCount;
 			m_blockCount++;
 			if (m_currentBlock != nullptr)
 				m_currentBlock->next = newBlock;
@@ -602,6 +625,7 @@ namespace CLUSTER
 			m_logIndex = prevLogIndex;
 			m_beginLogIndex = beginLogIndex;
 			m_blocks = new block * [m_maxBlockCount];
+			m_offset = HEAD_SIZE;
 			memset(m_blocks, 0, sizeof(block*) * m_maxBlockCount);
 			dsOk();
 		}
@@ -620,9 +644,10 @@ namespace CLUSTER
 		}
 		DLL_EXPORT void close()
 		{
-			LOG(ERROR)<<"close log file";
 			if (m_fd != INVALID_HANDLE_VALUE)
 			{
+				if(m_currentBlock != nullptr && m_currentBlock->size > m_currentBlock->writedSize)
+					writeCurrentBlock();
 				closeFile(m_fd);
 				m_fd = INVALID_HANDLE_VALUE;
 			}
@@ -646,9 +671,6 @@ namespace CLUSTER
 				delete[]m_blocks;
 				m_blocks = nullptr;
 			}
-			m_next = nullptr;
-			m_offset = 0;
-			m_blockCount = 0;
 		}
 		DLL_EXPORT dsStatus& finish()
 		{
@@ -770,7 +792,7 @@ namespace CLUSTER
 				dsOk();
 			}
 		public:
-			DLL_EXPORT iterator() : m_offset(0), m_file(nullptr), m_block(nullptr) {}
+			DLL_EXPORT iterator() : m_offset(0), m_file(nullptr), m_block(nullptr), m_onlyReadCommitted(true) {}
 			DLL_EXPORT ~iterator()
 			{
 				if (m_block != nullptr)
@@ -778,6 +800,7 @@ namespace CLUSTER
 			}
 			DLL_EXPORT dsStatus& setLogFile(clusterLogFile* file)
 			{
+				m_file = file;
 				dsReturn(file->m_ref.use());
 			}
 			DLL_EXPORT dsStatus& attachToNextLogFile(clusterLogFile* file)
@@ -792,7 +815,7 @@ namespace CLUSTER
 				{
 					dsFailedAndLogIt(errorCode::logIndexNotFound, "do not find logIndex:" << logIndex.term << "." << logIndex.logIndex, WARNING);
 				}
-				dsReturnIfFailed(m_file->m_ref.use());
+				dsReturnIfFailed(m_block->m_ref.use());
 				if ((m_offset = m_block->find(logIndex)) == block::INVALID_RESULT)
 				{
 					m_block->m_ref.unuse();
