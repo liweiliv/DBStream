@@ -60,12 +60,12 @@ DLL_EXPORT int fileList::load()
 			{
 				fileInfo file;
 				file.fileName = fileName;
-				getFileSizeAndTimestamp((dirPath + "/" + "fileName").c_str(),&file.size, &file.timestamp);
+				getFileSizeAndTimestamp((dirPath + "/" + "fileName").c_str(), &file.size, &file.timestamp);
 				files.insert(std::pair<uint64_t, fileInfo>(id, file));
 			}
 #ifdef OS_WIN
-		}while (FindNextFile(hFind, &findFileData));
-		FindClose(hFind);
+	} while (FindNextFile(hFind, &findFileData));
+	FindClose(hFind);
 #endif
 #ifdef OS_LINUX
 	}
@@ -78,4 +78,38 @@ DLL_EXPORT int fileList::update()
 	clean();
 	return load();
 }
+#ifdef OS_LINUX
+DLL_EXPORT dsStatus& fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
+{
+	DIR* dir = opendir(dirPath.c_str());
+	if (dir == nullptr)
+		dsFailedAndLogIt(errno, "open data dir:" << dirPath << " failed, errno:" << errno << "," << strerror(errno), ERROR);
+	dirent* file;
+	while ((file = readdir(dir)) != nullptr)
+	{
+		if (file->d_type != 8)
+			continue;
+		files.push_back(file->d_name);
+	}
+	closedir(dir);
+	dsOk();
+}
+#endif
+
+#ifdef OS_WIN
+DLL_EXPORT dsStatus& fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
+{
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((dirPath + "\\*").c_str(), &findFileData);
+	if (INVALID_HANDLE_VALUE == hFind)
+		dsFailedAndLogIt(errno, "open data dir:" << dirPath << " failed, errno:" << errno << "," << strerror(errno), ERROR);
+	do
+	{
+		if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			continue;
+		files.push_back(findFileData.cFileName);
+	} while (FindNextFile(hFind, &findFileData));
+	FindClose(hFind);
+}
+#endif
 

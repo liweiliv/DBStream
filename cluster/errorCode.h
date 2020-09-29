@@ -12,6 +12,7 @@ namespace CLUSTER
 		logIndexNotFound,
 		illegalLogEntry,
 		rollbackCommited,
-		rollbackTooEarlier
+		rollbackTooEarlier,
+		missingLogFile
 	};
 }

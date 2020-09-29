@@ -159,6 +159,10 @@ add_library(cluster SHARED ${clusterDir})
 TARGET_LINK_LIBRARIES(cluster util thread memory ${GLOG} ${GLFAGS} )
 target_include_directories(cluster PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${LIBEVENT_INCLUDE_PATH})
 target_include_directories(cluster PUBLIC ${BOOST_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(cluster boost_coroutine)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 
 
 #database
@@ -379,7 +383,14 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testClusterLogFile  cluster/unittest/testClusterLogFile.cpp)
-TARGET_LINK_LIBRARIES(testClusterLogFile util thread memory)
+TARGET_LINK_LIBRARIES(testClusterLogFile util thread memory cluster)
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testClusterLogFile pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testClusterLog  cluster/unittest/testClusterLog.cpp)
+TARGET_LINK_LIBRARIES(testClusterLog util thread memory cluster)
+target_include_directories(testClusterLog PUBLIC ${BOOST_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testClusterLog pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

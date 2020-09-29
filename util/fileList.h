@@ -2,9 +2,11 @@
 #include <string>
 #include <map>
 #include <string.h>
+#include <vector>
 #include <stdint.h>
 #include "file.h"
 #include "winDll.h"
+#include "status.h"
 DLL_EXPORT class fileList
 {
 public:
@@ -27,5 +29,5 @@ public:
 	{
 		return files;
 	}
-
+	DLL_EXPORT static dsStatus& getFileList(const std::string &filePath, std::vector<std::string>& files);
 };
