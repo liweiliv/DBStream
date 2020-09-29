@@ -31,46 +31,42 @@ namespace CLUSTER
 	template<class T>
 	class ref
 	{
-	public:
-		enum class unuseResult {
-			NORMAL,
-			CLOSE,
-			FREE
-		};
 	private:
-		constexpr static int IN_CLEAR = 0x80000000;
-		constexpr static int IN_LOAD = 0xc0000000;
+		constexpr static uint32_t IN_CLEAR = 0x80000000U;
+		constexpr static uint32_t IN_LOAD = 0xc0000000U;
+		constexpr static uint32_t NEED_FREE = 0x20000000U;
 
-		std::atomic<int> m_ref;
+		std::atomic<uint32_t> m_ref;
 		T* m_data;
 		std::function<dsStatus& (T*)>& loadFunc;
 	public:
 		ref(T* data, std::function<dsStatus& (T*)>& loadFunc) :m_ref(0), m_data(data), loadFunc(loadFunc) {}
-		unuseResult unuse()
+		void needFree()
+		{
+			if(0 == m_ref.fetch_or(NEED_FREE))
+				delete m_data;
+		}
+		void unuse()
 		{
 			for (;;)
 			{
-				int r = m_ref.load(std::memory_order_relaxed);
-				if (r == 1)
+				uint32_t r = m_ref.load(std::memory_order_relaxed);
+				if ((r & ~NEED_FREE) == 1)
 				{
 					if (m_ref.compare_exchange_weak(r, IN_CLEAR))
 					{
 						m_data->close();
-						m_ref.store(0, std::memory_order_release);
-						return unuseResult::CLOSE;
+						if (r & NEED_FREE)
+							delete m_data;
+						else
+							m_ref.store(0, std::memory_order_relaxed);
+						return;
 					}
 				}
 				else
 				{
 					if (m_ref.compare_exchange_weak(r, r - 1))
-					{
-						if (r == 0)
-						{
-							delete m_data;
-							return unuseResult::FREE;
-						}
-						return unuseResult::NORMAL;
-					}
+						return;
 				}
 			}
 		}
@@ -82,7 +78,9 @@ namespace CLUSTER
 		{
 			for (;;)
 			{
-				int r = m_ref.load(std::memory_order_relaxed);
+				uint32_t r = m_ref.load(std::memory_order_relaxed);
+				//do not allow iterator call use after needFree()
+				assert(!(r & NEED_FREE));
 				if (unlikely(r == IN_CLEAR || r == IN_LOAD))
 				{
 					yield();
@@ -104,11 +102,8 @@ namespace CLUSTER
 				}
 				else
 				{
-					assert(r > 0);
 					if (m_ref.compare_exchange_weak(r, r + 1))
-					{
 						dsOk();
-					}
 				}
 			}
 		}
@@ -205,9 +200,9 @@ namespace CLUSTER
 		{
 			dsReturn(m_ref.use());
 		}
-		DLL_EXPORT inline ref<clusterLogFile>::unuseResult unUse()
+		DLL_EXPORT inline void unUse()
 		{
-			return m_ref.unuse();
+			m_ref.unuse();
 		}
 		class iterator {
 		private:

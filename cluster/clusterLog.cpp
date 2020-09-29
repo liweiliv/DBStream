@@ -215,14 +215,13 @@ namespace CLUSTER {
 			if (lastCommited.term == 0 && lastCommited.logIndex == 0)
 			{
 				m_currentLogFile = new clusterLogFile((logDir + "/" + logPrefix + ".1.log").c_str(), 1, m_logConfig);
-				if (!dsCheck(m_currentLogFile->create({ 1,0, }, { 1,1 })) || !dsCheck(m_currentLogFile->use()))
+				if (!dsCheck(m_currentLogFile->create({ 1,0, }, { 1,1 })))
 				{
 					m_currentLogFile->close();
 					delete m_currentLogFile;
 					m_currentLogFile = nullptr;
 					dsReturn(getLocalStatus());
 				}
-				m_currentLogFile->use();
 				m_files.insert(std::pair<logIndexInfo, clusterLogFile*>({ 1,1 }, m_currentLogFile));
 			}
 			else

@@ -20,6 +20,7 @@ dsStatus& wFunc(clusterLogFile *logFile)
 		logEntry->opt = 1;
 		dsTest(logFile->append(logEntry));
 	}
+	logFile->finish();
 	logFile->unUse();
 	dsOk();
 }
@@ -43,6 +44,7 @@ dsStatus& rFunc(clusterLogFile* logFile)
 		assert(logEntry->port == i % 65535);
 		assert(logEntry->opt == 1);
 	}
+	assert(iter.next(entry).code == errorCode::endOfFile);
 	printf("finished\n");
 	dsOk();
 }
@@ -123,6 +125,6 @@ void testRollback()
 }
 int main()
 {
-	//test();
-	testRollback();
+	test();
+	//testRollback();
 }

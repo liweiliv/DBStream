@@ -33,6 +33,10 @@ namespace CLUSTER {
 		logIndexInfo() :term(0), logIndex(0) {}
 		logIndexInfo(const logIndexInfo& index) :term(index.term), logIndex(index.logIndex) {}
 		logIndexInfo(uint64_t term, uint64_t logIndex) :term(term), logIndex(logIndex) {}
+		inline bool invalid()
+		{
+			return term == 0;
+		}
 	};
 
 	struct authReq {

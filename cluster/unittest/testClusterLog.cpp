@@ -36,10 +36,7 @@ dsStatus& rFunc(clusterLog* logFile)
 	const logEntryRpcBase* entry;
 	for (int i = 1; i < 100000; i++)
 	{
-		dsStatus & rtv = iter.next(entry);
-		if(!dsCheck(rtv))
-			printf("xxx\n");
-		dsTest(rtv);
+		dsTest(iter.next(entry));
 		const nodeInfoLogEntry* logEntry = static_cast<const nodeInfoLogEntry*>(entry);
 		assert(logEntry->version == VERSION);
 		assert(logEntry->recordType == static_cast<uint8_t>(rpcType::nodeInfoLogEntry));
@@ -64,7 +61,13 @@ dsStatus& test()
 	std::thread w(wFunc, &log);
 	w.join();
 	std::thread r0(rFunc, &log);
+	std::thread r1(rFunc, &log);
+	std::thread r2(rFunc, &log);
+	std::thread r3(rFunc, &log);
 	r0.join();
+	r1.join();
+	r2.join();
+	r3.join();
 	dsOk();
 }
 int main()

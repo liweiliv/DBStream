@@ -303,12 +303,26 @@ namespace CLUSTER
 	{
 		if (m_fd == INVALID_HANDLE_VALUE)
 			dsReturnIfFailed(openLogFile(m_fd, false));
+		if (m_beginLogIndex.invalid() || m_prevLogIndex.invalid())
+			dsReturnIfFailed(readMetaInfo());
 		if (m_blocks == nullptr)
 		{
 			m_blocks = new block * [m_maxBlockCount];
 			memset(m_blocks, 0, sizeof(block*) * m_maxBlockCount);
 		}
 		dsReturnIfFailed(loadIndex(m_fd, false));
+		if (m_blockCount > 0)
+		{
+			m_currentBlock = m_blocks[m_blockCount - 1];
+			dsReturnIfFailed(m_currentBlock->m_ref.use());
+			if (seekFile(m_fd, m_currentBlock->idx.offset + m_currentBlock->size, SEEK_SET) != m_currentBlock->idx.offset + m_currentBlock->size)
+				dsFailedAndLogIt(errorCode::ioError, "seek to end of cluster log " << m_filePath << " failed for:" << errno << "," << strerror(errno), ERROR);
+		}
+		else
+		{
+			if (seekFile(m_fd, HEAD_SIZE, SEEK_SET) != HEAD_SIZE)
+				dsFailedAndLogIt(errorCode::ioError, "seek to end of cluster log " << m_filePath << " failed for:" << errno << "," << strerror(errno), ERROR);
+		}
 		m_ref.useForWrite();
 		dsOk();
 	}
@@ -373,9 +387,13 @@ namespace CLUSTER
 		wmb();
 		m_blocks[m_blockCount] = newBlock;
 		newBlock->id = m_blockCount;
+		newBlock->m_ref.useForWrite();
 		m_blockCount++;
 		if (m_currentBlock != nullptr)
+		{
 			m_currentBlock->next = newBlock;
+			m_currentBlock->m_ref.unuse();
+		}
 		m_currentBlock = newBlock;
 		dsOk();
 	}
@@ -427,8 +445,7 @@ namespace CLUSTER
 	{
 		if (b->data != nullptr)
 			dsOk();
-		int size = (b->next == nullptr ? m_offset : b->next->idx.offset) - b->idx.offset;
-		char* data = new char[size];
+		char* data = new char[b->size];
 		m_lock.lock();
 		if (m_readFd == INVALID_HANDLE_VALUE)
 		{
@@ -445,7 +462,7 @@ namespace CLUSTER
 			delete[]data;
 			dsFailedAndLogIt(errorCode::ioError, "read cluster log " << m_filePath << " failed for:" << errno << "," << strerror(errno), ERROR);
 		}
-		if (size != readFile(m_readFd, data, size))
+		if (b->size != readFile(m_readFd, data, b->size))
 		{
 			m_lock.unlock();
 			delete[]data;
@@ -522,8 +539,12 @@ namespace CLUSTER
 	{
 		if (m_fd != INVALID_HANDLE_VALUE)
 		{
-			if (m_currentBlock != nullptr && m_currentBlock->size > m_currentBlock->writedSize)
-				writeCurrentBlock();
+			if (m_currentBlock != nullptr)
+			{
+				if (m_currentBlock->size > m_currentBlock->writedSize)
+					dsCheckButIgnore(writeCurrentBlock());
+				m_currentBlock->m_ref.unuse();
+			}
 			closeFile(m_fd);
 			m_fd = INVALID_HANDLE_VALUE;
 		}
@@ -541,7 +562,7 @@ namespace CLUSTER
 		{
 			for (uint32_t i = 0; i < m_blockCount; i++)
 			{
-				delete m_blocks[i];
+				m_blocks[i]->m_ref.needFree();
 				m_blocks[i] = nullptr;
 			}
 			delete[]m_blocks;
@@ -554,9 +575,12 @@ namespace CLUSTER
 		memcpy(m_currentBlock->data + m_currentBlock->size, &head, sizeof(head));
 		wmb();
 		m_currentBlock->size += sizeof(head);
-		dsReturn(flush());
+		m_offset += sizeof(head);
+		dsReturnIfFailed(flush());
+		m_currentBlock->m_ref.unuse();
 		closeFile(m_fd);
 		m_fd = INVALID_HANDLE_VALUE;
+		dsOk();
 	}
 	DLL_EXPORT dsStatus& clusterLogFile::writeCurrentBlock()
 	{
