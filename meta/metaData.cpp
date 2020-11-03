@@ -137,6 +137,8 @@ namespace META {
 		default:
 			abort();
 		}
+		if (!m_nullable)
+			sql.append(" not null");
 		return sql;
 
 	}

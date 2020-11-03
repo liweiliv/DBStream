@@ -151,6 +151,7 @@ namespace CLUSTER
 		std::function<dsStatus& (clusterLogFile*)> m_fileLoadFunc;
 		ref<clusterLogFile> m_ref;
 		std::mutex m_lock;
+		std::mutex m_flushLock;
 		std::condition_variable m_condition;
 
 		fileHandle m_fd;

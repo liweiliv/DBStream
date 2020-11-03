@@ -121,7 +121,7 @@ namespace REPLICATOR
 
 				if (TEST_BITMAP(dml->nullBitmap, table->columnMap[idx]))
 				{
-					LOG(ERROR)<<"unexpect null value in record key column:"<<table->meta->m_columns[table->columnMap[idx]].m_columnName<<",record checkpoint is:"<<dml->head->logOffset;
+					LOG(ERROR) << "unexpect null value in record key column:" << table->meta->m_columns[table->columnMap[idx]].m_columnName << ",record checkpoint is:" << dml->head->logOffset;
 					return -1;
 				}
 				else
@@ -136,13 +136,13 @@ namespace REPLICATOR
 		}
 		else // no pk ,and no uk or all uk has null value,put all columns to where condition  
 		{
-			bool columnSetted = false,notSetLobColumn = true;
+			bool columnSetted = false, notSetLobColumn = true;
 			int idx = 0;
 RESET:
 			for (idx = 0; idx < table->destMeta->m_columnsCount; idx++)
 			{
 				/*often we do not add lob,text column to where condition for it is too slow and will increase pressure of database server */
-				if (notSetLobColumn&&(dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::COLUMN_TYPE::T_BLOB||
+				if (notSetLobColumn && (dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::COLUMN_TYPE::T_BLOB ||
 					dml->meta->m_columns[table->columnMap[idx]].m_columnType == META::COLUMN_TYPE::T_TEXT))
 					continue;
 				if (columnSetted)

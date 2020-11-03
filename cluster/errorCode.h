@@ -4,6 +4,7 @@ namespace CLUSTER
 	enum errorCode {
 		ok,
 		ioError,
+		netError,
 		endOfFile,
 		full,
 		emptyLogFile,

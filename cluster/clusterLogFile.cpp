@@ -584,6 +584,7 @@ namespace CLUSTER
 	}
 	DLL_EXPORT dsStatus& clusterLogFile::writeCurrentBlock()
 	{
+		std::lock_guard<std::mutex> guard(m_flushLock);
 		if (m_currentBlock->size == m_currentBlock->writedSize)
 			dsOk();
 		if (writeFile(m_fd, m_currentBlock->data + m_currentBlock->writedSize, m_currentBlock->size - m_currentBlock->writedSize) !=

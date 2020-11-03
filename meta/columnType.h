@@ -88,6 +88,16 @@ namespace META {
 	{COLUMN_TYPE::T_TEXT,4,true,false,true}
 	};
 #pragma pack(1)
+	static inline uint32_t hashBinary(const char* s,uint32_t size)
+	{
+		uint32_t hash = 1315423911;
+		const char* dest = s + size;
+		while (s != dest)
+		{
+			hash ^= ((hash << 5) + (*s++) + (hash >> 2));
+		}
+		return (hash & 0x7FFFFFFF);
+	}
 	enum class KEY_TYPE {
 		PRIMARY_KEY,
 		UNIQUE_KEY,
@@ -191,6 +201,10 @@ namespace META {
 		DLL_EXPORT binaryType(const char* _data, uint16_t _size);
 		DLL_EXPORT binaryType(const binaryType& dest);
 		DLL_EXPORT binaryType operator=(const binaryType& dest);
+		inline uint32_t hash() const
+		{
+			return hashBinary(data, size);
+		}
 		inline bool operator< (const binaryType& dest) const
 		{
 			return  compare(dest) < 0;
@@ -226,11 +240,20 @@ namespace META {
 		}
 		inline bool operator== (const unionKey& dest) const
 		{
-			return compare(dest) == 0;
+			if (meta->fixed)
+			{
+				return memcmp(key, dest.key, meta->size) == 0;
+			}
+			else
+			{
+				if (*(uint16_t*)key != *(uint16_t*)dest.key)
+					return false;
+				return memcmp(key + sizeof(uint16_t), dest.key + sizeof(uint16_t), *(uint16_t*)key) == 0;
+			}
 		}
 		inline bool operator!= (const unionKey& dest) const
 		{
-			return compare(dest) != 0;
+			return !(*this == dest);
 		}
 		static inline int externSize(const META::unionKeyMeta* meta)
 		{
@@ -257,6 +280,10 @@ namespace META {
 		inline void setVarSize(uint16_t size)
 		{
 			*(uint16_t*)(key) = size;
+		}
+		inline uint32_t hash() const
+		{
+			return meta->fixed ? hashBinary(key, meta->size) : hashBinary(key, *(uint16_t*)key);
 		}
 		DLL_EXPORT static uint16_t memSize(const DATABASE_INCREASE::DMLRecord* r, const META::unionKeyMeta* meta, bool keyUpdated);
 		DLL_EXPORT static void initKey(char* key, uint16_t size, const META::unionKeyMeta* keyMeta, const DATABASE_INCREASE::DMLRecord* r, bool keyUpdated = false);

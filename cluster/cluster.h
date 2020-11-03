@@ -1,6 +1,7 @@
 #pragma once
 #include "memory/bufferPool.h"
 #include "util/sparsepp/spp.h"
+#include "util/status.h"
 #include "thread/shared_mutex.h"
 #include <boost/asio.hpp>
 #include <boost/asio/spawn.hpp>
@@ -18,6 +19,9 @@ namespace CLUSTER
 	struct nodeInfo;
 	class node;
 	class processor;
+	class clusterLog;
+	class clusterLog::iterator;
+	struct logEntryRpcBase;
 	typedef spp::sparse_hash_map<int32_t, nodeInfo*> nodeTree;
 	typedef spp::sparse_hash_map<std::string,uint32_t> nodeList;
 
@@ -38,12 +42,16 @@ namespace CLUSTER
 		io_context *m_netService;
 		acceptor *m_acceptor;
 		node* m_myself;
+		nodeInfo* m_leader;
 		nodeTree m_nodes;
 		nodeList m_allRegistedNodes;
 		uint32_t m_clusterId;
 		shared_mutex m_lock;
 		bufferPool* m_pool;
+		clusterLog* m_log;
+		clusterLog::iterator * m_logIter;
 	private:
+		int apply(const logEntryRpcBase* rpc);
 		int addNode(nodeInfo *node);
 		int deleteNode(int32_t id);
 		int addProcessor(processor * p);
@@ -58,6 +66,6 @@ namespace CLUSTER
 		}
 	public:
 		int init();
-		int processMessage(const char* msg);
+		dsStatus& processMessage(const char* msg);
 	};
 }

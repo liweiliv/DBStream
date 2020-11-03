@@ -114,12 +114,13 @@ namespace META {
 		uint32_t m_decimals;
 		stringArray m_setAndEnumValueList;
 		bool m_signed;
+		bool m_nullable;
 		bool m_isPrimary;
 		bool m_isUnique;
 		bool m_isIndex;
 		bool m_generated;
 		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
-			m_setAndEnumValueList(), m_signed(false), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
+			m_setAndEnumValueList(), m_signed(false), m_nullable(true), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
 		{}
 		columnMeta& operator =(const columnMeta& c)
 		{
@@ -134,6 +135,7 @@ namespace META {
 			m_decimals = c.m_decimals;
 			m_setAndEnumValueList = c.m_setAndEnumValueList;
 			m_signed = c.m_signed;
+			m_nullable = c.m_nullable;
 			m_isPrimary = c.m_isPrimary;
 			m_isUnique = c.m_isUnique;
 			m_isIndex = c.m_isIndex;
@@ -153,6 +155,7 @@ namespace META {
 				m_decimals != c.m_decimals ||
 				m_setAndEnumValueList != c.m_setAndEnumValueList ||
 				m_signed != c.m_signed ||
+				m_nullable != c.m_nullable ||
 				m_isPrimary != c.m_isPrimary ||
 				m_isUnique != c.m_isUnique ||
 				m_isIndex != c.m_isIndex ||

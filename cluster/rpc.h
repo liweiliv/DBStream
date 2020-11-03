@@ -57,7 +57,7 @@ namespace CLUSTER {
 		char msg[1];
 	};
 	enum class rpcType {
-		baseLogEntry,
+		baseLogEntry,//for heartbeat
 		logEntryRsp,
 		nodeInfoLogEntry,
 		processorLogEntry,
@@ -65,7 +65,10 @@ namespace CLUSTER {
 		checkpointLogEntry,
 		voteReq,
 		voteRsq,
-		endOfFile
+		prevNotMatch,
+		heartbeat,
+		endOfFile //inner type ,do not send to other nodes
+
 	};
 	struct raftRpcHead {
 		uint32_t size;

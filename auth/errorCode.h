@@ -1,0 +1,11 @@
+#pragma once
+namespace AUTH
+{
+	enum errorCode {
+		INVALID_USER,
+		INVALID_PASSWORD,
+		INVALID_SALT,
+		USER_EXIST,
+		USER_NOT_EXIST_OR_PASSWORD_NOT_MATCH,
+	};
+}

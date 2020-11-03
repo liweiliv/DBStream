@@ -115,6 +115,7 @@ namespace DATABASE_INCREASE
 #define TEST_BITMAP(m,i) (((m)[(i)>>3]>>(i&0x7))&0x1)
 #define SET_BITMAP(m,i)  (m)[(i)>>3]|= (0x01<<(i&0x7))
 #define UNSET_BITMAP(m,i) (m)[(i)>>3] &= (~(0x01<<(i&0x7)))
+#define BITMAP_SIZE(l) (((l) >> 3) + ((l) & 0x7f ? 1 : 0))
 	/*
 	* [16 bit charsetID][database string+ 1 byte '\0']
 	*/
@@ -283,12 +284,19 @@ namespace DATABASE_INCREASE
 			*((uint64_t*)(ptr)) = tableMetaID;
 			ptr += sizeof(tableMetaID);
 			nullBitmap = (const uint8_t*)ptr;
-			memset((void*)nullBitmap, 0, (meta->m_columnsCount >> 3) + (meta->m_columnsCount & 0x7f ? 1 : 0));
-			ptr += (meta->m_columnsCount >> 3) + (meta->m_columnsCount & 0x7f ? 1 : 0);
+			memset((void*)nullBitmap, 0, BITMAP_SIZE(meta->m_columnsCount));
+			ptr += BITMAP_SIZE(meta->m_columnsCount);
 			columns = ptr;
 			ptr += meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount];
 			varLengthColumns = (const uint32_t*)ptr;
 			((uint32_t*)varLengthColumns)[meta->m_varColumnCount] = (char*)&varLengthColumns[meta->m_varColumnCount+1] - columns;
+		}
+		static inline uint32_t allocSize(const META::tableMeta* meta)
+		{
+			return sizeof(recordHead) + 8 //tableMetaID
+				+ BITMAP_SIZE(meta->m_columnsCount) //nullBitmap
+				+ meta->m_fixedColumnOffsetsInRecord[meta->m_fixedColumnCount]//fixed column 
+				+ sizeof(uint32_t) * (meta->m_varColumnCount + 1);//var coolumn
 		}
 
 		template<class T>
@@ -296,6 +304,12 @@ namespace DATABASE_INCREASE
 		{
 			assert(meta->m_realIndexInRowFormat[id]<meta->m_columnsCount);
 			*(T*)(columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[id]]) = value;
+			SET_BITMAP((uint8_t*)nullBitmap, id);
+		}
+		inline void setFixedColumnByMemcopy(uint16_t id, const char * value)
+		{
+			assert(meta->m_realIndexInRowFormat[id] < meta->m_columnsCount);
+			memcpy((char*)columns + meta->m_fixedColumnOffsetsInRecord[meta->m_realIndexInRowFormat[id]], value, META::columnInfos[static_cast<uint8_t>(meta->getColumn(id)->m_columnType)].columnTypeSize);
 			SET_BITMAP((uint8_t*)nullBitmap, id);
 		}
 		inline char* allocVarColumn()

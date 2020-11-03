@@ -111,13 +111,13 @@ namespace CLUSTER {
 			registe("storageTime", [=](UPD_ARGV) {return::config::getUint32(value.c_str(), m_storageTime); });
 			registe("maxFilesSize", [=](UPD_ARGV) {return::config::getUint64(value.c_str(), m_maxFilesSize); });
 			registe("logDir", [=](UPD_ARGV) {
-				if (isInit)
+				if (!isInit)
 					return "can not change logDir";
 				m_logDir = value;
 				return "";
 				});
 			registe("logFileNamePrefix", [=](UPD_ARGV) {
-				if (isInit)
+				if (!isInit)
 					return "can not change logFileNamePrefix";
 				m_logFileNamePrefix = value;
 				return "";

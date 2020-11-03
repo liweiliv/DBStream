@@ -4,6 +4,7 @@
 #include <map>
 #include <time.h>
 #include <mutex>
+#include "itoaSse.h"
 #ifdef OS_WIN
 #include <Windows.h>
 #endif
@@ -23,6 +24,15 @@ public:
 			};
 			uint64_t time;
 		};
+		timestamp() :time(0) {}
+		timestamp(uint64_t t) :time(t) {}
+		timestamp(uint64_t s, uint32_t ns) :seconds(s), nanoSeconds(ns) {}
+		timestamp(const timestamp& t) :time(t.time) {}
+		timestamp& operator=(const timestamp& t)
+		{
+			time = t.time;
+			return *this;
+		}
 		inline void add(int64_t second, uint32_t nanoSecond)
 		{
 			if (nanoSeconds + nanoSecond > 1000000000)
@@ -39,6 +49,37 @@ public:
 		inline void add(timestamp time)
 		{
 			add(time.seconds, time.nanoSeconds);
+		}
+		static timestamp delta(uint64_t s, uint64_t d)
+		{
+			timestamp st(s), dt(d);
+			timestamp v;
+			if (st.nanoSeconds > dt.nanoSeconds)
+			{
+				v.seconds = st.seconds - dt.seconds;
+				v.nanoSeconds = st.nanoSeconds - dt.nanoSeconds;
+			}
+			else
+			{
+				v.seconds = st.seconds - dt.seconds - 1;
+				v.nanoSeconds = st.nanoSeconds + 1000000000LL - dt.nanoSeconds;
+			}
+			return v;
+		}
+		uint8_t toString(char* s)
+		{
+			uint8_t length = u64toa_sse2(seconds, s);
+			s[length - 1] = '.';
+			uint8_t nlength = u32toa_sse2_b(nanoSeconds, &s[length + 9]);
+			for (int i = length + 9 - nlength; i >= length; i--)
+				s[i] = '0';
+			return 1 + length + nlength;
+		}
+		std::string toString()
+		{
+			char s[32] = { 0 };
+			uint8_t length = toString(s);
+			return std::string(s, length);
 		}
 	};
 	struct timerTask
@@ -95,7 +136,7 @@ public:
 		if (!running)
 		{
 			running = true;
-			timeThreadInfo = std::thread(_timerThread,this);
+			timeThreadInfo = std::thread(_timerThread, this);
 		}
 		lock.unlock();
 	}
@@ -109,7 +150,7 @@ public:
 		}
 		lock.unlock();
 	}
-	bool addTimer(void * userData, void (*action)(uint64_t, void*), uint64_t cycle)
+	bool addTimer(void* userData, void (*action)(uint64_t, void*), uint64_t cycle)
 	{
 		timerTask* task = new timerTask;
 		task->cycle.time = cycle;
@@ -139,7 +180,7 @@ public:
 		{
 			uint64_t nowTime;
 			lock.lock();
-			
+
 			for (std::multimap<uint64_t, timerTask*>::iterator iter = tasks.begin(); iter != tasks.end(); )
 			{
 				nowTime = getNowTimestamp();

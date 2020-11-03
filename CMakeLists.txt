@@ -61,6 +61,15 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	endif() 
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+#tbb
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(TBB_INCLUDE_PATH "D:\\git\\tbb\\include")
+	find_library(TBB tbb_debug "D:\\git\\tbb\\lib")
+	if(NOT TBB)
+        message(FATAL_ERROR "tbb not found")
+	endif() 
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+
 
 #mysqlclient
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -170,6 +179,16 @@ aux_source_directory(database databaseDir)
 add_library(database SHARED ${databaseDir})
 TARGET_LINK_LIBRARIES(database  util globalInfo thread memory meta ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(database PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+
+#kvdb
+aux_source_directory(memKvDatabase memKvDatabaseDir)
+add_library(memKvDatabase SHARED ${memKvDatabaseDir})
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	target_include_directories(memKvDatabase PUBLIC ${TBB_INCLUDE_PATH})
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+TARGET_LINK_LIBRARIES(memKvDatabase  util globalInfo thread memory meta ${LZ4} ${GLOG} ${GFLAGS} ${TBB})
+target_include_directories(memKvDatabase PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+
 #metaCollection
 add_library(metaCollection SHARED meta/metaDataCollection.cpp)
 TARGET_LINK_LIBRARIES(metaCollection meta database util thread sqlParser ${GLOG})
@@ -242,6 +261,17 @@ target_include_directories(DBStream PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_P
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(DBStream dl pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
+
+#crypt
+aux_source_directory(crypt/aes aesDir)
+aux_source_directory(crypt/sha-2 sha2Dir)
+
+add_library(crypt SHARED ${aesDir} ${sha2Dir})
+
+
+
 #-------------------------------------------------------------------------------
 
 
@@ -393,4 +423,11 @@ TARGET_LINK_LIBRARIES(testClusterLog util thread memory cluster)
 target_include_directories(testClusterLog PUBLIC ${BOOST_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testClusterLog pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+ADD_EXECUTABLE(testKvTable  memKvDatabase/unittest/testTable.cpp)
+TARGET_LINK_LIBRARIES(testKvTable util  ${TBB} memory thread)
+target_include_directories(testKvTable PUBLIC ${TBB_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testKvTable pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

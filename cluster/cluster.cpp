@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include "cluster.h"
+#include "clusterLog.h"
 #include "processor.h"
 #include "node.h"
 #include <functional>
@@ -21,7 +22,7 @@ namespace CLUSTER
 		"connetion from this node exist,can not connect before close it"//nodeConnectExist
 	};
 
-	#define raftRpcBaseColumn "recordType tinyint," \
+#define raftRpcBaseColumn "recordType tinyint," \
 	"version int,"\
 	"clusterId int unsigned,"\
 	"term bigint unsigned,"\
@@ -123,7 +124,7 @@ namespace CLUSTER
 						goto FAILED;
 					}
 					n = ni->m_fd->async_read_some(boost::asio::buffer((&data[0]) + 4, size), yield);
-					if(n != (size_t)size)
+					if (n != (size_t)size)
 					{
 						code = authReturnCode::illegalPackage;
 						goto FAILED;
@@ -188,7 +189,7 @@ namespace CLUSTER
 				uint32_t size = 0;
 				try {
 					size_t n = ni->m_fd->async_read_some(boost::asio::buffer((char*)&size, 4), yield);
-					if(n != sizeof(size))
+					if (n != sizeof(size))
 					{
 						LOG(ERROR) << "read package from " << ni->m_fd->remote_endpoint().address().to_string() << " failed";
 					}
@@ -244,6 +245,69 @@ namespace CLUSTER
 		m_netService->run();
 		return 0;
 	}
+	int cluster::apply(const logEntryRpcBase* rpc)
+	{
+
+	}
+
+	dsStatus& cluster::processMessage(const char* msg)
+	{
+		logEntryRpcBase* rpc = (logEntryRpcBase*)msg;
+		if (rpc->recordType >= static_cast<uint8_t>(rpcType::endOfFile))
+			dsFailedAndLogIt(errorCode::illegalLogEntry, "get illegal rpc type:" << rpc->recordType, ERROR);
+		if (rpc->size < sizeof(logEntryRpcBase))
+			dsFailedAndLogIt(errorCode::illegalLogEntry, "get illegal rpc ,size:" << rpc->size << " is to small", ERROR);
+		switch (m_myself->getNodeInfo().m_role)
+		{
+		case clusterRole::LEADER:
+		{
+			rpc->logIndex = m_myself->incAndGetLogIndex();
+			dsReturnIfFailed(m_log->append(rpc));
+			break;
+		}
+		case clusterRole::FOLLOWER:
+		{
+			if (!dsCheck(m_log->append(rpc)))
+			{
+				if (getLocalStatus().code == errorCode::prevNotMatch)
+				{
+					logEntryRpcBase msg;
+					msg.size = sizeof(logEntryRpcBase);
+					msg.recordType = static_cast<uint8_t>(rpcType::prevNotMatch);
+					msg.version = VERSION;
+					msg.logIndex = m_myself->getNodeInfo().m_currentLogIndex;
+					try {
+						if (msg.size != m_leader->m_fd->send(boost::asio::buffer((char*)&msg, msg.size)))
+							dsFailedAndLogIt(errorCode::netError, "only send part of package to leader ", ERROR);
+					}
+					catch (std::exception& e) {
+						dsFailedAndLogIt(errorCode::netError, "send package to leader failed for:" << e.what(), ERROR);
+					}
+				}
+				else
+					dsReturn(getLocalStatus());
+			}
+			if (rpc->logIndex.term != m_myself->getNodeInfo().m_currentLogIndex.term)
+			{
+
+			}
+			if (rpc->leaderCommitIndex > m_myself->getNodeInfo().m_currentLogIndex.logIndex)
+			{
+				const logEntryRpcBase* logEntry;
+				do {
+					dsReturnIfFailed(m_logIter->next(logEntry));
+					dsReturnIfFailed(apply(logEntry));
+				} while (logEntry->logIndex.logIndex < rpc->leaderCommitIndex);
+			}
+			break;
+		}
+
+		case clusterRole::CANDIDATE:
+		case clusterRole::LEARNER:
+			break;
+		}
+	}
+
 	int cluster::addNode(nodeInfo* node)
 	{
 		m_lock.lock();
