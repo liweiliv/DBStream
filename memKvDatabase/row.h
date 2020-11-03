@@ -29,7 +29,6 @@ namespace KVDB
 		static dsStatus& allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowChange* row)
 		{
 			uint16_t columnIdMap[MAX_COLUMN_COUNT];
-			uint16_t keyCount = 0;
 			if (unlikely(row->count > MAX_COLUMN_COUNT))
 				dsFailedAndLogIt(errorCode::COLUMN_COUNT_NOT_MATCH, "column count:" << row->count << " over " << MAX_COLUMN_COUNT, WARNING);
 			memset(columnIdMap, 0, meta->m_columnsCount * sizeof(uint16_t));

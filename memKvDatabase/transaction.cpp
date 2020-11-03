@@ -1,4 +1,3 @@
-#pragma once
 #include "transaction.h"
 #include "row.h"
 namespace KVDB {

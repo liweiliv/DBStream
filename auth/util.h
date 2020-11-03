@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "util/status.h"
 #include "client.h"
+#include <glog/logging.h>
 #include "errorCode.h"
 namespace AUTH {
 	constexpr static uint32_t PASSWORD_HASH_SIZE = 32;//sha-256

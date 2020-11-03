@@ -75,29 +75,12 @@ namespace CLUSTER
 	constexpr static auto heartbeatTableId = META::tableMeta::genTableId(4, 1);
 	constexpr static auto checkpointTableId = META::tableMeta::genTableId(5, 1);
 	constexpr static auto rollbackTableId = META::tableMeta::genTableId(6, 1);
-	struct authReq {
-		int32_t size;
-		uint32_t crc;
-		int32_t migicNum;
-		uint32_t clusterId;
-		uint32_t nodeId;
-		uint16_t port;
-		char host[1];
-	};
-	struct authRsp {
-		int32_t size;
-		uint32_t crc;
-		int32_t migicNum;
-		int8_t sucess;
-		uint32_t nodeId;
-		char msg[1];
-	};
 
 	void cluster::formatAuthRspMsg(char* msg, uint32_t migicNum, authReturnCode code) {
 		authRsp* rsp = (authRsp*)msg;
 		rsp->migicNum = ~migicNum;
 		rsp->nodeId = m_myself->getNodeInfo().m_id;
-		rsp->sucess = static_cast<int8_t>(code);
+		rsp->success = static_cast<int8_t>(code);
 		strcpy(rsp->msg, authRspMsgs[static_cast<int>(code)]);
 		rsp->size = sizeof(authRsp) - offsetof(authRsp, crc) + strlen(rsp->msg);
 		rsp->crc = hwCrc32c(0, ((char*)&rsp->crc) + sizeof(rsp->crc), rsp->size - offsetof(authRsp, crc) - sizeof(rsp->crc));
@@ -293,11 +276,14 @@ namespace CLUSTER
 			}
 			if (rpc->leaderCommitIndex > m_myself->getNodeInfo().m_currentLogIndex.logIndex)
 			{
+				/*
 				const logEntryRpcBase* logEntry;
 				do {
 					dsReturnIfFailed(m_logIter->next(logEntry));
 					dsReturnIfFailed(apply(logEntry));
 				} while (logEntry->logIndex.logIndex < rpc->leaderCommitIndex);
+				*/
+				//todo
 			}
 			break;
 		}

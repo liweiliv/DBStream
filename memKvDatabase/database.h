@@ -1,34 +1,75 @@
 #pragma once
 #include "util/status.h"
 #include "clientHandel.h"
+#include "thread/shared_mutex.h"
+#include "util/sparsepp/spp.h"
 #include "table.h"
 namespace KVDB
 {
 	class database {
 	private:
 		spp::sparse_hash_map<std::string, tableInterface*> m_tableMap;
-		std::mutex m_lock;
+		shared_mutex m_lock;
 	public:
 		dsStatus& insert(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* rowChange)
 		{
+			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
 			if (iter == m_tableMap.end())
+			{
+				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
-			dsReturn(iter->second->insert(pool, client, rowChange));
+			}
+			if (unlikely(!dsCheck(iter->second->insert(pool, client, rowChange))))
+			{
+				m_lock.unlock_shared();
+				dsReturn(getLocalStatus());
+			}
+			else
+			{
+				m_lock.unlock_shared();
+				dsOk();
+			}
 		}
 		dsStatus& update(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* change, const rowChange* condition)
 		{
+			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
 			if (iter == m_tableMap.end())
+			{
+				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
-			dsReturn(iter->second->update(pool, client, change, condition));
+			}
+			if (unlikely(!dsCheck((iter->second->update(pool, client, change, condition)))))
+			{
+				m_lock.unlock_shared();
+				dsReturn(getLocalStatus());
+			}
+			else
+			{
+				m_lock.unlock_shared();
+				dsOk();
+			}
 		}
 		dsStatus& drop(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* condition)
 		{
+			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
 			if (iter == m_tableMap.end())
+			{
+				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
-			dsReturn(iter->second->drop(pool, client, condition));
+			}
+			if (unlikely(!dsCheck(iter->second->drop(pool, client, condition))))
+			{
+				m_lock.unlock_shared();
+				dsReturn(getLocalStatus());
+			}
+			else
+			{
+				m_lock.unlock_shared();
+				dsOk();
+			}
 		}
 
 		dsStatus& createTable(clientHandle* client, META::tableMeta* meta)
@@ -112,6 +153,9 @@ namespace KVDB
 				delete t;
 				dsFailedAndLogIt(errorCode::TABLE_EXIST, "table exist", WARNING);
 			}
+			m_tableMap.insert(std::pair<std::string, tableInterface*>(meta->m_tableName, t));
+			m_lock.unlock();
+			dsOk();
 		}
 	};
 }

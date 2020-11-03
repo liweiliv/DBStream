@@ -20,7 +20,6 @@ namespace CLUSTER
 	class node;
 	class processor;
 	class clusterLog;
-	class clusterLog::iterator;
 	struct logEntryRpcBase;
 	typedef spp::sparse_hash_map<int32_t, nodeInfo*> nodeTree;
 	typedef spp::sparse_hash_map<std::string,uint32_t> nodeList;
@@ -49,7 +48,6 @@ namespace CLUSTER
 		shared_mutex m_lock;
 		bufferPool* m_pool;
 		clusterLog* m_log;
-		clusterLog::iterator * m_logIter;
 	private:
 		int apply(const logEntryRpcBase* rpc);
 		int addNode(nodeInfo *node);

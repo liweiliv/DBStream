@@ -76,7 +76,7 @@ namespace KVDB
 		}
 		void clear()
 		{
-			for (tbb::concurrent_hash_map<T, row*, hashWrap<T> >::iterator iter = rowMap.begin(); iter != rowMap.end(); iter++)
+			for (typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::iterator iter = rowMap.begin(); iter != rowMap.end(); iter++)
 			{
 				T* key = (T*)&iter->first;
 				destroyKey(*key, true);
@@ -89,7 +89,7 @@ namespace KVDB
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
-			tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
+			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
 				destroyKey(key, false);
@@ -109,7 +109,7 @@ namespace KVDB
 			dsReturnIfFailed(version::allocForInsert(v, pool, m_meta, change));
 			T key;
 			createKey(pool, &v->data, key);
-			tbb::concurrent_hash_map<T, row*, hashWrap<T> >::accessor accessor;
+			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
 				row* r = (row*)pool->alloc(sizeof(row));
@@ -135,7 +135,7 @@ namespace KVDB
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
-			tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
+			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
 				destroyKey(key, false);
@@ -154,7 +154,7 @@ namespace KVDB
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
-			tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
+			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
 				destroyKey(key, false);
@@ -169,6 +169,7 @@ namespace KVDB
 			dsOk();
 		}
 	};
+
 	template<>
 	inline void table<META::unionKey>::createKey(bufferPool* pool, const DATABASE_INCREASE::DMLRecord* record, META::unionKey& key)
 	{
@@ -177,6 +178,7 @@ namespace KVDB
 		key.key = (char*)pool->alloc(size + (key.meta->fixed ? 0 : sizeof(uint16_t)));
 		META::unionKey::initKey((char*)key.key, size, key.meta, record, false);
 	}
+
 	template<>
 	inline void table<META::binaryType>::createKey(bufferPool* pool, const DATABASE_INCREASE::DMLRecord* record, META::binaryType& key)
 	{
@@ -184,6 +186,7 @@ namespace KVDB
 		key.size = record->varColumnSize(id);
 		key.data = record->column(id);
 	}
+
 	template<>
 	inline void table<META::binaryType>::copyKeyValueFromRecord(bufferPool* pool, META::binaryType& key)
 	{
@@ -193,16 +196,21 @@ namespace KVDB
 		memcpy(data, key.data, key.size);
 		key.data = data;
 	}
+
+	template<>
 	inline void table<META::unionKey>::destroyKey(META::unionKey& key, bool afterCopy)
 	{
 		bufferPool::free((char*)key.key);
 	}
+
+	template<>
 	inline void table<META::binaryType>::destroyKey(META::binaryType& key, bool afterCopy)
 	{
 		if (afterCopy)
 			bufferPool::free((char*)key.data);
 	}
 
+	template<>
 	inline dsStatus& table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowChange* condition)
 	{
 		if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
@@ -212,6 +220,7 @@ namespace KVDB
 		dsOk();
 	}
 
+	template<>
 	inline dsStatus& table<META::unionKey>::createKeyFromCondition(bufferPool* pool, META::unionKey& key, const rowChange* condition)
 	{
 		if (condition->count != m_meta->m_primaryKey->columnCount)

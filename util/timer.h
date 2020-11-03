@@ -26,7 +26,7 @@ public:
 		};
 		timestamp() :time(0) {}
 		timestamp(uint64_t t) :time(t) {}
-		timestamp(uint64_t s, uint32_t ns) :seconds(s), nanoSeconds(ns) {}
+		timestamp(uint64_t s, uint32_t ns) :nanoSeconds(ns), seconds(s) {}
 		timestamp(const timestamp& t) :time(t.time) {}
 		timestamp& operator=(const timestamp& t)
 		{
