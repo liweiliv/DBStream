@@ -374,6 +374,13 @@ TARGET_LINK_LIBRARIES(testString util)
 ADD_EXECUTABLE(testHeap util/unittest/testHeap.cpp)
 TARGET_LINK_LIBRARIES(testHeap util)
 
+ADD_EXECUTABLE(testFixedQueue util/unittest/testFixedQueue.cpp)
+target_include_directories(testFixedQueue PUBLIC ${BASE_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+        TARGET_LINK_LIBRARIES(testFixedQueue pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
 ADD_EXECUTABLE(testBitUtil util/unittest/testBitUtil.cpp)
 TARGET_LINK_LIBRARIES(testBitUtil util)
 
