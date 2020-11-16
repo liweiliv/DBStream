@@ -54,10 +54,20 @@ public:
 		getThreadLocalWrap().idle();
 		return m_var[getThreadId()];
 	}
+	inline T* get(int tid)
+	{
+		return m_var[tid];
+	}
 	inline void set(T* v)
 	{
 		getThreadLocalWrap().idle();
 		int tid = getThreadId();
+		if (m_var[tid] != nullptr)
+			delete m_var[tid];
+		m_var[tid] = v;
+	}
+	inline void set(int tid, T* v)
+	{
 		if (m_var[tid] != nullptr)
 			delete m_var[tid];
 		m_var[tid] = v;

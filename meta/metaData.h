@@ -107,6 +107,7 @@ namespace META {
 		uint8_t m_srcColumnType;// type in database
 		uint16_t m_columnIndex;  //column id in table
 		std::string m_columnName;
+		std::string m_alias;
 		std::string m_collate;
 		const charsetInfo* m_charset;
 		uint32_t m_size;

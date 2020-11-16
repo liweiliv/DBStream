@@ -1,10 +1,10 @@
-#include "util/fixedQueue.h"
+#include "util/arrayQueue.h"
 #include "util/timer.h"
 #include <thread>
 #include <assert.h>
 int testSingleThreadPopPush()
 {
-	fixedQueue<int> q(1024);
+	arrayQueue<int> q(1024);
 	std::thread t1([&]() {
 		for (int i = 0; i < 1000000; i++)
 			while (!q.push(i));
@@ -21,7 +21,7 @@ int testSingleThreadPopPush()
 }
 int testSingleThreadPopPushWithCond()
 {
-	fixedQueue<int> q(1024);
+	arrayQueue<int> q(1024);
 	std::thread t1([&]() {
 		for (int i = 0; i < 1000000; i++)
 			q.pushWithCond(i);
@@ -36,43 +36,43 @@ int testSingleThreadPopPushWithCond()
 	t2.join();
 	return 0;
 }
+#define THREAD_COUNT  5
+#define TEST_COUNT 2000000
+
+#define THREAD_COUNT  5
+#define TEST_COUNT 2000000
 int testSingleThreadPopMultiThreadPush()
 {
-	fixedQueue<int> q(1024);
-	std::thread t1[5];
-	int** vll = new int *[5];
-	for (int tid = 0; tid < 5; tid++)
-	{
-		vll[tid] = new int[1000000];
-		memset(vll[tid], 0, sizeof(int) * 1000000);
-	}
-	for (int tid = 0; tid < 5; tid++)
+	arrayQueue<int> q(1024);
+	std::thread t1[THREAD_COUNT];
+	for (int tid = 0; tid < THREAD_COUNT; tid++)
 	{
 		t1[tid] = std::thread([&](int id) {
-			for (int i = 0; i < 1000000; i++) {
+			for (int i = 0; i < TEST_COUNT; i++) {
 				int v = i | (id << 28);
-				vll[id][i] = q.pushWithLock(v);
+				q.pushWithLock(v);
 			}
 			}, tid);
 	}
 	std::thread t2([&]() {
-		int vl[5] = { 0 };
-		for (int i = 0; i < 5000000; i++) {
+		int vl[THREAD_COUNT] = { 0 };
+		for (int i = 0; i < TEST_COUNT * THREAD_COUNT; i++) {
 			int v;
-			q.popWithCond(v);
+			q.popWithLock(v);
 			int tid = v >> 28;
 			if (vl[tid] != 0)
 				assert(vl[tid] == v - 1);
 			vl[tid] = v;
 		}
-		for (int tid = 0; tid < 5; tid++)
-			assert(vl[tid] == ((tid << 28) | (1000000 - 1)));
+		for (int tid = 0; tid < THREAD_COUNT; tid++)
+			assert(vl[tid] == ((tid << 28) | (TEST_COUNT - 1)));
 		});
-	for (int tid = 0; tid < 5; tid++)
+	for (int tid = 0; tid < THREAD_COUNT; tid++)
 		t1[tid].join();
 	t2.join();
 	return 0;
 }
+
 int main()
 {
 	uint64_t t1 = timer::getNowTimestamp();
@@ -83,6 +83,6 @@ int main()
 	testSingleThreadPopMultiThreadPush();
 	uint64_t t4 = timer::getNowTimestamp();
 	printf("%s\n%s\n%s\n", timer::timestamp::delta(t2, t1).toString().c_str(), timer::timestamp::delta(t3, t2).toString().c_str()
-		,timer::timestamp::delta(t4, t3).toString().c_str());
+		, timer::timestamp::delta(t4, t3).toString().c_str());
 	return 0;
 }

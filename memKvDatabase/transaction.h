@@ -5,8 +5,10 @@
 namespace KVDB {
 	struct row;
 	struct version;
+	struct tableInterface;
 }
 typedef spp::sparse_hash_set<KVDB::row*> rowMap;
+typedef spp::sparse_hash_set<KVDB::tableInterface*> tableMap;
 typedef dsStatus& (*logApplyFunc) (const std::vector<KVDB::version*> &vesionList);
 namespace KVDB {
 	enum class TRANS_ISOLATION_LEVEL {
@@ -17,11 +19,14 @@ namespace KVDB {
 	class transaction {
 	public:
 		bool m_start;
+		bool m_autoCommit;
 		TRANS_ISOLATION_LEVEL m_level;
 		rowMap m_rows;
+		tableMap m_tables;
 		std::vector<version*> m_vesionList;
 		version* m_begin;
 		void newOperator(row* r);
+		void clear();
 		dsStatus& commit(logApplyFunc func);
 		dsStatus& rollback();
 	};

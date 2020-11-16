@@ -8,25 +8,16 @@
 #include "meta/columnType.h"
 #include "errorCode.h"
 #include "clientHandel.h"
+#include "rowChange.h"
 namespace KVDB
 {
 	constexpr static int MAX_COLUMN_COUNT = 1024;
-	struct columnChange {
-		uint16_t columnId;
-		uint32_t size;
-		const char* newValue;
-	};
-	struct rowChange {
-		uint16_t count;
-		uint32_t varColumnSize;
-		columnChange* columnChanges;
-	};
 	struct version
 	{
 		version* prev;
 		version* next;
 		DATABASE_INCREASE::DMLRecord data;
-		static dsStatus& allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowChange* row)
+		static dsStatus& allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowImage* row)
 		{
 			uint16_t columnIdMap[MAX_COLUMN_COUNT];
 			if (unlikely(row->count > MAX_COLUMN_COUNT))
@@ -81,7 +72,7 @@ namespace KVDB
 					r.setVarColumn(columnId, v, size);
 			}
 		}
-		dsStatus& update(bufferPool* pool, uint64_t tid, const rowChange* change)
+		dsStatus& update(bufferPool* pool, uint64_t tid, const rowImage* change)
 		{
 			const META::tableMeta* meta = data.meta;
 			int32_t deltaSize = 0;
@@ -223,7 +214,7 @@ namespace KVDB
 			}
 			dsOk();
 		}
-		dsStatus& update(bufferPool* pool, clientHandle* client, const rowChange* change)
+		dsStatus& update(bufferPool* pool, clientHandle* client, const rowImage* change)
 		{
 			if (tail == nullptr || tail->data.head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not update, row not exist");

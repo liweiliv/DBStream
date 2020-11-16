@@ -22,6 +22,17 @@ namespace SHELL {
 		GROUP_FUNCTION_FIELD,
 		EXPRESSION_FIELD
 	};
+	struct varLenValue
+	{
+		uint32_t size;
+		bool alloced;
+		const char* value;
+		inline void clean()
+		{
+			if (alloced)
+				basicBufferPool::free((char*)value);
+		}
+	};
 	struct Field {
 		FieldType fieldType;
 		META::COLUMN_TYPE valueType;
@@ -46,17 +57,7 @@ namespace SHELL {
 				cleanFunc(this);
 		}
 	};
-	struct varLenValue
-	{
-		uint32_t size;
-		bool alloced;
-		const char* value;
-		inline void clean()
-		{
-			if (alloced)
-				basicBufferPool::free((char*)value);
-		}
-	};
+
 	struct rawField :public Field {
 		void* data;
 		inline void init(void* data, META::COLUMN_TYPE type)

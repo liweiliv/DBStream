@@ -11,16 +11,16 @@ namespace KVDB
 		spp::sparse_hash_map<std::string, tableInterface*> m_tableMap;
 		shared_mutex m_lock;
 	public:
-		dsStatus& insert(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* rowChange)
+		dsStatus& insert(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
-			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
+			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
 			if (iter == m_tableMap.end())
 			{
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(iter->second->insert(pool, client, rowChange))))
+			if (unlikely(!dsCheck(iter->second->insert(pool, client))))
 			{
 				m_lock.unlock_shared();
 				dsReturn(getLocalStatus());
@@ -31,16 +31,16 @@ namespace KVDB
 				dsOk();
 			}
 		}
-		dsStatus& update(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* change, const rowChange* condition)
+		dsStatus& update(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
-			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
+			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
 			if (iter == m_tableMap.end())
 			{
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck((iter->second->update(pool, client, change, condition)))))
+			if (unlikely(!dsCheck((iter->second->update(pool, client)))))
 			{
 				m_lock.unlock_shared();
 				dsReturn(getLocalStatus());
@@ -51,16 +51,37 @@ namespace KVDB
 				dsOk();
 			}
 		}
-		dsStatus& drop(bufferPool* pool, clientHandle* client, const std::string& tableName, const rowChange* condition)
+		dsStatus& drop(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
-			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(tableName);
+			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
 			if (iter == m_tableMap.end())
 			{
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(iter->second->drop(pool, client, condition))))
+			if (unlikely(!dsCheck(iter->second->drop(pool, client))))
+			{
+				m_lock.unlock_shared();
+				dsReturn(getLocalStatus());
+			}
+			else
+			{
+				m_lock.unlock_shared();
+				dsOk();
+			}
+		}
+
+		dsStatus& select(bufferPool* pool, clientHandle* client)
+		{
+			m_lock.lock_shared();
+			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
+			if (iter == m_tableMap.end())
+			{
+				m_lock.unlock_shared();
+				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
+			}
+			if (unlikely(!dsCheck(iter->second->drop(pool, client))))
 			{
 				m_lock.unlock_shared();
 				dsReturn(getLocalStatus());

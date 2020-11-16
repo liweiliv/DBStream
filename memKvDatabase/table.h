@@ -18,10 +18,10 @@ namespace KVDB
 	public:
 		tableInterface(const char* name, META::tableMeta* meta) :m_name(name), m_meta(meta) {}
 		virtual ~tableInterface() {}
-		virtual dsStatus& select(bufferPool* pool, clientHandle* client, const rowChange* condition, const version *& result) = 0;
-		virtual dsStatus& insert(bufferPool* pool, clientHandle* client, const rowChange* rowChange) = 0;
-		virtual dsStatus& update(bufferPool* pool, clientHandle* client, const rowChange* change, const rowChange* condition) = 0;
-		virtual dsStatus& drop(bufferPool* pool, clientHandle* client, const rowChange* condition) = 0;
+		virtual dsStatus& select(bufferPool* pool, clientHandle* client, const version *& result) = 0;
+		virtual dsStatus& insert(bufferPool* pool, clientHandle* client) = 0;
+		virtual dsStatus& update(bufferPool* pool, clientHandle* client) = 0;
+		virtual dsStatus& drop(bufferPool* pool, clientHandle* client) = 0;
 		const std::string& getName() { return m_name; }
 	};
 	template<class C>
@@ -51,8 +51,6 @@ namespace KVDB
 	template<class T>
 	class table :public tableInterface {
 	private:
-
-
 		tbb::concurrent_hash_map<T, row*, hashWrap<T> > rowMap;
 	private:
 		inline void destroyKey(T& key, bool afterCopy) {}
@@ -61,7 +59,7 @@ namespace KVDB
 		{
 			key = *(const T*)record->column(m_meta->m_primaryKey->columnInfo[0].columnId);
 		}
-		inline dsStatus& createKeyFromCondition(bufferPool* pool, T& key, const rowChange* condition)
+		inline dsStatus& createKeyFromCondition(bufferPool* pool, T& key, const rowImage* condition)
 		{
 			if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
 				dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must be primary key column", WARNING);
@@ -85,10 +83,10 @@ namespace KVDB
 			}
 			rowMap.clear();
 		}
-		dsStatus& select(bufferPool* pool, clientHandle* client, const rowChange* condition, const version*& result)
+		dsStatus& select(bufferPool* pool, clientHandle* client, const version*& result)
 		{
 			T key;
-			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
+			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
 			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
@@ -103,10 +101,10 @@ namespace KVDB
 			destroyKey(key, false);
 			dsOk();
 		}
-		dsStatus& insert(bufferPool* pool, clientHandle* client, const rowChange* change)
+		dsStatus& insert(bufferPool* pool, clientHandle* client)
 		{
 			version* v;
-			dsReturnIfFailed(version::allocForInsert(v, pool, m_meta, change));
+			dsReturnIfFailed(version::allocForInsert(v, pool, m_meta, &client->m_change->columns));
 			T key;
 			createKey(pool, &v->data, key);
 			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::accessor accessor;
@@ -131,17 +129,17 @@ namespace KVDB
 			dsOk();
 		}
 
-		dsStatus& update(bufferPool* pool, clientHandle* client, const rowChange* change, const rowChange* condition)
+		dsStatus& update(bufferPool* pool, clientHandle* client)
 		{
 			T key;
-			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
+			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
 			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
 				destroyKey(key, false);
 				dsFailedAndLogIt(errorCode::ROW_NOT_EXIST, "update failed for row not exist", WARNING);
 			}
-			if (unlikely(!dsCheck((accessor->second)->update(pool, client, change))))
+			if (unlikely(!dsCheck((accessor->second)->update(pool, client, &client->m_change->columns))))
 			{
 				destroyKey(key, false);
 				dsReturn(getLocalStatus());
@@ -150,10 +148,10 @@ namespace KVDB
 			dsOk();
 		}
 
-		dsStatus& drop(bufferPool* pool, clientHandle* client, const rowChange* condition)
+		dsStatus& drop(bufferPool* pool, clientHandle* client)
 		{
 			T key;
-			dsReturnIfFailed(createKeyFromCondition(pool, key, condition));
+			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
 			typename tbb::concurrent_hash_map<T, row*, hashWrap<T> >::const_accessor accessor;
 			if (!rowMap.find(accessor, key))
 			{
@@ -211,7 +209,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline dsStatus& table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowChange* condition)
+	inline dsStatus& table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowImage* condition)
 	{
 		if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
 			dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must be primary key column", WARNING);
@@ -221,7 +219,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline dsStatus& table<META::unionKey>::createKeyFromCondition(bufferPool* pool, META::unionKey& key, const rowChange* condition)
+	inline dsStatus& table<META::unionKey>::createKeyFromCondition(bufferPool* pool, META::unionKey& key, const rowImage* condition)
 	{
 		if (condition->count != m_meta->m_primaryKey->columnCount)
 			dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must have all primary key column", WARNING);

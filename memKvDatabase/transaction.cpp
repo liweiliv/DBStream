@@ -6,7 +6,12 @@ namespace KVDB {
 		m_rows.insert(r);
 		m_vesionList.push_back(r->tail);
 	}
-
+	void transaction::clear()
+	{
+		m_rows.clear();
+		m_vesionList.clear();
+		m_tables.clear();
+	}
 	dsStatus& transaction::commit(logApplyFunc func)
 	{
 		if (unlikely(m_start))
@@ -15,6 +20,7 @@ namespace KVDB {
 			dsReturnIfFailed(func(m_vesionList));
 		for (rowMap::iterator iter = m_rows.begin(); iter != m_rows.end(); iter++)
 			(*iter)->commit();
+		m_start = false;
 		dsOk();
 	}
 	dsStatus& transaction::rollback()
@@ -25,6 +31,7 @@ namespace KVDB {
 		for (rowMap::iterator iter = m_rows.begin(); iter != m_rows.end(); iter++)
 			(*iter)->rollback();
 		m_rows.clear();
+		m_start = false;
 		dsOk();
 	}
 }

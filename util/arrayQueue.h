@@ -3,18 +3,20 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
-#include "thread/barrier.h"
 template <typename T>
-class fixedQueue
+class arrayQueue
 {
 private:
 	T* m_queue;
 	uint32_t m_volumn;
 	uint32_t m_mask;
-	uint32_t m_head;
-	uint32_t m_tail;
-	std::condition_variable m_cond;
-	std::mutex m_lock;
+	volatile uint32_t m_head;
+	volatile uint32_t m_tail;
+	std::mutex m_rLock;
+	std::mutex m_wLock;
+	std::condition_variable m_fullCond;
+	std::condition_variable m_emptyCond;
+
 	static uint32_t calVolumn(uint32_t size)
 	{
 		uint32_t s = 1;
@@ -27,10 +29,10 @@ private:
 	}
 	inline bool isEndPos(uint32_t pos)
 	{
-		return nextPos(pos) == m_tail
+		return nextPos(pos) == m_tail;
 	}
 public:
-	fixedQueue(int size = 256) :m_volumn(calVolumn(size)), m_mask(m_volumn - 1), m_head(0), m_tail(0)
+	arrayQueue(int size = 256) :m_volumn(calVolumn(size)), m_mask(m_volumn - 1), m_head(0), m_tail(0)
 	{
 		m_queue = new T[m_volumn];
 	}
@@ -48,7 +50,6 @@ public:
 		if (next == m_tail)
 			return false;
 		m_queue[next] = v;
-		wmb();
 		m_head = next;
 		return true;
 	}
@@ -58,7 +59,6 @@ public:
 			return false;
 		uint32_t next = nextPos(m_tail);
 		v = m_queue[next];
-		wmb();
 		m_tail = next;
 		return true;
 	}
@@ -68,75 +68,68 @@ public:
 		uint32_t next;
 		while ((next = nextPos(m_head)) == m_tail)
 		{
-			std::unique_lock<std::mutex> lock(m_lock);
 			auto t = std::chrono::system_clock::now();
 			t += std::chrono::microseconds(100);
-			m_cond.wait_until(lock, t);
-		}		
+			std::unique_lock<std::mutex> lock(m_wLock);
+			m_fullCond.wait_until(lock, t);
+		}
 		m_queue[next] = v;
-		wmb();
 		m_head = next;
-		m_cond.notify_one();
+		m_emptyCond.notify_one();
 	}
 	inline void popWithCond(T& v)
 	{
 		while (empty())
 		{
-			std::unique_lock<std::mutex> lock(m_lock);
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::microseconds(100);
-			m_cond.wait_until(lock, t);
+			t += std::chrono::milliseconds(100);
+			std::unique_lock<std::mutex> lock(m_rLock);
+			m_emptyCond.wait_until(lock, t);
 		}
 		uint32_t next = nextPos(m_tail);
 		v = m_queue[next];
-		wmb();
 		m_tail = next;
-		m_cond.notify_one();
+		m_fullCond.notify_one();
 	}
-	inline int pushWithLock(T& v)
+private:
+	inline void pushWithLock_(T& v)
 	{
 		uint32_t next;
-	RETRY:
+		std::unique_lock<std::mutex> lock(m_wLock);
 		while ((next = nextPos(m_head)) == m_tail)
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::microseconds(100);
-			std::unique_lock<std::mutex> lock(m_lock);
-			m_cond.wait_until(lock, t);
-		}		
-		m_lock.lock();
-		if (next != nextPos(m_head))
-		{
-			m_lock.unlock();
-			goto RETRY;
+			t += std::chrono::seconds(1);
+			m_fullCond.wait_until(lock, t);
 		}
 		m_queue[next] = v;
-		wmb();
 		m_head = next;
-		m_lock.unlock();
-		m_cond.notify_one();
-		return next;
 	}
-	inline void popWithLock(T& v)
+public:
+	inline void pushWithLock(T& v)
+	{
+		pushWithLock_(v);
+		m_emptyCond.notify_one();
+	}
+private:
+	inline void popWithLock_(T& v)
 	{
 		uint32_t next;
-	RETRY:
+		std::unique_lock<std::mutex> lock(m_rLock);
 		while ((next = m_tail) == m_head)
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::microseconds(100);
-			m_cond.wait_until(lock, t);
-		}		m_lock.lock();
-		if (next != m_tail)
-		{
-			m_lock.unlock();
-			goto RETRY;
+			t += std::chrono::seconds(1);
+			m_emptyCond.wait_until(lock, t);
 		}
 		next = nextPos(next);
 		v = m_queue[next];
-		wmb();
 		m_tail = next;
-		m_lock.unlock();
-		m_cond.notify_one();
+	}
+public:
+	inline void popWithLock(T& v)
+	{
+		popWithLock_(v);
+		m_fullCond.notify_one();
 	}
 };
