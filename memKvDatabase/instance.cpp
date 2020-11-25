@@ -85,6 +85,7 @@ namespace KVDB
 	{
 		if (!dsCheck(handle->m_trans->commit(nullptr)))
 			dsReturn(getLocalStatus());
+
 		dsOk();
 	}
 	dsStatus& instance::rollback(clientHandle* handle)

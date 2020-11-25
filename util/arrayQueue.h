@@ -3,6 +3,7 @@
 #include <mutex>
 #include <chrono>
 #include <condition_variable>
+#include "util/likely.h"
 template <typename T>
 class arrayQueue
 {
@@ -62,74 +63,134 @@ public:
 		m_tail = next;
 		return true;
 	}
-
-	inline void pushWithCond(T& v)
+	inline bool pushWithCond(T& v, uint32_t outTime)
 	{
 		uint32_t next;
-		while ((next = nextPos(m_head)) == m_tail)
+		if (unlikely((next = nextPos(m_head)) == m_tail))
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::microseconds(100);
-			std::unique_lock<std::mutex> lock(m_wLock);
-			m_fullCond.wait_until(lock, t);
+			t += std::chrono::milliseconds(outTime != 0xffffffffu ? outTime : 1000);
+			while ((next = nextPos(m_head)) == m_tail)
+			{
+				std::unique_lock<std::mutex> lock(m_wLock);
+				if (m_fullCond.wait_until(lock, t) == std::cv_status::timeout)
+				{
+					if (outTime != 0xffffffffu)
+						return false;
+					else
+						t += std::chrono::milliseconds(1000);
+				}
+			}
 		}
 		m_queue[next] = v;
 		m_head = next;
 		m_emptyCond.notify_one();
+		return true;
 	}
-	inline void popWithCond(T& v)
+	inline void pushWithCond(T& v)
 	{
-		while (empty())
+		pushWithCond(v, 0xffffffffu);
+	}
+	inline bool popWithCond(T& v, uint32_t outTime)
+	{
+		if (unlikely(empty()))
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::milliseconds(100);
-			std::unique_lock<std::mutex> lock(m_rLock);
-			m_emptyCond.wait_until(lock, t);
+			t += std::chrono::milliseconds(outTime != 0xffffffffu ? outTime : 1000);
+			while (empty())
+			{
+				std::unique_lock<std::mutex> lock(m_rLock);
+				if (m_emptyCond.wait_until(lock, t) == std::cv_status::timeout)
+				{
+					if (outTime != 0xffffffffu)
+						return false;
+					else
+						t += std::chrono::milliseconds(1000);
+				}
+			}
 		}
 		uint32_t next = nextPos(m_tail);
 		v = m_queue[next];
 		m_tail = next;
 		m_fullCond.notify_one();
+		return true;
 	}
+	inline void popWithCond(T& v)
+	{
+		popWithCond(v, 0xffffffffu);
+	}
+
 private:
-	inline void pushWithLock_(T& v)
+	inline bool pushWithLock_(T& v, uint32_t outTime)
 	{
 		uint32_t next;
 		std::unique_lock<std::mutex> lock(m_wLock);
-		while ((next = nextPos(m_head)) == m_tail)
+		if (unlikely((next = nextPos(m_head)) == m_tail))
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::seconds(1);
-			m_fullCond.wait_until(lock, t);
+			t += std::chrono::milliseconds(outTime != 0xffffffffu ? outTime : 1000);
+			while ((next = nextPos(m_head)) == m_tail)
+			{
+				if (m_fullCond.wait_until(lock, t) == std::cv_status::timeout)
+				{
+					if (outTime != 0xffffffffu)
+						return false;
+					else
+						t += std::chrono::milliseconds(1000);
+				}
+			}
 		}
 		m_queue[next] = v;
 		m_head = next;
+		return true;
 	}
 public:
 	inline void pushWithLock(T& v)
 	{
-		pushWithLock_(v);
+		pushWithLock_(v, 0xffffffffu);
 		m_emptyCond.notify_one();
 	}
+	inline bool pushWithLock(T& v, uint32_t outTime)
+	{
+		bool success = pushWithLock_(v, outTime);
+		m_emptyCond.notify_one();
+		return success;
+	}
 private:
-	inline void popWithLock_(T& v)
+	inline bool popWithLock_(T& v, uint32_t outTime)
 	{
 		uint32_t next;
 		std::unique_lock<std::mutex> lock(m_rLock);
-		while ((next = m_tail) == m_head)
+		if (unlikely(m_tail == m_head))
 		{
 			auto t = std::chrono::system_clock::now();
-			t += std::chrono::seconds(1);
-			m_emptyCond.wait_until(lock, t);
+			t += std::chrono::milliseconds(outTime != 0xffffffffu ? outTime : 1000);
+			while (m_tail == m_head)
+			{
+				if (m_emptyCond.wait_until(lock, t) == std::cv_status::timeout)
+				{
+					if (outTime != 0xffffffffu)
+						return false;
+					else
+						t += std::chrono::milliseconds(1000);
+				}
+			}
 		}
-		next = nextPos(next);
+		next = nextPos(m_tail);
 		v = m_queue[next];
 		m_tail = next;
+		return true;
 	}
 public:
 	inline void popWithLock(T& v)
 	{
-		popWithLock_(v);
+		popWithLock_(v, 0xffffffffu);
 		m_fullCond.notify_one();
+	}
+	inline bool popWithLock(T& v, uint32_t outTime)
+	{
+		bool success = popWithLock_(v, outTime);
+		m_fullCond.notify_one();
+		return success;
 	}
 };

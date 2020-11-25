@@ -2,6 +2,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include "util/arrayQueue.h"
 #include "row.h"
 namespace KVDB {
 	constexpr static auto UNDO_ROW_LIST_VOLUMN = 256;
@@ -12,20 +13,25 @@ namespace KVDB {
 		struct undoRowList {
 			row* rows[UNDO_ROW_LIST_VOLUMN];
 			uint16_t count;
-			undoRowList* next;
 		};
 	private:
-		undoRowList* m_queue[MAX_UNDO_LIST_SIZE] ;
-		uint32_t m_head;
-		uint32_t m_tail;
-		std::mutex m_lock;
-		std::condition_variable m_cond;
+		bool m_running;
+		arrayQueue<undoRowList*> m_queue;
 	public:
-
-		void push(undoRowList* rowList)
+		inline void put(undoRowList* rowList)
 		{
-			m_lock.lock();
+			m_queue.pushWithLock(rowList);
+		}
+	private:
+		dsStatus& run()
+		{
+			while (m_running)
+			{
+				undoRowList* rows = nullptr;
+				if (!m_queue.popWithCond(rows, 1000))
+					continue;
 
+			}
 		}
 	};
 }

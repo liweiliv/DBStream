@@ -21,6 +21,7 @@ namespace KVDB {
 		std::string m_currentDatabase;
 		transaction * m_trans;
 		rowChange* m_change;
+
 		char m_resultDefaultBuffer[2048];
 		DATABASE_INCREASE::dmlRecord* m_result;
 
