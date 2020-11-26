@@ -19,20 +19,20 @@ namespace KVDB
 	dsStatus& instance::rowChange(clientHandle* handle)
 	{
 		if (handle->m_change == nullptr)
-			dsFailed(errorCode::INVALID_ROW_CHANGE, "invalid row change", WARNING);
+			dsFailedAndLogIt(errorCode::INVALID_ROW_CHANGE, "invalid row change", WARNING);
 		if (handle->m_change->table.empty())
-			dsFailed(errorCode::NO_TABLE_SELECTED, "No table selected", WARNING);
+			dsFailedAndLogIt(errorCode::NO_TABLE_SELECTED, "No table selected", WARNING);
 
 		dbMap::iterator iter;
 		if (handle->m_change->database.empty())
 		{
 			if (handle->m_currentDatabase.empty())
-				dsFailed(errorCode::NO_DATABASE_SELECTED, "No database selected", WARNING);
+				dsFailedAndLogIt(errorCode::NO_DATABASE_SELECTED, "No database selected", WARNING);
 			m_lock.lock_shared();
 			if ((iter = m_dbMap.find(handle->m_currentDatabase)) == m_dbMap.end())
 			{
 				m_lock.unlock_shared();
-				dsFailed(errorCode::DATABASE_NOT_EXIST, "database not exist", WARNING);
+				dsFailedAndLogIt(errorCode::DATABASE_NOT_EXIST, "database not exist", WARNING);
 			}
 		}
 		else
@@ -41,7 +41,7 @@ namespace KVDB
 			if ((iter = m_dbMap.find(handle->m_change->database)) == m_dbMap.end())
 			{
 				m_lock.unlock_shared();
-				dsFailed(errorCode::DATABASE_NOT_EXIST, "database not exist", WARNING);
+				dsFailedAndLogIt(errorCode::DATABASE_NOT_EXIST, "database not exist", WARNING);
 			}
 		}
 		database* db = iter->second;
