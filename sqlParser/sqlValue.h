@@ -19,9 +19,40 @@ namespace SQL_PARSER {
 		EXPRESSION_TYPE,
 		MAX_TYPE
 	};
+	struct stringValue {
+		bool quote;
+		const char* name;
+		uint32_t size;
+		stringValue():name(nullptr),size(0),quote(true){}
+		inline void assign(const char* name, uint32_t size,bool quote = true)
+		{
+			if (!quote && name != nullptr)
+				delete[](char*)name;
+			this->name = name;
+			this->size = size;
+			this->quote = quote;
+		}
+		inline stringValue& operator=(const stringValue& v)
+		{
+			if (!quote && name != nullptr)
+				delete[](char*)name;
+			this->name = v.name;
+			this->size = v.size;
+			quote = true;
+			return *this;
+		}
+		~stringValue()
+		{
+			if (!quote && name != nullptr)
+				delete[](char*)name;
+		}
+		inline std::string& toString()
+		{
+			return std::string(name, size);
+		}
+	};
 	class SQLValue {
 	public:
-
 		SQLValueType type;
 		int32_t ref;
 		SQLValue(SQLValueType type) :type(type), ref(0) {}
@@ -66,64 +97,48 @@ namespace SQL_PARSER {
 	};
 	class SQLStringValue :public SQLValue {
 	public:
-		char* value;
-		uint32_t size;
-		uint32_t volumn;
-		bool quote;
-		SQLStringValue(SQLValueType type) :SQLValue(type), value(nullptr), size(0), volumn(0), quote(false) {}
+		stringValue value;
+		SQLStringValue(SQLValueType type) :SQLValue(type), value(){}
 		inline const char* assign(const char* src, uint32_t size)
 		{
-			if (!quote && volumn > size)
-			{
-				memcpy(value, src, size);
-				value[size] = '\0';
-			}
-			else
-			{
-				quote = false;
-				if (value != nullptr)
-					free(value);
-				value = (char*)malloc(size + 1);
-				memcpy(value, src, size);
-				value[size] = '\0';
-				volumn = this->size = size;
-			}
-			return value;
+			value.assign(src, size);
+			return src;
 		}
 		~SQLStringValue()
 		{
-			if (!quote && value != nullptr)
-				free(value);
 		}
 	};
 	class SQLNameValue :public SQLValue {
 	public:
-		std::string name;
+		stringValue name;
 		SQLNameValue() :SQLValue(SQLValueType::NAME_TYPE) {}
 	};
 	class SQLTableNameValue :public SQLValue {
 	public:
-		std::string database;
-		std::string table;
-		std::string alias;
+		stringValue database;
+		stringValue table;
+		stringValue alias;
 		SQLTableNameValue() :SQLValue(SQLValueType::TABLE_NAME_TYPE) {}
 	};
 	class SQLColumnNameValue :public SQLValue {
 	public:
-		std::string database;
-		std::string table;
-		std::string columnName;
+		stringValue database;
+		stringValue table;
+		stringValue columnName;
 		SQLColumnNameValue() :SQLValue(SQLValueType::COLUMN_NAME_TYPE) {}
 	};
+	constexpr static int MAX_FUNC_ARGV_COUNT = 32;
 	class SQLFunctionValue :public SQLValue {
 	public:
-		std::string funcName;
-		std::list<SQLValue*> argvs;
+		stringValue funcName;
+		SQLValue* argvs[MAX_FUNC_ARGV_COUNT];
+		uint8_t argvCount;
 		SQLFunctionValue() :SQLValue(SQLValueType::FUNCTION_TYPE) {}
 		~SQLFunctionValue()
 		{
-			for (std::list<SQLValue*>::iterator iter = argvs.begin(); iter != argvs.end(); iter++)
-				delete* iter;
+			for (int i = 0; i < argvCount; argvCount++)
+				delete argvs[i];
+			argvCount = 0;
 		}
 	};
 	class SQLExpressionValue :public SQLValue {

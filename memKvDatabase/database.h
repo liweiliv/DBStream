@@ -1,6 +1,6 @@
 #pragma once
 #include "util/status.h"
-#include "clientHandel.h"
+#include "clientHandle.h"
 #include "thread/shared_mutex.h"
 #include "util/sparsepp/spp.h"
 #include "table.h"

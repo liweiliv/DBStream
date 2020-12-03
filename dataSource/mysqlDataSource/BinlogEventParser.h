@@ -42,7 +42,7 @@ namespace DATA_SOURCE
 		int16_t m_parsedRecordBegin;
 		String m_error;
 	public:
-		enum ParseStatus {
+		enum class ParseStatus {
 			OK,
 			BEGIN,
 			COMMIT,

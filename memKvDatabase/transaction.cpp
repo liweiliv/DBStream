@@ -4,20 +4,19 @@ namespace KVDB {
 	void transaction::newOperator(row* r)
 	{
 		m_rows.insert(r);
-		m_vesionList.push_back(r->tail);
+		if (m_redoListTail != nullptr)
+			m_redoListTail->transNext = r->tail;
+		m_redoListTail = r->tail;
 	}
 	void transaction::clear()
 	{
 		m_rows.clear();
-		m_vesionList.clear();
 		m_tables.clear();
 	}
-	dsStatus& transaction::commit(logApplyFunc func)
+	dsStatus& transaction::commit()
 	{
 		if (unlikely(m_start))
 			dsFailedAndLogIt(errorCode::TRANSACTION_NOT_START, "transaction not start", WARNING);
-		if (func != nullptr)
-			dsReturnIfFailed(func(m_vesionList));
 		for (rowMap::iterator iter = m_rows.begin(); iter != m_rows.end(); iter++)
 			(*iter)->commit();
 		m_start = false;
@@ -27,7 +26,6 @@ namespace KVDB {
 	{
 		if (unlikely(m_start))
 			dsFailedAndLogIt(errorCode::TRANSACTION_NOT_START, "transaction not start", WARNING);
-		m_vesionList.clear();
 		for (rowMap::iterator iter = m_rows.begin(); iter != m_rows.end(); iter++)
 			(*iter)->rollback();
 		m_rows.clear();

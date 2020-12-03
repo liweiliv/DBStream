@@ -90,10 +90,8 @@ namespace DATA_SOURCE {
 	{
 		uint64_t srvVersion = mysql_get_server_version(m_conn);
 		int majorVersion = srvVersion / 10000;
-		char serverVersion[64] =
-		{ 0 };
-		sprintf(serverVersion, "%d.%ld.%ld", majorVersion,
-			(srvVersion % 10000) / 100, srvVersion % 100);
+		char serverVersion[64] = { 0 };
+		sprintf(serverVersion, "%d.%ld.%ld", majorVersion, (srvVersion % 10000) / 100, srvVersion % 100);
 		if (majorVersion < 5)
 		{
 			LOG(ERROR) << "mysql version " << serverVersion << " is lower than 5,not support";

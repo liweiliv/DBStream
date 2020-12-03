@@ -4,6 +4,7 @@ namespace AUTH
 {
 	class hashWrap
 	{
+	public:
 		inline bool equal(const std::string& s, const std::string& d) const
 		{
 			return s == d;

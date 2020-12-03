@@ -277,6 +277,7 @@ namespace SQL_PARSER {
 		}
 		char quote = *p;
 		const char* end = p + 1;
+		bool hasEscape = false;
 		while (true)
 		{
 			if (*end == '\0')
@@ -286,6 +287,8 @@ namespace SQL_PARSER {
 #endif
 				return NOT_MATCH_PTR;
 			}
+			if (*end == '\\')
+				hasEscape = true;
 			if (*end == quote)
 			{
 				int escapeCount = 1;
@@ -299,70 +302,74 @@ namespace SQL_PARSER {
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(SQLValueType::STRING_TYPE);
-			if (nullptr == (value->value = (char*)malloc(value->volumn = (end - p))))
+			if (!hasEscape)
 			{
-				LOG(ERROR) << m_comment << " do not match " << sql << " for alloc memory failed";
-				delete value;
-				return NOT_MATCH_PTR;
+				value->value.assign(p + 1, end - p - 1);
 			}
-			for (uint32_t soffset = 1; soffset < value->volumn; soffset++)
+			else
 			{
-				if (unlikely(p[soffset] == '\\'))
+				int length = end - p - 1;
+				char* str = new char[length];
+				int realSize = 0;
+				for (uint32_t soffset = 1; soffset < length; soffset++)
 				{
-					if (likely(soffset < value->volumn))
+					if (unlikely(p[soffset] == '\\'))
 					{
-						switch (p[soffset + 1])
+						if (likely(soffset < length))
 						{
-						case '\\':
-							value->value[value->size++] = '\\';
-							soffset++;
-							break;
-						case 't':
-							value->value[value->size++] = '\t';
-							soffset++;
-							break;
-						case '\'':
-							value->value[value->size++] = '\'';
-							soffset++;
-							break;
-						case '"':
-							value->value[value->size++] = '"';
-							soffset++;
-							break;
-						case 'r':
-							value->value[value->size++] = '\r';
-							soffset++;
-							break;
-						case 'n':
-							value->value[value->size++] = '\n';
-							soffset++;
-							break;
-						case '0':
-							value->value[value->size++] = '\0';
-							soffset++;
-							break;
-						default:
-							value->value[value->size++] = '\\';
-							soffset++;
-							break;
+							switch (p[soffset + 1])
+							{
+							case '\\':
+								str[realSize++] = '\\';
+								soffset++;
+								break;
+							case 't':
+								str[realSize++] = '\t';
+								soffset++;
+								break;
+							case '\'':
+								str[realSize++] = '\'';
+								soffset++;
+								break;
+							case '"':
+								str[realSize++] = '"';
+								soffset++;
+								break;
+							case 'r':
+								str[realSize++] = '\r';
+								soffset++;
+								break;
+							case 'n':
+								str[realSize++] = '\n';
+								soffset++;
+								break;
+							case '0':
+								str[realSize++] = '\0';
+								soffset++;
+								break;
+							default:
+								str[realSize++] = p[soffset + 1];
+								soffset++;
+								break;
+							}
+						}
+						else
+						{
+#ifdef DEBUG
+							LOG(ERROR) << m_comment << " do not match " << sql;
+#endif
+							delete str;
+							delete value;
+							return NOT_MATCH_PTR;
 						}
 					}
 					else
 					{
-
-#ifdef DEBUG
-						LOG(ERROR) << m_comment << " do not match " << sql;
-#endif
-						delete value;
-						return NOT_MATCH_PTR;
+						str[realSize++] = p[soffset];
 					}
 				}
-				else
-				{
-					value->value[value->size++] = p[soffset];
-				}
+				value->value.assign(str, realSize, false);
 			}
-			value->value[value->size] = '\0';
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -400,8 +407,7 @@ namespace SQL_PARSER {
 		if (m_parser != nullptr || needValue)
 		{
 			value = new SQLStringValue(SQLValueType::STRING_TYPE);
-			value->value = (char*)m_word.c_str();
-			value->quote = true;
+			value->assign(m_word.c_str(), m_word.length());
 			if (needValue)
 				value->ref++;
 			if (m_parser != nullptr)
@@ -920,7 +926,7 @@ namespace SQL_PARSER {
 			const char* savePoint = sql;
 			if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR)
 			{
-				if (!operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
+				if (!operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues &&
 					operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 				{
 					if ((value = globalFunc.match(nullptr, sql, needValue)) != NOT_MATCH_PTR ||
@@ -952,7 +958,7 @@ namespace SQL_PARSER {
 		const char* savePoint = sql;
 		if ((opValue = opWord.match(nullptr, sql, true)) != NOT_MATCH_PTR)
 		{
-			if (operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues&&
+			if (operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasLeftValues &&
 				operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].hasRightValue)
 			{
 				while (!opStack.empty() && operationInfos[opStack.top()->opera].type != LEFT_BRACKET && operationInfos[opStack.top()->opera].priority <= operationInfos[static_cast<SQLOperatorValue*>(opValue)->opera].priority)
@@ -1158,7 +1164,11 @@ namespace SQL_PARSER {
 				(value = match(nullptr, pos, needValue)) != NOT_MATCH_PTR)
 			{
 				if (sfv != nullptr)
-					sfv->argvs.push_back(value);
+				{
+					if (sfv->argvCount >= MAX_FUNC_ARGV_COUNT)
+						return NOT_MATCH_PTR;
+					sfv->argvs[sfv->argvCount++] = value;
+				}
 				else if (value != nullptr)
 					delete value;
 			}

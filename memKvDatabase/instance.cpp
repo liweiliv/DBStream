@@ -5,6 +5,9 @@
 #include "database.h"
 #include "memory/bufferPool.h"
 #include "temporaryTables.h"
+#include "walLogWriter.h"
+#include "util/arrayQueue.h"
+#include "service.h"
 namespace KVDB
 {
 	dsStatus& instance::startTrans(clientHandle* handle)
@@ -83,9 +86,8 @@ namespace KVDB
 	}
 	dsStatus& instance::commit(clientHandle* handle)
 	{
-		if (!dsCheck(handle->m_trans->commit(nullptr)))
+		if (!dsCheck(handle->m_trans->commit()))
 			dsReturn(getLocalStatus());
-
 		dsOk();
 	}
 	dsStatus& instance::rollback(clientHandle* handle)
@@ -94,4 +96,45 @@ namespace KVDB
 			dsReturn(getLocalStatus());
 		dsOk();
 	}
+	dsStatus& instance::asyncWriteWalLog(clientHandle* handle)
+	{
+		if (m_walLogWriter == nullptr)
+			dsOk();
+		dsReturn(m_walLogWriter->writeTrans(handle->m_trans->m_redoListHead));
+	}
+	void instance::workThread(int tid)
+	{
+		clientHandle* current;
+		while (m_running)
+		{
+			if (m_walFinishTask.pop(current))
+			{
+				if (!dsCheck(current->m_trans->commit()))
+				{
+
+				}
+			}
+		}
+	}
+
+	void instance::walWriteThread()
+	{
+		clientHandle* current;
+		while (m_running)
+		{
+			if (m_walTask.pop(current))
+			{
+				if (unlikely(!dsCheck(m_walLogWriter->writeTrans(current->m_trans->m_redoListHead))))
+				{
+					m_running = false;
+					m_error = getLocalStatus();
+					LOG(ERROR) << "write wal log failed,error info:" << m_error.toString();
+					break;
+				}
+			}
+		}
+	}
+
+
+
 }

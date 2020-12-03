@@ -75,7 +75,7 @@ namespace SQL_PARSER {
 			return nullptr;
 		}
 	}
-	static  inline META::columnMeta* createColume(handle* h, const char* name)
+	static  inline META::columnMeta* createColume(handle* h, const stringValue &value)
 	{
 		META::ddl* ddl = static_cast<META::ddl*>(h->userData);
 		switch (ddl->m_type)
@@ -83,7 +83,7 @@ namespace SQL_PARSER {
 		case META::CREATE_TABLE:
 		{
 			META::columnMeta column;
-			column.m_columnName.assign(name);
+			column.m_columnName.assign(value.name, value.size);
 			static_cast<META::createTableDDL*>(ddl)->tableDef.addColumn(&column);
 			return &static_cast<META::createTableDDL*>(ddl)->tableDef.m_columns[static_cast<META::createTableDDL*>(ddl)->tableDef.m_columnsCount - 1];
 		}
@@ -96,13 +96,13 @@ namespace SQL_PARSER {
 			case META::ALTER_TABLE_CHANGE_COLUMN:
 			case META::ALTER_TABLE_MODIFY_COLUMN:
 			{
-				static_cast<META::addColumn*>(alterInfo)->column.m_columnName.assign(name);
+				static_cast<META::addColumn*>(alterInfo)->column.m_columnName.assign(value.name, value.size);
 				return &static_cast<META::addColumn*>(alterInfo)->column;
 			}
 			case META::ALTER_TABLE_ADD_COLUMNS:
 			{
 				META::columnMeta* column = new META::columnMeta();
-				column->m_columnName.assign(name);
+				column->m_columnName.assign(value.name, value.size);
 				static_cast<META::addColumns*>(alterInfo)->columns.push_back(column);
 				return column;
 			}
@@ -326,7 +326,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue stringTypeCharSet(handle * h, SQLValue * value)
 	{
 		META::columnMeta* column = getColumn(h);
-		column->m_charset = getCharset(static_cast<SQLStringValue*>(value)->value);
+		column->m_charset = getCharset(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		if (column->m_charset == nullptr)
 			return NOT_SUPPORT;
 		if (column->m_size > 0)
@@ -426,7 +426,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  enumOrSetValueList(handle * h, SQLValue * value)
 	{
 		META::columnMeta* column = getColumn(h);
-		column->m_setAndEnumValueList.add(static_cast<SQLStringValue*>(value)->value);
+		column->m_setAndEnumValueList.add(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue geometryType(handle * h, SQLValue * value)
@@ -446,13 +446,13 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue newColumn(handle * h, SQLValue * value)
 	{
-		createColume(h, static_cast<SQLNameValue*>(value)->name.c_str());
+		createColume(h, static_cast<SQLNameValue*>(value)->name);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  columnCollate(handle * h, SQLValue * value)
 	{
 		META::columnMeta* column = getColumn(h);
-		column->m_collate = static_cast<SQLStringValue*>(value)->value;
+		column->m_collate.assign(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue generatedColumn(handle * h, SQLValue * value)
@@ -497,11 +497,11 @@ namespace SQL_PARSER {
 		if (ddl->m_type == META::ALTER_TABLE)
 		{
 			META::addKey* pk = static_cast<META::addKey*>(*static_cast<META::alterTable*>(ddl)->detail.rbegin());
-			pk->columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			pk->columnNames.push_back(std::string(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size));
 		}
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
-			static_cast<META::createTableDDL*>(ddl)->primaryKey.columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			static_cast<META::createTableDDL*>(ddl)->primaryKey.columnNames.push_back(std::string(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size));
 		}
 		else
 			return NOT_MATCH;
@@ -531,12 +531,12 @@ namespace SQL_PARSER {
 		if (ddl->m_type == META::ALTER_TABLE)
 		{
 			META::addKey* uk = static_cast<META::addKey*>(*static_cast<META::alterTable*>(ddl)->detail.rbegin());
-			uk->name = static_cast<SQLNameValue*>(value)->name;
+			uk->name.assign(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size);
 		}
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
 			META::addKey& uk = *static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin();
-			uk.name = static_cast<SQLNameValue*>(value)->name;
+			uk.name.assign(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size);
 		}
 		else
 			return NOT_MATCH;
@@ -548,12 +548,12 @@ namespace SQL_PARSER {
 		if (ddl->m_type == META::ALTER_TABLE_ADD_UNIQUE_KEY)
 		{
 			META::addKey* uk = static_cast<META::addKey*>(*static_cast<META::alterTable*>(ddl)->detail.rbegin());
-			uk->columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			uk->columnNames.push_back(std::string(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size));
 		}
 		else if (ddl->m_type == META::CREATE_TABLE)
 		{
 			META::addKey& uk = *static_cast<META::createTableDDL*>(ddl)->uniqueKeys.rbegin();
-			uk.columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+			uk.columnNames.push_back(std::string(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size));
 		}
 		else if (ddl->m_type == META::ALTER_TABLE)
 		{
@@ -562,7 +562,7 @@ namespace SQL_PARSER {
 			{
 
 				META::addKey* uk = static_cast<META::addKey*>(lastAlter);
-				uk->columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+				uk->columnNames.push_back(std::string(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size));
 			}
 			else
 				return INVALID;
@@ -574,7 +574,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue tableCharset(handle * h, SQLValue * value)
 	{
 		META::ddl* ddl = static_cast<META::ddl*>(h->userData);
-		const charsetInfo* charset = getCharset(static_cast<SQLStringValue*>(value)->value);
+		const charsetInfo* charset = getCharset(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		if (charset == nullptr)
 			return NOT_SUPPORT;
 		if (ddl->m_type == META::CREATE_TABLE)
@@ -612,13 +612,13 @@ namespace SQL_PARSER {
 		META::ddl* ddl = static_cast<META::ddl*>(h->userData);
 		if (ddl->m_type == META::CREATE_TABLE)
 		{
-			static_cast<META::createTableDDL*>(ddl)->tableDef.m_collate = static_cast<SQLStringValue*>(value)->value;
+			static_cast<META::createTableDDL*>(ddl)->tableDef.m_collate.assign(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		}
 		else if (ddl->m_type == META::ALTER_TABLE_ADD_COLUMN)
 		{
 			META::alterTableHead* alterInfo = *static_cast<META::alterTable*>(ddl)->detail.rbegin();
 			if (alterInfo->type == META::ALTER_TABLE_DEFAULT_CHARSET || alterInfo->type == META::ALTER_TABLE_CONVERT_DEFAULT_CHARSET)
-				static_cast<META::defaultCharset*>(alterInfo)->collate = static_cast<SQLStringValue*>(value)->value;
+				static_cast<META::defaultCharset*>(alterInfo)->collate = static_cast<SQLStringValue*>(value)->value.toString();
 			else
 				return NOT_MATCH;
 		}
@@ -635,8 +635,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  newTableName(handle * h, SQLValue * value)
 	{
 		META::tableDdl* table = getTableInfo();
-		table->table.database = static_cast<SQLTableNameValue*>(value)->database;
-		table->table.table = static_cast<SQLTableNameValue*>(value)->table;
+		table->table.database.assign(static_cast<SQLTableNameValue*>(value)->database.name, static_cast<SQLTableNameValue*>(value)->database.size);
+		table->table.table.assign(static_cast<SQLTableNameValue*>(value)->table.name, static_cast<SQLTableNameValue*>(value)->table.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue createTable(handle * h, SQLValue * value)
@@ -658,8 +658,8 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  newLikedTableName(handle * h, SQLValue * value)
 	{
-		static_cast<META::createTableLike*>(h->userData)->likedTable.database = static_cast<SQLTableNameValue*>(value)->database;
-		static_cast<META::createTableLike*>(h->userData)->likedTable.table = static_cast<SQLTableNameValue*>(value)->table;
+		static_cast<META::createTableLike*>(h->userData)->likedTable.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		static_cast<META::createTableLike*>(h->userData)->likedTable.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  alterTableAddColumn(handle * h, SQLValue * value)
@@ -689,14 +689,14 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  AlterNewColumnAfter(handle * h, SQLValue * value)
 	{
-		static_cast<META::addColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->afterColumnName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<META::addColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->afterColumnName.assign(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  alterDropIndex(handle * h, SQLValue * value)
 	{
 		META::dropKey* ddl = new META::dropKey;
 		ddl->type = META::ALTER_TABLE_DROP_INDEX;
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name.assign(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size);
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}
@@ -708,14 +708,14 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  alterChangeColumnName(handle * h, SQLValue * value)
 	{
-		static_cast<META::changeColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->srcColumnName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<META::changeColumn*>(GET_CURRENT_ALTER_TABLE_INFO())->srcColumnName.assign(static_cast<SQLNameValue*>(value)->name.name, static_cast<SQLNameValue*>(value)->name.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  dropColumn(handle * h, SQLValue * value)
 	{
 		META::dropColumn* ddl = new META::dropColumn;
 		ddl->type = META::ALTER_TABLE_DROP_COLUMN;
-		ddl->columnName = static_cast<SQLNameValue*>(value)->name;
+		ddl->columnName = static_cast<SQLNameValue*>(value)->name.toString();
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}
@@ -730,7 +730,7 @@ namespace SQL_PARSER {
 	{
 		META::dropKey* ddl = new META::dropKey;
 		ddl->type = META::ALTER_TABLE_DROP_FOREIGN_KEY;
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name = static_cast<SQLNameValue*>(value)->name.toString();
 		static_cast<META::alterTable*>(h->userData)->detail.push_back(ddl);
 		return OK;
 	}
@@ -754,18 +754,18 @@ namespace SQL_PARSER {
 	/*now we only parse uk ,key/index not parse*/
 	extern "C" DLL_EXPORT  parseValue  createIndexName(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::createIndex*>(h->userData)->index.name = static_cast<SQLNameValue*>(value)->name;
+		static_cast<struct META::createIndex*>(h->userData)->index.name = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  ddlTableName(handle * h, SQLValue * value)
 	{
-		static_cast<META::tableDdl*>(h->userData)->table.database = static_cast<SQLTableNameValue*>(value)->database;
-		static_cast<META::tableDdl*>(h->userData)->table.table = static_cast<SQLTableNameValue*>(value)->table;
+		static_cast<META::tableDdl*>(h->userData)->table.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		static_cast<META::tableDdl*>(h->userData)->table.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue createIndexColumn(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::createIndex*>(h->userData)->index.columnNames.push_back(static_cast<SQLNameValue*>(value)->name);
+		static_cast<struct META::createIndex*>(h->userData)->index.columnNames.push_back(static_cast<SQLNameValue*>(value)->name.toString());
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  dropIndex(handle * h, SQLValue * value)
@@ -777,7 +777,7 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  dropIndexName(handle * h, SQLValue * value)
 	{
 		META::dropIndex* ddl = static_cast<META::dropIndex*>(h->userData);
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  dropTable(handle * h, SQLValue * value)
@@ -788,8 +788,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  dropTableName(handle * h, SQLValue * value)
 	{
 		META::tableName table;
-		table.database = static_cast<SQLTableNameValue*>(value)->database;
-		table.table = static_cast<SQLTableNameValue*>(value)->table;
+		table.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		table.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		static_cast<META::dropTable*>(h->userData)->tables.push_back(table);
 		return OK;
 	}
@@ -801,16 +801,16 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  renameSrcTable(handle * h, SQLValue * value)
 	{
 		META::tableName table;
-		table.database = static_cast<SQLTableNameValue*>(value)->database;
-		table.table = static_cast<SQLTableNameValue*>(value)->table;
+		table.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		table.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		static_cast<META::renameTable*>(h->userData)->src.push_back(table);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  renameDestTable(handle * h, SQLValue * value)
 	{
 		META::tableName table;
-		table.database = static_cast<SQLTableNameValue*>(value)->database;
-		table.table = static_cast<SQLTableNameValue*>(value)->table;
+		table.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		table.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		static_cast<META::renameTable*>(h->userData)->dest.push_back(table);
 		return OK;
 	}
@@ -821,12 +821,12 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  renameOldKeyName(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::renameKey*>(h->userData)->srcKeyName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<struct META::renameKey*>(h->userData)->srcKeyName = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  renameNewKeyName(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::renameKey*>(h->userData)->destKeyName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<struct META::renameKey*>(h->userData)->destKeyName = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  alterRenameColumn(handle * h, SQLValue * value)
@@ -836,25 +836,25 @@ namespace SQL_PARSER {
 	}
 	extern "C" DLL_EXPORT  parseValue  renameOldColumn(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::renameColumn*>(h->userData)->srcColumnName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<struct META::renameColumn*>(h->userData)->srcColumnName = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  renameNewColumn(handle * h, SQLValue * value)
 	{
-		static_cast<struct META::renameColumn*>(h->userData)->destColumnName = static_cast<SQLNameValue*>(value)->name;
+		static_cast<struct META::renameColumn*>(h->userData)->destColumnName = static_cast<SQLNameValue*>(value)->name.toString();
 		return OK;
 	}
 
 	extern "C" DLL_EXPORT  parseValue  useDatabase(handle * h, SQLValue * value)
 	{
-		h->dbName = static_cast<SQLStringValue*>(value)->value;
+		h->dbName = static_cast<SQLStringValue*>(value)->value.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  alterDatabase(handle * h, SQLValue * value)
 	{
 		META::dataBaseDDL* ddl = new META::dataBaseDDL();
 		ddl->m_type = META::ALTER_DATABASE;
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name = static_cast<SQLNameValue*>(value)->name.toString();
 		setDdl(h, ddl);
 		return OK;
 	}
@@ -862,7 +862,7 @@ namespace SQL_PARSER {
 	{
 		META::dataBaseDDL* ddl = new META::dataBaseDDL();
 		ddl->m_type = META::CREATE_DATABASE;
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name = static_cast<SQLNameValue*>(value)->name.toString();
 		setDdl(h, ddl);
 		return OK;
 	}
@@ -870,18 +870,18 @@ namespace SQL_PARSER {
 	{
 		META::dataBaseDDL* ddl = new META::dataBaseDDL();
 		ddl->m_type = META::DROP_DATABASE;
-		ddl->name = static_cast<SQLNameValue*>(value)->name;
+		ddl->name = static_cast<SQLNameValue*>(value)->name.toString();
 		setDdl(h, ddl);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  databaseCharset(handle * h, SQLValue * value)
 	{
-		static_cast<META::dataBaseDDL*>(h->userData)->charset = getCharset(static_cast<SQLStringValue*>(value)->value);
+		static_cast<META::dataBaseDDL*>(h->userData)->charset = getCharset(static_cast<SQLStringValue*>(value)->value.name, static_cast<SQLStringValue*>(value)->value.size);
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue  databaseCollate(handle * h, SQLValue * value)
 	{
-		static_cast<META::dataBaseDDL*>(h->userData)->collate = static_cast<SQLStringValue*>(value)->value;;
+		static_cast<META::dataBaseDDL*>(h->userData)->collate = static_cast<SQLStringValue*>(value)->value.toString();
 		return OK;
 	}
 }

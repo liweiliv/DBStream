@@ -109,6 +109,7 @@ namespace SQL_PARSER {
 	};
 	class SQLArrayWord :public SQLSingleWord
 	{
+	private:
 	public:
 		SQLArrayWord(bool optional) :SQLSingleWord(optional, S_ARRAY)
 		{

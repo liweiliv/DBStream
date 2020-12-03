@@ -3,7 +3,7 @@
 #include <thread>
 #include <assert.h>
 #include "dataSource/dataSource.h"
-#include "util/ringFixedQueue.h"
+#include "util/arrayQueue.h"
 #include <stdio.h>
 class ringBuffer;
 namespace DATA_SOURCE
@@ -16,7 +16,7 @@ namespace DATA_SOURCE
 		static constexpr auto NAME = "mysql";
 		bool m_async;
 		bool m_running;
-		ringFixedQueue<DATABASE_INCREASE::record*> m_outputQueue;
+		arrayQueue<DATABASE_INCREASE::record*> m_outputQueue;
 		mysqlBinlogReader * m_reader;
 		BinlogEventParser * m_parser;
 		mysqlConnector * m_connector;

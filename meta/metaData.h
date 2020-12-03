@@ -34,10 +34,15 @@ namespace META {
 		}
 		void add(const char* str)
 		{
+			add(str, strlen(str));
+		}
+		void add(const char* str, uint32_t size)
+		{
 			char** array = (char**)malloc(sizeof(char*) * (m_count + 1));
 			memcpy(array, m_array, sizeof(char*) * m_count);
-			array[m_count] = (char*)malloc(sizeof(str) + 1);
-			strcpy(array[m_count], str);
+			array[m_count] = (char*)malloc(size + 1);
+			memcpy(array[m_count], str, size);
+			array[m_count][size] = '\0';
 			if (nullptr != m_array)
 				free(m_array);
 			m_array = array;

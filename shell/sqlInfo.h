@@ -36,22 +36,31 @@ namespace SHELL {
 			list[size++] = v;
 		}
 	};
+	constexpr static int MAX_JOIN_TABLE_COUNT = 32;
+	constexpr static int MAX_SELECT_FIELD_COUNT = 1024;
+	constexpr static int MAX_GROUP_BY_COLUMN_COUNT = 32;
+	constexpr static int MAX_JOIN_COLUMN_COUNT = 32;
 
+	struct tableNameInfo {
+		const char* tableName;
+		uint16_t tableNameSize;
+		const char* dbName;
+		uint16_t dbNameSize;
+		const char* alias;
+		uint16_t aliasSize;
+	};
 	struct selectSqlInfo :public sqlBasicInfo {
 		const char* usedDatabase;
-		const META::tableMeta* table;
-		const char* alias;
+		tableNameInfo selectTable;
 		uint64_t selectTableId;
-		const char* tableAlias;
-
-		sqlList<const META::tableMeta*> joinedTables;
-		sqlList<const char*> joinedTablesAlias;
+		tableNameInfo joinTables[MAX_JOIN_TABLE_COUNT];
+		uint64_t joinedTableIds[MAX_JOIN_TABLE_COUNT];
+		uint8_t joinTablesCount;
 		int selectFieldCount;
-		sqlList<Field*> selectFields;
-		sqlList<const char*> selectFieldAlias;
-		uint64_t* joinedTableIds;
-		sqlList<SQL_PARSER::SQLColumnNameValue*> inGroupColumns;
-		sqlList<SQL_PARSER::SQLColumnNameValue*> notInGroupColumns;
+		Field* selectField[MAX_SELECT_FIELD_COUNT];
+		SQL_PARSER::SQLColumnNameValue* inGroupColumns[MAX_GROUP_BY_COLUMN_COUNT];
+		uint8_t gourpColumnCount;
+
 		sqlList<const char*> joinedUsingColumns;
 		JOIN_TYPE joinType;
 		expressionField* joinedCondition;

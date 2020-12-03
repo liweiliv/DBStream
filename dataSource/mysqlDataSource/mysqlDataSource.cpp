@@ -19,10 +19,15 @@ namespace DATA_SOURCE {
 	#define mysqlParserTree "sqlParser/ParseTree"
 #endif
 
-	static constexpr uint64_t BEGIN_RECORD  = 0x1ffffffffffffffful;
-	static constexpr uint64_t COMMIT_RECORD = 0x2ffffffffffffffful;
+	static  DATABASE_INCREASE::record  BEGIN_RECORD;
+	static  DATABASE_INCREASE::record * BEGIN_RECORD_PTR = &BEGIN_RECORD;
+
+	static  DATABASE_INCREASE::record  COMMIT_RECORD;
+	static  DATABASE_INCREASE::record * COMMIT_RECORD_PTR = &COMMIT_RECORD;
+
+
 	static constexpr auto ASYNC = "async";
-	#define asyncPushRecord(r)	while (unlikely(!m_outputQueue.push((r), 100)))\
+	#define asyncPushRecord(r)	while (unlikely(!m_outputQueue.pushWithCond((r), 1000)))\
 	{\
 		if (unlikely(!m_running))\
 			break;\
@@ -68,7 +73,7 @@ namespace DATA_SOURCE {
 			parseStatus = m_parser->parser(logEvent, size);
 			switch (parseStatus)
 			{
-			case BinlogEventParser::OK:
+			case BinlogEventParser::ParseStatus::OK:
 			{
 				DATABASE_INCREASE::record* record;
 				do {
@@ -81,13 +86,13 @@ namespace DATA_SOURCE {
 				} while (likely(m_running));
 				break;
 			}
-			case BinlogEventParser::FILTER:
+			case BinlogEventParser::ParseStatus::FILTER:
 				break;
-			case BinlogEventParser::BEGIN:
-				asyncPushRecord(static_cast<DATABASE_INCREASE::record*>((void*)BEGIN_RECORD));
+			case BinlogEventParser::ParseStatus::BEGIN:
+				asyncPushRecord(BEGIN_RECORD_PTR);
 				break;
-			case BinlogEventParser::COMMIT:
-				asyncPushRecord(static_cast<DATABASE_INCREASE::record*>((void*)COMMIT_RECORD));
+			case BinlogEventParser::ParseStatus::COMMIT:
+				asyncPushRecord(COMMIT_RECORD_PTR);
 				break;
 			default:
 				m_lastError = m_parser->getError();
@@ -103,11 +108,11 @@ namespace DATA_SOURCE {
 		static int i = 0;
 		DATABASE_INCREASE::record* record = nullptr;
 		do {
-			if (m_outputQueue.pop(record, 10))
+			if (m_outputQueue.popWithCond(record, 1000))
 			{
-				if (((uint64_t)record) == BEGIN_RECORD)
+				if (record == BEGIN_RECORD_PTR)
 					m_store->begin();
-				else if (((uint64_t)record) == COMMIT_RECORD)
+				else if (record == COMMIT_RECORD_PTR)
 					m_store->commit();
 				else
 				{
@@ -121,8 +126,7 @@ namespace DATA_SOURCE {
 	}
 	DATABASE_INCREASE::record* mysqlDataSource::syncRead()
 	{
-		static int i = 0;
-		DATABASE_INCREASE::record* record = nullptr;
+		DATABASE_INCREASE::record* record;
 		if (nullptr != (record = m_parser->getRecord()))
 			return record;
 		const char* logEvent = nullptr;
@@ -134,22 +138,18 @@ namespace DATA_SOURCE {
 			parseStatus = m_parser->parser(logEvent, size);
 			switch (parseStatus)
 			{
-			case BinlogEventParser::OK:
+			case BinlogEventParser::ParseStatus::OK:
 			{
 				if (nullptr != (record = m_parser->getRecord()))
-				{
-					if((++i&0xffff) == 0)
-						LOG(ERROR)<<record->head->logOffset;
 					return record;
-				}
 				break;
 			}
-			case BinlogEventParser::FILTER:
+			case BinlogEventParser::ParseStatus::FILTER:
 				break;
-			case BinlogEventParser::BEGIN:
+			case BinlogEventParser::ParseStatus::BEGIN:
 				m_store->begin();
 				break;
-			case BinlogEventParser::COMMIT:
+			case BinlogEventParser::ParseStatus::COMMIT:
 				m_store->commit();
 				break;
 			default:

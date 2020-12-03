@@ -4,7 +4,7 @@
 #include "meta/metaData.h"
 #include "util/status.h"
 #include "util/sparsepp/spp.h"
-#include "clientHandel.h"
+#include "clientHandle.h"
 namespace KVDB {
 	constexpr static int MAX_JOIN_TABLE_COUNT = 32;
 	struct joinColumnMap {

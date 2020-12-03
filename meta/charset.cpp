@@ -48,9 +48,26 @@ constexpr static charsetStringInfo sortedCharsetInfo[MAX_CHARSET] = {
 {"utf8",utf8},
 {"utf8mb4",utf8mb4}
 };
-DLL_EXPORT const charsetInfo* getCharset(const char * name)
+DLL_EXPORT const charsetInfo* getCharset(const char * name, uint32_t size)
 {
 	int16_t s = 0, e = MAX_CHARSET - 1,m;
+	while (s <= e && s < MAX_CHARSET)
+	{
+		m = (s + e) / 2;
+		int8_t c = strncasecmp(sortedCharsetInfo[m].nameString, name, size);
+		if (c == 0)
+			return &charsets[sortedCharsetInfo[m].charset];
+		else if (c > 0)
+			e = m - 1;
+		else
+			s = m + 1;
+	}
+	return nullptr;
+}
+
+DLL_EXPORT const charsetInfo* getCharset(const char* name)
+{
+	int16_t s = 0, e = MAX_CHARSET - 1, m;
 	while (s <= e && s < MAX_CHARSET)
 	{
 		m = (s + e) / 2;

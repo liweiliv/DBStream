@@ -45,7 +45,7 @@ public:
 	{
 		return m_head == m_tail;
 	}
-	inline bool push(T& v)
+	inline bool push(T v)
 	{
 		uint32_t next = nextPos(m_head);
 		if (next == m_tail)
@@ -54,7 +54,7 @@ public:
 		m_head = next;
 		return true;
 	}
-	inline bool pop(T& v)
+	inline bool pop(T v)
 	{
 		if (empty())
 			return false;
@@ -63,7 +63,7 @@ public:
 		m_tail = next;
 		return true;
 	}
-	inline bool pushWithCond(T& v, uint32_t outTime)
+	inline bool pushWithCond(T v, uint32_t outTime)
 	{
 		uint32_t next;
 		if (unlikely((next = nextPos(m_head)) == m_tail))
@@ -87,11 +87,11 @@ public:
 		m_emptyCond.notify_one();
 		return true;
 	}
-	inline void pushWithCond(T& v)
+	inline bool pushWithCond(T v)
 	{
-		pushWithCond(v, 0xffffffffu);
+		return pushWithCond(v, 0xffffffffu);
 	}
-	inline bool popWithCond(T& v, uint32_t outTime)
+	inline bool popWithCond(T v, uint32_t outTime)
 	{
 		if (unlikely(empty()))
 		{
@@ -115,13 +115,13 @@ public:
 		m_fullCond.notify_one();
 		return true;
 	}
-	inline void popWithCond(T& v)
+	inline void popWithCond(T v)
 	{
 		popWithCond(v, 0xffffffffu);
 	}
 
 private:
-	inline bool pushWithLock_(T& v, uint32_t outTime)
+	inline bool pushWithLock_(T v, uint32_t outTime)
 	{
 		uint32_t next;
 		std::unique_lock<std::mutex> lock(m_wLock);
@@ -145,19 +145,19 @@ private:
 		return true;
 	}
 public:
-	inline void pushWithLock(T& v)
+	inline void pushWithLock(T v)
 	{
 		pushWithLock_(v, 0xffffffffu);
 		m_emptyCond.notify_one();
 	}
-	inline bool pushWithLock(T& v, uint32_t outTime)
+	inline bool pushWithLock(T v, uint32_t outTime)
 	{
 		bool success = pushWithLock_(v, outTime);
 		m_emptyCond.notify_one();
 		return success;
 	}
 private:
-	inline bool popWithLock_(T& v, uint32_t outTime)
+	inline bool popWithLock_(T v, uint32_t outTime)
 	{
 		uint32_t next;
 		std::unique_lock<std::mutex> lock(m_rLock);
@@ -182,12 +182,12 @@ private:
 		return true;
 	}
 public:
-	inline void popWithLock(T& v)
+	inline void popWithLock(T v)
 	{
 		popWithLock_(v, 0xffffffffu);
 		m_fullCond.notify_one();
 	}
-	inline bool popWithLock(T& v, uint32_t outTime)
+	inline bool popWithLock(T v, uint32_t outTime)
 	{
 		bool success = popWithLock_(v, outTime);
 		m_fullCond.notify_one();

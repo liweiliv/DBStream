@@ -11,7 +11,7 @@ int testSingleThreadPopPush()
 		});
 	std::thread t2([&]() {
 		for (int i = 0; i < 1000000; i++) {
-			int v;
+			int v = 0;
 			while (!q.pop(v));
 			assert(v == i);
 		}});

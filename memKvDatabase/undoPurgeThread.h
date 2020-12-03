@@ -7,7 +7,6 @@
 namespace KVDB {
 	constexpr static auto UNDO_ROW_LIST_VOLUMN = 256;
 	constexpr static auto MAX_UNDO_LIST_SIZE = 1024;
-
 	class undoPurgeThread {
 	public:
 		struct undoRowList {
@@ -20,7 +19,7 @@ namespace KVDB {
 	public:
 		inline void put(undoRowList* rowList)
 		{
-			m_queue.pushWithLock(rowList);
+			m_queue.pushWithLock(rowList); 
 		}
 	private:
 		dsStatus& run()

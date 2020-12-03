@@ -9,7 +9,6 @@ namespace KVDB {
 }
 typedef spp::sparse_hash_set<KVDB::row*> rowMap;
 typedef spp::sparse_hash_set<KVDB::tableInterface*> tableMap;
-typedef dsStatus& (*logApplyFunc) (const std::vector<KVDB::version*> &vesionList);
 namespace KVDB {
 	enum class TRANS_ISOLATION_LEVEL {
 		READ_UNCOMMITTED,
@@ -23,11 +22,13 @@ namespace KVDB {
 		TRANS_ISOLATION_LEVEL m_level;
 		rowMap m_rows;
 		tableMap m_tables;
-		std::vector<version*> m_vesionList;
+		version* m_redoListHead;
+		version* m_redoListTail;
+
 		version* m_begin;
 		void newOperator(row* r);
 		void clear();
-		dsStatus& commit(logApplyFunc func);
+		dsStatus& commit();
 		dsStatus& rollback();
 	};
 }

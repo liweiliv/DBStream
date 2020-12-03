@@ -7,7 +7,7 @@
 #include "thread/barrier.h"
 #include "meta/columnType.h"
 #include "errorCode.h"
-#include "clientHandel.h"
+#include "clientHandle.h"
 #include "rowChange.h"
 namespace KVDB
 {
@@ -16,6 +16,7 @@ namespace KVDB
 	{
 		version* prev;
 		version* next;
+		version* transNext;
 		DATABASE_INCREASE::DMLRecord data;
 		static dsStatus& allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowImage* row)
 		{

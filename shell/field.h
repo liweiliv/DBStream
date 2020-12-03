@@ -36,6 +36,8 @@ namespace SHELL {
 	struct Field {
 		FieldType fieldType;
 		META::COLUMN_TYPE valueType;
+		const char* alias;
+		uint16_t aliasSize;
 		void* (*getValueFunc)(Field* field, const DATABASE_INCREASE::DMLRecord** const row);
 		void (*cleanFunc)(Field*);
 		int ref;
