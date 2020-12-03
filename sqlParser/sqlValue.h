@@ -20,9 +20,9 @@ namespace SQL_PARSER {
 		MAX_TYPE
 	};
 	struct stringValue {
-		bool quote;
 		const char* name;
 		uint32_t size;
+		bool quote;
 		stringValue():name(nullptr),size(0),quote(true){}
 		inline void assign(const char* name, uint32_t size,bool quote = true)
 		{
@@ -46,8 +46,10 @@ namespace SQL_PARSER {
 			if (!quote && name != nullptr)
 				delete[](char*)name;
 		}
-		inline std::string& toString()
+		inline std::string toString()
 		{
+			if (name == nullptr)
+				return "";
 			return std::string(name, size);
 		}
 	};

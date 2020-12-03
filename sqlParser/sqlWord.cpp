@@ -308,10 +308,10 @@ namespace SQL_PARSER {
 			}
 			else
 			{
-				int length = end - p - 1;
+				int32_t length = end - p - 1;
 				char* str = new char[length];
-				int realSize = 0;
-				for (uint32_t soffset = 1; soffset < length; soffset++)
+				uint32_t realSize = 0;
+				for (int32_t soffset = 1; soffset < length; soffset++)
 				{
 					if (unlikely(p[soffset] == '\\'))
 					{

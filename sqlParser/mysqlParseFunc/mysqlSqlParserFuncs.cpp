@@ -635,8 +635,8 @@ namespace SQL_PARSER {
 	extern "C" DLL_EXPORT  parseValue  newTableName(handle * h, SQLValue * value)
 	{
 		META::tableDdl* table = getTableInfo();
-		table->table.database.assign(static_cast<SQLTableNameValue*>(value)->database.name, static_cast<SQLTableNameValue*>(value)->database.size);
-		table->table.table.assign(static_cast<SQLTableNameValue*>(value)->table.name, static_cast<SQLTableNameValue*>(value)->table.size);
+		table->table.database = static_cast<SQLTableNameValue*>(value)->database.toString();
+		table->table.table = static_cast<SQLTableNameValue*>(value)->table.toString();
 		return OK;
 	}
 	extern "C" DLL_EXPORT  parseValue createTable(handle * h, SQLValue * value)

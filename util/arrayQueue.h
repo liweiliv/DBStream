@@ -54,7 +54,7 @@ public:
 		m_head = next;
 		return true;
 	}
-	inline bool pop(T v)
+	inline bool pop(T& v)
 	{
 		if (empty())
 			return false;
@@ -91,7 +91,7 @@ public:
 	{
 		return pushWithCond(v, 0xffffffffu);
 	}
-	inline bool popWithCond(T v, uint32_t outTime)
+	inline bool popWithCond(T& v, uint32_t outTime)
 	{
 		if (unlikely(empty()))
 		{
@@ -115,7 +115,7 @@ public:
 		m_fullCond.notify_one();
 		return true;
 	}
-	inline void popWithCond(T v)
+	inline void popWithCond(T& v)
 	{
 		popWithCond(v, 0xffffffffu);
 	}
@@ -157,7 +157,7 @@ public:
 		return success;
 	}
 private:
-	inline bool popWithLock_(T v, uint32_t outTime)
+	inline bool popWithLock_(T& v, uint32_t outTime)
 	{
 		uint32_t next;
 		std::unique_lock<std::mutex> lock(m_rLock);
@@ -182,12 +182,12 @@ private:
 		return true;
 	}
 public:
-	inline void popWithLock(T v)
+	inline void popWithLock(T& v)
 	{
 		popWithLock_(v, 0xffffffffu);
 		m_fullCond.notify_one();
 	}
-	inline bool popWithLock(T v, uint32_t outTime)
+	inline bool popWithLock(T& v, uint32_t outTime)
 	{
 		bool success = popWithLock_(v, outTime);
 		m_fullCond.notify_one();

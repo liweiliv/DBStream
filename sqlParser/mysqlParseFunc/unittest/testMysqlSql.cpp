@@ -51,7 +51,7 @@ int main()
 		return -1;
 	}
 	const char * sql = "create table test.test1 (a int primary key ,b char (200),c varchar(200))";
-	testSql(&parser,nullptr,"alter table test.t1 add column a int unsignedd");
+	testSql(&parser,nullptr,"alter table test.t1 add column a int unsigned");
 	testSql(&parser,nullptr,"create table a (c1 int primary key,c2 char(20))");
 	testSql(&parser,"test","alter table t2 add column(c1 int,c2 char(20),c3 varchar(20)),add unique key uk1 (c1 ,c2)");
 	testSql(&parser,"test","alter table aaa change d c int");
