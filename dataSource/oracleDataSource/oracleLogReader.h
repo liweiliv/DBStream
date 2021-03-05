@@ -13,6 +13,7 @@ namespace DATA_SOURCE
 		uint64_t scn;
 		uint64_t timestamp;
 		uint64_t tableId;
+		uint64_t rba;
 		char txnId[20];
 		char rowId[20];
 		uint32_t sqlSize;
@@ -35,6 +36,10 @@ namespace DATA_SOURCE
 			uint64_t firstChange;
 			uint64_t nextChange;
 			uint32_t sequence;
+			bool isRedo;
+			bool isCurrent;
+			uint32_t archivedThread;
+			std::string status;
 		};
 		struct oracleInstance
 		{
@@ -79,7 +84,7 @@ namespace DATA_SOURCE
 
 					if (currentFile != instance->currentLogFile.fileName)
 					{
-						instance->readStmt->execute("BEGIN DBMS_LOGMNR.ADD_LOGFILE(LOGFILENAME = > ? , OPTIONS = > DBMS_LOGMNR.NEW); END");
+						instance->readStmt->execute("BEGIN SYS.DBMS_LOGMNR.ADD_LOGFILE(LOGFILENAME = > ? , OPTIONS = > DBMS_LOGMNR.NEW); END");
 						uint64ToOracleNumber((OCINumber*)&start, instance->currentLogFile.firstChange);
 					}
 					else
@@ -99,9 +104,8 @@ namespace DATA_SOURCE
 						uint64ToOracleNumber((OCINumber*)&end, databaseCurrentScn);
 					}
 
-					instance->readStmt->setSQL("BEGIN DBMS_LOGMNR.START_LOGMNR(STARTSCN => ? , ENDSCN => ? );END;");
+					instance->readStmt->setSQL("BEGIN DBMS_LOGMNR.START_LOGMNR(STARTSCN => ?);END;");
 					instance->readStmt->setNumber(1, start);
-					instance->readStmt->setNumber(2, end);
 					instance->readStmt->execute();
 
 					instance->readStmt->setSQL("SELECT SQL_REDO , SCN, TIMESTAMP, XID, OPERATION_CODE, ROLLBACK, ROW_ID, DATA_OBJ#, CSF  FROM V$LOGMNR_CONTENTS");
@@ -127,8 +131,6 @@ namespace DATA_SOURCE
 					instance->readRs = nullptr;
 					return ORACLE_READER_CODE::ALL_RESULT_READED;
 				}
-				instance->readRs.
-				if()
 			}
 			catch (oracle::occi::SQLException exp)
 			{
@@ -138,7 +140,6 @@ namespace DATA_SOURCE
 				else
 					return ORACLE_READER_CODE::FATAL_ERROR;
 			}
-
 		}
 		ORACLE_READER_CODE read(oracleInstance* instance, oracleLogEntry *&entry)
 		{
@@ -157,12 +158,7 @@ CHECK:
 			switch (code)
 			{
 			case ORACLE_READER_CODE::NEED_RECONNECT:
-				if (instance->readStmt != nullptr)
-				{
-					instance->conn->terminateStatement(instance->readStmt);
-					instance->readStmt = nullptr;
-				}
-				delete instance->conn;
+				m_connector->close(instance->conn, instance->readStmt, instance->readRs);
 				if (nullptr == (instance->conn = m_connector->connect()))
 					return ORACLE_READER_CODE::FATAL_ERROR;
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));//sleep 1s every reconect
@@ -224,26 +220,19 @@ CHECK:
 					rs = stmt->executeQuery(sql);
 					if (rs == nullptr || !rs->next())
 					{
-						if (rs != nullptr)
-							stmt->closeResultSet(rs);
-						conn->terminateStatement(stmt);
+						m_connector->closeStmt(conn, stmt, rs);
 						LOG(ERROR) << "get log file by scn:" << scn << " failed for empty result";
 						return ORACLE_READER_CODE::FATAL_ERROR;
 					}
 				}
 				getLogFileByScnFromResult(rs, fileInfo);
 				LOG(INFO) << "find scn " << scn << " in log file:" << fileInfo.fileName;
-				stmt->closeResultSet(rs);
-				rs = nullptr;
-				conn->terminateStatement(stmt);
+				m_connector->closeStmt(conn, stmt, rs);
 				return ORACLE_READER_CODE::OK;
 			}
 			catch (oracle::occi::SQLException exp) {
 				LOG(ERROR) << "getLogFileByScn failed for:" << exp.getErrorCode() << ":" << exp.getMessage();
-				if (rs != nullptr)
-					stmt->closeResultSet(rs);
-				if (stmt != nullptr)
-					conn->terminateStatement(stmt);
+				m_connector->closeStmt(conn, stmt, rs);
 				if (oracleConnect::errorRecoverable(exp.getErrorCode()))
 					return ORACLE_READER_CODE::NEED_RECONNECT;
 				else
@@ -269,17 +258,12 @@ CHECK:
 				}
 				oracle::occi::Number number = rs->getNumber(1);
 				oracleNumberToUInt64((const uint8_t*)&number, scn, true);
-				stmt->closeResultSet(rs);
-				rs = nullptr;
-				conn->terminateStatement(stmt);
+				m_connector->closeStmt(stmt, rs);
 				return ORACLE_READER_CODE::OK;
 			}
 			catch (oracle::occi::SQLException exp) {
 				LOG(ERROR) << "get current scn from database failed for :" << exp.getErrorCode() << ":" << exp.getMessage();
-				if (rs != nullptr)
-					stmt->closeResultSet(rs);
-				if (stmt != nullptr)
-					conn->terminateStatement(stmt);
+				m_connector->closeStmt(stmt, rs);
 				if (oracleConnect::errorRecoverable(exp.getErrorCode()))
 					return ORACLE_READER_CODE::NEED_RECONNECT;
 				else

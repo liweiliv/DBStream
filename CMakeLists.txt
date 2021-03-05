@@ -87,6 +87,22 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	endif()
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
+
+#oracleClient
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	SET(ORACLE_INCLUDE_PATH "thirdParty/oracle/linux/include")
+	find_library(ORACLE_CLIENT occi thirdParty/oracle/linux/lib)
+	if(NOT ORACLE_CLIENT)
+        message(FATAL_ERROR "occi not found")
+	endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(ORACLE_INCLUDE_PATH "thirdparty/oracle/windows/include")
+	find_library(ORACLE_CLIENT names oci oraocci19d "thirdParty/oracle/windows/lib/")
+	if(NOT ORACLE_CLIENT)
+        message(FATAL_ERROR "occi not found")
+	endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 #boost
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	SET(BOOST_INCLUDE_PATH "D:\\boost\\boost_1_73_0")
@@ -143,6 +159,12 @@ target_include_directories(sqlParser PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_
 add_library(mysqlParserFuncs SHARED sqlParser/mysqlParseFunc/mysqlSqlParserFuncs.cpp)
 TARGET_LINK_LIBRARIES(mysqlParserFuncs meta ${GLOG} ${GLFAGS})
 target_include_directories(mysqlParserFuncs PUBLIC ${MYSQL_INCLUDE_PATH})
+
+#sql parser v2
+aux_source_directory(sqlParserV2 sqlparserV2Dir)
+add_library(sqlParserV2 SHARED ${sqlparserV2Dir})
+TARGET_LINK_LIBRARIES(sqlParserV2 util thread ${GLOG} ${GLFAGS})
+target_include_directories(sqlParserV2 PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 #memory
 aux_source_directory(memory memoryDir)
@@ -438,3 +460,15 @@ target_include_directories(testKvTable PUBLIC ${TBB_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testKvTable pthread tbb)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+
+ADD_EXECUTABLE(testSqlWordV2  sqlParserV2/unittest/testSqlWord.cpp)
+TARGET_LINK_LIBRARIES(testSqlWordV2 util sqlParserV2 thread)
+target_include_directories(testSqlWordV2 PUBLIC)
+
+ADD_EXECUTABLE(testOracleConect  dataSource/oracleDataSource/unittest/testOracleConnect.cpp)
+TARGET_LINK_LIBRARIES(testOracleConect util ${ORACLE_CLIENT})
+target_include_directories(testOracleConect PUBLIC)
+target_include_directories(testOracleConect PRIVATE ${ORACLE_INCLUDE_PATH})
+
+#	target_include_directories(oracleDataSource PRIVATE  thirdparty/oracle/windows/include)

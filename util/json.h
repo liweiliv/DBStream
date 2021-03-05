@@ -10,86 +10,78 @@
 #include <list>
 #include <string>
 #include <stdint.h>
-#include "winDll.h"
+#include "status.h"
 using namespace std;
+enum class JSON_TYPE
+{
+	J_STRING,
+	J_NUM,
+	J_OBJECT,
+	J_ARRAY,
+	J_BOOL,
+	J_NULL_TYPE,
+	J_INVALID_TYPE
+};
 class DLL_EXPORT jsonValue
 {
 public:
-    enum type
-    {
-        J_STRING,
-        J_NUM,
-        J_OBJECT,
-        J_ARRAY,
-        J_BOOL,
-        J_NULLTYPE
-    };
-
-    type t;
-    jsonValue(type _t);
-    virtual ~jsonValue(){};
-    virtual string toString(int level = 0)const  =0 ;
-    static type getType(const char * data);
-    static jsonValue * Parse(const char* data,int &size);
+	JSON_TYPE t;
+	jsonValue(JSON_TYPE _t);
+	virtual ~jsonValue() {};
+	virtual string toString(int level = 0)const = 0;
+	static JSON_TYPE getType(const char* data);
+	static dsStatus& parse(jsonValue* &value,const char* data, int& size);
+	virtual dsStatus& parse(const char* data, int& size) = 0;
 };
 class DLL_EXPORT jsonString :public jsonValue
 {
 public:
-    std::string m_value;
-    jsonString(const char * data=NULL);
-    int parse(const char * data);
-    string toString(int level = 0) const;
-    ~jsonString(){}
+	std::string m_value;
+	jsonString(const char* data = nullptr);
+	dsStatus& parse(const char* data,int & size);
+	string toString(int level = 0) const;
+	~jsonString() {}
 };
 class DLL_EXPORT jsonNum :public jsonValue
 {
 public:
-    long m_value;
-    jsonNum(const char * data = NULL);
-    int parse(const char * data);
-    string toString(int level = 0) const;
-    ~jsonNum(){}
+	long m_value;
+	jsonNum(const char* data = nullptr);
+	dsStatus& parse(const char* data, int& size);
+	string toString(int level = 0) const;
+	~jsonNum() {}
 };
+typedef std::map<std::string, jsonValue*> jsonObjectMap;
 class DLL_EXPORT jsonObject :public jsonValue
 {
 public:
-    struct objectKeyValuePair {
-        std::string key;
-        jsonValue* value;
-        objectKeyValuePair(const char* k, jsonValue* v) :key(k), value(v) {}
-        objectKeyValuePair(const objectKeyValuePair& kv)
-        {
-            key = kv.key;
-            value = kv.value;
-        }
-    };
-    std::list<objectKeyValuePair> m_valueList;
-    std::map<std::string, jsonValue *> m_values;
-    jsonObject(const char * data=NULL);
-    const jsonValue * get(const string &s)const;
+	std::list<std::pair<std::string, jsonValue*> > m_valueList;
+	jsonObjectMap m_values;
+	jsonObject(const char* data = nullptr);
+	const jsonValue* get(const string& s)const;
 	const jsonValue* get(const char* s)const;
-    ~jsonObject();
-    void clean();
-    int parse(const char * data);
-    string toString(int level = 0) const;
+	~jsonObject();
+	void clean();
+	dsStatus& parse(const char* data, int& size);
+	string toString(int level = 0) const;
 };
 class DLL_EXPORT jsonArray :public jsonValue
 {
 public:
-    std::list<jsonValue*> m_values;
-    jsonArray(const char * data=NULL);
-    ~jsonArray();
-    void clean();
-    int parse(const char * data);
-    string toString(int level = 0) const;
+	std::list<jsonValue*> m_values;
+	jsonArray(const char* data = nullptr);
+	~jsonArray();
+	void clean();
+	dsStatus& parse(const char* data, int& size);
+	string toString(int level = 0) const;
 };
 class DLL_EXPORT jsonBool :public jsonValue
 {
 public:
-    bool m_value;
-    jsonBool(const char * data = NULL);
-    int parse(const char * data);
-    string toString(int level = 0)const;
+	bool m_value;
+	jsonBool(const char* data = nullptr);
+	dsStatus& parse(const char* data, int& size);
+	string toString(int level = 0)const;
 };
 
 #endif

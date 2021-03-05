@@ -41,6 +41,7 @@ namespace SHELL {
 	constexpr static int MAX_GROUP_BY_COLUMN_COUNT = 32;
 	constexpr static int MAX_JOIN_COLUMN_COUNT = 32;
 
+	 
 	struct tableNameInfo {
 		const char* tableName;
 		uint16_t tableNameSize;
@@ -49,24 +50,41 @@ namespace SHELL {
 		const char* alias;
 		uint16_t aliasSize;
 	};
-	struct selectSqlInfo :public sqlBasicInfo {
+	enum class FIELDS_TYPE {
+		SELECT_FROM_TABLE,
+		SELECT_FROM_JOIN_TABLE
+	};
+	struct fieldsInfo :public sqlBasicInfo {
+		uint64_t tableId;
+		const META::tableMeta* table;
+		tableNameInfo alias;
+	};
+	struct joinInfo :public sqlBasicInfo {
+		fieldsInfo* join;
+		bool innerJoin;
+		bool crossJoin;
+		bool straightJoin;
+		bool leftjoin;
+		bool rightJoin;
+		bool outerJoin;
+		bool naturalJoin;
+		fieldsInfo* joined[MAX_JOIN_TABLE_COUNT];
+		uint32_t joinedCount;
+		expressionField* joinedCondition;
+		tableNameInfo joinOnColumns[MAX_JOIN_COLUMN_COUNT];
+		uint32_t joinOnColumnsCount;
+	};
+	struct selectSqlInfo :public fieldsInfo {
 		const char* usedDatabase;
-		tableNameInfo selectTable;
-		uint64_t selectTableId;
-		tableNameInfo joinTables[MAX_JOIN_TABLE_COUNT];
-		uint64_t joinedTableIds[MAX_JOIN_TABLE_COUNT];
-		uint8_t joinTablesCount;
+		fieldsInfo* selectTable;
 		int selectFieldCount;
+		//select field
 		Field* selectField[MAX_SELECT_FIELD_COUNT];
+		//group by columns
 		SQL_PARSER::SQLColumnNameValue* inGroupColumns[MAX_GROUP_BY_COLUMN_COUNT];
 		uint8_t gourpColumnCount;
-
-		sqlList<const char*> joinedUsingColumns;
-		JOIN_TYPE joinType;
-		expressionField* joinedCondition;
+		//join using(columnName)
 		expressionField* whereCondition;
-		sqlList<Field*> groupBy;
-		sqlList<columnFiled*> groupByColumnNames;
 		expressionField* havCondition;
 		uint32_t limitCount;
 		uint32_t limitOffset;
@@ -74,70 +92,24 @@ namespace SHELL {
 		bool orderByDesc;
 		void init()
 		{
-			usedDatabase = nullptr;
-			type = SELECT_SQL;
-			table = nullptr;
-			selectFields.init();
-			joinedTables.init();
-			joinedUsingColumns.init();
-			joinedCondition = nullptr;
-			joinType = LEFT_JOIN;
-			whereCondition = nullptr;
-			groupBy.init();
-			groupByColumnNames.init();
-			havCondition = nullptr;
-			limitCount = 0;
-			limitOffset = 0;
-			orderBy = nullptr;
-			orderByDesc = false;
 		}
-		bool isGroupColumn(const char* columnName, uint64_t tableId)
+		bool isGroupColumn(SQL_PARSER::SQLColumnNameValue* column)
 		{
-			for (uint32_t idx = 0; idx < groupByColumnNames.size; idx++)
+			for (uint32_t idx = 0; idx < gourpColumnCount; idx++)
 			{
-				if (tableId == groupByColumnNames.list[idx]->tableId)
-				{
-					if (strcmp(groupByColumnNames.list[idx]->name, columnName) == 0 ||
-						strcmp(groupByColumnNames.list[idx]->alias, columnName) == 0)
-					{
-						return true;
-					}
-				}
+				if (*inGroupColumns[idx] == *column)
+					return true;
 			}
 			return false;
 		}
-		bool addGroupColumn(columnFiled* column)
+		bool addGroupColumn(SQL_PARSER::SQLColumnNameValue* column)
 		{
-			if (isGroupColumn(column->name, column->tableId))
+			if (gourpColumnCount >= MAX_GROUP_BY_COLUMN_COUNT)
 				return false;
-			groupByColumnNames.add(column);
+			if (isGroupColumn(column))
+				return false;
+			inGroupColumns[gourpColumnCount] = column;
 			return true;
-		}
-		int8_t getTable(const char* database, const char* tableName)
-		{
-			if (database == nullptr)
-			{
-				if (tableName == nullptr)
-					return 0;
-				if (strcmp(alias, tableName) == 0)
-					return 0;
-				for (uint32_t idx = 0; idx < joinedTablesAlias.size; idx++)
-				{
-					if (joinedTablesAlias.list[idx] != nullptr && strcmp(joinedTablesAlias.list[idx], tableName) == 0)
-						return 0;
-				}
-				if (usedDatabase == nullptr)
-					return -1;
-				database = usedDatabase;
-			}
-			if (table->isMe(database, tableName))
-				return 0;
-			for (uint32_t idx = 0; idx < joinedTables.size; idx++)
-			{
-				if (joinedTables.list[idx]->isMe(database, tableName))
-					return idx;
-			}
-			return -1;
 		}
 	};
 }

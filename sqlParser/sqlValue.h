@@ -41,16 +41,44 @@ namespace SQL_PARSER {
 			quote = true;
 			return *this;
 		}
+		inline bool operator==(const stringValue& v) const
+		{
+			if (size != v.size)
+				return false;
+			if (name == v.name)
+				return true;
+			return strcmp(name, v.name) == 0;
+		}
+		inline bool operator==(const const char* v) const
+		{
+			if (strncmp(name, v, size) != 0)
+				return false;
+			if (v[size] != '\0')
+				return false;
+			return true;
+		}
+		inline bool operator!=(const const char* v) const
+		{
+			if (strncmp(name, v, size) != 0)
+				return true;
+			if (v[size] != '\0')
+				return true;
+			return false;
+		}
 		~stringValue()
 		{
 			if (!quote && name != nullptr)
 				delete[](char*)name;
 		}
-		inline std::string toString()
+		inline std::string toString() const
 		{
 			if (name == nullptr)
 				return "";
 			return std::string(name, size);
+		}
+		inline bool empty() const
+		{
+			return name == nullptr || size == 0;
 		}
 	};
 	class SQLValue {
@@ -128,6 +156,10 @@ namespace SQL_PARSER {
 		stringValue table;
 		stringValue columnName;
 		SQLColumnNameValue() :SQLValue(SQLValueType::COLUMN_NAME_TYPE) {}
+		inline bool operator==(const SQLColumnNameValue& dest)
+		{
+			return database == dest.database && table == dest.table && columnName == dest.columnName;
+		}
 	};
 	constexpr static int MAX_FUNC_ARGV_COUNT = 32;
 	class SQLFunctionValue :public SQLValue {

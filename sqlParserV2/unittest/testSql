@@ -1,0 +1,24 @@
+{
+	"alter table": {
+		"is head": true,
+		"child": [
+			"ALTER",
+			"TABLE",
+			{ "identifier word": "alterTableName" },
+			"ADD",
+			"COLUMN",
+			{ "identifier word": "alterTableColumn" }
+		]
+	},
+	"alter table 1": {
+		"is head": true,
+		"child": [
+			"ALTER",
+			"TABLE",
+			{ "identifier word": "alterTableName" },
+			"DROP",
+			"COLUMN",
+			{ "identifier word": "alterTableColumn" }
+		]
+	}
+}

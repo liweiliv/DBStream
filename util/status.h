@@ -83,7 +83,7 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 #define dsReturnForFailed(errInfo) do{getLocalStatus().addStack(currentStack(errInfo));return getLocalStatus();}while(0)
 
 
-#define dsFailed(code,errInfo)  do{setFailed((code),(errInfo),currentStack(errInfo));return getLocalStatus();}while(0)
+#define dsFailed(code,errInfo)  do{String __s;__s = __s<<errInfo;setFailed((code),(__s),currentStack(__s));return getLocalStatus();}while(0)
 
 #define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus();}while(0)
 
@@ -96,3 +96,6 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 #define dsCheckButIgnore(status) do{dsStatus& __s = (status);if(unlikely(!dsCheck(__s))){LOG(WARNING)<<__s.toString(); __s.clear();}}while(0);
 
 #define dsTest(status) do{dsStatus& __s = (status);if(unlikely(!dsCheck(__s))){LOG(ERROR)<<__s.toString();abort();}}while(0);
+
+#define resetStatus() do{if(!dsCheck(getLocalStatus())){getLocalStatus().clear();setLocalStatus(DS_OK);}}while(0);
+

@@ -3,7 +3,7 @@
 #include "message/record.h"
 #include "database/database.h"
 #include "database/iterator.h"
-#include "nameCompare.h"
+#include "util/nameCompare.h"
 #include "util/sparsepp/spp.h"
 namespace META {
 	enum class IS_TABLE_ID {
@@ -11,14 +11,14 @@ namespace META {
 		STATISTIC_ID,
 		MAX_TABLE_ID
 	};
-	typedef spp::sparse_hash_map<const char*, tableMeta*, nameCompare, nameCompare> tableHashMap;
+	typedef spp::sparse_hash_map<const char*, tableMeta*, UTIL::nameCompare, UTIL::nameCompare> tableHashMap;
 	static constexpr auto IF_SHEMA_NAME = "information_schema";
 	class informationSchema :public metaDataBaseCollection
 	{
 	private:
 		tableHashMap m_tables;
 		DATABASE::database * m_file;
-		nameCompare m_nameCompare;
+		UTIL::nameCompare m_nameCompare;
 		tableMeta* m_tablesById[static_cast<int>(IS_TABLE_ID::MAX_TABLE_ID)];
 		void tables()
 		{

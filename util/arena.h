@@ -19,6 +19,7 @@ class DLL_EXPORT Arena {
  public:
   Arena();
   ~Arena();
+  void clear();
 
   // Return a pointer to a newly allocated memory block of "bytes" bytes.
   char* Allocate(size_t bytes);

@@ -34,7 +34,7 @@ namespace SQL_PARSER
 {
 	bool sqlParser::getLoopCondition(const jsonValue* loop, SQLWord*& condition)
 	{
-		if (loop->t == jsonValue::J_STRING)
+		if (loop->t == JSON_TYPE::J_STRING)
 		{
 			if (strncasecmp(static_cast<const jsonString*>(loop)->m_value.c_str(), "always", 7) == 0)
 			{
@@ -50,7 +50,7 @@ namespace SQL_PARSER
 					return false;
 			}
 		}
-		else if (loop->t == jsonValue::J_OBJECT)
+		else if (loop->t == JSON_TYPE::J_OBJECT)
 		{
 			condition = loadWordArrayFromJson(static_cast<const jsonObject*>(loop), nullptr, nullptr);
 			if (condition != nullptr)
@@ -86,7 +86,7 @@ namespace SQL_PARSER
 	{
 		for (std::list<jsonValue*>::const_iterator iter = value->m_values.begin(); iter != value->m_values.end(); iter++)
 		{
-			if ((*iter)->t != jsonObject::J_STRING)
+			if ((*iter)->t != JSON_TYPE::J_STRING)
 			{
 				LOG(ERROR) << "expect string type in [" << value->toString() << "]";
 				return false;
@@ -129,7 +129,7 @@ namespace SQL_PARSER
 		parserFuncType func = nullptr;
 		if (value != nullptr)
 		{
-			if (value->t != jsonObject::J_BOOL)
+			if (value->t != JSON_TYPE::J_BOOL)
 			{
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -138,7 +138,7 @@ namespace SQL_PARSER
 		}
 		if (nullptr != (value = json->get("F")))
 		{
-			if (value->t != jsonValue::J_STRING)
+			if (value->t != JSON_TYPE::J_STRING)
 			{
 				LOG(ERROR) << "function type expect string type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -150,7 +150,7 @@ namespace SQL_PARSER
 			}
 		}
 		value = json->get("K");
-		if (value == nullptr || value->t != jsonValue::J_STRING)
+		if (value == nullptr || value->t != JSON_TYPE::J_STRING)
 		{
 			LOG(ERROR) << "expect key value pair :\"K\":\"type info\" by string type in [" << json->toString() << "]";
 			return nullptr;
@@ -175,7 +175,7 @@ namespace SQL_PARSER
 		SQLWordArray* array = nullptr;
 		if ((value = json->get("OPT")) != nullptr)
 		{
-			if (value->t != jsonValue::J_BOOL)
+			if (value->t != JSON_TYPE::J_BOOL)
 			{
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -184,7 +184,7 @@ namespace SQL_PARSER
 		}
 		if ((value = json->get("OR")) != nullptr)
 		{
-			if (value->t != jsonValue::J_BOOL)
+			if (value->t != JSON_TYPE::J_BOOL)
 			{
 				LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -193,7 +193,7 @@ namespace SQL_PARSER
 		}
 		if (nullptr != (value = json->get("DECLARE")))
 		{
-			if (value->t != jsonValue::J_ARRAY)
+			if (value->t != JSON_TYPE::J_ARRAY)
 			{
 				LOG(ERROR) << "expect array type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 				return nullptr;
@@ -221,7 +221,7 @@ namespace SQL_PARSER
 			return nullptr;
 		}
 
-		if (value->t != jsonObject::J_ARRAY)
+		if (value->t != JSON_TYPE::J_ARRAY)
 		{
 			LOG(ERROR) << "expect array type in [" << value->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 			return nullptr;
@@ -256,7 +256,7 @@ namespace SQL_PARSER
 			static_cast<const jsonArray*>(value)->m_values.begin();
 			iter != static_cast<const jsonArray*>(value)->m_values.end(); iter++)
 		{
-			if ((*iter)->t != jsonObject::J_OBJECT)
+			if ((*iter)->t != JSON_TYPE::J_OBJECT)
 			{
 				delete array;
 				LOG(ERROR) << "expect object type in [" << (*iter)->toString() << "]" << " ,occurred in [" << json->toString() << "]";
@@ -274,7 +274,7 @@ namespace SQL_PARSER
 			}
 			else if ((inc = static_cast<jsonObject*>(*iter)->get("INCLUDE")) != nullptr)
 			{
-				if (inc->t != jsonValue::J_STRING)
+				if (inc->t != JSON_TYPE::J_STRING)
 				{
 					LOG(ERROR) << "expect string type in INCLUDE : [" << (*iter)->toString() << "]" << " ,occurred in [" << json->toString() << "]";
 					delete array;
@@ -443,25 +443,25 @@ namespace SQL_PARSER
 				LOG(ERROR) << "load parse tree from " << p << " failed for json string is parse failed";
 				return -1;
 			}
-			if (segment->t != jsonValue::J_OBJECT)
+			if (segment->t != JSON_TYPE::J_OBJECT)
 			{
 				LOG(ERROR) << "expect object type in [" << segment->toString() << "]";
 				delete segment;
 				return -1;
 			}
-			for (std::list<jsonObject::objectKeyValuePair>::const_iterator iter = static_cast<jsonObject*>(segment)->m_valueList.begin(); iter != static_cast<jsonObject*>(segment)->m_valueList.end(); iter++)
+			for (std::list<std::pair<std::string, jsonValue*> >::const_iterator iter = static_cast<jsonObject*>(segment)->m_valueList.begin(); iter != static_cast<jsonObject*>(segment)->m_valueList.end(); iter++)
 			{
-				if ((*iter).value->t != jsonValue::J_OBJECT)
+				if ((*iter).second->t != JSON_TYPE::J_OBJECT)
 				{
-					LOG(ERROR) << "expect object type in [" << (*iter).value->toString() << "]";
+					LOG(ERROR) << "expect object type in [" << (*iter).second->toString() << "]";
 					delete segment;
 					return -1;
 				}
-				jsonObject* sentence = static_cast<jsonObject*>((*iter).value);
+				jsonObject* sentence = static_cast<jsonObject*>((*iter).second);
 				const jsonValue* value;
 				bool head = false;
 
-				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t != jsonValue::J_ARRAY)
+				if ((value = static_cast<jsonObject*>(sentence)->get("C")) == nullptr || value->t != JSON_TYPE::J_ARRAY)
 				{
 					delete segment;
 					LOG(ERROR) << "expect \"C\":[child info ] as array type in [" << static_cast<jsonObject*>(sentence)->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
@@ -469,7 +469,7 @@ namespace SQL_PARSER
 				}
 				if ((value = static_cast<jsonObject*>(sentence)->get("HEAD")) != nullptr)
 				{
-					if (value->t != jsonObject::J_BOOL)
+					if (value->t != JSON_TYPE::J_BOOL)
 					{
 						delete segment;
 						LOG(ERROR) << "expect bool type in [" << value->toString() << "]" << " ,occurred in [" << sentence->toString() << "]";
@@ -478,7 +478,7 @@ namespace SQL_PARSER
 					head = static_cast<const jsonBool*>(value)->m_value;
 				}
 
-				SQLWordArray* s = loadWordArrayFromJson(sentence, (*iter).key.c_str(), nullptr);
+				SQLWordArray* s = loadWordArrayFromJson(sentence, (*iter).first.c_str(), nullptr);
 				if (s == nullptr)
 				{
 					delete segment;
@@ -486,9 +486,9 @@ namespace SQL_PARSER
 					return -1;
 				}
 				s->include();
-				m_parseTree.insert(pair<std::string, SQLWordArray*>(iter->key, s));
+				m_parseTree.insert(pair<std::string, SQLWordArray*>((*iter).first, s));
 				if (head)
-					m_parseTreeHead.insert(pair<std::string, SQLWordArray*>(iter->key, s));
+					m_parseTreeHead.insert(pair<std::string, SQLWordArray*>((*iter).first, s));
 			}
 			delete segment;
 			p = nextWord(p + size);

@@ -37,7 +37,7 @@ public:
 			return false;
 		return true;
 	}
-	config(const char* path) :m_filePath(path == nullptr ? "" : path)
+	config(const char* path = nullptr) :m_filePath(path == nullptr ? "" : path)
 	{
 	}
 	~config()

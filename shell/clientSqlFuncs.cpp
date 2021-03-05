@@ -1,3 +1,4 @@
+#include <stack>
 #include "meta/metaDataCollection.h"
 #include "meta/charset.h"
 #include "sqlParser/sqlParserHandle.h"
@@ -10,6 +11,27 @@
 namespace SHELL {
 	static threadLocal<SQL_PARSER::SQLValue*> selectValues;
 	static threadLocal<char*> selectValueAlias;
+	struct sqlHandleInfo {
+		sqlBasicInfo* current;
+		std::stack<sqlBasicInfo*> stack;
+		inline bool finish()
+		{
+			if (current == nullptr)
+				return false;
+			stack.pop();
+			current = stack.empty() ? nullptr : stack.top();
+			return true;
+		}
+		inline void push(sqlBasicInfo* sql)
+		{
+			stack.push(sql);
+			current = sql;
+		}
+	};
+	extern "C" DLL_EXPORT  SQL_PARSER::parseValue finishCurrentSql(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
+	{
+		return static_cast<sqlHandleInfo*>(h->userData)->finish() ? SQL_PARSER::parseValue::INVALID : SQL_PARSER::parseValue::OK;
+	}
 	static inline SQL_PARSER::SQLValue** getSelectValues()
 	{
 		SQL_PARSER::SQLValue** values;
@@ -32,10 +54,23 @@ namespace SHELL {
 	}
 	static inline const META::tableMeta* getMeta(SQL_PARSER::handle* h, const SQL_PARSER::SQLTableNameValue* table)
 	{
-		const char* database = table->database.empty() ? (h->dbName.empty() ? nullptr : h->dbName.c_str()) : table->database.c_str();
+		char db[256], tb[256];
+		const char* database = nullptr;
+		if (table->database.empty())
+		{
+			database = h->dbName.empty() ? nullptr : h->dbName.c_str();
+		}
+		else
+		{
+			memcpy(db, table->database.name, table->database.size);
+			db[table->database.size] = '\0';
+			database = db;
+		}
 		if (database == nullptr)
 			return nullptr;
-		return shellMetaCenter->get(database, table->table.c_str());
+		memcpy(tb, table->table.name, table->table.size);
+		tb[table->table.size] = '\0';
+		return shellMetaCenter->get(db, tb);
 	}
 #define GET_SELECT_TABLE static_
 	inline void createSelectSqlInfo(SQL_PARSER::handle* h)
@@ -54,21 +89,14 @@ namespace SHELL {
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		assert(value->type == SQL_PARSER::SQLValueType::TABLE_NAME_TYPE);
-		const char* database = static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.empty() ? (h->dbName.empty() ? nullptr : h->dbName.c_str()) : static_cast<SQL_PARSER::SQLTableNameValue*>(value)->database.c_str();
-		if (database == nullptr)
-			return SQL_PARSER::INVALID;
-		if (nullptr == (sql->table = shellMetaCenter->get(database, static_cast<SQL_PARSER::SQLTableNameValue*>(value)->table.c_str())))
+		if ((sql->table = getMeta(h, static_cast<SQL_PARSER::SQLTableNameValue*>(value))) == nullptr)
 			return SQL_PARSER::INVALID;
 		return SQL_PARSER::OK;
 	}
 	static inline rawField* SQLValue2String(SQL_PARSER::SQLValue* value)
 	{
 		rawField* field = (rawField*)shellGlobalBufferPool->alloc(sizeof(rawField));
-		varLenValue* v = (varLenValue*)shellGlobalBufferPool->alloc(sizeof(varLenValue));
-		v->size = static_cast<SQL_PARSER::SQLStringValue*>(value)->size;
-		v->value = static_cast<SQL_PARSER::SQLStringValue*>(value)->value;
-		v->alloced = false;
-		field->init(v, META::COLUMN_TYPE::T_STRING);
+		field->init(value, META::COLUMN_TYPE::T_STRING);
 		return field;
 	}
 	static inline rawField* SQLValue2Int(SQL_PARSER::SQLValue* value)
@@ -432,5 +460,14 @@ namespace SHELL {
 			sql->selectFields.add(field);
 		}
 		return true;
+	}
+
+	extern "C" DLL_EXPORT  SQL_PARSER::parseValue selectTableReferences(SQL_PARSER::handle * h, SQL_PARSER::SQLValue * value)
+	{
+		sqlHandleInfo* handle = static_cast<sqlHandleInfo*>(h->userData);
+		if (handle->current == nullptr)
+			return SQL_PARSER::parseValue::INVALID;
+		selectSqlInfo* sql = static_cast<selectSqlInfo*>(handle->current);
+
 	}
 }

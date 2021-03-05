@@ -11,14 +11,14 @@ int testSQLCharWord()
 		const char* s = &str[0];
 		SQL_PARSER::SQLCharWord word(false, str);
 		SQL_PARSER::SQLValue* value;
-		if (idx == ' ' || idx == '\t' || idx == '\n' ||idx=='\r')
+		if (idx == ' ' || idx == '\t' || idx == '\n' || idx == '\r')
 			continue;
-		if ((value = word.match(&h, s,true)) == NOT_MATCH_PTR ||static_cast<SQL_PARSER::SQLCharValue*>(value)->value!= word.m_word||s!=&str[1])
+		if ((value = word.match(&h, s, true)) == NOT_MATCH_PTR || static_cast<SQL_PARSER::SQLCharValue*>(value)->value != word.m_word || s != &str[1])
 		{
-			printf("test %s failed @%d\n", __FUNCTION__,__LINE__);
+			printf("test %s failed @%d\n", __FUNCTION__, __LINE__);
 			return -1;
 		}
-		else if(value!=nullptr)
+		else if (value != nullptr)
 			delete value;
 	}
 	return 0;
@@ -96,7 +96,7 @@ int testSQLTableNameWord()
 {
 	const char* _sql;
 	SQL_PARSER::handle h;
-	SQL_PARSER::SQLTableNameWord word(false,false);
+	SQL_PARSER::SQLTableNameWord word(false, false);
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("\"name\".\"name1\"");
 	checkTable(value, "name", "name1");
@@ -171,7 +171,7 @@ int testSQLTableNameWord1()
 	checkTable(value, "name", "name1");
 	delete value;
 	MATCH_ASSERT_SUCCESS("name");
-	checkTable(value, "","name");
+	checkTable(value, "", "name");
 	delete value;
 	MATCH_ASSERT_SUCCESS("\"name\"");
 	checkTable(value, "", "name");
@@ -329,7 +329,7 @@ int testSQLColumnNameWord()
 	delete value;
 	MATCH_ASSERT_FAIL("`name1'.name2");
 	MATCH_ASSERT_SUCCESS("`name`.`name1.`name2`");
-	checkColumn(value,"", "name", "name1.");
+	checkColumn(value, "", "name", "name1.");
 	delete value;
 	MATCH_ASSERT_FAIL("`name2");
 	MATCH_ASSERT_FAIL("`name2`.");
@@ -339,7 +339,7 @@ int testSQLColumnNameWord1()
 {
 	const char* _sql;
 	SQL_PARSER::handle h;
-	SQL_PARSER::SQLColumnNameWord word(false,'`');
+	SQL_PARSER::SQLColumnNameWord word(false, '`');
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("`name`.`name1`.`name2`");
 	checkColumn(value, "name", "name1", "name2");
@@ -383,12 +383,12 @@ int testSQLColumnNameWord1()
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
 	}\
-	if(str==nullptr&&!static_cast<SQL_PARSER::SQLStringValue*>(svalue)->size!=0)\
+	if(str==nullptr&&static_cast<SQL_PARSER::SQLStringValue*>(svalue)->value.size!=0)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
 	}\
-	if(strlen(str)!=static_cast<SQL_PARSER::SQLStringValue*>(svalue)->size||memcmp(static_cast<SQL_PARSER::SQLStringValue*>(svalue)->value,str,static_cast<SQL_PARSER::SQLStringValue*>(svalue)->size)!=0)\
+	if(strlen(str)!=static_cast<SQL_PARSER::SQLStringValue*>(svalue)->value.size||memcmp(static_cast<SQL_PARSER::SQLStringValue*>(svalue)->value.name,str,static_cast<SQL_PARSER::SQLStringValue*>(svalue)->value.size)!=0)\
 	{\
 			printf("test %s failed @%d\n", __FUNCTION__, __LINE__); \
 			return -1; \
@@ -432,7 +432,7 @@ int testSQLStringWord()
 {
 	const char* _sql;
 	SQL_PARSER::handle h;
-	SQL_PARSER::SQLStringWord word(false,"asdf123");
+	SQL_PARSER::SQLStringWord word(false, "asdf123");
 	SQL_PARSER::SQLValue* value;
 	MATCH_ASSERT_SUCCESS("asdf123");
 	delete value;
@@ -608,7 +608,7 @@ int testSQLWordExpressions()
 {
 	const char* _sql;
 	SQL_PARSER::handle h;
-	SQL_PARSER::SQLWordExpressions word(false,false,'`');
+	SQL_PARSER::SQLWordExpressions word(false, false, '`');
 	SQL_PARSER::SQLValue* value;
 	SQL_PARSER::SQLExpressionValue* exp = nullptr;
 	MATCH_ASSERT_FAIL("(a+b)/c+");
@@ -692,20 +692,17 @@ int testSQLWordExpressions()
 	checkOpt(exp->valueStack[4], SQL_PARSER::DIVISION);
 	if (exp->valueStack[5]->type != SQL_PARSER::SQLValueType::FUNCTION_TYPE)
 	{
-		printf("test %s failed @%d\n", __FUNCTION__, __LINE__); 
+		printf("test %s failed @%d\n", __FUNCTION__, __LINE__);
 		return -1;
 	}
 	SQL_PARSER::SQLFunctionValue* f = static_cast<SQL_PARSER::SQLFunctionValue*>(exp->valueStack[5]);
-	if (f->argvs.size() != 2)
+	if (f->argvCount != 2)
 	{
 		printf("test %s failed @%d\n", __FUNCTION__, __LINE__);
 		return -1;
 	}
-	std::list<SQL_PARSER::SQLValue*>::iterator iter = f->argvs.begin();
-
-	checkArray_((*iter), "dwad");
-	iter++;
-	checkColumn((*iter), "", "b", "c");
+	checkArray_(f->argvs[0], "dwad");
+	checkColumn(f->argvs[1], "", "b", "c");
 	checkOpt(exp->valueStack[6], SQL_PARSER::PLUS);
 
 	delete value;
@@ -747,9 +744,9 @@ int main()
 		return -1;
 	if (0 != testSQLNameWord())
 		return -1;
-	if (0 != testSQLTableNameWord()||0!= testSQLTableNameWord1()||0!= testSQLTableNameWord2()||0!= testSQLTableNameWord3())
+	if (0 != testSQLTableNameWord() || 0 != testSQLTableNameWord1() || 0 != testSQLTableNameWord2() || 0 != testSQLTableNameWord3())
 		return -1;
-	if (0 != testSQLColumnNameWord()||0!= testSQLColumnNameWord1())
+	if (0 != testSQLColumnNameWord() || 0 != testSQLColumnNameWord1())
 		return -1;
 	if (0 != testSQLArrayWord())
 		return -1;

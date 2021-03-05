@@ -1011,7 +1011,8 @@ namespace SQL_PARSER {
 			return MATCH;
 		}
 		return NOT_MATCH_PTR;
-	}	/*trans mid-prefix to back-prefix*/
+	}	
+	/*trans mid-prefix to back-prefix*/
 	DLL_EXPORT SQLValue* SQLWordExpressions::match(handle* h, const char*& sql, bool needValue)
 	{
 		std::stack<SQLOperatorValue*> opStack;

@@ -19,6 +19,28 @@ Arena::~Arena() {
     delete[] blocks_[i];
   }
 }
+void Arena::clear() {
+    if (!blocks_.empty()) {
+        for (size_t i = 1; i < blocks_.size(); i++) {
+            delete[] blocks_[i];
+        }
+        char* result = blocks_[0];
+        if (*(size_t*)result != kBlockSize) {
+            delete[] result;
+            blocks_.clear();
+            memory_usage_.NoBarrier_Store(0);
+            alloc_ptr_ = nullptr;
+            alloc_bytes_remaining_ = 0;
+        } else {
+            blocks_.clear();
+            blocks_.push_back(result);
+            alloc_ptr_ = result + sizeof(size_t);
+            alloc_bytes_remaining_ = *(size_t*)result;
+            memory_usage_.NoBarrier_Store(reinterpret_cast<void*>(alloc_bytes_remaining_));
+        }
+    }
+}
+
 
 char* Arena::AllocateFallback(size_t bytes) {
   if (bytes > kBlockSize / 4) {
@@ -58,11 +80,12 @@ char* Arena::AllocateAligned(size_t bytes) {
 }
 
 char* Arena::AllocateNewBlock(size_t block_bytes) {
-  char* result = new char[block_bytes];
+  char* result = new char[block_bytes + sizeof(size_t)];
   blocks_.push_back(result);
   memory_usage_.NoBarrier_Store(
       reinterpret_cast<void*>(MemoryUsage() + block_bytes + sizeof(char*)));
-  return result;
+  *(size_t*)result = block_bytes;
+  return result + sizeof(size_t);
 }
 
 }  // namespace leveldb

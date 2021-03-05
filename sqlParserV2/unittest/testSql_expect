@@ -1,0 +1,33 @@
+{
+	"alter table": {
+		"is head": true,
+		"child": [
+			{
+				"child": [
+					"ALTER",
+					"TABLE",
+					{ "identifier word": "alterTableName" }
+				]
+			},
+			{
+				"or": true,
+				"child": [
+					{
+						"child": [
+							"ADD",
+							"COLUMN",
+							{ "identifier word": "alterTableColumn" }
+						]
+					},
+					{
+						"child": [
+							"DROP",
+							"COLUMN",
+							{ "identifier word": "alterTableColumn" }
+						]
+					}
+				]
+			}
+		]
+	}
+}

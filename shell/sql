@@ -1,73 +1,202 @@
 {
-	"joined_tables":{
-		"DECLARE":["select"],
-		"LOOP":"_C_:,",
-		"OR":TRUE,
-		"C":[
-			{"K":"_TABLE_","F":"selectJoinTable"},
-			{"INCLUDE":"select"}
-		]
+	"table_references" : {
+		"HEAD": false,
+		{"LOOP":"_C_:,",
+			"F":"selectTableReferences",
+			{"INCLUDE":"escaped_table_reference"}
+		}
+	},
+	"escaped_table_reference": {
+		"HEAD": false,
+		{"OR":true,
+			,"C":[
+			{"INCLUDE":"table_reference"},
+			{"C":[
+				{"K":"_S_:OJ"},
+				"INCLUDE":"table_reference",
+			]}
+		]}
 	}
-	"join":{
-		"C":[
-			{"OPT":true,
-			"OR":true,"C":[
-				{"K":"_S_:LEFT","F":"selectLeftJoin"},
-				{"K":"_S_:RIGHT","F":"selectRightJoin"},
-				{"K":"_S_:INNER","F":"selectInnerJoin"}
-			]},
-			{"K":"_S_:JOIN"},
-			{"OR":true,"C":[
-				{"C":[
+	"table_reference":{
+		"HEAD": false,
+		{"OR":true,
+			,"C":[
+			{"INCLUDE":"joined_table","F":"selectJoinTable"}
+			{"INCLUDE":"table_factor","F":"selectTableFactor"},
+		]}
+	}
+	"table_factor":{
+		"HEAD": false,
+		{"OR":true,"C":[
+			{"C":[
+				"K":"_TABLE_",
+				{"OPT":true,"C":[
+					{"K":"_S_:PARTITION","F":"selectByPartition"},
 					{"K":"_C_:("},
-					{"LOOP":"_C_:,","C":[{"K":"_TABLE_","F":"selectJoinTable"}]}
+					{"LOOP":"_C_:,","K":"_N_","F":"selectByPartitionName"},
 					{"K":"_C_:)"}
 				]},
-				{"LOOP":"_C_:,","C":[{"K":"_TABLE_","F":"selectJoinTable"}]}
+				{"OPT":true,"C":[
+					{"OPT":true,"C":[{"K":"_S_:AS"}]},
+					{"K":"_N_","selectTableAlias"}
+				]},
+				{"OPT":true,"C":[
+					"INCLUDE":"index_hint"
+				]},
 			]},
-			{"OR":TRUE,"C":[
+			{"C":[
+				{"OPT":true,"K":"_S_:LATERAL"},
+				{"INCLUDE":"select","F":"selectFromSelect"},
+				{"OPT":true,"K":"_S_:As"},
+				{"K":"_N_","selectFromSelectAlias"},
+				{"OPT":true,"C":[
+					{"K":"_S_:PARTITION","F":"selectByPartition"},
+					{"K":"_C_:("},
+					{"LOOP":"_C_:,","K":"_N_","F":"selectByPartitionName"},
+					{"K":"_C_:)"}
+				]},
+			]},
+			{"C":[
+				{"K":"_C_:("},
+				"INCLUDE":"table_references",
+				{"K":"_C_:)"}
+			]}
+		]}
+	},
+	"joined_table";{
+	"HEAD": false,
+	"C":[
+		{"INCLUDE":"table_reference","F":"joinTable"},
+		{"OR":true,"C":[
+			{"C":[
+				{"OR":true,"OPT":true,"C":[
+					{"K":"_S_:INNER","F":"innerJoin"},
+					{"K":"_S_:CROSS","F":"crossJoin"},
+				]},
+				{"OR":true,"C":[
+					{"K":"_S_:JOIN"},
+					{"K":"_S_:STRAIGHT_JOIN","F":"straightJoin"},
+				]},
+				{"INCLUDE":"table_factor","F":"joinedTable"},
+				{"OPT":true,"INCLUDE":"join_specification"}
+			]},
+			{"C":[
+				{"OR":true,"C":[
+					{"K":"_S_:LEFT","F":"leftJoin"},
+					{"K":"_S_:RIGHT","F":"rightJoin"},
+				]},
+				{"OPT":true,"C":[
+					{"K":"_S_:OUTER","F":"outerJoin"},
+				]},
+				{"K":"_S_:JOIN"},
+				{"INCLUDE":"table_factor","F":"joinedTable"},
+				{"INCLUDE":"join_specification"}
+			]},
+			{"C":[
+				{"K":"_S_:NATURAL"},
+				{"OPT":true,"OR":true,"C":[
+					{"K":"_S_:INNER","F":"naturalInnerJoin"},
+					{"C":[
+						{"OR":true,"C":[
+							{"K":"_S_:LEFT","F":"naturalLeftJoin"},
+							{"K":"_S_:RIGHT","F":"naturalRightJoin"},
+						]},
+						{"OPT":true,"K":"_S_:OUTER","F":"naturalOuterJoin"}
+					]}
+				]},
+				{"K":"_S_:JOIN"},
+				{"INCLUDE":"table_factor"}
+			],"F":"naturalJoin"}
+		]}
+	]},
+	"join_specification":{
+		"HEAD": false,
+		"C":[
+			{"OR":true,"C":[
 				{"C":[
 					{"K":"_S_:ON"},
-					{"K":"_E_:LOGIC","F":"_selectJoinOnCondition"}
+					{"K":"_E_:LOGIC","F":"joinCondition"}
 				]},
 				{"C":[
 					{"K":"_S_:USING"},
 					{"K":"_C_:("},
-					{"LOOP":"_C_:,","C":[
-						{"K":"_N_","F":"selectJoinUsingColumn"}
+					{"LOOP":"_C_:,","K":"_N_","F":"joinUsingColumn"},
+					{"K":"_C_:)"}
+				],"F":"joinUsingColumns"}
+			]}
+		]
+	},
+	"index_hint":{
+		"HEAD": false,
+		"C":[
+			{"OR":true,"C:[
+				{"C":[
+					{"K":"_S_:USE"},
+					{"OR":true,"C":[
+						{"K":"_S_:KEY"},
+						{"K":"_S_:INDEX"}
 					]},
+					{"OPT":true,"C":[
+						"K":"_S_:FOR",
+						{"OR":true,"C":[
+							{"K":"_S_:JOIN"},
+							{"C":[{"K":"_S_:ORDER"},{"K":"_S_:BY"]}},
+							{"C":[{"K":"_S_:GROUP"},{"K":"_S_:BY"]}}
+						]}
+					]},
+					{"K":"_C_:("},
+					{"LOOP":"_C_:,","K":"_N_"},
+					{"K":"_C_:)"}
+				]},
+				{"C":[
+					{"OR":true,"C":[
+						{"K":"_S_:IGNORE"},
+						{"K":"_S_:FORCE"}
+					]},
+					{"OR":true,"C":[
+						{"K":"_S_:KEY"},
+						{"K":"_S_:INDEX"}
+					]},
+					{"OPT":true,"C":[
+						{"K":"_S_:FOR"},
+						{"OR":true,"C":[
+							"K":"_S_:JOIN",
+							{"C":[{"K":"_S_:ORDER"},{"K":"_S_:BY"}]},
+							{"C":[{"K":"_S_:GROUP"},{"K":"_S_:BY"}]}
+						]}
+					]},
+					{"K":"_C_:("},
+					{"LOOP":"_C_:,"K":"_N_"},
 					{"K":"_C_:)"}
 				]}
 			]}
 		]
-	},	
+	},
+
 	"select":{
 	"HEAD": true,
 	"F":"buildSelectInfo",
 	"C":[
 		{"K":"_S_:SELECT","F":"selectSqlType"},
-		{
-		"LOOP": "_C_:,",
-		"OR":true,
-		"C":[
-			{"C":[
-				{"K":"_E_:MATH","F":"selectField"},
-				{"K":"_E_:LOGIC","F":"selectField"},
-				{"K":"_F_","F":"selectField"},
-				{"K":"_COLUMN_","F":"selectField"},
-				{"K":"_A_","F":"selectField"},
-				{"K":"_INT_","F":"selectField"},
-				{"K":"_FLOAT_","F":"selectField"}
-			]},
-			{"OPT":true,"C":[
+		{"LOOP": "_C_:,",
+			"OR":true,
+			"C":[
+				{"OR":true,"C":[
+					{"K":"_E_:MATH","F":"selectField"},
+					{"K":"_E_:LOGIC","F":"selectField"},
+					{"K":"_F_","F":"selectField"},
+					{"K":"_COLUMN_","F":"selectField"},
+					{"K":"_A_","F":"selectField"},
+					{"K":"_INT_","F":"selectField"},
+					{"K":"_FLOAT_","F":"selectField"}
+				]},
+				{"OPT":true,"C":[
 				{"OPT:"true,"K":"_S_:AS"},
-				{"K":"_N_","F":"selectFiledAlias"};
+				{"K":"_N_","F":"selectFiledAlias"}
 			]}
-		]
-		},
+		]},
 		{"K":"_S_:FROM"},
-		{"K":"_TABLE_","F":"selectTableName"},
-		{"OPT":true,"INCLUDE":"join"},
+		{"INCLUDE":table_references},
 		{"OPT":true,"C":[
 			{"K":"_S_:WHERE"},
 			{"K":"_E_:LOGIC","F":"selectWhereField"},

@@ -1,0 +1,3522 @@
+{
+    "COLUMN_CHARSER": {
+        "optional": true,
+        "child": [
+            {
+                "optional": true,
+                "child": [
+                    "CHARACTER",
+                    "SET",
+                    {"any string":"stringTypeCharSet"}
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    "COLLATE",
+                    {"any string":"columnCollate"}
+                ]
+            }
+        ]
+    },
+    "REFERENCES": {
+        "child": [
+            "REFERENCES",
+            "identifier word",
+            "(",
+            {
+                "loop": ",",
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "child": [
+                                    {
+                                        "identifier word": null
+                                    },
+                                    {
+                                        "optional": true,
+                                        "child": [
+                                            "(",
+                                            "int value",
+                                            ")"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    "(",
+                                    "expression value",
+                                    ")"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "or": true,
+                        "optional": true,
+                        "child": [
+                            "ASC",
+                            "DESC"
+                        ]
+                    }
+                ]
+            },
+            ")",
+            {
+                "optional": true,
+                "child": [
+                    "MATCH",
+                    {
+                        "or": true,
+                        "child": [
+                            "FULL",
+                            "PARTIAL",
+                            "SIMPLE"
+                        ]
+                    }
+                ]
+            },
+            {
+                "loop": null,
+                "optional": true,
+                "child": [
+                    {
+                        "ON": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "UPDATE": null
+                            },
+                            {
+                                "DELETE": null
+                            }
+                        ]
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "RESTRICT": null
+                            },
+                            {
+                                "CASCADE": null
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "SET": null
+                                    },
+                                    {
+                                        "NULL": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "NO": null
+                                    },
+                                    {
+                                        "ACTION": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "SET": null
+                                    },
+                                    {
+                                        "DEFAULT": null
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "check_constraint_definition": {
+        "child": [
+            {
+                "CONSTRAINT": null
+            },
+            {
+                "optional": true,
+                "identifier word": null
+            },
+            {
+                "CHECK": null
+            },
+            {
+                "(": null
+            },
+            {
+                "bool expression value": null
+            },
+            {
+                ")": null
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "optional": true,
+                        "NOT": null
+                    },
+                    {
+                        "ENFORCED": null
+                    }
+                ]
+            }
+        ]
+    },
+    "COLUMN_TYPE": {
+        "or": true,
+        "child": [
+            {
+                "child": [
+                    {
+                        "BIT": "bitType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "TINYINT": "tinyIntType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "UNSIGNED": "numberTypeIsUnsigned"
+                    },
+                    {
+                        "optional": true,
+                        "ZEROFILL": null
+                    }
+                ]
+            },
+            {
+                "BOOLEAN": "BoolType"
+            },
+            {
+                "BOOL": "BoolType"
+            },
+            {
+                "child": [
+                    {
+                        "SMALLINT": "smallIntType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "UNSIGNED": "numberTypeIsUnsigned"
+                    },
+                    {
+                        "optional": true,
+                        "ZEROFILL": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "MEDIUMINT": "mediumIntType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "UNSIGNED": "numberTypeIsUnsigned"
+                    },
+                    {
+                        "optional": true,
+                        "ZEROFILL": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "INTEGER": "intType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "UNSIGNED": "numberTypeIsUnsigned",
+                        "optional": true
+                    },
+                    {
+                        "ZEROFILL": null,
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "INT": "intType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "UNSIGNED": "numberTypeIsUnsigned",
+                        "optional": true
+                    },
+                    {
+                        "ZEROFILL": null,
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "BIGINT": "bigIntType"
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "intTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "UNSIGNED": "numberTypeIsUnsigned",
+                        "optional": true
+                    },
+                    {
+                        "ZEROFILL": null,
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "DECIMAL": "decimalType"
+                            },
+                            {
+                                "NUMERIC": "decimalType"
+                            },
+                            {
+                                "FLOAT": "floatType"
+                            },
+                            {
+                                "DOUBLE": "doubleType"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "floatSize"
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        ",": null
+                                    },
+                                    {
+                                        "int value": "floatDigitsSize"
+                                    }
+                                ]
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "UNSIGNED": "numberTypeIsUnsigned",
+                        "optional": true
+                    },
+                    {
+                        "ZEROFILL": null,
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "DATETIME": "datetimeType"
+                            },
+                            {
+                                "TIMESTAMP": "timestampType"
+                            },
+                            {
+                                "TIME": "timeType"
+                            },
+                            {
+                                "YEAR": "yearType"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "timeTypePrec"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "DATE": "dateType"
+            },
+            {
+                "child": [
+                    {
+                        "optional": true,
+                        "NATIONAL": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "CHAR": "charType"
+                            },
+                            {
+                                "VARCHAR": "varcharType"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "stringTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "include": "COLUMN_CHARSER"
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "BINARY": "binaryType"
+                            },
+                            {
+                                "VARBINARY": "varbinaryType"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "int value": "stringTypeSize"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "TINYBLOB": "tinyBlobType"
+            },
+            {
+                "MEDIUMBLOB": "mediumBlobType"
+            },
+            {
+                "LONGBLOB": "longBlobtype"
+            },
+            {
+                "BLOB": "blobType"
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "TINYTEXT": "tinyTextType"
+                            },
+                            {
+                                "MEDIUMTEXT": "mediumTextType"
+                            },
+                            {
+                                "TEXT": "textType"
+                            },
+                            {
+                                "LONGTEXT": "longTexttype"
+                            }
+                        ]
+                    },
+                    {
+                        "include": "COLUMN_CHARSER"
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "ENUM": "enumType"
+                            },
+                            {
+                                "SET": "setType"
+                            }
+                        ]
+                    },
+                    {
+                        "(": null
+                    },
+                    {
+                        "loop": ",",
+                        "string value": "enumOrSetValueList"
+                    },
+                    {
+                        ")": null
+                    },
+                    {
+                        "include": "COLUMN_CHARSER"
+                    }
+                ]
+            },
+            {
+                "GEOMETRY": "geometryType"
+            },
+            {
+                "POINT": "geometryType"
+            },
+            {
+                "LINESTRING": "geometryType"
+            },
+            {
+                "JSON": "jsonType"
+            }
+        ]
+    },
+    "DEFAULT_VALUE": {
+        "optional": true,
+        "child": [
+            {
+                "DEFAULT": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {"NULL": "defaultValue"},
+                    {"all values":"defaultValue"},
+                    {
+                        "child": [
+                            {
+                                "child": [
+                                    {
+                                        "CURRENT_TIMESTAMP": "defaultValue"
+                                    },
+                                    {
+                                        "optional": true,
+                                        "child": [
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "int value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                     "ON",
+                                     "UPDATE",
+                                    {
+                                        "CURRENT_TIMESTAMP": "defaultValue"
+                                    },
+                                    {
+                                        "optional": true,
+                                        "child": [
+                                            "(",
+                                            {
+                                                "int value": null
+                                            },
+                                            ")"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            "ON",
+                            "UPDATE",
+                            "CURRENT_TIMESTAMP",
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "(": null
+                                    },
+                                    {
+                                        "int value": null
+                                    },
+                                    {
+                                        ")": null
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "COLUMN_INFO": {
+        "child": [
+            {
+                "identifier word": "newColumn"
+            },
+            {
+                "include": "COLUMN_TYPE"
+            },
+            {
+                "or": true,
+                "optional": true,
+                "loop": null,
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "NULL": "columnNullable"
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "NOT": null
+                                    },
+                                    {
+                                        "NULL": "columnNotNull"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "GENERATED": null
+                                    },
+                                    {
+                                        "ALWAYS": "null"
+                                    }
+                                ]
+                            },
+                            {
+                                "AS": "generatedColumn"
+                            },
+                            {
+                                "(": null
+                            },
+                            {
+                                "expression value": null
+                            },
+                            {
+                                ")": null
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "VIRTUAL": null
+                                    },
+                                    {
+                                        "STORED": null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "include": "DEFAULT_VALUE"
+                    },
+                    {
+                        "AUTO_INCREMENT": null
+                    },
+                    {
+                        "child": [
+                            {
+                                "UNIQUE": "columnIsUK"
+                            },
+                            {
+                                "optional": true,
+                                "KEY": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "PRIMARY": "columnIsPK"
+                            },
+                            {
+                                "optional": true,
+                                "KEY": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "COMMENT": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "COLUMN_FORMAT": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "FIXED": null
+                                    },
+                                    {
+                                        "DYNAMIC": null
+                                    },
+                                    {
+                                        "DEFAULT": null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "ENGINE_ATTRIBUTE": null
+                            },
+                            {
+                                "=": null,
+                                "optional": true
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "SECONDARY_ENGINE_ATTRIBUTE": null
+                            },
+                            {
+                                "=": null,
+                                "optional": true
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "STORAGE": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "DISK": null
+                                    },
+                                    {
+                                        "MEMORY": null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "include": "REFERENCES"
+                    },
+                    {
+                        "include": "check_constraint_definition"
+                    }
+                ]
+            }
+        ]
+    },
+    "index_option": {
+        "or": true,
+        "loop": null,
+        "child": [
+            {
+                "child": [
+                    {
+                        "KEY_BLOCK_SIZE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "int value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "USING": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "BTREE": null
+                            },
+                            {
+                                "HASH": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "WITH": null
+                    },
+                    {
+                        "PARSER": null
+                    },
+                    {
+                        "identifier word": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "COMMENT": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "VISIBLE": null
+                    },
+                    {
+                        "INVISIBLE": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "ENGINE_ATTRIBUTE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "SECONDARY_ENGINE_ATTRIBUTE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            }
+        ]
+    },
+    "CONSTRAINT": {
+        "child": [
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "CONSTRAINT": null
+                    },
+                    {
+                        "optional": true,
+                        "identifier word": null
+                    }
+                ]
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "child": [
+                            {
+                                "PRIMARY": "primaryKeys",
+                                "KEY": null
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    "USING",
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            "BTREE",
+                                            "HASH"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "(": null
+                            },
+                            {
+                                "or": true,
+                                "loop": ",",
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "identifier word": "primaryKeyColumn"
+                                            },
+                                            {
+                                                "optional": true,
+                                                "child": [
+                                                    {
+                                                        "(": null
+                                                    },
+                                                    {
+                                                        "int value": null
+                                                    },
+                                                    {
+                                                        ")": null
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "child": [
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "expression value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                ")": null
+                            },
+                            {
+                                "include": "index_option"
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "UNIQUE": "createUniqueKey"
+                            },
+                            {
+                                "or": true,
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "KEY": null
+                                    },
+                                    {
+                                        "INDEX": null
+                                    }
+                                ]
+                            },
+                            {
+                                "optional": true,
+                                "identifier word": "uniqueKeyName"
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "USING": null
+                                    },
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "BTREE": null
+                                            },
+                                            {
+                                                "HASH": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "(": null
+                            },
+                            {
+                                "or": true,
+                                "loop": ",",
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "identifier word": "uniqueKeyColumn"
+                                            },
+                                            {
+                                                "optional": true,
+                                                "child": [
+                                                    {
+                                                        "(": null
+                                                    },
+                                                    {
+                                                        "int value": null
+                                                    },
+                                                    {
+                                                        ")": null
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "child": [
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "expression value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                ")": null
+                            },
+                            {
+                                "include": "index_option"
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "FOREIGN": "createForeignKey"
+                            },
+                            {
+                                "KEY": null
+                            },
+                            {
+                                "optional": true,
+                                "identifier word": "foreignKeyName"
+                            },
+                            {
+                                "(": null
+                            },
+                            {
+                                "loop": ",",
+                                "identifier word": "foreignKeyColumn"
+                            },
+                            {
+                                ")": null
+                            },
+                            {
+                                "include": "index_option"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "index_define": {
+        "child": [
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "FULLTEXT": null
+                    },
+                    {
+                        "SPATIAL": null
+                    }
+                ]
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "KEY": null
+                    },
+                    {
+                        "INDEX": null
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "identifier word": "indexName"
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "USING": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "BTREE": null
+                            },
+                            {
+                                "HASH": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "(": null
+            },
+            {
+                "or": true,
+                "loop": ",",
+                "child": [
+                    {
+                        "child": [
+                            {
+                                "identifier word": "uniqueKeyColumn"
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "(": null
+                                    },
+                                    {
+                                        "int value": null
+                                    },
+                                    {
+                                        ")": null
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "expression value": null
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                ")": null
+            },
+            {
+                "include": "index_option"
+            }
+        ]
+    },
+    "create_definition": {
+        "loop": ",",
+        "optional": true,
+        "child": [
+            {
+                "or": true,
+                "child": [
+                    {
+                        "include": "COLUMN_INFO"
+                    },
+                    {
+                        "include": "CONSTRAINT"
+                    },
+                    {
+                        "include": "index_define"
+                    },
+                    {
+                        "include": "check_constraint_definition"
+                    }
+                ]
+            }
+        ]
+    },
+    "table_options": {
+        "loop": null,
+        "optional": true,
+        "or": true,
+        "child": [
+            {
+                "child": [
+                    {
+                        "AUTOEXTEND_SIZE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "int value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "AUTO_INCREMENT": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "int value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "AVG_ROW_LENGTH": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "optional": true,
+                        "DEFAULT": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            "CHARSET",
+                            {
+                                "child": [
+                                    "CHARACTER",
+                                    "SET"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "any string": "tableCharset"
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "optional": true,
+                        "DEFAULT": null
+                    },
+                    "COLLATE",
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "any string": "tableCollate"
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "CHECKSUM": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    "int value" 
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "COMMENT": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "COMPRESSION": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "ZLIB": null
+                            },
+                            {
+                                "LZ4": null
+                            },
+                            {
+                                "NONE": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "CONNECTION": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "DATA": null
+                            },
+                            {
+                                "INDEX": null
+                            }
+                        ]
+                    },
+                    {
+                        "DIRECTORY": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "DELAY_KEY_WRITE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    "int value"
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "ENCRYPTION": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "ENGINE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "ENGINE_ATTRIBUTE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "INSERT_METHOD": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "NO": null
+                            },
+                            {
+                                "FIRST": null
+                            },
+                            {
+                                "LAST": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "KEY_BLOCK_SIZE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "MAX_ROWS": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "MIN_ROWS": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "PACK_KEYS": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    "int value"
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "PASSWORD": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "ROW_FORMAT": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "DEFAULT": null
+                            },
+                            {
+                                "DYNAMIC": null
+                            },
+                            {
+                                "FIXED": null
+                            },
+                            {
+                                "COMPRESSED": null
+                            },
+                            {
+                                "REDUNDANT": null
+                            },
+                            {
+                                "COMPACT": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "SECONDARY_ENGINE_ATTRIBUTE": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "string value": null
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "STATS_AUTO_RECALC": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    "int value"
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "STATS_PERSISTENT": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            "int value",
+                            "DEFAULT"
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "STATS_SAMPLE_PAGES": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "TABLESPACE": null
+                    },
+                    {
+                        "identifier word": null
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "STORAGE": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "DISK": null
+                                    },
+                                    {
+                                        "MEMORY": null
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "child": [
+                    {
+                        "UNION": null
+                    },
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "(": null
+                    },
+                    {
+                        "loop": ",",
+                        "identifier word": null
+                    },
+                    {
+                        ")": null
+                    }
+                ]
+            }
+        ]
+    },
+    "partition_options": {
+        "optional": true,
+        "child": [
+            {
+                "PARTITION": null
+            },
+            {
+                "BY": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "child": [
+                            {
+                                "optional": true,
+                                "LINEAR": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "HASH": null
+                                            },
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "expression value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "child": [
+                                            {
+                                                "KEY": null
+                                            },
+                                            {
+                                                "optional": true,
+                                                "child": [
+                                                    {
+                                                        "ALGORITHM": null
+                                                    },
+                                                    {
+                                                        "=": null
+                                                    },
+                                                    {
+                                                        "(": null
+                                                    },
+                                                    {
+                                                        "or": true,
+                                                        "child": [
+                                                            {
+                                                                "1": null
+                                                            },
+                                                            {
+                                                                "2": null
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        ")": null
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "loop": ",",
+                                                "identifier word": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "RANGE": null
+                                    },
+                                    {
+                                        "LIST": null
+                                    }
+                                ]
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "expression value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "child": [
+                                            "COLUMNS",
+                                             "(",
+                                            {
+                                                "loop": ",",
+                                                "identifier word": null
+                                            },
+                                             ")"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "PARTITIONS": null
+                    },
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "number value": null
+                            },
+                            {
+                                "string value": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "SUBPARTITION": null
+                    },
+                    {
+                        "BY": null
+                    },
+                    {
+                        "child": [
+                            {
+                                "optional": true,
+                                "LINEAR": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "HASH": null
+                                            },
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "expression value": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "child": [
+                                            {
+                                                "KEY": null
+                                            },
+                                            {
+                                                "optional": true,
+                                                "child": [
+                                                    {
+                                                        "ALGORITHM": null
+                                                    },
+                                                    {
+                                                        "=": null
+                                                    },
+                                                    {
+                                                        "(": null
+                                                    },
+                                                    {
+                                                        "or": true,
+                                                        "child": [
+                                                            {
+                                                                "1": null
+                                                            },
+                                                            {
+                                                                "2": null
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        ")": null
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "(": null
+                                            },
+                                            {
+                                                "loop": ",",
+                                                "identifier word": null
+                                            },
+                                            {
+                                                ")": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "SUBPARTITIONS": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "number value": null
+                                    },
+                                    {
+                                        "string value": null
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "optional":true,
+                "child":[
+                    "(",
+                    {"loop":",","include": "partition_definition"},
+                    ")"
+                ]
+            }
+        ]
+    },
+    "partition_definition":{
+        "child":[
+            "PARTITION",
+            {"identifier word":"partitionName"},
+            {"optional":true,"child":[
+                "VALUES",
+                {"or":true,"child":[
+                    {"child":[
+                        "LESS",
+                        "THAN",
+                        {"or":true,"child":[
+                            {"child":[
+                                "(",
+                                {"loop":",","all values":null},
+                                ")"
+                            ]},
+                            "MAXVALUE"
+                        ]}
+                    ]},
+                    {
+                        "child":[
+                            "IN",
+                            "(",
+                            {"loop":",","all values":null},
+                             ")"
+                        ]
+                    }
+                ]},
+            ]},
+            {"optional":true,"child":[
+                {"optional":true,"STORAGE":null},
+                "ENGINE",
+                {"optional":true,"=":null},
+                "any string"
+            ]},
+            {"optional":true,"child":[
+                {"optional":true,"COMMENT":null},
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "DATA",
+                "DIRECTORY",
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "INDEX",
+                "DIRECTORY",
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "MAX_ROWS",
+                {"optional":true,"=":null},
+                "int value"
+            ]},
+            {"optional":true,"child":[
+                "MIN_ROWS",
+                {"optional":true,"=":null},
+                "int value"
+            ]},
+            {"optional":true,"child":[
+                "TABLESPACE",
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "(",
+                {"loop":",","include":"subpartition_definition"},
+                ")"
+            ]}
+        ]
+    },
+    "subpartition_definition":{
+        "child":[
+            "SUBPARTITION",
+            {"identifier word":"subpartitionName"},
+            {"optional":true,"child":[
+                {"optional":true,"STORAGE":null},
+                "ENGINE",
+                {"optional":true,"=":null},
+                "any string"
+            ]},
+            {"optional":true,"child":[
+                {"optional":true,"COMMENT":null},
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "DATA",
+                "DIRECTORY",
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "INDEX",
+                "DIRECTORY",
+                {"optional":true,"=":null},
+                "string value"
+            ]},
+            {"optional":true,"child":[
+                "MAX_ROWS",
+                {"optional":true,"=":null},
+                "int value"
+            ]},
+            {"optional":true,"child":[
+                "MIN_ROWS",
+                {"optional":true,"=":null},
+                "int value"
+            ]},
+            {"optional":true,"child":[
+                "TABLESPACE",
+                {"optional":true,"=":null},
+                "string value"
+            ]}
+        ]
+    },
+    "CREATE_TABLE": {
+        "is head": true,
+        "child": [
+            {
+                "CREATE": null
+            },
+            {
+                "optional": true,
+                "TEMPORARY": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "TABLE": "newTable"
+                    },
+                    {
+                        "SEQUENCE": "newTable"
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    {
+                        "IF": null
+                    },
+                    {
+                        "NOT": null
+                    },
+                    {
+                        "EXISTS": null
+                    }
+                ]
+            },
+            {
+                "identifier word": "newTableName"
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "child": [
+                            {
+                                "LIKE": "createTableLike"
+                            },
+                            {
+                                "identifier word": "newLikedTableName"
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "(": null
+                            },
+                            {
+                                "LIKE": "createTableLike"
+                            },
+                            {
+                                "identifier word": "newLikedTableName"
+                            },
+                            {
+                                ")": null
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "(": "createTable"
+                            },
+                            {
+                                "include": "create_definition"
+                            },
+                            {
+                                ")": null
+                            },
+                            {
+                                "include": "table_options"
+                            },
+                            {
+                                "include": "partition_options"
+                            },
+                            {
+                                "optional": true,
+                                "child": [
+                                    {
+                                        "optional": true,
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "IGNORE": null
+                                            },
+                                            {
+                                                "REPLACE": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "optional": true,
+                                        "AS": null
+                                    },
+                                    {
+                                        "optional": true,"include":"select_query_in_create_table"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "select_query_in_create_table":{
+        "child":[
+            "SELECT",
+            {"or":true, "child":[
+                "*",
+                {"or":true,"loop":",","child":[
+                    {"identifier word":"createAsSelectSourceColumn"},
+                    {"all values":"createAsSelectValue"}
+                ]}
+            ]},
+            "FROM",
+            {"identifier word":"createAsSelectSourceTable"},
+            {"optional":true,"child":[
+                "WHERE",
+                "bool expression value"
+            ]},
+            {"optional":true,"child":[
+                "GROUP",
+                "BY",
+                {"or":true,"child":[
+                    "identifier word",
+                    {"child":[
+                        "(",
+                        {"loop":",","identifier word":null},
+                        ")"
+                    ]}
+                ]}
+            ]},
+            {"optional":true,"child":[
+                "ORDER",
+                "BY",
+                {"or":true,"child":[
+                    "identifier word",
+                    {"child":[
+                        "(",
+                        {"loop":",","identifier word":null},
+                        ")"
+                    ]}
+                ]},
+                {"optional":true,"DESC":null}
+            ]}
+        ]
+    },
+    "alter_table_add_column": {
+        "optional": true,
+        "child": [
+            {
+                "ADD": null
+            },
+            {
+                "COLUMN": "alterTableAddColumn"
+            },
+            {
+                "include": "COLUMN_INFO"
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "FIRST": "AlterNewColumnAtFirst"
+                    },
+                    {
+                        "child": [
+                            {
+                                "AFTER": null
+                            },
+                            {
+                                "identifier word": "AlterNewColumnAfter"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_add_columns": {
+        "optional": true,
+        "child": [
+            {
+                "ADD": null
+            },
+            {
+                "COLUMN": null
+            },
+            {
+                "(": "alterTableAddColumns"
+            },
+            {
+                "loop": ",",
+                "child": [
+                    {
+                        "include": "COLUMN_INFO"
+                    }
+                ]
+            },
+            {
+                ")": null
+            }
+        ]
+    },
+    "alter_table_MODIFY_column": {
+        "optional": true,
+        "child": [
+            {
+                "MODIFY": "alterTableModifyColumn"
+            },
+            {
+                "optional": true,
+                "COLUMN": null
+            },
+            {
+                "include": "COLUMN_INFO"
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "FIRST": "AlterNewColumnAtFirst"
+                    },
+                    {
+                        "child": [
+                            {
+                                "AFTER": null
+                            },
+                            {
+                                "identifier word": "AlterNewColumnAfter"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_add_CONSTRAINT": {
+        "optional": true,
+        "child": [
+            {
+                "ADD": null
+            },
+            {
+                "include": "CONSTRAINT"
+            }
+        ]
+    },
+    "alter_table_add_key": {
+        "optional": true,
+        "child": [
+            {
+                "ADD": null
+            },
+            {
+                "include": "index_define"
+            }
+        ]
+    },
+    "alter_table_drop_index": {
+        "optional": true,
+        "child": [
+            {
+                "DROP": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "KEY": null
+                    },
+                    {
+                        "INDEX": null
+                    }
+                ]
+            },
+            {
+                "identifier word": "alterDropIndex"
+            }
+        ]
+    },
+    "alter_table_change_column": {
+        "optional": true,
+        "child": [
+            {
+                "CHANGE": "alterChangeColumn"
+            },
+            {
+                "optional": true,
+                "COLUMN": null
+            },
+            {
+                "identifier word": "alterChangeColumnName"
+            },
+            {
+                "include": "COLUMN_INFO"
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "FIRST": "AlterNewColumnAtFirst"
+                    },
+                    {
+                        "child": [
+                            {
+                                "AFTER": null
+                            },
+                            {
+                                "identifier word": "AlterNewColumnAfter"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_change_default_charset": {
+        "optional": true,
+        "child": [
+            {
+                "optional": true,
+                "DEFAULT": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "CHARSET": null
+                    },
+                    {
+                        "child": [
+                            {
+                                "CHARACTER": null
+                            },
+                            {
+                                "SET": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "optional": true,
+                "=": null
+            },
+            {
+                "string value": "tableCharset"
+            },
+            {
+                "optional": true,
+                "child": [
+                    "COLLATE",
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "any string": "tableCollate"
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_convert_default_charset": {
+        "optional": true,
+        "child": [
+            {
+                "CONVERT": "converTableCharset"
+            },
+            {
+                "TO": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "CHARSET": null
+                    },
+                    {
+                        "child": [
+                            {
+                                "CHARACTER": null
+                            },
+                            {
+                                "SET": null
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "any string": "tableCharset"
+            },
+            {
+                "optional": true,
+                "child": [
+                    "COLLATE",
+                    {
+                        "optional": true,
+                        "=": null
+                    },
+                    {
+                        "any string": "tableCollate"
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_drop_column": {
+        "optional": true,
+        "child": [
+            {
+                "DROP": null
+            },
+            {
+                "optional": true,
+                "COLUMN": null
+            },
+            {
+                "identifier word": "dropColumn"
+            }
+        ]
+    },
+    "alter_table_drop_primary_key": {
+        "optional": true,
+        "child": [
+            {
+                "DROP": null
+            },
+            {
+                "PRIMARY": null
+            },
+            {
+                "KEY": "dropPrimaryKey"
+            }
+        ]
+    },
+    "alter_table_drop_foreign_key": {
+        "optional": true,
+        "child": [
+            {
+                "DROP": null
+            },
+            {
+                "FOREIGN": null
+            },
+            {
+                "KEY": null
+            },
+            {
+                "identifier word": "dropForeignKey"
+            }
+        ]
+    },
+    "alter_table_rename_column": {
+        "optional": true,
+        "child": [
+            {
+                "RENAME": null
+            },
+            {
+                "COLUMN": "alterRenameColumn"
+            },
+            {
+                "identifier word": "renameOldColumn"
+            },
+            {
+                "TO": null
+            },
+            {
+                "identifier word": "renameNewColumn"
+            }
+        ]
+    },
+    "alter_table_rename_key": {
+        "optional": true,
+        "child": [
+            {
+                "RENAME": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "KEY": "alterRenameKey"
+                    },
+                    {
+                        "INDEX": "alterRenameKey"
+                    }
+                ]
+            },
+            {
+                "identifier word": "renameOldKeyName"
+            },
+            {
+                "TO": null
+            },
+            {
+                "identifier word": "renameNewKeyName"
+            }
+        ]
+    },
+    "alter_table_rename_table": {
+        "child": [
+            {
+                "RENAME": null
+            },
+            {
+                "or": true,
+                "optional": true,
+                "child": [
+                    {
+                        "TO": null
+                    },
+                    {
+                        "AS": null
+                    }
+                ]
+            },
+            {
+                "identifier word": "renameNewTableName"
+            }
+        ]
+    },
+    "alter_index_visible": {
+        "optional": true,
+        "child": [
+            {
+                "INDEX": null
+            },
+            {
+                "identifier word": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "VISIBLE": null
+                    },
+                    {
+                        "INVISIBLE": null
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_alter_column": {
+        "child": [
+            {
+                "ALTER": null
+            },
+            {
+                "optional": true,
+                "COLUMN": null
+            },
+            {
+                "identifier word": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "child": [
+                            {
+                                "SET": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "child": [
+                                            {
+                                                "DEFAULT": null
+                                            },
+                                            {
+                                                "include": "DEFAULT_VALUE"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "VISIBLE": null
+                                            },
+                                            {
+                                                "INVISIBLE": null
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "DROP": null
+                            },
+                            {
+                                "DEFAULT": null
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_alter_index": {
+        "child": [
+            {
+                "ALTER": null
+            },
+            {
+                "INDEX": null
+            },
+            {
+                "identifier word": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "VISIBLE": null
+                    },
+                    {
+                        "INVISIBLE": null
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table_lock": {
+        "child": [
+            {
+                "LOCK": null
+            },
+            {
+                "optional": true,
+                "=": null
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "DEFAULT": null
+                    },
+                    {
+                        "NONE": null
+                    },
+                    {
+                        "SHARED": null
+                    },
+                    {
+                        "EXCLUSIVE": null
+                    }
+                ]
+            }
+        ]
+    },
+    "alter_table": {
+        "optional": true,
+        "is head": true,
+        "child": [
+            {
+                "ALTER": null
+            },
+            {
+                "TABLE": "alterTable"
+            },
+            {
+                "identifier word": "ddlTableName"
+            },
+            {
+                "loop": ",",
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "include": "alter_table_add_column"
+                            },
+                            {
+                                "include": "alter_table_add_columns"
+                            },
+                            {
+                                "include": "alter_table_MODIFY_column"
+                            },
+                            {
+                                "include": "alter_table_add_CONSTRAINT"
+                            },
+                            {
+                                "include": "alter_table_add_key"
+                            },
+                            {
+                                "include": "alter_table_drop_index"
+                            },
+                            {
+                                "include": "alter_table_change_column"
+                            },
+                            {
+                                "include": "alter_table_drop_column"
+                            },
+                            {
+                                "include": "alter_table_drop_primary_key"
+                            },
+                            {
+                                "include": "alter_table_drop_foreign_key"
+                            },
+                            {
+                                "include": "alter_table_convert_default_charset"
+                            },
+                            {
+                                "include": "alter_table_change_default_charset"
+                            },
+                            {
+                                "include": "alter_table_rename_column"
+                            },
+                            {
+                                "include": "alter_table_rename_key"
+                            },
+                            {
+                                "include": "alter_index_visible"
+                            },
+                            {
+                                "include": "alter_table_alter_column"
+                            },
+                            {
+                                "include": "alter_table_alter_index"
+                            },
+                            {
+                                "FORCE": null
+                            },
+                            {
+                                "include": "alter_table_lock"
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "DISABLE": null
+                                            },
+                                            {
+                                                "ENABLE": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "KEYS": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "DISCARD": null
+                                            },
+                                            {
+                                                "IMPORT": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "TABLESPACE": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "or": true,
+                                        "child": [
+                                            {
+                                                "WITHOUT": null
+                                            },
+                                            {
+                                                "WITH": null
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "VALIDATION": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "ORDER": null
+                                    },
+                                    {
+                                        "BY": null
+                                    },
+                                    {
+                                        "loop": ",",
+                                        "identifier word": null
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    {
+                                        "COMMENT": null
+                                    },
+                                    {
+                                        "optional": true,
+                                        "=": null
+                                    },
+                                    {
+                                        "string value": null
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "create_index": {
+        "optional": true,
+        "is head": true,
+        "child": [
+            "CREATE",
+            {
+                "optional": true,
+                "child": [
+                    "ONINE",
+                    "OFFLINE"
+                ]
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "UNIQUE": "createNewIndexIsUk"
+                    },
+                    "FULLTEXT",
+                    "SPATIAL"
+                ]
+            },
+            {
+                "INDEX": "createNewIndex"
+            },
+            {
+                "identifier word": "createIndexName"
+            },
+            {
+                "optional": true,
+                "child": [
+                    "USING",
+                    {
+                        "or": true,
+                        "child": [
+                            "BTREE",
+                            "HASH"
+                        ]
+                    }
+                ]
+            },
+            "ON",
+            {
+                "identifier word": "ddlTableName"
+            },
+            "(",
+            {
+                "loop": ",",
+                "child": [
+                    {
+                        "or": true,
+                        "child": [
+                            {
+                                "child": [
+                                    {
+                                        "identifier word": "createIndexColumn"
+                                    },
+                                    {
+                                        "optional": true,
+                                        "child": [
+                                            "(",
+                                            "int value",
+                                            ")"
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "child": [
+                                    "(",
+                                    "expression value",
+                                    ")"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "or": true,
+                        "child": [
+                            "ASC",
+                            "DESC"
+                        ]
+                    }
+                ]
+            },
+            ")",
+            {
+                "include": "index_option"
+            },
+            {
+                "or": true,
+                "optional": true,
+                "loop": null,
+                "child": [
+                    {
+                        "child": [
+                            "ALGORITHM",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    "DEFAULT",
+                                    "INPLACE",
+                                    "COPY"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "include": "alter_table_lock"
+                    }
+                ]
+            }
+        ]
+    },
+    "drop_index": {
+        "optional": true,
+        "is head": true,
+        "child": [
+            "DROP",
+            {
+                "INDEX": "dropIndex"
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    "ONINE",
+                    "OFFLINE"
+                ]
+            },
+            {
+                "identifier word": "dropIndexName"
+            },
+            "ON",
+            {
+                "identifier word": "ddlTableName"
+            },
+            {
+                "or": true,
+                "optional": true,
+                "loop": null,
+                "child": [
+                    {
+                        "child": [
+                            "ALGORITHM",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    "DEFAULT",
+                                    "INPLACE",
+                                    "COPY"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "include": "alter_table_lock"
+                    }
+                ]
+            }
+        ]
+    },
+    "DROP_TABLE": {
+        "optional": true,
+        "is head": true,
+        "child": [
+            "DROP",
+            {
+                "optional": true,
+                "TEMPORARY": null
+            },
+            {
+                "TABLE": "dropTable"
+            },
+            {
+                "optional": true,
+                "child": [
+                    "IF",
+                    "EXISTS"
+                ]
+            },
+            {
+                "loop": ",",
+                "identifier word": "dropTableName"
+            },
+            {
+                "optional": true,
+                "or": true,
+                "child": [
+                    "RESTRICT",
+                    "CASCADE"
+                ]
+            }
+        ]
+    },
+    "RENAME_TABLE": {
+        "optional": true,
+        "is head": true,
+        "child": [
+            "RENAME",
+            "TABLE",
+            {
+                "loop": ",",
+                "child": [
+                    {
+                        "identifier word": "renameSrcTable"
+                    },
+                    "TO",
+                    {
+                        "identifier word": "renameDestTable"
+                    }
+                ]
+            }
+        ]
+    },
+    "create_database": {
+        "is head": true,
+        "child": [
+            "CREATE",
+            {
+                "or": true,
+                "child": [
+                    "DATABASE",
+                    "SCHEMA"
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    "IF",
+                    "NOT",
+                    "EXISTS"
+                ]
+            },
+            {
+                "identifier word": "createDatabase"
+            },
+            {
+                "loop": null,
+                "optional": true,
+                "or": true,
+                "child": [
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "optional": true,
+                                "DEFAULT": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    {
+                                        "child": [
+                                            "CHARACTER",
+                                            "SET"
+                                        ]
+                                    },
+                                    "CHARSET"
+                                ]
+                            },
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "any string": "databaseCharset"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            {
+                                "optional": true,
+                                "DEFAULT": null
+                            },
+                            "COLLATE",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "any string": "databaseCollate"
+                            }
+                        ]
+                    },
+                    {
+                        "optional": true,
+                        "child": [
+                            "ENCRYPTION",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    "Y",
+                                    "N"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "drop_database": {
+        "is head": true,
+        "child": [
+            "DROP",
+            {
+                "or": true,
+                "child": [
+                    "DATABASE",
+                    "SCHEMA"
+                ]
+            },
+            {
+                "optional": true,
+                "child": [
+                    "IF",
+                    "EXISTS"
+                ]
+            },
+            {
+                "identifier word": "dropDatabase"
+            }
+        ]
+    },
+    "alter_database": {
+        "is head": true,
+        "child": [
+            "ALTER",
+            {
+                "or": true,
+                "child": [
+                    "DATABASE",
+                    "SCHEMA"
+                ]
+            },
+            {
+                "identifier word": "alterDatabase"
+            },
+            {
+                "or": true,
+                "child": [
+                    {
+                        "child": [
+                            "UPGRADE",
+                            "DATA",
+                            "DIRECTORY",
+                            "string value"
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "optional": true,
+                                "DEFAULT": null
+                            },
+                            "CHARACTER",
+                            "SET",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "any string": "databaseCharset"
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            {
+                                "optional": true,
+                                "DEFAULT": null
+                            },
+                            "COLLATE",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "any string": "databaseCollate"
+                            }
+                        ]
+                    },
+                    {
+                        "child": [
+                            "READ",
+                            "ONLY",
+                            {
+                                "optional": true,
+                                "=": null
+                            },
+                            {
+                                "or": true,
+                                "child": [
+                                    "DEFAULT",
+                                    "int value"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "use_database": {
+        "is head": true,
+        "child": [
+            {
+                "USE": null
+            },
+            {
+                "identifier word": "useDatabase"
+            }
+        ]
+    },
+    "BEGIN": {
+        "is head": true,
+        "child": [
+            {
+                "BEGIN": "begin"
+            }
+        ]
+    },
+    "COMMIT": {
+        "is head": true,
+        "child": [
+            {
+                "COMMIT": "commit"
+            }
+        ]
+    },
+    "ROLLBACK": {
+        "is head": true,
+        "child": [
+            {
+                "ROLLBACK": "rollback"
+            }
+        ]
+    }
+}
