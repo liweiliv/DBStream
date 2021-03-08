@@ -23,7 +23,7 @@
 using namespace SQL_PARSER;
 using namespace DATABASE_INCREASE;
 namespace META {
-	typedef spp::sparse_hash_map<const char*, MetaTimeline<tableMeta>*, nameCompare, nameCompare> tbTree;
+	typedef spp::sparse_hash_map<const char*, MetaTimeline<tableMeta>*, UTIL::nameCompare, UTIL::nameCompare> tbTree;
 #define getDbInfo(database,di) do{		\
 	dbTree::iterator DBIter = m_dbs.find(database);\
 	if (unlikely(DBIter == m_dbs.end()))\
@@ -45,7 +45,7 @@ namespace META {
 		std::string name;
 		const charsetInfo* charset;
 		std::string collate;
-		dbInfo(nameCompare& comp) :tables(0, comp, comp), m_id(0), charset(nullptr) {}
+		dbInfo(UTIL::nameCompare& comp) :tables(0, comp, comp), m_id(0), charset(nullptr) {}
 		dbInfo& operator = (const dbInfo& db)
 		{
 			for (tbTree::iterator iter = db.tables.begin(); iter != db.tables.end(); iter++)

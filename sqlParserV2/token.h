@@ -26,7 +26,7 @@ namespace SQL_PARSER
 	DLL_EXPORT struct token {
 		tokenType type;
 		str value;
-		DLL_EXPORT inline bool compare(const token& t);
+		DLL_EXPORT bool compare(const token& t);
 	};
 
 	enum class literalType {

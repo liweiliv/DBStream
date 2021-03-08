@@ -15,7 +15,7 @@ namespace SQL_PARSER
 			bool loop;
 			const char* loopSeparator;
 			bool optional;
-			bool or ;
+			bool branch ;
 			const jsonArray* childJson;
 			nodeInfo** child;
 			int childCount;
@@ -23,7 +23,7 @@ namespace SQL_PARSER
 			std::string funcName;
 			std::string include;
 			int ref;
-			nodeInfo() :loop(false), loopSeparator(nullptr), optional(false), or (false), childJson(nullptr), child(nullptr), childCount(0), nodeToken(nullptr), ref(1)
+			nodeInfo() :loop(false), loopSeparator(nullptr), optional(false),branch (false), childJson(nullptr), child(nullptr), childCount(0), nodeToken(nullptr), ref(1)
 			{
 			}
 			~nodeInfo()
@@ -83,7 +83,7 @@ namespace SQL_PARSER
 			}
 			bool compare(const nodeInfo& n) const
 			{
-				if (optional != n.optional || or!=n. or ||loop != loop)
+				if (optional != n.optional ||branch!=n.branch ||loop != loop)
 					return false;
 
 				if (nodeToken != nullptr && n.nodeToken != nullptr)
@@ -182,7 +182,7 @@ namespace SQL_PARSER
 				{
 					if (v->t != JSON_TYPE::J_BOOL)
 						dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
-					n-> or = static_cast<const jsonBool*>(v)->m_value;
+					n->branch = static_cast<const jsonBool*>(v)->m_value;
 					dsOk();
 				}
 				else
@@ -300,7 +300,7 @@ namespace SQL_PARSER
 				n->nodeToken->value.assign(key.c_str());
 			}
 			else
-				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "key must be a lowercase string or key word, but actually is:" << key, ERROR);
+				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "key must be a lowercase stringbranch key word, but actually is:" << key, ERROR);
 			dsOk();
 		}
 
@@ -333,7 +333,7 @@ namespace SQL_PARSER
 					n->funcName = child->funcName;
 					if (n->optional || child->optional)
 						n->optional = true;
-					n-> or = child-> or ;
+					n->branch = child->branch ;
 					n->child = child->child;
 					n->childCount = child->childCount;
 					child->nodeToken = nullptr;
@@ -556,14 +556,14 @@ namespace SQL_PARSER
 				{
 					dsReturnIfFailed(tokenConflictCheck(src, child->nodeToken));
 				}
-				if (!dest-> or && !child->optional)
+				if (!dest->branch && !child->optional)
 					break;
 			}
 			dsOk();
 		}
 		dsStatus& nodeAndNodeConflictCheck(nodeInfo* src, nodeInfo* dest)
 		{
-			if (src-> or && dest-> or )
+			if (src->branch && dest->branch )
 			{
 				for (int i = 0; i < src->childCount; i++)
 				{
@@ -573,7 +573,7 @@ namespace SQL_PARSER
 					}
 				}
 			}
-			else if (src-> or && !dest-> or )
+			else if (src->branch && !dest->branch )
 			{
 				for (int i = 0; i < src->childCount; i++)
 				{
@@ -585,7 +585,7 @@ namespace SQL_PARSER
 					}
 				}
 			}
-			else if (!src-> or && dest-> or )
+			else if (!src->branch && dest->branch )
 			{
 				for (int i = 0; i < dest->childCount; i++)
 				{
@@ -699,7 +699,7 @@ namespace SQL_PARSER
 		dsStatus& checkAndTryMergeTokenAndNode(nodeInfo*& first, nodeInfo* second)
 		{
 			token* t = first->nodeToken;
-			if (second-> or )
+			if (second->branch )
 			{
 				for (int i = 0; i < second->childCount; i++)
 				{
@@ -752,7 +752,7 @@ namespace SQL_PARSER
 					}
 					else
 					{
-						if (c-> or )
+						if (c->branch )
 						{
 							if (!c->loop)
 								dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
@@ -833,7 +833,7 @@ namespace SQL_PARSER
 			else //both has child
 			{
 				//or is true ,means loop is true
-				if (first->or && second-> or )
+				if (first->branch && second->branch )
 				{
 					if (nodeInfo::compareLoop(*first, *second))
 					{
@@ -855,7 +855,7 @@ namespace SQL_PARSER
 					else
 						dsReturn(nodeConflictCheck(first, second));
 				}
-				else if (first-> or && !second-> or )
+				else if (first->branch && !second->branch )
 				{
 					if (nodeInfo::compareLoop(*first, *second))
 					{
@@ -874,7 +874,7 @@ namespace SQL_PARSER
 					else
 						dsReturn(nodeConflictCheck(first, second));
 				}
-				else if (!first-> or && second-> or )
+				else if (!first->branch && second->branch )
 				{
 					if (nodeInfo::compareLoop(*first, *second))
 					{
@@ -928,7 +928,7 @@ namespace SQL_PARSER
 						p->child[idx]->child[0] = first;
 						p->child[idx]->child[1] = second;
 						p->child[idx]->childCount = 2;
-						p->child[idx]-> or = true;
+						p->child[idx]->branch = true;
 						for (int i = 0; i < idx; i++)
 						{
 							delete second->child[i];
@@ -983,12 +983,12 @@ namespace SQL_PARSER
 				if (node->child[i]->child != nullptr)
 					dsReturnIfFailed(optimizeChild(node->child[i]));
 			}
-			if (node-> or )
+			if (node->branch )
 			{
 				for (int i = 0; i < node->childCount; i++)
 				{
 					nodeInfo* c = node->child[i];
-					if (c-> or )
+					if (c->branch )
 					{
 						if (c->loop)
 							continue;
@@ -1173,7 +1173,7 @@ namespace SQL_PARSER
 		}
 		dsStatus& optimize()
 		{
-			m_root. or = true;
+			m_root.branch = true;
 			m_root.childCount = m_headNodes.size();
 			m_root.child = new nodeInfo * [m_root.childCount];
 			int idx = 0;

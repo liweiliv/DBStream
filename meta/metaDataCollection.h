@@ -35,7 +35,7 @@ namespace META {
 	struct tableMeta;
 	struct columnMeta;
 	struct dbInfo;
-	typedef spp::sparse_hash_map<const char*, MetaTimeline<dbInfo>*, nameCompare, nameCompare> dbTree;
+	typedef spp::sparse_hash_map<const char*, MetaTimeline<dbInfo>*, UTIL::nameCompare, UTIL::nameCompare> dbTree;
 	class newColumnInfo;
 	class newTableInfo;
 	struct Table;

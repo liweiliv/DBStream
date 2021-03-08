@@ -66,13 +66,13 @@ int test1()
 int test2()
 {
 	SQL_PARSER::lex l;
-	if (!dsCheck(l.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\unittest\\testsql")))
+	if (!dsCheck(l.loadFromFile("sqlParserV2/unittest/testSql")))
 		LOG(ERROR) << getLocalStatus().toString();
 	if (!dsCheck(l.optimize()))
 		LOG(ERROR) << getLocalStatus().toString();
 
 	SQL_PARSER::lex lr;
-	if (!dsCheck(lr.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\unittest\\testsql_expect")))
+	if (!dsCheck(lr.loadFromFile("sqlParserV2/unittest/testSql_expect")))
 		LOG(ERROR) << getLocalStatus().toString();
 	if (!dsCheck(lr.optimize()))
 		LOG(ERROR) << getLocalStatus().toString();

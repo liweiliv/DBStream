@@ -2,13 +2,9 @@
 	"alter table": {
 		"is head": true,
 		"child": [
-			{
-				"child": [
-					"ALTER",
-					"TABLE",
-					{ "identifier word": "alterTableName" }
-				]
-			},
+			"ALTER",
+			"TABLE",
+			{ "identifier word": "alterTableName" },
 			{
 				"or": true,
 				"child": [

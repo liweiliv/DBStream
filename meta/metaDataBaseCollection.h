@@ -1,13 +1,13 @@
 #pragma once
 #include "metaData.h"
-#include "nameCompare.h"
+#include "util/nameCompare.h"
 #include "charset.h"
 namespace META
 {
 	class metaDataBaseCollection
 	{
 	protected:
-		nameCompare m_nameCompare;
+		UTIL::nameCompare m_nameCompare;
 		const charsetInfo* m_defaultCharset;
 	public:
 		metaDataBaseCollection(bool caseSensitive, const charsetInfo* defaultCharset) :m_nameCompare(caseSensitive), m_defaultCharset(defaultCharset) {}

@@ -438,7 +438,7 @@ namespace SQL_PARSER
 		const char* p = nextWord(config);
 		while (true)
 		{
-			if (NULL == (segment = jsonValue::Parse(p, size)))
+			if (!dsCheck(jsonValue::parse(segment, p, size)))
 			{
 				LOG(ERROR) << "load parse tree from " << p << " failed for json string is parse failed";
 				return -1;

@@ -16,7 +16,7 @@
 #include "mysqlTypes.h"
 #include "charset.h"
 #include "util/winDll.h"
-#include "nameCompare.h"
+#include "util/nameCompare.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }
@@ -197,7 +197,7 @@ namespace META {
 		uint16_t m_indexCount;
 		unionKeyMeta** m_indexs;
 		std::string* m_indexNames;
-		nameCompare m_nameCompare;
+		UTIL::nameCompare m_nameCompare;
 		void * userData;
 		constexpr static inline uint16_t tableVersion(uint64_t tableIDInfo)
 		{

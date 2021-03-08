@@ -5,7 +5,7 @@
 #include "token.h"
 namespace SQL_PARSER {
 
-	constexpr static char* reserverdKeyWords[] = {
+	constexpr static char* const reserverdKeyWords[] = {
 	"ABSOLUTE", "CASCADED", "CURRENT_ROLE",
 	"ACTION", "CASE", "CURRENT_TIME",
 	"ADD", "CAST", "CURRENT_TIMESTAMP",

@@ -69,8 +69,8 @@ namespace DATA_SOURCE
 				{
 					if (instance->readStmt == nullptr)
 					{
-						if (instance->conn == nullptr)
-							instance->conn = m_connector->connect();
+						if (instance->conn == nullptr && !dsCheck(m_connector->connect(instance->conn)))
+							return ORACLE_READER_CODE::FATAL_ERROR;
 						instance->readStmt = instance->conn->createStatement();
 					}
 					std::string currentFile = instance->currentLogFile.fileName;
@@ -159,7 +159,7 @@ CHECK:
 			{
 			case ORACLE_READER_CODE::NEED_RECONNECT:
 				m_connector->close(instance->conn, instance->readStmt, instance->readRs);
-				if (nullptr == (instance->conn = m_connector->connect()))
+				if (!dsCheck(m_connector->connect(instance->conn)))
 					return ORACLE_READER_CODE::FATAL_ERROR;
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));//sleep 1s every reconect
 			case ORACLE_READER_CODE::NEED_RELOCATE_LOG:
@@ -258,12 +258,12 @@ CHECK:
 				}
 				oracle::occi::Number number = rs->getNumber(1);
 				oracleNumberToUInt64((const uint8_t*)&number, scn, true);
-				m_connector->closeStmt(stmt, rs);
+				m_connector->closeStmt(m_conn, stmt, rs);
 				return ORACLE_READER_CODE::OK;
 			}
 			catch (oracle::occi::SQLException exp) {
 				LOG(ERROR) << "get current scn from database failed for :" << exp.getErrorCode() << ":" << exp.getMessage();
-				m_connector->closeStmt(stmt, rs);
+				m_connector->closeStmt(m_conn, stmt, rs);
 				if (oracleConnect::errorRecoverable(exp.getErrorCode()))
 					return ORACLE_READER_CODE::NEED_RECONNECT;
 				else

@@ -49,7 +49,7 @@ namespace SQL_PARSER {
 				return true;
 			return strcmp(name, v.name) == 0;
 		}
-		inline bool operator==(const const char* v) const
+		inline bool operator==(const char* v) const
 		{
 			if (strncmp(name, v, size) != 0)
 				return false;
@@ -57,7 +57,7 @@ namespace SQL_PARSER {
 				return false;
 			return true;
 		}
-		inline bool operator!=(const const char* v) const
+		inline bool operator!=(const char* v) const
 		{
 			if (strncmp(name, v, size) != 0)
 				return true;
