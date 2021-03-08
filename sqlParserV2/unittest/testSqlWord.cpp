@@ -53,7 +53,6 @@ int test()
 		return -1;
 	}
 	return 0;
-
 }
 int test1()
 {
@@ -62,9 +61,6 @@ int test1()
 		LOG(ERROR)<<getLocalStatus().toString();
 	if (!dsCheck(l.optimize()))
 		LOG(ERROR) << getLocalStatus().toString();
-
-
-
 	return 0;
 }
 int test2()

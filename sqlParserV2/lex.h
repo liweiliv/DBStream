@@ -920,26 +920,15 @@ namespace SQL_PARSER
 					else
 					{
 						nodeInfo* p = new nodeInfo;
-						p->child = new nodeInfo*[2];
-						if (idx == 1)
-						{
-							p->child[0] = first->child[0];
-						}
-						else
-						{
-							nodeInfo* n = new nodeInfo();
-							n->child = new nodeInfo * [idx];
-							memcpy(n->child, first->child, idx * sizeof(nodeInfo*));
-							n->childCount = idx;
-							p->child[0] = n;
-						}
-						p->child[1] = new nodeInfo();
-						p->child[1]->child = new nodeInfo * [2];
-						p->child[1]->child[0] = first;
-						p->child[1]->child[1] = second;
-						p->child[1]->childCount = 2;
-						p->child[1]-> or = true;
-						p->childCount = 2;
+						p->child = new nodeInfo * [idx + 1];
+						p->childCount = idx + 1;
+						memcpy(p->child, first->child, idx * sizeof(nodeInfo*));
+						p->child[idx] = new nodeInfo();
+						p->child[idx]->child = new nodeInfo * [2];
+						p->child[idx]->child[0] = first;
+						p->child[idx]->child[1] = second;
+						p->child[idx]->childCount = 2;
+						p->child[idx]-> or = true;
 						for (int i = 0; i < idx; i++)
 						{
 							delete second->child[i];
@@ -947,7 +936,7 @@ namespace SQL_PARSER
 						}
 						if (first->childCount == idx + 1)
 						{
-							p->child[1]->child[0] = first->child[idx];
+							p->child[idx]->child[0] = first->child[idx];
 							delete[]first->child;
 							first->child = nullptr;
 							delete first;
@@ -963,7 +952,7 @@ namespace SQL_PARSER
 						}
 						if (second->childCount == idx + 1)
 						{
-							p->child[1]->child[1] = second->child[idx];
+							p->child[idx]->child[1] = second->child[idx];
 							delete[]second->child;
 							second->child = nullptr;
 							delete second;
@@ -979,6 +968,7 @@ namespace SQL_PARSER
 						}
 						second = nullptr;
 						first = p;
+						dsReturn(optimizeChild(p));
 					}
 				}
 			}
@@ -1052,8 +1042,7 @@ namespace SQL_PARSER
 					if (node->child[i] != nullptr)
 						newCount++;
 				}
-				if (newCount == node->childCount)
-					dsOk();
+
 				if (newCount == 1)
 				{
 					nodeInfo* c = nullptr;
@@ -1093,6 +1082,8 @@ namespace SQL_PARSER
 					}
 					dsOk();
 				}
+				if (newCount == node->childCount)
+					dsOk();
 				nodeInfo** nodes = new nodeInfo * [newCount];
 				int idx = 0;
 				for (int i = 0; i < node->childCount; i++)
