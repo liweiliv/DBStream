@@ -65,7 +65,7 @@ namespace REPLICATOR
 				}
 				else
 				{
-					if (mapedColumn->t != jsonValue::J_STRING)
+					if (mapedColumn->t != JSON_TYPE::J_STRING)
 					{
 						LOG(ERROR) << "can not genrate table map info between src table:" << meta->m_dbName << "." << meta->m_tableName << " and " << destMeta->m_dbName << "." << destMeta->m_tableName << " for column map of dest column " << destMeta->m_columns[idx].m_columnName << " is not a string";
 						return false;

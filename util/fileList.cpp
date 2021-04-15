@@ -79,7 +79,7 @@ DLL_EXPORT int fileList::update()
 	return load();
 }
 #ifdef OS_LINUX
-DLL_EXPORT dsStatus& fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
+DLL_EXPORT DS fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
 {
 	DIR* dir = opendir(dirPath.c_str());
 	if (dir == nullptr)
@@ -97,7 +97,7 @@ DLL_EXPORT dsStatus& fileList::getFileList(const std::string& dirPath, std::vect
 #endif
 
 #ifdef OS_WIN
-DLL_EXPORT dsStatus& fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
+DLL_EXPORT DS fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
 {
 	WIN32_FIND_DATA findFileData;
 	HANDLE hFind = FindFirstFile((dirPath + "\\*").c_str(), &findFileData);

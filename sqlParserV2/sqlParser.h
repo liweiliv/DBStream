@@ -14,18 +14,9 @@
 #include "operationInfo.h"
 #include "errorCode.h"
 #include "lex.h"
+#include "literalTranslate.h"
 namespace SQL_PARSER {
-	struct sqlParserStack {
-		sqlStack<operatorSymbol*> opStack;
-		sqlStack<token*> valueStack;
-		leveldb::Arena arena;
-		inline void clear()
-		{
-			opStack.t = 0;
-			valueStack.t = 0;
-			arena.clear();
-		}
-	};
+
 	struct grammarToken;
 	typedef spp::sparse_hash_map<const str*, const grammarToken*, strCompare, strCompare> grammarHashMap;
 	typedef spp::sparse_hash_map<const str*, keyWordInfo*, strCompare, strCompare> keyWordMap;
@@ -39,6 +30,13 @@ namespace SQL_PARSER {
 		FLOAT_NUMBER,
 		SYMBOL
 	};
+	enum class SQL_TYPE {
+		ORACLE,
+		MYSQL,
+		POSTGRESQL,
+		SQL_SERVER,
+		DB2
+	};
 	struct grammarToken {
 		token word;
 		bool matchAnyValueToekn;
@@ -51,6 +49,72 @@ namespace SQL_PARSER {
 		grammarHashMap nextKeyWordMap;
 		bool leaf;
 	};
+#define NOT_MATHCH_RETURN if(matched){dsFailed(1, "grammar error @ "<< std::string(sqlPos, min(50, strlen(sqlPos))));}else{dsReturnCode(1);}
+#define NOT_MATCH_CHECK_ANNOTATION_RETRY(i) if() 
+
+#define tryProcessAnnotation(sqlPos) \
+			if ((sqlPos)[0] == '-') \
+			{\
+				if ((sqlPos)[1] == '-')\
+				{\
+					if (m_sqlType == SQL_TYPE::MYSQL)\
+					{\
+						if ((sqlPos)[2] == ' ')\
+						{\
+							(sqlPos) += 3;\
+							seekToNextLine(sqlPos);\
+						}\
+					}\
+					else\
+					{\
+						(sqlPos) += 2;\
+						seekToNextLine(sqlPos);\
+					}\
+				}\
+			}\
+			else if ((sqlPos)[0] == '#')\
+			{\
+				(sqlPos)++;\
+				seekToNextLine(sqlPos);\
+			}\
+			else if ((sqlPos)[0] == '/' && (sqlPos)[1] == '*')\
+			{\
+				dsReturnIfFailed(processMultiLineAnnotation(sqlPos));\
+			}\
+
+#define NOT_MATCH_CHECK_ANNOTATION_RETRY(sqlPos, i) \
+			if ((sqlPos)[0] == '-') \
+			{\
+				if ((sqlPos)[1] == '-')\
+				{\
+					if (m_sqlType == SQL_TYPE::MYSQL)\
+					{\
+						if ((sqlPos)[2] == ' ')\
+						{\
+							(sqlPos) += 3;\
+							seekToNextLine(sqlPos);\
+							goto MATCH_##i;\
+						}\
+					}\
+					else\
+					{\
+						(sqlPos) += 2;\
+						seekToNextLine(sqlPos);\
+						goto MATCH_##i;\
+					}\
+				}\
+			}\
+			else if ((sqlPos)[0] == '#')\
+			{\
+				(sqlPos)++;\
+				seekToNextLine(sqlPos);\
+				goto MATCH_##i;\
+			}\
+			else if ((sqlPos)[0] == '/' && (sqlPos)[1] == '*')\
+			{\
+				dsReturnIfFailed(processMultiLineAnnotation(sqlPos));\
+				goto MATCH_##i;\
+			}\
 
 	class sqlParser
 	{
@@ -64,9 +128,13 @@ namespace SQL_PARSER {
 		operatorSymbol* m_rbr;
 		grammarHashMap m_grammarTree;
 		threadLocal<sqlParserStack> m_stack;
-
+		literalTranslate m_litTrans;
+	protected:
+		SQL_TYPE m_sqlType;
+		int m_mysqlVersion;
+	private:
 		template<typename T>
-		inline dsStatus& matchGeneralLiteral(sqlParserStack* stack, token*& t, const char*& pos, T f, literalType type)
+		inline DS matchGeneralLiteral(sqlParserStack* stack, token*& t, char*& pos, T f, literalType type)
 		{
 			const char* start = pos + 2;
 			while (f(*pos))
@@ -84,10 +152,10 @@ namespace SQL_PARSER {
 			pos++;
 			dsOk();
 		}
-		inline dsStatus& tryMatchExpression(sqlParserStack* stack, token*& t, const char*& pos)
+		inline DS tryMatchExpression(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			nextWordPos(pos);
-			const char* p = pos;
+			char* p = pos;
 			operatorSymbol* op = m_opTress.match(p);
 			if (op != nullptr && (op->op->optType == OPERATION_TYPE::MATHS || op->op->optType == OPERATION_TYPE::LOGIC))
 			{
@@ -106,9 +174,11 @@ namespace SQL_PARSER {
 		sqlParser()
 		{
 			initKeyWords();
-			const char* pos = "(";
+			char lb[2] = { '(','\0'};
+			char rb[2] = { ')','\0' };
+			char* pos = lb;
 			m_lbr = m_opTress.match(pos);
-			pos = ")";
+			pos = rb;
 			m_rbr = m_opTress.match(pos);
 		}
 
@@ -123,10 +193,135 @@ namespace SQL_PARSER {
 		{
 			m_doubleQuoteCanBeString = yes;
 		}
-
-		dsStatus& matchToken(sqlParserStack* stack, token*& t, const char*& pos, bool needMatchExpression, bool needMatchValue)
+	protected:
+		inline void seekToNextLine(char*& sqlPos)
 		{
-			const char* start = pos;
+			char c;
+			while ((c == *(sqlPos++)) != '\0')
+			{
+				if (c == '\n')
+					return ;
+			}
+		}
+
+		inline bool seekToEndOfMultiLineAnnotation(char*& sqlPos)
+		{
+			char c;
+			while ((c = *(sqlPos++)) != '\0')
+			{
+				if (c == '*' && *sqlPos == '/')
+				{
+					sqlPos++;
+					return true;
+				}
+			}
+			return false;
+		}
+
+		DS processMultiLineAnnotation(char*& sqlPos)
+		{
+			sqlPos += 2;
+			if (m_sqlType == SQL_TYPE::MYSQL && *sqlPos == '!')
+			{
+				char* pos = sqlPos + 1;
+				nextWordPos(pos);
+				if ((*pos >= '0' && *pos <= '9'))
+				{
+					int version = atoi(pos);
+					if (version < m_mysqlVersion)
+					{
+						if (!seekToEndOfMultiLineAnnotation(pos))
+							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+						sqlPos = pos;
+						dsOk();
+					}
+					else
+					{
+						while ((*pos >= '0' && *pos <= '9'))
+							pos++;
+						sqlPos = pos;
+						if (!seekToEndOfMultiLineAnnotation(pos))
+							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+						*(pos - 1) = ' ';
+						*(pos - 2) = ' ';
+						dsOk();
+					}
+				}
+				else
+				{
+					sqlPos = pos;
+					if (!seekToEndOfMultiLineAnnotation(pos))
+						dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+					*(pos - 1) = ' ';
+					*(pos - 2) = ' ';
+					dsOk();
+				}
+			}
+			else
+			{
+				if (!seekToEndOfMultiLineAnnotation(sqlPos))
+					dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+				dsOk();
+			}
+		}
+
+
+	
+
+		inline DS matchLiteralType(literalType type, token*& t)
+		{
+			if (unlikely(t->type != tokenType::literal))
+				dsReturnCode(1);
+			if (unlikely(static_cast<literal*>(t)->lType != type))
+			{
+				if (m_litTrans.canTrans(static_cast<literal*>(t)->lType, type))
+					dsOk();
+				else
+					dsReturnCode(1);
+			}
+			dsOk();
+		}
+
+		inline DS matchLiteral(sqlParserStack* stack, char*& pos, sqlHandle* handle, literalType type, token*& t)
+		{
+			dsReturnIfFailed(matchToken(stack, t, pos, true, true));
+			dsReturnCode(matchLiteralType(type, t));
+		}
+
+		inline DS matchAllLiteralToken(token* t)
+		{
+			if (unlikely(t->type != tokenType::literal))
+				dsReturnCode(1);
+			dsOk();
+		}
+
+		inline DS matchAllLiteral(sqlParserStack* stack, char*& pos, sqlHandle* handle, token*& t)
+		{
+			nextWordPos(pos);
+			dsReturnIfFailed(matchToken(stack, t, pos, true, true));
+			if (unlikely(t->type != tokenType::literal))
+				dsReturnCode(1);
+			dsOk();
+		}
+
+		inline DS matchAnyString(token* t)
+		{
+			if (unlikely(t->type != tokenType::literal && t->type != tokenType::keyword))
+				dsReturnCode(1);
+			dsOk();
+		}
+
+		inline DS matchAnyStringLiteral(sqlParserStack* stack, char*& pos, sqlHandle* handle, token*& t)
+		{
+			nextWordPos(pos);
+			dsReturnIfFailed(matchToken(stack, t, pos, true, true));
+			dsReturnCode(matchAnyString(t));
+		}
+
+	public:
+		DS matchToken(sqlParserStack* stack, token*& t, char*& pos, bool needMatchExpression, bool needMatchValue)
+		{
+			char* start = pos;
 			char c = *pos;
 			t = nullptr;
 			if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))//key word or identifier or function name
@@ -237,7 +432,7 @@ namespace SQL_PARSER {
 			}
 			else if (needMatchExpression)
 			{
-				const char* p = pos;
+				char* p = pos;
 				operatorSymbol* op = m_opTress.match(p);
 				if (op != nullptr && (op->op->optType == OPERATION_TYPE::MATHS || op->op->optType == OPERATION_TYPE::LOGIC) && !op->op->hasLeftValues)//no left value expression
 				{
@@ -249,12 +444,12 @@ namespace SQL_PARSER {
 			else
 				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
 		}
-		inline void nextWordPos(const char*& pos)
+		inline void nextWordPos(char*& pos)
 		{
-			while (isSeparator(pos))
+			while (*pos != '\0' && isSeparator(pos))
 				pos++;
 		}
-		dsStatus& matchExpression(sqlParserStack* stack, token*& t, operatorSymbol* op, const char*& pos)
+		DS matchExpression(sqlParserStack* stack, token*& t, operatorSymbol* op, char*& pos)
 		{
 			uint32_t vt = stack->valueStack.size();
 			uint32_t ot = stack->opStack.size();
@@ -373,14 +568,14 @@ namespace SQL_PARSER {
 			dsOk();
 		}
 
-		dsStatus& matchNumber(sqlParserStack* stack, token*& t, const char*& pos)
+		DS matchNumber(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			bool isFloat = false;
 			const char* start = pos;
 			if (*pos == '+' || *pos == '-')
 				pos++;
 			if (*pos < '0' || *pos>'9')
-				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+				dsReturnCode(1);
 			pos++;
 			while (*pos >= '0' && *pos <= '9')
 				pos++;
@@ -389,7 +584,7 @@ namespace SQL_PARSER {
 				isFloat = true;
 				pos++;
 				if (*pos < '0' || *pos  >'9')
-					dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+					dsReturnCode(1);
 				pos++;
 				while (*pos >= '0' && *pos <= '9')
 					pos++;
@@ -400,7 +595,7 @@ namespace SQL_PARSER {
 				if (*pos == '+' || *pos == '-')
 					pos++;
 				if (*pos < '0' || *pos  >'9')
-					dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+					dsReturnCode(1);
 				pos++;
 				while (*pos >= '0' && *pos <= '9')
 					pos++;
@@ -414,14 +609,13 @@ namespace SQL_PARSER {
 			t = l;
 			dsOk();
 		}
-		dsStatus& matchString(sqlParserStack* stack, token*& t, const char*& pos)
+		DS matchString(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			char symb = *pos++;
 			const char* start = pos;
 			bool backslash = false;
 			while (*pos != '\0')
 			{
-
 				if (unlikely(*pos == '\\'))
 				{
 					backslash = !backslash;
@@ -430,8 +624,9 @@ namespace SQL_PARSER {
 				{
 					if (likely(!backslash))
 					{
-						t = (token*)stack->arena.AllocateAligned(sizeof(token));
-						t->type = tokenType::identifier;
+						t = (token*)stack->arena.AllocateAligned(sizeof(literal));
+						t->type = tokenType::literal;
+						static_cast<literal*>(t)->lType = literalType::CHARACTER_STRING;
 						t->value.assign(start, pos - start);
 						pos++;
 						dsOk();
@@ -441,9 +636,9 @@ namespace SQL_PARSER {
 				}
 				pos++;
 			}
-			dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+			dsReturnCode(1);
 		}
-		dsStatus& matchFunctionArgvList(sqlParserStack* stack, token*& t, const char*& pos)
+		DS matchFunctionArgvList(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			int top = stack->valueStack.size();
 			for (;;)
@@ -465,7 +660,7 @@ namespace SQL_PARSER {
 					break;
 				}
 				else
-					dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+					dsReturnCode(1);
 			}
 			pos++;
 			int size = stack->valueStack.size() - top;
@@ -479,22 +674,22 @@ namespace SQL_PARSER {
 			t = f;
 			dsOk();
 		}
-		dsStatus& matchFunction(sqlParserStack* stack, token*& t, const char*& pos)
+		DS matchFunction(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			dsReturnIfFailed(matchNonDelimitedIdentifier(stack, t, pos, true));
 			while (isSeparator(pos))
 				pos++;
 			if (*pos != '(')
-				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+				dsReturnCode(1);
 			dsReturn(matchFunctionArgvList(stack, t, pos));
 		}
-		dsStatus& matchNonDelimitedIdentifier(sqlParserStack* stack, token*& t, const char*& pos, bool funcName)
+		DS matchNonDelimitedIdentifier(sqlParserStack* stack, token*& t, char*& pos, bool funcName)
 		{
 			const char* start = pos;
 			char c = *pos;
 			//first char must be a-z or U+0080 .. U+FFFF
 			if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) && c < 0x80)
-				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+				dsReturnCode(1);
 			//a-z A-Z 0-9 $#_
 			while ((c = *pos) && ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '1' && c <= '9') || c == '$' || c == '#' || c == '_' || c > 0x80))
 				pos++;
@@ -517,10 +712,11 @@ namespace SQL_PARSER {
 			}
 			dsOk();
 		}
-		dsStatus& matchDelimitedIdentifier(sqlParserStack* stack, token*& t, const char*& pos)
+
+		DS matchDelimitedIdentifier(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			if (*pos != m_identifierQuote)
-				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+				dsFailed(1, "must be delimited identifier  @" << std::string(pos, min(strlen(pos), 50)));
 			pos++;
 			const char* start = pos;
 			bool backslash = false;
@@ -549,51 +745,44 @@ namespace SQL_PARSER {
 				}
 				pos++;
 			}
-			dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
+			dsFailed(1, "unexpect unfinished delimited identifier @" << std::string(pos, min(strlen(pos), 50)));
 		}
 
-		dsStatus& matchIdentifier(sqlParserStack* stack, token*& t, const char*& pos)
+		DS matchIdentifier(sqlParserStack* stack, token*& t, char*& pos)
 		{
+			t = nullptr;
 			for (char i = 0; i < 3; i++)
 			{
+				DS s;
 				if (*pos == m_identifierQuote)
-				{
-					dsReturnIfFailed(matchDelimitedIdentifier(stack, t, pos));
-				}
+					dsReturnIfNotOk(matchDelimitedIdentifier(stack, t, pos));
 				else
-				{
-					dsReturnIfFailed(matchNonDelimitedIdentifier(stack, t, pos, false));
-				}
+					dsReturnIfNotOk(matchNonDelimitedIdentifier(stack, t, pos, false));
 				if (*pos != '.')
 					break;
 			}
 			dsOk();
 		}
-		inline sqlParserStack* getStack()
+
+		DLL_EXPORT virtual DS parseOneSentence(sqlHandle* handle, char*& sqlStr, sql* s);
+	public:
+		DLL_EXPORT DS parse(sqlHandle* handle, char* sqlStr, DS(*handleFunc)(sqlHandle*))
 		{
-			sqlParserStack* s = m_stack.get();
-			if (unlikely(s == nullptr))
-				m_stack.set(s = new sqlParserStack());
-			return s;
-		}
-		dsStatus& parseOneSentence(sqlHandle* handle, const char*& sqlStr, sql* s);
-		dsStatus& parse(sqlHandle* handle, const char* sqlStr, dsStatus& (*handleFunc)(sqlHandle*))
-		{
-			const char* pos = sqlStr;
+			char* pos = sqlStr;
+			nextWordPos(pos);
 			for (;;)
 			{
-				nextWordPos(pos);
-				if (*pos == ';')
-				{
-					pos++;
-					continue;
-				}
-				else if (*pos == '\0')
-					dsOk();
 				sql s;
 				dsReturnIfFailed(parseOneSentence(handle, pos, &s));
-				dsReturnIfFailed(s.semanticAnalysis(handle));
-				dsReturnIfFailed(handleFunc(handle));
+				if(handleFunc != nullptr)
+					dsReturnIfFailed(handleFunc(handle));
+				nextWordPos(pos);
+				if (*pos == ';')
+					pos++;
+				else if (*pos == '\0')
+					dsOk();
+				else
+					dsFailed(1, "unexpect sql @" << std::string(pos, min(strlen(pos), 50)));
 			}
 		}
 	};

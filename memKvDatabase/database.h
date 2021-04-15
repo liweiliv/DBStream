@@ -11,7 +11,7 @@ namespace KVDB
 		spp::sparse_hash_map<std::string, tableInterface*> m_tableMap;
 		shared_mutex m_lock;
 	public:
-		dsStatus& insert(bufferPool* pool, clientHandle* client)
+		DS insert(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
@@ -20,18 +20,9 @@ namespace KVDB
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(iter->second->insert(pool, client))))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			else
-			{
-				m_lock.unlock_shared();
-				dsOk();
-			}
+			dsReturnWithOp(iter->second->insert(pool, client), m_lock.unlock_shared());
 		}
-		dsStatus& update(bufferPool* pool, clientHandle* client)
+		DS update(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
@@ -40,18 +31,9 @@ namespace KVDB
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck((iter->second->update(pool, client)))))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			else
-			{
-				m_lock.unlock_shared();
-				dsOk();
-			}
+			dsReturnWithOp(iter->second->update(pool, client), m_lock.unlock_shared());
 		}
-		dsStatus& drop(bufferPool* pool, clientHandle* client)
+		DS drop(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
@@ -60,19 +42,10 @@ namespace KVDB
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(iter->second->drop(pool, client))))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			else
-			{
-				m_lock.unlock_shared();
-				dsOk();
-			}
+			dsReturnWithOp(iter->second->drop(pool, client), m_lock.unlock_shared());
 		}
 
-		dsStatus& select(bufferPool* pool, clientHandle* client)
+		DS select(bufferPool* pool, clientHandle* client)
 		{
 			m_lock.lock_shared();
 			spp::sparse_hash_map<std::string, tableInterface*>::iterator iter = m_tableMap.find(client->m_change->table);
@@ -81,19 +54,14 @@ namespace KVDB
 				m_lock.unlock_shared();
 				dsFailedAndLogIt(errorCode::TABLE_NOT_EXIST, "table not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(iter->second->drop(pool, client))))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			else
-			{
-				m_lock.unlock_shared();
-				dsOk();
-			}
+			const version* result;
+			dsReturnIfFailedWithOp(iter->second->select(pool, client, result), m_lock.unlock_shared());
+			m_lock.unlock_shared();
+			client->m_result = &result->data;
+			dsOk();
 		}
 
-		dsStatus& createTable(clientHandle* client, META::tableMeta* meta)
+		DS createTable(clientHandle* client, META::tableMeta* meta)
 		{
 			if (meta->m_primaryKey == nullptr)
 				dsFailedAndLogIt(errorCode::PRIMARYKEY_NOT_EXIST, "table must have primary key", WARNING);

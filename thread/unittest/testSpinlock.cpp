@@ -11,7 +11,7 @@ template<typename LOCK>
 void testLock(LOCK* lock,int cnt)
 {
 	timer::timestamp t, t1;
-	_threadLocalWrap.idle();
+	getThreadLocalWrap().idle();
 	t.time = timer::getNowTimestamp();
 	for (int i = 0; i < cnt; i++)
 	{

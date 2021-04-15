@@ -36,7 +36,7 @@ JSON_TYPE jsonValue::getType(const char* data)
 }
 jsonValue::jsonValue(JSON_TYPE _t) :t(_t) {}
 
-dsStatus& jsonValue::parse(jsonValue*& value, const char* data, int& size)
+DS jsonValue::parse(jsonValue*& value, const char* data, int& size)
 {
 	jsonValue* v = nullptr;
 	switch (getType(data))
@@ -68,16 +68,9 @@ dsStatus& jsonValue::parse(jsonValue*& value, const char* data, int& size)
 	default:
 		dsFailed(-1, "unpexpect type");
 	}
-	if (!dsCheck(v->parse(data, size)))
-	{
-		delete v;
-		dsReturn(getLocalStatus());
-	}
-	else
-	{
-		value = v;
-		dsOk();
-	}
+	dsReturnIfFailedWithOp(v->parse(data, size), delete v);
+	value = v;
+	dsOk();
 }
 
 jsonString::jsonString(const char* data) :
@@ -97,7 +90,7 @@ string jsonString::toString(int level) const
 	s.append(m_value).append("\"");
 	return s;
 }
-dsStatus& jsonString::parse(const char* data, int& size)
+DS jsonString::parse(const char* data, int& size)
 {
 	size = 0;
 	if (data == nullptr)
@@ -126,7 +119,7 @@ jsonNum::jsonNum(const char* data) :
 	int size = 0;
 	parse(data, size);
 }
-dsStatus& jsonNum::parse(const char* data, int& size)
+DS jsonNum::parse(const char* data, int& size)
 {
 	size = 0;
 	m_value = 0;
@@ -200,7 +193,7 @@ void jsonObject::clean()
 	}
 	m_values.clear();
 }
-dsStatus& jsonObject::parse(const char* data, int& size)
+DS jsonObject::parse(const char* data, int& size)
 {
 	if (data == nullptr)
 		dsFailed(-1, "data is null");
@@ -231,11 +224,7 @@ dsStatus& jsonObject::parse(const char* data, int& size)
 		}
 		ptr++;
 		jsonValue* v = nullptr;
-		if (!dsCheck(jsonValue::parse(v, ptr, childSize)))
-		{
-			clean();
-			dsReturn(getLocalStatus());
-		}
+		dsReturnIfFailedWithOp(jsonValue::parse(v, ptr, childSize), clean());
 		if (!m_values.insert(std::pair<std::string, jsonValue*>(k.m_value, v)).second)
 		{
 			clean();
@@ -321,7 +310,7 @@ void jsonArray::clean()
 	m_values.clear();
 }
 
-dsStatus& jsonArray::parse(const char* data, int& size)
+DS jsonArray::parse(const char* data, int& size)
 {
 	if (data == nullptr)
 		dsFailed(-1, "data is null");
@@ -341,11 +330,7 @@ dsStatus& jsonArray::parse(const char* data, int& size)
 			break;
 		int childSize = 0;
 		jsonValue* v = nullptr;
-		if (!dsCheck(jsonValue::parse(v, ptr, childSize)))
-		{
-			clean();
-			dsReturn(getLocalStatus());
-		}
+		dsReturnIfFailedWithOp(jsonValue::parse(v, ptr, childSize), clean());
 		m_values.push_back(v);
 		ptr += childSize;
 		while (*ptr == ' ' || *ptr == '\t' || *ptr == '\n' || *ptr == '\r')
@@ -394,7 +379,7 @@ jsonBool::jsonBool(const char* data) :jsonValue(JSON_TYPE::J_BOOL), m_value(fals
 	int size = 0;
 	parse(data, size);
 }
-dsStatus& jsonBool::parse(const char* data, int& size)
+DS jsonBool::parse(const char* data, int& size)
 {
 	if (data == nullptr)
 	{

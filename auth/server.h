@@ -34,7 +34,7 @@ namespace AUTH
 		uint32_t m_maxPwdHashLength;
 		leveldb::Random m_random;
 	private:
-		dsStatus& userExist(const char* user, uint16_t size)
+		DS userExist(const char* user, uint16_t size)
 		{
 			dsReturnIfFailed(checkUser(user, size));
 			userMap::const_accessor accessor;
@@ -44,7 +44,7 @@ namespace AUTH
 			else
 				dsFailed(errorCode::USER_NOT_EXIST_OR_PASSWORD_NOT_MATCH, "");
 		}
-		dsStatus& userNotExist(const char* user, uint16_t size)
+		DS userNotExist(const char* user, uint16_t size)
 		{
 			dsReturnIfFailed(checkUser(user, size));
 			userMap::const_accessor accessor;
@@ -55,11 +55,11 @@ namespace AUTH
 				dsFailed(errorCode::USER_EXIST, "");
 		}
 	public:
-		dsStatus& load(const char* path)
+		DS load(const char* path)
 		{
 			dsOk();
 		}
-		dsStatus& registerUser(const char* user, uint16_t userSize, const char* password, uint16_t passwordSize)
+		DS registerUser(const char* user, uint16_t userSize, const char* password, uint16_t passwordSize)
 		{
 			dsReturnIfFailed(checkUser(user, userSize));
 			dsReturnIfFailed(checkPassword(password, passwordSize));
@@ -73,14 +73,14 @@ namespace AUTH
 				dsFailed(errorCode::USER_EXIST, "user exist");
 			dsOk();
 		}
-		dsStatus& authReq(serverHandle& handle)
+		DS authReq(serverHandle& handle)
 		{
 			dsReturnIfFailed(checkUser(handle.userName.c_str(), handle.userName.size()));
 			for (int i = 0; i < sizeof(handle.salt); i += sizeof(uint32_t))
 				*(uint32_t*)&handle.salt[i] = m_random.Next();
 			dsOk();
 		}
-		dsStatus& authLogin(serverHandle& handle, const char* resp, uint32_t respSize)
+		DS authLogin(serverHandle& handle, const char* resp, uint32_t respSize)
 		{
 			dsReturnIfFailed(checkUser(handle.userName.c_str(), handle.userName.size()));
 			dsReturnIfFailed(checkPasswordHash(resp, respSize));

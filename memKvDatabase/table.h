@@ -18,10 +18,10 @@ namespace KVDB
 	public:
 		tableInterface(const char* name, META::tableMeta* meta) :m_name(name), m_meta(meta) {}
 		virtual ~tableInterface() {}
-		virtual dsStatus& select(bufferPool* pool, clientHandle* client, const version *& result) = 0;
-		virtual dsStatus& insert(bufferPool* pool, clientHandle* client) = 0;
-		virtual dsStatus& update(bufferPool* pool, clientHandle* client) = 0;
-		virtual dsStatus& drop(bufferPool* pool, clientHandle* client) = 0;
+		virtual DS select(bufferPool* pool, clientHandle* client, const version *& result) = 0;
+		virtual DS insert(bufferPool* pool, clientHandle* client) = 0;
+		virtual DS update(bufferPool* pool, clientHandle* client) = 0;
+		virtual DS drop(bufferPool* pool, clientHandle* client) = 0;
 		const std::string& getName() { return m_name; }
 	};
 	template<class C>
@@ -59,7 +59,7 @@ namespace KVDB
 		{
 			key = *(const T*)record->column(m_meta->m_primaryKey->columnInfo[0].columnId);
 		}
-		inline dsStatus& createKeyFromCondition(bufferPool* pool, T& key, const rowImage* condition)
+		inline DS createKeyFromCondition(bufferPool* pool, T& key, const rowImage* condition)
 		{
 			if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
 				dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must be primary key column", WARNING);
@@ -83,7 +83,7 @@ namespace KVDB
 			}
 			rowMap.clear();
 		}
-		dsStatus& select(bufferPool* pool, clientHandle* client, const version*& result)
+		DS select(bufferPool* pool, clientHandle* client, const version*& result)
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
@@ -93,15 +93,9 @@ namespace KVDB
 				destroyKey(key, false);
 				dsFailedAndLogIt(errorCode::ROW_NOT_EXIST, "select failed for row not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(accessor->second->select(pool, client, result))))
-			{
-				destroyKey(key, false);
-				dsReturn(getLocalStatus());
-			}
-			destroyKey(key, false);
-			dsOk();
+			dsReturnWithOp(accessor->second->select(pool, client, result), destroyKey(key, false));
 		}
-		dsStatus& insert(bufferPool* pool, clientHandle* client)
+		DS insert(bufferPool* pool, clientHandle* client)
 		{
 			version* v;
 			dsReturnIfFailed(version::allocForInsert(v, pool, m_meta, &client->m_change->columns));
@@ -112,24 +106,16 @@ namespace KVDB
 			{
 				row* r = (row*)pool->alloc(sizeof(row));
 				r->init();
-				if (unlikely(!dsCheck(r->insert(pool, client, v))))
-				{
-					destroyKey(key, false);
-					dsReturn(getLocalStatus());
-				}
+				dsReturnIfFailedWithOp(r->insert(pool, client, v), destroyKey(key, false));
 				copyKeyValueFromRecord(pool, key);
 				if (rowMap.insert(accessor, std::pair<T, row*>(key, r)))
 					dsOk();
 			}
-			if (unlikely(!dsCheck(accessor->second->insert(pool, client, v))))
-			{
-				destroyKey(key, false);
-				dsReturn(getLocalStatus());
-			}
+			dsReturnIfFailedWithOp(accessor->second->insert(pool, client, v), destroyKey(key, false));
 			dsOk();
 		}
 
-		dsStatus& update(bufferPool* pool, clientHandle* client)
+		DS update(bufferPool* pool, clientHandle* client)
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
@@ -139,16 +125,10 @@ namespace KVDB
 				destroyKey(key, false);
 				dsFailedAndLogIt(errorCode::ROW_NOT_EXIST, "update failed for row not exist", WARNING);
 			}
-			if (unlikely(!dsCheck((accessor->second)->update(pool, client, &client->m_change->columns))))
-			{
-				destroyKey(key, false);
-				dsReturn(getLocalStatus());
-			}
-			destroyKey(key, false);
-			dsOk();
+			dsReturnWithOp((accessor->second)->update(pool, client, &client->m_change->columns), destroyKey(key, false));
 		}
 
-		dsStatus& drop(bufferPool* pool, clientHandle* client)
+		DS drop(bufferPool* pool, clientHandle* client)
 		{
 			T key;
 			dsReturnIfFailed(createKeyFromCondition(pool, key, &client->m_change->condition));
@@ -158,11 +138,7 @@ namespace KVDB
 				destroyKey(key, false);
 				dsFailedAndLogIt(errorCode::ROW_NOT_EXIST, "delete failed for row not exist", WARNING);
 			}
-			if (unlikely(!dsCheck(accessor->second->drop(pool, client))))
-			{
-				destroyKey(key, false);
-				dsReturn(getLocalStatus());
-			}
+			dsReturnIfFailedWithOp(accessor->second->drop(pool, client), destroyKey(key, false));
 			destroyKey(key, false);
 			dsOk();
 		}
@@ -209,7 +185,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline dsStatus& table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowImage* condition)
+	inline DS table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowImage* condition)
 	{
 		if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
 			dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must be primary key column", WARNING);
@@ -219,7 +195,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline dsStatus& table<META::unionKey>::createKeyFromCondition(bufferPool* pool, META::unionKey& key, const rowImage* condition)
+	inline DS table<META::unionKey>::createKeyFromCondition(bufferPool* pool, META::unionKey& key, const rowImage* condition)
 	{
 		if (condition->count != m_meta->m_primaryKey->columnCount)
 			dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must have all primary key column", WARNING);

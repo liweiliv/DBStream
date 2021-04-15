@@ -32,13 +32,13 @@ namespace KVDB {
 		arrayQueue<clientHandle*>* m_inputTasks;
 		int m_workThreadCount;
 	public:
-		dsStatus& startTrans(clientHandle* handle);
-		dsStatus& rowChange(clientHandle* handle);
-		dsStatus& select(clientHandle* handle);
-		dsStatus& ddl(clientHandle* handle);
-		dsStatus& commit(clientHandle* handle);
-		dsStatus& rollback(clientHandle* handle);
-		dsStatus& asyncWriteWalLog(clientHandle* handle);
+		DS startTrans(clientHandle* handle);
+		DS rowChange(clientHandle* handle);
+		DS select(clientHandle* handle);
+		DS ddl(clientHandle* handle);
+		DS commit(clientHandle* handle);
+		DS rollback(clientHandle* handle);
+		DS asyncWriteWalLog(clientHandle* handle);
 		void workThread(int tid);
 		void walWriteThread();
 

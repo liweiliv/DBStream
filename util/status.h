@@ -5,6 +5,8 @@
 #include "file.h"
 #include "String.h"
 #include "winDll.h"
+
+typedef int32_t DS;
 DLL_EXPORT class dsStatus
 {
 public:
@@ -27,7 +29,7 @@ public:
 		}
 		~stackInfo() {}
 	};
-	int code;
+	DS code;
 	std::string errMessage;
 	std::vector<stackInfo> stacks;
 	DLL_EXPORT dsStatus() :code(0) {}
@@ -60,6 +62,10 @@ public:
 		}
 		return s;
 	}
+	inline DS getCode()
+	{
+		return code;
+	}
 };
 /*do not use*/
 DLL_IMPORT extern dsStatus DS_OK;
@@ -71,31 +77,38 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 #define currentStack(errInfo) dsStatus::stackInfo(basename(__FILE__),__func__,__LINE__,errInfo)
 /*use those*/
 
+#define dsOk() return 0
+#define dsCheck(status) (likely((status) >= 0))
+#define dsReturnIfFailed(status)  do{if(!(dsCheck(status))){dsStatus& __s = getLocalStatus();__s.addStack(currentStack(nullptr));return  __s.getCode();}}while(0)
 
-#define dsOk() return DS_OK
-#define dsCheck(status) ((&(status)) == (&DS_OK))
-#define dsReturnIfFailed(status) do{dsStatus& __s = (status);if(unlikely((&(__s)) != (&DS_OK))){(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
-
-#define dsReturn(status) do{dsStatus& __s = (status); if(likely((&(__s)) == (&DS_OK))){return (__s);}else{(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
-#define dsReturnForFailedAndLogIt(errInfo) do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;getLocalStatus().addStack(currentStack(__s));return getLocalStatus();}while(0)
-
-//#define dsReturnForFailed() do{getLocalStatus().addStack(currentStack(nullptr));return getLocalStatus();}while(0);
-#define dsReturnForFailed(errInfo) do{getLocalStatus().addStack(currentStack(errInfo));return getLocalStatus();}while(0)
+#define dsReturnIfNotOk(status)  do{DS _s = (status);if(_s == 0){break;} else if(_s > 0){return _s;}else{dsStatus& __s = getLocalStatus();__s.addStack(currentStack(nullptr));return _s;}}while(0)
 
 
-#define dsFailed(code,errInfo)  do{String __s;__s = __s<<errInfo;setFailed((code),(__s),currentStack(__s));return getLocalStatus();}while(0)
+#define dsReturnIfFailedWithOp(status,op)  do{if(!(dsCheck(status))){op;dsStatus& __s = getLocalStatus();__s.addStack(currentStack(nullptr));return  __s.getCode();}}while(0)
 
-#define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus();}while(0)
+//define dsReturnIfFailed(status) do{dsStatus& __s = (status);if(unlikely((&(__s)) != (&DS_OK))){(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
+
+#define dsReturnCode(code) return (code)
+
+#define dsReturn(status) do{DS __s = (status); if(dsCheck(__s)){return __s;}else{dsStatus& __st = getLocalStatus();__st.addStack(currentStack(nullptr));return  __s;}}while(0)
+
+#define dsReturnWithOp(status,op) do{DS __s = (status); if(dsCheck(__s)){op;return __s;}else{op;dsStatus& __st = getLocalStatus();__st.addStack(currentStack(nullptr));return  __s;}}while(0)
 
 
-/*function return value is not dsStatus&,use dsFailedReturn to save error info ,and return value*/
-#define dsFailedReturn(code,errInfo,returnValue) do{setFailed((code),(errInfo),currentStack(errInfo));return (returnValue);}while(0)
-/*errInfo must not be null*/
-#define dsFailedReturnAndLogIt(code,errInfo,logType,returnValue) do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),(errInfo),currentStack(errInfo));return (returnValue);}while(0)
+#define dsFailedAndReturn() do{dsStatus& __st = getLocalStatus();assert(&__st != &DS_OK); __st.addStack(currentStack(nullptr));return __st.getCode(); }while(0)
 
-#define dsCheckButIgnore(status) do{dsStatus& __s = (status);if(unlikely(!dsCheck(__s))){LOG(WARNING)<<__s.toString(); __s.clear();}}while(0);
 
-#define dsTest(status) do{dsStatus& __s = (status);if(unlikely(!dsCheck(__s))){LOG(ERROR)<<__s.toString();abort();}}while(0);
+//#define dsReturn(status) do{dsStatus& __s = (status); if(likely((&(__s)) == (&DS_OK))){return (__s);}else{(__s).addStack(currentStack(nullptr));return (__s);}}while(0)
 
-#define resetStatus() do{if(!dsCheck(getLocalStatus())){getLocalStatus().clear();setLocalStatus(DS_OK);}}while(0);
+
+#define dsFailed(code,errInfo)  do{String __s;__s = __s<<errInfo;setFailed((code),(__s),currentStack(__s));return getLocalStatus().getCode();}while(0)
+
+#define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus().getCode();}while(0)
+
+#define resetStatus() do{if(&getLocalStatus() != &DS_OK ){getLocalStatus().clear();setLocalStatus(DS_OK);}}while(0);
+
+#define dsCheckButIgnore(status) do{if(unlikely(!dsCheck(status))){LOG(WARNING)<<getLocalStatus().toString(); resetStatus();}}while(0)
+
+#define dsTest(status) do{if(unlikely(!dsCheck(__s))){LOG(ERROR)<<getLocalStatus().toString();abort();}}while(0);
+
 

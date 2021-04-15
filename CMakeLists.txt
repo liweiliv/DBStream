@@ -17,8 +17,10 @@ SET(BASE_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "pwd: ${BASE_INCLUDE_PATH}")
 SET(EXECUTABLE_OUTPUT_PATH bin)
 ADD_DEFINITIONS(-DASIO_STANDALONE)
-
+SET(UT_EXECUTABLE_OUTPUT_PATH "test")
 #ADD_DEFINITIONS(-DDEBUG)
+
+SET(THIRDPARTY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
 
 #lz4
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -77,39 +79,6 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 
 
-#mysqlclient
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	SET(MYSQL_INCLUDE_PATH "/usr/include/mysql")
-	find_library(MYSQL_CLIENT libmysqlclient.a /usr/lib64/mysql/)
-	if(NOT MYSQL_CLIENT)
-        message(FATAL_ERROR "libmysqlclient.a  not found")
-	endif()
-ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	SET(MYSQL_INCLUDE_PATH "C:\\Program Files\\mysql-8.0.17-winx64\\include")
-	find_library(MYSQL_CLIENT mysqlclient "C:\\Program Files\\mysql-8.0.17-winx64\\lib")
-	#find_library(MYSQL_CLIENT mysqlclient  "D:\\code\\mysql-8.0.19\\out\\install\\x64-Debug\\lib")
-	if(NOT MYSQL_CLIENT)
-        message(FATAL_ERROR "mysqlclient library not found")
-	endif()
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-
-#oracleClient
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	SET(ORACLE_INCLUDE_PATH "thirdParty/oracle/linux/include")
-	find_library(ORACLE_CLIENT NAMES ociei clntsh clntshcore nnz21 occi HINTS "thirdParty/oracle/linux/lib")
-	if(NOT ORACLE_CLIENT)
-	message(FATAL_ERROR "occi not found")
-	endif()
-	message(STATUS "pwd: ${ORACLE_CLIENT}")
-ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
-	SET(ORACLE_INCLUDE_PATH "thirdparty/oracle/windows/include")
-	find_library(ORACLE_CLIENT names oci oraocci19d "thirdParty/oracle/windows/lib/")
-	if(NOT ORACLE_CLIENT)
-        message(FATAL_ERROR "occi not found")
-	endif()
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
 #boost
 IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 	SET(BOOST_INCLUDE_PATH "D:\\boost\\boost_1_73_0")
@@ -119,17 +88,24 @@ ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	LINK_DIRECTORIES("../boost_1_73_0/stage/lib")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 
+#libIconv
+IF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(LIB_ICONV_INCLUDE_PATH "${BASE_INCLUDE_PATH}\\thirdParty\\libIconv\\windows\\include")
+	find_library(LIB_ICONV_LIB libIconv "${BASE_INCLUDE_PATH}\\thirdParty\\libIconv\\windows\\lib")
+	if(NOT LIB_ICONV_LIB)
+		message(FATAL_ERROR "Iconv not found")
+	endif() 
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	SET(LIB_ICONV_INCLUDE_PATH "${BASE_INCLUDE_PATH}\\thirdParty\\libIconv\\linux\\include")
+	find_library(LIB_ICONV_LIB Iconv "${BASE_INCLUDE_PATH}\\thirdParty\\libIconv\\linux\\lib")
+	if(NOT LIB_ICONV_LIB)
+		message(FATAL_ERROR "Iconv not found")
+	endif() 
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
 
 
-#util
-aux_source_directory(util utilDir)
-add_library(util SHARED ${utilDir})
-TARGET_LINK_LIBRARIES(util ${GLOG} ${GFLAGS})
-target_include_directories(util PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(util pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+ADD_SUBDIRECTORY(util)
 
 
 #global 
@@ -170,8 +146,8 @@ target_include_directories(mysqlParserFuncs PUBLIC ${MYSQL_INCLUDE_PATH})
 #sql parser v2
 aux_source_directory(sqlParserV2 sqlparserV2Dir)
 add_library(sqlParserV2 SHARED ${sqlparserV2Dir})
-TARGET_LINK_LIBRARIES(sqlParserV2 util thread ${GLOG} ${GLFAGS})
-target_include_directories(sqlParserV2 PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+TARGET_LINK_LIBRARIES(sqlParserV2 util thread ${GLOG} ${GLFAGS} ${LIB_ICONV_LIB})
+target_include_directories(sqlParserV2 PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${LIB_ICONV_INCLUDE_PATH})
 
 #memory
 aux_source_directory(memory memoryDir)
@@ -233,42 +209,8 @@ add_library(shell SHARED ${shellDir})
 TARGET_LINK_LIBRARIES(shell store util memory meta ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(shell PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
-#datasource
-aux_source_directory(dataSource dataSourceDir)
-add_library(dataSource SHARED ${dataSourceDir})
-TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG} ${GFLAGS})
-target_include_directories(dataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(dataSource dl)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-#mysqlDataSource
-include_directories(/usr/include/mysql)
-aux_source_directory(dataSource/mysqlDataSource mysqlDataSourceDir)
-add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
-target_include_directories(mysqlDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
-TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-#oracleDataSource
-aux_source_directory(dataSource/oracleDataSource oracleDataSourceDir)
-add_library(oracleDataSource SHARED ${oracleDataSourceDir})
-target_include_directories(oracleDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
-target_include_directories(oracleDataSource PRIVATE ${ORACLE_INCLUDE_PATH})
-TARGET_LINK_LIBRARIES(oracleDataSource util thread store meta ${ORACLE_CLIENT} ${GLOG} ${GFLAGS})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(oracleDataSource pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-
-
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(dataSource dl)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-
+ADD_SUBDIRECTORY(dataSource)
 
 #mysqlApplier
 aux_source_directory(replicator/mysqlApplier mysqlApplierDir)
@@ -369,55 +311,7 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ADD_EXECUTABLE(testRingBuffer  memory/unittest/testRingBuffer.cpp)
 TARGET_LINK_LIBRARIES(testRingBuffer memory util)
 
-ADD_EXECUTABLE(testLinkList  util/unittest/testLinkList.cpp)
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testLinkList pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-ADD_EXECUTABLE(testDualLinkList  util/unittest/testDualLinkList.cpp)
-target_include_directories(testDualLinkList PUBLIC ${BASE_INCLUDE_PATH})
-TARGET_LINK_LIBRARIES(testDualLinkList thread)
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testDualLinkList pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-ADD_EXECUTABLE(testConfig  util/unittest/testConfig.cpp)
-TARGET_LINK_LIBRARIES(testConfig util)
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testConfig pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-ADD_EXECUTABLE(testTrieTree  util/unittest/testTrieTree.cpp)
-TARGET_LINK_LIBRARIES(testTrieTree util)
-
-ADD_EXECUTABLE(testSparsepp util/unittest/testSparsepp.cpp)
-
-ADD_EXECUTABLE(testString util/unittest/testString.cpp)
-TARGET_LINK_LIBRARIES(testString util)
-
-
-
-ADD_EXECUTABLE(testHeap util/unittest/testHeap.cpp)
-TARGET_LINK_LIBRARIES(testHeap util)
-
-ADD_EXECUTABLE(testFixedQueue util/unittest/testFixedQueue.cpp)
-target_include_directories(testFixedQueue PUBLIC ${BASE_INCLUDE_PATH})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testFixedQueue pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-
-
-ADD_EXECUTABLE(testBitUtil util/unittest/testBitUtil.cpp)
-TARGET_LINK_LIBRARIES(testBitUtil util)
-
-ADD_EXECUTABLE(testItoa util/unittest/testItoa.cpp)
-TARGET_LINK_LIBRARIES(testItoa util)
-
-ADD_EXECUTABLE(testRingFixedQueue  util/unittest/testRingFixedQueue.cpp)
-TARGET_LINK_LIBRARIES(testRingFixedQueue util)
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-        TARGET_LINK_LIBRARIES(testRingFixedQueue pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testBuddy  memory/unittest/testBuddy.cpp)
 TARGET_LINK_LIBRARIES(testBuddy util memory)
@@ -470,10 +364,3 @@ ADD_EXECUTABLE(testSqlWordV2  sqlParserV2/unittest/testSqlWord.cpp)
 TARGET_LINK_LIBRARIES(testSqlWordV2 util sqlParserV2 thread)
 target_include_directories(testSqlWordV2 PUBLIC)
 
-ADD_EXECUTABLE(testOracleConect  dataSource/oracleDataSource/unittest/testOracleConnect.cpp)
-TARGET_LINK_LIBRARIES(testOracleConect util oracleDataSource ${ORACLE_CLIENT} ${GLOG})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(testOracleConect pthread)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-target_include_directories(testOracleConect PUBLIC)
-target_include_directories(testOracleConect PRIVATE ${ORACLE_INCLUDE_PATH})

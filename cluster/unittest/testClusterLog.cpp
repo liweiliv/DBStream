@@ -8,7 +8,7 @@ void clear(const std::string logDir)
 	for (std::vector<std::string>::iterator iter = files.begin(); iter != files.end(); iter++)
 		remove((logDir + "/" + *iter).c_str());
 }
-dsStatus& wFunc(clusterLog* log)
+DS wFunc(clusterLog* log)
 {
 	for (int i = 1; i < 100000; i++)
 	{
@@ -29,7 +29,7 @@ dsStatus& wFunc(clusterLog* log)
 	}
 	dsOk();
 }
-dsStatus& rFunc(clusterLog* logFile)
+DS rFunc(clusterLog* logFile)
 {
 	clusterLog::iterator iter(logFile, {1,1});
 	dsTest(iter.seek(logIndexInfo(1, 1)));
@@ -50,7 +50,7 @@ dsStatus& rFunc(clusterLog* logFile)
 	}
 	dsOk();
 }
-dsStatus& test()
+DS test()
 {
 	clusterLogConfig logManagerConfig;
 	logConfig logConfig;

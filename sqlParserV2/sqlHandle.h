@@ -1,10 +1,11 @@
 #pragma once
 #include "token.h"
 #include "util/status.h"
+#include "util/winDll.h"
 namespace SQL_PARSER
 {
 	struct sqlHandle;
-	typedef dsStatus& (*parserFuncType)(sqlHandle*, const token*);
+	typedef DS (*parserFuncType)(sqlHandle*, const token*);
 	struct sqlValueFuncPair {
 		const token* value;
 		parserFuncType func;
@@ -36,20 +37,26 @@ namespace SQL_PARSER
 			tail->next = pair;
 			tail = pair;
 		}
-		inline dsStatus& semanticAnalysis(sqlHandle * handle)
+		inline DS semanticAnalysis(sqlHandle * handle)
 		{
 			for (sqlValueFuncPair* p = head; p != nullptr; p = p->next)
 				dsReturnIfFailed(p->func(handle, p->value));
 			dsOk();
 		}
 	};
+	struct sqlParserStack;
+	class literalTranslate;
 	struct sqlHandle {
 		void* userData;
 		uint32_t uid;
 		uint32_t tid;
 		std::string currentDatabase;
+		sqlParserStack* stack;
+		const literalTranslate * literalTrans;
 		sql* sqlList;
 		sql* tail;
 		uint32_t sqlCount;
+		DLL_EXPORT sqlHandle();
+		DLL_EXPORT ~sqlHandle();
 	};
 }

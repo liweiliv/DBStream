@@ -230,10 +230,10 @@ namespace CLUSTER
 	}
 	int cluster::apply(const logEntryRpcBase* rpc)
 	{
-
+		return 0;//todo
 	}
 
-	dsStatus& cluster::processMessage(const char* msg)
+	DS cluster::processMessage(const char* msg)
 	{
 		logEntryRpcBase* rpc = (logEntryRpcBase*)msg;
 		if (rpc->recordType >= static_cast<uint8_t>(rpcType::endOfFile))
@@ -268,7 +268,7 @@ namespace CLUSTER
 					}
 				}
 				else
-					dsReturn(getLocalStatus());
+					dsFailedAndReturn();
 			}
 			if (rpc->logIndex.term != m_myself->getNodeInfo().m_currentLogIndex.term)
 			{

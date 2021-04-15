@@ -29,5 +29,5 @@ public:
 	{
 		return files;
 	}
-	DLL_EXPORT static dsStatus& getFileList(const std::string &filePath, std::vector<std::string>& files);
+	DLL_EXPORT static DS getFileList(const std::string &filePath, std::vector<std::string>& files);
 };

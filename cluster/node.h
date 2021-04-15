@@ -45,12 +45,12 @@ namespace CLUSTER
 		nodeInfo m_nodeInfo;
 		cluster* m_cluster;
 		int clean();
-		dsStatus& apply(const logEntryRpcBase* rpc)
+		DS apply(const logEntryRpcBase* rpc)
 		{
 
 		}
 	public:
-		dsStatus& applyTo(const logIndexInfo& logIndex)
+		DS applyTo(const logIndexInfo& logIndex)
 		{
 
 		}

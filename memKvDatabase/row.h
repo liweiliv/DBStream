@@ -18,7 +18,7 @@ namespace KVDB
 		version* next;
 		version* transNext;
 		DATABASE_INCREASE::DMLRecord data;
-		static dsStatus& allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowImage* row)
+		static DS allocForInsert(version*& v, bufferPool* pool, const META::tableMeta* meta, const rowImage* row)
 		{
 			uint16_t columnIdMap[MAX_COLUMN_COUNT];
 			if (unlikely(row->count > MAX_COLUMN_COUNT))
@@ -73,7 +73,7 @@ namespace KVDB
 					r.setVarColumn(columnId, v, size);
 			}
 		}
-		dsStatus& update(bufferPool* pool, uint64_t tid, const rowImage* change)
+		DS update(bufferPool* pool, uint64_t tid, const rowImage* change)
 		{
 			const META::tableMeta* meta = data.meta;
 			int32_t deltaSize = 0;
@@ -113,7 +113,7 @@ namespace KVDB
 			dsOk();
 		}
 		//delete
-		dsStatus& drop(bufferPool* pool, uint64_t tid)
+		DS drop(bufferPool* pool, uint64_t tid)
 		{
 			version* v = (version*)pool->alloc(offsetof(version, data) + sizeof(DATABASE_INCREASE::record) + sizeof(DATABASE_INCREASE::recordHead));
 			v->prev = this;
@@ -163,7 +163,7 @@ namespace KVDB
 		{
 			owner.store(0, std::memory_order_relaxed);
 		}
-		dsStatus& select(bufferPool* pool, clientHandle* client,const version*& v)
+		DS select(bufferPool* pool, clientHandle* client,const version*& v)
 		{
 			/*
 			if (client->m_trans->m_level == TRANS_ISOLATION_LEVEL::READ_COMMITTED)
@@ -190,7 +190,7 @@ namespace KVDB
 			dsOk();
 		}
 
-		dsStatus& insert(bufferPool* pool, clientHandle* client, version * v)
+		DS insert(bufferPool* pool, clientHandle* client, version * v)
 		{
 			if (tail != nullptr && tail->data.head->minHead.type != static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not delete, row not exist");
@@ -215,7 +215,7 @@ namespace KVDB
 			}
 			dsOk();
 		}
-		dsStatus& update(bufferPool* pool, clientHandle* client, const rowImage* change)
+		DS update(bufferPool* pool, clientHandle* client, const rowImage* change)
 		{
 			if (tail == nullptr || tail->data.head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not update, row not exist");
@@ -226,15 +226,11 @@ namespace KVDB
 				unlockWithOutCheck();
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not update, row not exist");
 			}
-			if (!dsCheck(tail->update(pool, client->m_txnId, change)))
-			{
-				unlockWithOutCheck();
-				dsReturn(getLocalStatus());
-			}
+			dsReturnIfFailedWithOp(tail->update(pool, client->m_txnId, change), unlockWithOutCheck());
 			tail = tail->next;
 			dsOk();
 		}
-		dsStatus& drop(bufferPool* pool, clientHandle* client)
+		DS drop(bufferPool* pool, clientHandle* client)
 		{
 			if (tail == nullptr || tail->data.head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not delete, row not exist");
@@ -245,11 +241,7 @@ namespace KVDB
 				unlockWithOutCheck();
 				dsFailed(errorCode::ROW_NOT_EXIST, "can not delete, row not exist");
 			}
-			if (!dsCheck(tail->drop(pool, client->m_txnId)))
-			{
-				unlockWithOutCheck();
-				dsReturn(getLocalStatus());
-			}
+			dsReturnIfFailedWithOp(tail->drop(pool, client->m_txnId), unlockWithOutCheck());
 			tail = tail->next;
 			dsOk();
 		}

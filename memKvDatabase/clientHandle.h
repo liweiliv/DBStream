@@ -10,7 +10,7 @@ namespace AUTH {
 	class serverHandle;
 }
 namespace DATABASE_INCREASE{
-	struct dmlRecord;
+	struct DMLRecord;
 }
 namespace KVDB {
 	class transaction;
@@ -40,7 +40,7 @@ namespace KVDB {
 		volatile bool m_busy;
 		arrayQueue<rpcHead *> m_preProcessResp;
 		char m_resultDefaultBuffer[2048];
-		DATABASE_INCREASE::dmlRecord* m_result;
+		const DATABASE_INCREASE::DMLRecord* m_result;
 
 
 	public:

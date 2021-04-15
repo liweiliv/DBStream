@@ -4,12 +4,12 @@
 #include "meta/metaData.h"
 
 namespace CLUSTER {
-	DLL_EXPORT dsStatus& clusterLog::append(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLog::append(const logEntryRpcBase* logEntry)
 	{
-		dsStatus& s = m_currentLogFile->append(logEntry);
+		DS s = m_currentLogFile->append(logEntry);
 		if (!dsCheck(s))
 		{
-			switch (s.code)
+			switch (-s)
 			{
 			case errorCode::full:
 			{
@@ -40,7 +40,7 @@ namespace CLUSTER {
 		}
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLog::rollback(const logIndexInfo& logIndex)
+	DLL_EXPORT DS clusterLog::rollback(const logIndexInfo& logIndex)
 	{
 		LOG(WARNING) << "cluster log start rollback to " << logIndex.term << "." << logIndex.logIndex;
 		if (m_commitLogIndex >= logIndex)
@@ -93,7 +93,7 @@ namespace CLUSTER {
 			return nullptr;
 		return iter->second;
 	}
-	DLL_EXPORT dsStatus& clusterLog::createNewFile(const logIndexInfo& logIndex)
+	DLL_EXPORT DS clusterLog::createNewFile(const logIndexInfo& logIndex)
 	{
 		uint64_t fileId = 1;
 		if (m_currentLogFile != nullptr)
@@ -124,7 +124,7 @@ namespace CLUSTER {
 		m_files.clear();
 		m_currentLogFile = nullptr;
 	}
-	DLL_EXPORT dsStatus& clusterLog::init(const logIndexInfo& lastCommited)
+	DLL_EXPORT DS clusterLog::init(const logIndexInfo& lastCommited)
 	{
 		std::map<uint64_t, std::string> files;
 		std::string logDir = m_logManagerConfig.getLogDir();
@@ -197,7 +197,7 @@ namespace CLUSTER {
 				}
 				prev = iter->first;
 				clusterLogFile* logFile = new clusterLogFile((logDir + "/" + iter->second).c_str(), iter->first, m_logConfig);
-				dsStatus& rtv = logFile->readMetaInfo();
+				DS rtv = logFile->readMetaInfo();
 				if (!dsCheck(rtv))
 				{
 					logFile->close();
@@ -220,7 +220,7 @@ namespace CLUSTER {
 					m_currentLogFile->close();
 					delete m_currentLogFile;
 					m_currentLogFile = nullptr;
-					dsReturn(getLocalStatus());
+					dsFailedAndReturn();
 				}
 				m_files.insert(std::pair<logIndexInfo, clusterLogFile*>({ 1,1 }, m_currentLogFile));
 			}
@@ -232,7 +232,7 @@ namespace CLUSTER {
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLog::iterator::seek(const logIndexInfo& logIndex)
+	DLL_EXPORT DS clusterLog::iterator::seek(const logIndexInfo& logIndex)
 	{
 		clusterLogFile* file = m_log->find(logIndex);
 		if (file == nullptr)
@@ -245,14 +245,14 @@ namespace CLUSTER {
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLog::iterator::next(const logEntryRpcBase*& logEntry, uint32_t outTime)
+	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& logEntry, uint32_t outTime)
 	{
 		logEntry = nullptr;
 		do {
-			dsStatus &rtv = m_iter.next(logEntry, 10);
+			DS rtv = m_iter.next(logEntry, 10);
 			if (unlikely(!dsCheck(rtv)))
 			{
-				if (rtv.code == errorCode::endOfFile)
+				if (rtv == -errorCode::endOfFile)
 				{
 					if (m_currentLogFile->getNext() != nullptr)
 					{
@@ -275,14 +275,14 @@ namespace CLUSTER {
 		} while (outTime > 0);
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLog::iterator::next(const logEntryRpcBase*& logEntry)
+	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& logEntry)
 	{
 		logEntry = nullptr;
 		do {
-			dsStatus &rtv = m_iter.next(logEntry);
+			DS rtv = m_iter.next(logEntry);
 			if (unlikely(!dsCheck(rtv)))
 			{
-				if (rtv.code == errorCode::endOfFile)
+				if (rtv == -errorCode::endOfFile)
 				{
 					if (m_currentLogFile->getNext() != nullptr)
 					{

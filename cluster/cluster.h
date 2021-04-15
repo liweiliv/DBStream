@@ -64,6 +64,6 @@ namespace CLUSTER
 		}
 	public:
 		int init();
-		dsStatus& processMessage(const char* msg);
+		DS processMessage(const char* msg);
 	};
 }

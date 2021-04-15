@@ -143,7 +143,7 @@ namespace SQL_PARSER {
 		bool m_doubleQuoteCanBeString;
 	private:
 		void initKeyWords();
-		inline dsStatus& nextQuoteWord(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextQuoteWord(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			char quote = *pos;
 			const char* end = pos + 1;
@@ -236,7 +236,7 @@ namespace SQL_PARSER {
 				}
 			}
 		}
-		inline dsStatus& nextString(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextString(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			const char* start = pos;
 			while (!KEY_CHAR[*pos])
@@ -273,7 +273,7 @@ namespace SQL_PARSER {
 			}
 			return false;
 		}
-		inline dsStatus& numberEnd(const char*& pos)
+		inline DS numberEnd(const char*& pos)
 		{
 			char c = *pos;
 			if (c == '\0' || c == ' ' || c == '\t' || c == '\n' || c == '\r')
@@ -284,7 +284,7 @@ namespace SQL_PARSER {
 				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
 		}
 
-		inline dsStatus& nextHexNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextHexNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			const char* start = pos - 2;
 			char c;
@@ -297,7 +297,7 @@ namespace SQL_PARSER {
 			}
 			dsReturn(numberEnd(pos));
 		}
-		inline dsStatus& nextBinaryNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextBinaryNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			const char* start = pos - 2;
 			char c;
@@ -310,7 +310,7 @@ namespace SQL_PARSER {
 			}
 			dsReturn(numberEnd(pos));
 		}
-		inline dsStatus& nextOctalNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextOctalNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			const char* start = pos - 2;
 			char c;
@@ -323,7 +323,7 @@ namespace SQL_PARSER {
 			}
 			dsReturn(numberEnd(pos));
 		}
-		inline dsStatus& nextNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextNumber(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 			bool isFloat = false;
 			int exponent = -1;
@@ -406,15 +406,15 @@ namespace SQL_PARSER {
 			if (!s->valueStack.push(value))
 				dsFailedAndLogIt(errorCode::OVER_LIMIT, "expression operation count over limit :" << pos, ERROR);
 		}
-		inline dsStatus& nextOperator(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS nextOperator(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 
 		}
-		inline dsStatus& parseChildField(sqlHandle* h, sqlParserStack* s, const char*& pos)
+		inline DS parseChildField(sqlHandle* h, sqlParserStack* s, const char*& pos)
 		{
 
 		}
-		inline dsStatus& parseLBrac(sqlHandle* h, sqlParserStack* s, PARSE_STATUS& status, const char*& pos)
+		inline DS parseLBrac(sqlHandle* h, sqlParserStack* s, PARSE_STATUS& status, const char*& pos)
 		{
 			if (status == PARSE_STATUS::NEED_LEFT_VALUE)
 			{
@@ -451,7 +451,7 @@ namespace SQL_PARSER {
 				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
 		}
 
-		inline dsStatus& parseRBrac(sqlHandle* h, sqlParserStack* s, PARSE_STATUS& status, const char*& pos)
+		inline DS parseRBrac(sqlHandle* h, sqlParserStack* s, PARSE_STATUS& status, const char*& pos)
 		{
 			if (status == PARSE_STATUS::FIELD_LIST_VALUE)
 			{
@@ -482,7 +482,7 @@ namespace SQL_PARSER {
 			return s;
 		}
 
-		inline dsStatus& endOfValue(sqlHandle* handle, sqlParserStack* s, const char* pos, sqlValue*& value, PARSE_STATUS status)
+		inline DS endOfValue(sqlHandle* handle, sqlParserStack* s, const char* pos, sqlValue*& value, PARSE_STATUS status)
 		{
 			if (s->valueStack.size() == 1 && s->opStack.empty())
 			{
@@ -503,7 +503,7 @@ namespace SQL_PARSER {
 			dsOk();
 		}
 
-		dsStatus& nextWord(sqlHandle* handle, sqlParserStack* s, sqlValue*& value, const char*& pos);
+		DS nextWord(sqlHandle* handle, sqlParserStack* s, sqlValue*& value, const char*& pos);
 		void cleanHandle(struct sqlHandle* h)
 		{
 			h->tid = getThreadId();
@@ -625,7 +625,7 @@ namespace SQL_PARSER {
 			}
 			return false;
 		}
-		dsStatus& parse(struct sqlHandle* h, const char* sqlString)
+		DS parse(struct sqlHandle* h, const char* sqlString)
 		{
 			sqlParserStack* s = getStack();
 			h->tid = getThreadId();

@@ -6,7 +6,7 @@ DLL_EXPORT dsStatus& getLocalStatus() { return *localStatus; }
 DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo stack)
 {
 	failed.clear();
-	failed.code = code;
+	failed.code = -code;
 	if (errMsg != nullptr)
 		failed.errMessage.assign(errMsg);
 	failed.addStack(stack);
@@ -15,7 +15,7 @@ DLL_EXPORT void setFailed(int code, const char* errMsg, dsStatus::stackInfo stac
 DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackInfo stack)
 {
 	failed.clear();
-	failed.code = code;
+	failed.code = -code;
 	failed.errMessage = errMsg;
 	failed.addStack(stack);
 	localStatus = &failed;

@@ -1,7 +1,7 @@
 #include "clusterLogFile.h"
 namespace CLUSTER
 {
-	DLL_EXPORT clusterLogFile::block::block(std::function<dsStatus& (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry) :
+	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry) :
 		idx(offset, logEntry->logIndex), data(nullptr), id(0), volumn(0), size(0), writedSize(0), next(nullptr), m_ref(this, loadFunc)
 	{
 		if (logEntry->size > defaultBlockSize)
@@ -12,12 +12,12 @@ namespace CLUSTER
 		memcpy(data, logEntry, logEntry->size);
 		size = logEntry->size;
 	}
-	DLL_EXPORT clusterLogFile::block::block(std::function<dsStatus& (block*)>& loadFunc, const index& i) :
+	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, const index& i) :
 		idx(i.offset, i.logIndex), data(nullptr), volumn(0),
 		size(0), writedSize(0), next(nullptr), m_ref(this, loadFunc)
 	{
 	}
-	DLL_EXPORT clusterLogFile::block::block(std::function<dsStatus& (block*)>& loadFunc, const index& i, char* data, uint32_t volumn, uint32_t size) :
+	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, const index& i, char* data, uint32_t volumn, uint32_t size) :
 		idx(i.offset, i.logIndex), data(data), volumn(volumn),
 		size(size), writedSize(size), next(nullptr), m_ref(this, loadFunc)
 	{
@@ -98,7 +98,7 @@ namespace CLUSTER
 		std::unique_lock <std::mutex> lck(m_lock);
 		m_condition.wait_for(lck, std::chrono::microseconds(10));
 	}
-	dsStatus& clusterLogFile::openLogFile(fileHandle& handle, bool readOnly)
+	DS clusterLogFile::openLogFile(fileHandle& handle, bool readOnly)
 	{
 		handle = ::openFile(m_filePath.c_str(), true, !readOnly, false);
 		if (handle == INVALID_HANDLE_VALUE)
@@ -111,7 +111,7 @@ namespace CLUSTER
 		}
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::readRecordHead(fileHandle fd, uint32_t dataFileSize, uint32_t pos, logEntryRpcBase& head, bool readOnly)
+	DLL_EXPORT DS clusterLogFile::readRecordHead(fileHandle fd, uint32_t dataFileSize, uint32_t pos, logEntryRpcBase& head, bool readOnly)
 	{
 		if (dataFileSize - pos < sizeof(head))
 		{
@@ -135,7 +135,7 @@ namespace CLUSTER
 		}
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::recoveryIndexFromLastBlock(fileHandle fd, uint32_t offset, uint32_t dataFileSize, bool readOnly)
+	DLL_EXPORT DS clusterLogFile::recoveryIndexFromLastBlock(fileHandle fd, uint32_t offset, uint32_t dataFileSize, bool readOnly)
 	{
 		if (seekFile(fd, offset, SEEK_SET) != offset)
 			dsFailedAndLogIt(errorCode::ioError, "seek to " << offset << " of log file:" << m_filePath << " failed,error:" << errno << "," << strerror(errno), ERROR);
@@ -147,10 +147,10 @@ namespace CLUSTER
 		while (pos < dataFileSize)
 		{
 			logEntryRpcBase head;
-			dsStatus& rtv = readRecordHead(fd, dataFileSize, pos, head, readOnly);
+			DS rtv = readRecordHead(fd, dataFileSize, pos, head, readOnly);
 			if (!dsCheck(rtv))
 			{
-				if (rtv.code == errorCode::endOfFile)
+				if (rtv == -errorCode::endOfFile)
 					break;
 				else
 					dsReturn(rtv);
@@ -166,10 +166,10 @@ namespace CLUSTER
 			{
 				if (readHead)
 				{
-					dsStatus& rtv = readRecordHead(fd, dataFileSize, pos, head, readOnly);
+					DS rtv = readRecordHead(fd, dataFileSize, pos, head, readOnly);
 					if (!dsCheck(rtv))
 					{
-						if (rtv.code == errorCode::endOfFile)
+						if (rtv == -errorCode::endOfFile)
 							break;
 						else
 							dsReturn(rtv);
@@ -207,7 +207,7 @@ namespace CLUSTER
 			m_blocks[m_blockCount]->size = pos - m_blocks[m_blockCount]->idx.offset;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::loadIndex(fileHandle fd, bool readOnly)
+	DLL_EXPORT DS clusterLogFile::loadIndex(fileHandle fd, bool readOnly)
 	{
 		int64_t dataFileSize = getFileSize(fd);
 		if (dataFileSize < 0)
@@ -287,7 +287,7 @@ namespace CLUSTER
 		}
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::readMetaInfo()
+	DLL_EXPORT DS clusterLogFile::readMetaInfo()
 	{
 		if (m_readFd == INVALID_HANDLE_VALUE)
 			dsReturnIfFailed(openLogFile(m_readFd, true));
@@ -299,7 +299,7 @@ namespace CLUSTER
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::recovery()
+	DLL_EXPORT DS clusterLogFile::recovery()
 	{
 		if (m_fd == INVALID_HANDLE_VALUE)
 			dsReturnIfFailed(openLogFile(m_fd, false));
@@ -326,7 +326,7 @@ namespace CLUSTER
 		m_ref.useForWrite();
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::load()
+	DLL_EXPORT DS clusterLogFile::load()
 	{
 		if (m_readFd == INVALID_HANDLE_VALUE)
 			dsReturnIfFailed(openLogFile(m_readFd, true));
@@ -338,12 +338,12 @@ namespace CLUSTER
 		dsReturn(loadIndex(m_readFd, true));
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::loadFile(clusterLogFile* logFile)
+	DLL_EXPORT DS clusterLogFile::loadFile(clusterLogFile* logFile)
 	{
 		dsReturn(logFile->load());
 	}
 
-	inline dsStatus& clusterLogFile::_append(const logEntryRpcBase* logEntry)
+	inline DS clusterLogFile::_append(const logEntryRpcBase* logEntry)
 	{
 		if (unlikely(m_currentBlock == nullptr))
 		{
@@ -364,7 +364,7 @@ namespace CLUSTER
 		notify();
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::appendToNewBlock(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLogFile::appendToNewBlock(const logEntryRpcBase* logEntry)
 	{
 		//flush current block
 		if (m_currentBlock != nullptr)
@@ -441,7 +441,7 @@ namespace CLUSTER
 		else
 			return nullptr;
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::loadBlock(block* b)
+	DLL_EXPORT DS clusterLogFile::loadBlock(block* b)
 	{
 		if (b->data != nullptr)
 			dsOk();
@@ -475,7 +475,7 @@ namespace CLUSTER
 			delete[]data;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::open()
+	DLL_EXPORT DS clusterLogFile::open()
 	{
 		if ((m_fd = openFile(m_filePath.c_str(), true, true, false)) == INVALID_HANDLE_VALUE)
 		{
@@ -488,14 +488,14 @@ namespace CLUSTER
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::create(clusterLogFile* prev, const logIndexInfo& beginLogIndex)
+	DLL_EXPORT DS clusterLogFile::create(clusterLogFile* prev, const logIndexInfo& beginLogIndex)
 	{
 		dsReturnIfFailed(create(prev->m_logIndex, beginLogIndex));
 		prev->m_next = this;
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::create(const logIndexInfo& prevLogIndex, const logIndexInfo& beginLogIndex)
+	DLL_EXPORT DS clusterLogFile::create(const logIndexInfo& prevLogIndex, const logIndexInfo& beginLogIndex)
 	{
 		if (checkFileExist(m_filePath.c_str(), F_OK) == 0)
 		{
@@ -522,7 +522,7 @@ namespace CLUSTER
 		m_ref.useForWrite();
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::deleteFile()
+	DLL_EXPORT DS clusterLogFile::deleteFile()
 	{
 		close();
 		if (remove((m_filePath + ".idx").c_str()) != 0)
@@ -569,7 +569,7 @@ namespace CLUSTER
 			m_blocks = nullptr;
 		}
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::finish()
+	DLL_EXPORT DS clusterLogFile::finish()
 	{
 		raftRpcHead head = { sizeof(raftRpcHead),static_cast<uint8_t>(rpcType::endOfFile),VERSION };
 		memcpy(m_currentBlock->data + m_currentBlock->size, &head, sizeof(head));
@@ -582,7 +582,7 @@ namespace CLUSTER
 		m_fd = INVALID_HANDLE_VALUE;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::writeCurrentBlock()
+	DLL_EXPORT DS clusterLogFile::writeCurrentBlock()
 	{
 		std::lock_guard<std::mutex> guard(m_flushLock);
 		if (m_currentBlock->size == m_currentBlock->writedSize)
@@ -595,7 +595,7 @@ namespace CLUSTER
 		m_currentBlock->writedSize = m_currentBlock->size;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::append(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLogFile::append(const logEntryRpcBase* logEntry)
 	{
 		if (unlikely(m_logIndex != logEntry->prevRecordLogIndex))
 		{
@@ -615,7 +615,7 @@ namespace CLUSTER
 			dsFailed(errorCode::full, nullptr);
 		dsReturn(_append(logEntry));
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::clear()
+	DLL_EXPORT DS clusterLogFile::clear()
 	{
 		for (uint32_t i = 0; i < m_blockCount; i++)
 		{
@@ -627,7 +627,7 @@ namespace CLUSTER
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::rollback(const logIndexInfo& logIndex)
+	DLL_EXPORT DS clusterLogFile::rollback(const logIndexInfo& logIndex)
 	{
 		block* block = findBlock(logIndex);
 		if (block == nullptr)
@@ -669,7 +669,7 @@ namespace CLUSTER
 			m_currentBlock->next = nullptr;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::flush()
+	DLL_EXPORT DS clusterLogFile::flush()
 	{
 		if (m_currentBlock != nullptr)
 		{
@@ -683,7 +683,7 @@ namespace CLUSTER
 	}
 
 
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::rotate(block* b)
+	DLL_EXPORT DS clusterLogFile::iterator::rotate(block* b)
 	{
 		dsReturnIfFailed(b->m_ref.use());
 		if (m_block != nullptr)
@@ -692,12 +692,12 @@ namespace CLUSTER
 		m_offset = 0;
 		dsOk();
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::setLogFile(clusterLogFile* file)
+	DLL_EXPORT DS clusterLogFile::iterator::setLogFile(clusterLogFile* file)
 	{
 		m_file = file;
 		dsReturn(file->m_ref.use());
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::attachToNextLogFile(clusterLogFile* file)
+	DLL_EXPORT DS clusterLogFile::iterator::attachToNextLogFile(clusterLogFile* file)
 	{
 		dsReturnIfFailed(file->use());
 		if (m_block != nullptr)
@@ -709,7 +709,7 @@ namespace CLUSTER
 		m_file = file;
 		dsReturn(rotate(m_file->m_blocks[0]));
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::search(const logIndexInfo& logIndex)
+	DLL_EXPORT DS clusterLogFile::iterator::search(const logIndexInfo& logIndex)
 	{
 		if (nullptr == (m_block = m_file->findBlock(logIndex)))
 		{
@@ -725,7 +725,7 @@ namespace CLUSTER
 		dsOk();
 	}
 
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry)
+	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry)
 	{
 		do {
 			if (m_offset == m_block->size)
@@ -757,7 +757,7 @@ namespace CLUSTER
 			}
 		} while (true);
 	}
-	DLL_EXPORT dsStatus& clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry, long outTime)
+	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry, long outTime)
 	{
 		do {
 			dsReturnIfFailed(next(logEntry));

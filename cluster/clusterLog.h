@@ -20,8 +20,8 @@ namespace CLUSTER
 		logConfig& m_logConfig;
 		std::map<logIndexInfo, clusterLogFile*> m_files;
 
-		DLL_EXPORT dsStatus& rollback(const logIndexInfo& logIndex);
-		DLL_EXPORT dsStatus& createNewFile(const logIndexInfo& logIndex);
+		DLL_EXPORT DS rollback(const logIndexInfo& logIndex);
+		DLL_EXPORT DS createNewFile(const logIndexInfo& logIndex);
 		DLL_EXPORT clusterLogFile* find(const logIndexInfo& logIndex);
 	public:
 		clusterLog(cluster* c, clusterLogConfig& logManagerConfig, logConfig& logConfig) :m_cluster(c), m_logIndex(0, 0), m_commitLogIndex(0, 0), m_commited(0)
@@ -32,8 +32,8 @@ namespace CLUSTER
 			close();
 		}
 		DLL_EXPORT void close();
-		DLL_EXPORT dsStatus& init(const logIndexInfo& lastCommited);
-		DLL_EXPORT dsStatus& append(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS init(const logIndexInfo& lastCommited);
+		DLL_EXPORT DS append(const logEntryRpcBase* logEntry);
 		DLL_EXPORT class iterator {
 		private:
 			clusterLog* m_log;
@@ -42,9 +42,9 @@ namespace CLUSTER
 			clusterLogFile::iterator m_iter;
 		public:
 			iterator(clusterLog* log, const logIndexInfo& logIndex) :m_log(log), m_logIndex(logIndex), m_currentLogFile(nullptr), m_iter() {}
-			DLL_EXPORT dsStatus& seek(const logIndexInfo& logIndex);
-			DLL_EXPORT dsStatus& next(const logEntryRpcBase*& logEntry);
-			DLL_EXPORT dsStatus& next(const logEntryRpcBase*& logEntry, uint32_t outTime);
+			DLL_EXPORT DS seek(const logIndexInfo& logIndex);
+			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry);
+			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry, uint32_t outTime);
 		};
 	};
 }

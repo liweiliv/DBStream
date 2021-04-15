@@ -50,6 +50,10 @@ namespace SQL_PARSER
 					return -1;
 			}
 		}
+		inline std::string toString()
+		{
+			return std::string(pos, size);
+		}
 	};
 	class strCompare {
 	public:

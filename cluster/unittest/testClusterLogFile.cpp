@@ -1,6 +1,6 @@
 #include "cluster/clusterLogFile.h"
 using namespace CLUSTER;
-dsStatus& wFunc(clusterLogFile *logFile)
+DS wFunc(clusterLogFile *logFile)
 {
 	logFile->use();
 	for (int i = 1; i < 100000; i++)
@@ -24,7 +24,7 @@ dsStatus& wFunc(clusterLogFile *logFile)
 	logFile->unUse();
 	dsOk();
 }
-dsStatus& rFunc(clusterLogFile* logFile)
+DS rFunc(clusterLogFile* logFile)
 {
 	clusterLogFile::iterator iter;
 	dsTest(iter.setLogFile(logFile));

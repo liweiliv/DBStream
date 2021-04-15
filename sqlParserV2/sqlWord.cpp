@@ -50,7 +50,7 @@ namespace SQL_PARSER {
 				dsOk();\
 			}\
 		}
-	dsStatus& grammarTree::nextWord(sqlHandle* handle, sqlParserStack* s, sqlValue*& value, const char*& pos)
+	DS grammarTree::nextWord(sqlHandle* handle, sqlParserStack* s, sqlValue*& value, const char*& pos)
 	{
 		PARSE_STATUS status = PARSE_STATUS::NEED_LEFT_VALUE;
 		char c;

@@ -4,6 +4,6 @@ namespace KVDB {
 	class version;
 	class walLogWriter {
 	public:
-		virtual dsStatus& writeTrans(const version* redoList) = 0;
+		virtual DS writeTrans(const version* redoList) = 0;
 	};
 }

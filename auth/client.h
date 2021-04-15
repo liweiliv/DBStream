@@ -20,14 +20,14 @@ namespace AUTH
 		{
 			return m_key;
 		}
-		dsStatus& setSalt(const char * salt,uint32_t size)
+		DS setSalt(const char * salt,uint32_t size)
 		{
 			if (salt == nullptr || size != PASSWORD_HASH_SIZE)
 				dsFailedAndLogIt(errorCode::INVALID_SALT, "invalid salt", WARNING);
 			memcpy(m_salt, salt, size);
 			dsOk();
 		}
-		dsStatus& generateResp(const char* password, uint32_t passwordSize,uint8_t resp[PASSWORD_HASH_SIZE])
+		DS generateResp(const char* password, uint32_t passwordSize,uint8_t resp[PASSWORD_HASH_SIZE])
 		{
 			dsReturnIfFailed(checkPassword(password, passwordSize));
 			uint8_t hash1Pwd[PASSWORD_HASH_SIZE] = { 0 }, hash2Pwd[PASSWORD_HASH_SIZE] = { 0 };

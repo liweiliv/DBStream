@@ -10,7 +10,7 @@
 #include "service.h"
 namespace KVDB
 {
-	dsStatus& instance::startTrans(clientHandle* handle)
+	DS instance::startTrans(clientHandle* handle)
 	{
 		if (handle->m_trans->m_start)
 			dsFailedAndLogIt(errorCode::TRANSACTION_HAS_START, "transaction has started", WARNING);
@@ -19,7 +19,7 @@ namespace KVDB
 		handle->m_trans->clear();
 		dsOk();
 	}
-	dsStatus& instance::rowChange(clientHandle* handle)
+	DS instance::rowChange(clientHandle* handle)
 	{
 		if (handle->m_change == nullptr)
 			dsFailedAndLogIt(errorCode::INVALID_ROW_CHANGE, "invalid row change", WARNING);
@@ -51,52 +51,33 @@ namespace KVDB
 		switch (handle->m_change->type)
 		{
 		case DATABASE_INCREASE::RecordType::R_INSERT:
-			if (!dsCheck(db->insert(m_pool, handle)))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			dsOk();
+			dsReturnWithOp(db->insert(m_pool, handle), m_lock.unlock_shared());
 		case DATABASE_INCREASE::RecordType::R_UPDATE:
-			if (!dsCheck(db->update(m_pool, handle)))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			dsOk();
+			dsReturnWithOp(db->update(m_pool, handle), m_lock.unlock_shared());
 		case DATABASE_INCREASE::RecordType::R_DELETE:
-			if (!dsCheck(db->drop(m_pool, handle)))
-			{
-				m_lock.unlock_shared();
-				dsReturn(getLocalStatus());
-			}
-			dsOk();
+			dsReturnWithOp(db->drop(m_pool, handle), m_lock.unlock_shared());
 		default:
 			m_lock.unlock_shared();
 			dsFailedAndLogIt(errorCode::UNKNOWN_OPERATION_TYPE, "unknown operation type", WARNING);
 		}
 	}
-	dsStatus& instance::select(clientHandle* handle)
+	DS instance::select(clientHandle* handle)
 	{
 		dsOk();
 	}
-	dsStatus& instance::ddl(clientHandle* handle)
+	DS instance::ddl(clientHandle* handle)
 	{
 		dsOk();
 	}
-	dsStatus& instance::commit(clientHandle* handle)
+	DS instance::commit(clientHandle* handle)
 	{
-		if (!dsCheck(handle->m_trans->commit()))
-			dsReturn(getLocalStatus());
-		dsOk();
+		dsReturn(handle->m_trans->commit());
 	}
-	dsStatus& instance::rollback(clientHandle* handle)
+	DS instance::rollback(clientHandle* handle)
 	{
-		if (!dsCheck(handle->m_trans->rollback()))
-			dsReturn(getLocalStatus());
-		dsOk();
+		dsReturn(handle->m_trans->rollback());
 	}
-	dsStatus& instance::asyncWriteWalLog(clientHandle* handle)
+	DS instance::asyncWriteWalLog(clientHandle* handle)
 	{
 		if (m_walLogWriter == nullptr)
 			dsOk();

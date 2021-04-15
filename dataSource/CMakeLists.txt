@@ -1,0 +1,11 @@
+#datasource
+aux_source_directory(. dataSourceDir)
+add_library(dataSource SHARED ${dataSourceDir})
+TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG} ${GFLAGS})
+target_include_directories(dataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(dataSource dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+INSTALL(TARGETS dataSource LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ADD_SUBDIRECTORY(mysqlDataSource)
+ADD_SUBDIRECTORY(oracleDataSource)

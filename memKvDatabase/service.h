@@ -28,7 +28,7 @@ namespace KVDB {
 		AUTH::server * m_auth;
 
 	private:
-		dsStatus& closeConnect(clientHandle* handle, errorCode code,const char * message)
+		DS closeConnect(clientHandle* handle, errorCode code,const char * message)
 		{
 			LOG(WARNING) << "close connect:" << handle->m_uid << " @ " << handle->m_ip << ":" << handle->m_port <<
 				",user:" << (handle->getAuthHandle() == nullptr ? "" : handle->getAuthHandle()->userName) <<
@@ -38,7 +38,7 @@ namespace KVDB {
 			delete handle;
 			dsOk();
 		}
-		dsStatus& auth(clientHandle* handle, const rpcHead* rpc)
+		DS auth(clientHandle* handle, const rpcHead* rpc)
 		{
 			switch (rpc->type)
 			{
@@ -75,24 +75,24 @@ namespace KVDB {
 				dsFailedAndLogIt(INNER_ERROR, "illegal rpc type:" + rpc->type, ERROR);
 			}
 		}
-		dsStatus& processSql(clientHandle* handle, const rpcHead* rpc)
+		DS processSql(clientHandle* handle, const rpcHead* rpc)
 		{
 			dsOk();
 		}
-		dsStatus& processPrepareStatmentSql(clientHandle* handle, const prepareStatment* rpc)
+		DS processPrepareStatmentSql(clientHandle* handle, const prepareStatment* rpc)
 		{
 			dsOk();
 		}
-		dsStatus& processPrepareStatmentData(clientHandle* handle, const prepareStatmentData* rpc)
+		DS processPrepareStatmentData(clientHandle* handle, const prepareStatmentData* rpc)
 		{
 			dsOk();
 		}
-		dsStatus& processGetMetaReq(clientHandle* handle, const getMetaReq* rpc)
+		DS processGetMetaReq(clientHandle* handle, const getMetaReq* rpc)
 		{
 			dsOk();
 		}
 	public:
-		dsStatus& excute(uint32_t id, const char* cmd)
+		DS excute(uint32_t id, const char* cmd)
 		{
 			clientHandle* handle;
 			tbb::concurrent_hash_map<int32_t, clientHandle*, hashWrap >::const_accessor accessor;

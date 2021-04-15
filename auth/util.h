@@ -17,19 +17,19 @@ namespace AUTH {
 		for (; i < size; i++)
 			r[i] = s[i] ^ d[i];
 	}
-	static inline dsStatus& checkUser(const char* user, uint16_t size)
+	static inline DS checkUser(const char* user, uint16_t size)
 	{
 		if (user == nullptr || size > MAX_USER_SIZE)
 			dsFailedAndLogIt(errorCode::INVALID_USER, "invalid user", WARNING);
 		dsOk();
 	}
-	static inline dsStatus& checkPasswordHash(const char* pwdHash, uint16_t size)
+	static inline DS checkPasswordHash(const char* pwdHash, uint16_t size)
 	{
 		if (pwdHash == nullptr || size != PASSWORD_HASH_SIZE)
 			dsFailedAndLogIt(errorCode::INVALID_PASSWORD, "invalid password", WARNING);
 		dsOk();
 	}
-	static inline dsStatus& checkPassword(const char* pwd, uint16_t size)
+	static inline DS checkPassword(const char* pwd, uint16_t size)
 	{
 		dsOk();
 	}

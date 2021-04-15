@@ -178,7 +178,7 @@ namespace SQL_PARSER {
 				}
 			}
 		}
-		operatorSymbol* match(const char*& sql)
+		operatorSymbol* match(char*& sql)
 		{
 			node* n = &m_root;
 			for(;;)

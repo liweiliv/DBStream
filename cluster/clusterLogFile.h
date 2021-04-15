@@ -38,9 +38,9 @@ namespace CLUSTER
 
 		std::atomic<uint32_t> m_ref;
 		T* m_data;
-		std::function<dsStatus& (T*)>& loadFunc;
+		std::function<DS (T*)>& loadFunc;
 	public:
-		ref(T* data, std::function<dsStatus& (T*)>& loadFunc) :m_ref(0), m_data(data), loadFunc(loadFunc) {}
+		ref(T* data, std::function<DS (T*)>& loadFunc) :m_ref(0), m_data(data), loadFunc(loadFunc) {}
 		void needFree()
 		{
 			if(0 == m_ref.fetch_or(NEED_FREE))
@@ -74,7 +74,7 @@ namespace CLUSTER
 		{
 			m_ref.store(1, std::memory_order_relaxed);
 		}
-		dsStatus& use()
+		DS use()
 		{
 			for (;;)
 			{
@@ -90,7 +90,7 @@ namespace CLUSTER
 				{
 					if (m_ref.compare_exchange_weak(r, IN_LOAD))
 					{
-						dsStatus& s = loadFunc(m_data);
+						DS s = loadFunc(m_data);
 						if (!dsCheck(s))
 						{
 							m_ref.fetch_sub(std::memory_order_relaxed);
@@ -125,9 +125,9 @@ namespace CLUSTER
 			uint32_t writedSize;
 			block* next;
 			ref<block> m_ref;
-			DLL_EXPORT block(std::function<dsStatus& (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry);
-			DLL_EXPORT block(std::function<dsStatus& (block*)>& loadFunc, const index& i);
-			DLL_EXPORT block(std::function<dsStatus& (block*)>& loadFunc, const index& i, char* data, uint32_t volumn, uint32_t size);
+			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry);
+			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, const index& i);
+			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, const index& i, char* data, uint32_t volumn, uint32_t size);
 			DLL_EXPORT ~block();
 			DLL_EXPORT void close();
 			uint32_t find(const logIndexInfo& logIndex);
@@ -147,8 +147,8 @@ namespace CLUSTER
 		logConfig m_config;
 		uint32_t m_maxBlockCount;
 		clusterLogFile* m_next;
-		std::function<dsStatus& (block*)> m_blockLoadFunc;
-		std::function<dsStatus& (clusterLogFile*)> m_fileLoadFunc;
+		std::function<DS (block*)> m_blockLoadFunc;
+		std::function<DS (clusterLogFile*)> m_fileLoadFunc;
 		ref<clusterLogFile> m_ref;
 		std::mutex m_lock;
 		std::mutex m_flushLock;
@@ -169,35 +169,35 @@ namespace CLUSTER
 	private:
 		void notify();
 		void wait();
-		dsStatus& openLogFile(fileHandle& handle, bool readOnly);
-		DLL_EXPORT dsStatus& readRecordHead(fileHandle fd, uint32_t dataFileSize, uint32_t pos, logEntryRpcBase& head, bool readOnly);
-		DLL_EXPORT dsStatus& recoveryIndexFromLastBlock(fileHandle fd, uint32_t offset, uint32_t dataFileSize, bool readOnly);
-		DLL_EXPORT dsStatus& loadIndex(fileHandle fd, bool readOnly);
+		DS openLogFile(fileHandle& handle, bool readOnly);
+		DLL_EXPORT DS readRecordHead(fileHandle fd, uint32_t dataFileSize, uint32_t pos, logEntryRpcBase& head, bool readOnly);
+		DLL_EXPORT DS recoveryIndexFromLastBlock(fileHandle fd, uint32_t offset, uint32_t dataFileSize, bool readOnly);
+		DLL_EXPORT DS loadIndex(fileHandle fd, bool readOnly);
 	public:
 
-		DLL_EXPORT dsStatus& readMetaInfo();
-		DLL_EXPORT dsStatus& recovery();
-		DLL_EXPORT dsStatus& load();
+		DLL_EXPORT DS readMetaInfo();
+		DLL_EXPORT DS recovery();
+		DLL_EXPORT DS load();
 	private:
-		DLL_EXPORT dsStatus& loadFile(clusterLogFile* logFile);
-		dsStatus& _append(const logEntryRpcBase* logEntry);
-		DLL_EXPORT dsStatus& appendToNewBlock(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS loadFile(clusterLogFile* logFile);
+		DS _append(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS appendToNewBlock(const logEntryRpcBase* logEntry);
 		DLL_EXPORT block* findBlock(const logIndexInfo& logIndex);
-		DLL_EXPORT dsStatus& loadBlock(block* b);
+		DLL_EXPORT DS loadBlock(block* b);
 	public:
-		DLL_EXPORT dsStatus& open();
-		DLL_EXPORT dsStatus& create(clusterLogFile* prev, const logIndexInfo& beginLogIndex);
+		DLL_EXPORT DS open();
+		DLL_EXPORT DS create(clusterLogFile* prev, const logIndexInfo& beginLogIndex);
 
-		DLL_EXPORT dsStatus& create(const logIndexInfo& prevLogIndex, const logIndexInfo& beginLogIndex);
-		DLL_EXPORT dsStatus& deleteFile();
+		DLL_EXPORT DS create(const logIndexInfo& prevLogIndex, const logIndexInfo& beginLogIndex);
+		DLL_EXPORT DS deleteFile();
 		DLL_EXPORT void close();
-		DLL_EXPORT dsStatus& finish();
-		DLL_EXPORT dsStatus& writeCurrentBlock();
-		DLL_EXPORT dsStatus& append(const logEntryRpcBase* logEntry);
-		DLL_EXPORT dsStatus& clear();
-		DLL_EXPORT dsStatus& rollback(const logIndexInfo& logIndex);
-		DLL_EXPORT dsStatus& flush();
-		DLL_EXPORT inline dsStatus& use()
+		DLL_EXPORT DS finish();
+		DLL_EXPORT DS writeCurrentBlock();
+		DLL_EXPORT DS append(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS clear();
+		DLL_EXPORT DS rollback(const logIndexInfo& logIndex);
+		DLL_EXPORT DS flush();
+		DLL_EXPORT inline DS use()
 		{
 			dsReturn(m_ref.use());
 		}
@@ -212,7 +212,7 @@ namespace CLUSTER
 			clusterLogFile* m_file;
 			block* m_block;
 			bool m_onlyReadCommitted;
-			DLL_EXPORT dsStatus& rotate(block* b);
+			DLL_EXPORT DS rotate(block* b);
 		public:
 			DLL_EXPORT iterator() : m_offset(0), m_file(nullptr), m_block(nullptr), m_onlyReadCommitted(true) {}
 			DLL_EXPORT ~iterator()
@@ -220,11 +220,11 @@ namespace CLUSTER
 				if (m_block != nullptr)
 					m_block->m_ref.unuse();
 			}
-			DLL_EXPORT dsStatus& setLogFile(clusterLogFile* file);
-			DLL_EXPORT dsStatus& attachToNextLogFile(clusterLogFile* file);
-			DLL_EXPORT dsStatus& search(const logIndexInfo& logIndex);
-			DLL_EXPORT dsStatus& next(const logEntryRpcBase*& logEntry);
-			DLL_EXPORT dsStatus& next(const logEntryRpcBase*& logEntry, long outTime);
+			DLL_EXPORT DS setLogFile(clusterLogFile* file);
+			DLL_EXPORT DS attachToNextLogFile(clusterLogFile* file);
+			DLL_EXPORT DS search(const logIndexInfo& logIndex);
+			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry);
+			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry, long outTime);
 		};
 	};
 }

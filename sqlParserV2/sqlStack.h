@@ -51,4 +51,16 @@ namespace SQL_PARSER
 			return t == 0;
 		}
 	};
+
+	struct sqlParserStack {
+		sqlStack<operatorSymbol*> opStack;
+		sqlStack<token*> valueStack;
+		leveldb::Arena arena;
+		inline void clear()
+		{
+			opStack.t = 0;
+			valueStack.t = 0;
+			arena.clear();
+		}
+	};
 }

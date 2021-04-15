@@ -60,7 +60,7 @@ enum CHARSET {
 };
 
 constexpr charsetInfo charsets[] = {
-	{ "big5", 4,2 ,big5} ,
+	{"big5", 4,2 ,big5} ,
 	{"dec8", 4,1,dec8} ,
 	{"cp850", 5,1,cp850} ,
 	{"hp8", 3,1,hp8},

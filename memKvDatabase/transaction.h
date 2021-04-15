@@ -28,7 +28,7 @@ namespace KVDB {
 		version* m_begin;
 		void newOperator(row* r);
 		void clear();
-		dsStatus& commit();
-		dsStatus& rollback();
+		DS commit();
+		DS rollback();
 	};
 }

@@ -22,7 +22,7 @@ namespace KVDB {
 			m_queue.pushWithLock(rowList); 
 		}
 	private:
-		dsStatus& run()
+		DS run()
 		{
 			while (m_running)
 			{

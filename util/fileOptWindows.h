@@ -5,7 +5,7 @@
 #include <io.h>
 #define fileHandle HANDLE 
 
-static fileHandle openFile(const char *file,bool readFlag,bool writeFlag,bool createFlag)
+static fileHandle openFile(const char* file, bool readFlag, bool writeFlag, bool createFlag)
 {
 	uint64_t flag = 0;
 	if (readFlag)
@@ -36,7 +36,7 @@ static int64_t seekFile(fileHandle fd, int64_t position, int seekType)
 {
 	LARGE_INTEGER li;
 	li.QuadPart = position;
-	li.LowPart = SetFilePointer(fd,li.LowPart,&li.HighPart,seekType);
+	li.LowPart = SetFilePointer(fd, li.LowPart, &li.HighPart, seekType);
 	if (li.LowPart == INVALID_SET_FILE_POINTER && GetLastError()
 		!= NO_ERROR)
 	{
@@ -48,7 +48,7 @@ static int truncateFile(fileHandle fd, uint64_t offset)
 {
 	if (offset != seekFile(fd, offset, SEEK_SET))
 		return -1;
-	return SetEndOfFile(fd)?0:-1;
+	return SetEndOfFile(fd) ? 0 : -1;
 }
 static bool fileHandleValid(fileHandle fd)
 {
@@ -60,7 +60,7 @@ static int64_t writeFile(fileHandle fd, const char* data, uint64_t size)
 {
 	DWORD writed = 0;
 	uint64_t remain = size;
-	while (WriteFile(fd, data+(size- remain), size, &writed, nullptr))
+	while (WriteFile(fd, data + (size - remain), size, &writed, nullptr))
 	{
 		if (writed > 0)
 		{
@@ -83,15 +83,15 @@ static int64_t writeFile(fileHandle fd, const char* data, uint64_t size)
 	}
 	return size - remain;
 }
-static int64_t readFile(fileHandle fd, char *buf, uint64_t size)
+static int64_t readFile(fileHandle fd, char* buf, uint64_t size)
 {
 	DWORD readed = 0;
 	uint64_t remain = size;
-	while (ReadFile(fd, buf+(size-remain), size, &readed, nullptr))
+	while (ReadFile(fd, buf + (size - remain), size, &readed, nullptr))
 	{
 		if (readed > 0)
 		{
-			if(0==(remain -= readed))
+			if (0 == (remain -= readed))
 				break;
 			readed = 0;
 		}
@@ -116,7 +116,7 @@ static int closeFile(fileHandle fd)
 }
 static int fsync(fileHandle fd)
 {
-	return FlushFileBuffers(fd)?0:-1;
+	return FlushFileBuffers(fd) ? 0 : -1;
 }
 
 #define F_OK 0
@@ -124,11 +124,12 @@ static int fsync(fileHandle fd)
 #define R_OK 4
 #define RW_OK 6
 
-static inline  int checkFileExist(const char* filename,int mode)
+static inline  int checkFileExist(const char* filename, int mode)
 {
 	return _access(filename, mode);
 }
-static long getFileTime(const char * file)
+
+static long getFileTime(const char* file)
 {
 	FILETIME creationTime, lastAccessTime, lastWriteTime;
 	fileHandle fd = openFile(file, true, false, false);
@@ -147,12 +148,13 @@ static int64_t getFileSize(fileHandle fd)
 		return -1;
 	return (high << 32) + size;
 }
+
 static int64_t getFileSize(const char* fileName)
 {
 	fileHandle fd = openFile(fileName, true, false, false);
 	if (fd == INVALID_HANDLE_VALUE)
 		return -1;
-	DWORD high = 0,size;
+	DWORD high = 0, size;
 	size = GetFileSize(fd, &high);
 	if (size == INVALID_FILE_SIZE)
 	{
@@ -160,8 +162,9 @@ static int64_t getFileSize(const char* fileName)
 		return -1;
 	}
 	closeFile(fd);
-	return (high<<32)+size;
+	return (high << 32) + size;
 }
+
 static int getFileSizeAndTimestamp(const char* fileName, int64_t* size, int64_t* timestamp)
 {
 	*size = *timestamp = 0;
@@ -182,6 +185,7 @@ static int getFileSizeAndTimestamp(const char* fileName, int64_t* size, int64_t*
 	closeFile(fd);
 	return 0;
 }
+
 static int removeDir(const char* dir)
 {
 	WIN32_FIND_DATA findFileData;
@@ -196,7 +200,7 @@ static int removeDir(const char* dir)
 		{
 			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
-				if (strcmp(findFileData.cFileName, ".") == 0|| strcmp(findFileData.cFileName, "..") == 0)
+				if (strcmp(findFileData.cFileName, ".") == 0 || strcmp(findFileData.cFileName, "..") == 0)
 					continue;
 				if (0 != removeDir(std::string(dir).append("\\").append(findFileData.cFileName).c_str()))
 					return -1;

@@ -30,15 +30,15 @@ public:
 	virtual ~jsonValue() {};
 	virtual string toString(int level = 0)const = 0;
 	static JSON_TYPE getType(const char* data);
-	static dsStatus& parse(jsonValue* &value,const char* data, int& size);
-	virtual dsStatus& parse(const char* data, int& size) = 0;
+	static DS parse(jsonValue* &value,const char* data, int& size);
+	virtual DS parse(const char* data, int& size) = 0;
 };
 class DLL_EXPORT jsonString :public jsonValue
 {
 public:
 	std::string m_value;
 	jsonString(const char* data = nullptr);
-	dsStatus& parse(const char* data,int & size);
+	DS parse(const char* data,int & size);
 	string toString(int level = 0) const;
 	~jsonString() {}
 };
@@ -47,7 +47,7 @@ class DLL_EXPORT jsonNum :public jsonValue
 public:
 	long m_value;
 	jsonNum(const char* data = nullptr);
-	dsStatus& parse(const char* data, int& size);
+	DS parse(const char* data, int& size);
 	string toString(int level = 0) const;
 	~jsonNum() {}
 };
@@ -62,7 +62,7 @@ public:
 	const jsonValue* get(const char* s)const;
 	~jsonObject();
 	void clean();
-	dsStatus& parse(const char* data, int& size);
+	DS parse(const char* data, int& size);
 	string toString(int level = 0) const;
 };
 class DLL_EXPORT jsonArray :public jsonValue
@@ -72,7 +72,7 @@ public:
 	jsonArray(const char* data = nullptr);
 	~jsonArray();
 	void clean();
-	dsStatus& parse(const char* data, int& size);
+	DS parse(const char* data, int& size);
 	string toString(int level = 0) const;
 };
 class DLL_EXPORT jsonBool :public jsonValue
@@ -80,7 +80,7 @@ class DLL_EXPORT jsonBool :public jsonValue
 public:
 	bool m_value;
 	jsonBool(const char* data = nullptr);
-	dsStatus& parse(const char* data, int& size);
+	DS parse(const char* data, int& size);
 	string toString(int level = 0)const;
 };
 

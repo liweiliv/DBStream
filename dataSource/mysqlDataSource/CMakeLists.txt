@@ -1,0 +1,27 @@
+#mysqlclient
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	SET(MYSQL_INCLUDE_PATH "/usr/include/mysql")
+	find_library(MYSQL_CLIENT libmysqlclient.a /usr/lib64/mysql/)
+	if(NOT MYSQL_CLIENT)
+        message(FATAL_ERROR "libmysqlclient.a  not found")
+	endif()
+ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")
+	SET(MYSQL_INCLUDE_PATH "C:\\Program Files\\mysql-8.0.17-winx64\\include")
+	find_library(MYSQL_CLIENT mysqlclient "C:\\Program Files\\mysql-8.0.17-winx64\\lib")
+	#find_library(MYSQL_CLIENT mysqlclient  "D:\\code\\mysql-8.0.19\\out\\install\\x64-Debug\\lib")
+	if(NOT MYSQL_CLIENT)
+        message(FATAL_ERROR "mysqlclient library not found")
+	endif()
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+#mysqlDataSource
+include_directories(/usr/include/mysql)
+aux_source_directory(. mysqlDataSourceDir)
+add_library(mysqlDataSource SHARED ${mysqlDataSourceDir})
+target_include_directories(mysqlDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
+TARGET_LINK_LIBRARIES(mysqlDataSource  util store meta sqlParser ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(mysqlDataSource pthread ssl crypto rt z)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+INSTALL(TARGETS mysqlDataSource LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR})
+

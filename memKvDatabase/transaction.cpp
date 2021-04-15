@@ -13,7 +13,7 @@ namespace KVDB {
 		m_rows.clear();
 		m_tables.clear();
 	}
-	dsStatus& transaction::commit()
+	DS transaction::commit()
 	{
 		if (unlikely(m_start))
 			dsFailedAndLogIt(errorCode::TRANSACTION_NOT_START, "transaction not start", WARNING);
@@ -22,7 +22,7 @@ namespace KVDB {
 		m_start = false;
 		dsOk();
 	}
-	dsStatus& transaction::rollback()
+	DS transaction::rollback()
 	{
 		if (unlikely(m_start))
 			dsFailedAndLogIt(errorCode::TRANSACTION_NOT_START, "transaction not start", WARNING);

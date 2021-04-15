@@ -88,7 +88,7 @@ namespace SQL_PARSER {
 	"TERMINATE", "TRUE", "VARCHAR"
 	};
 
-	constexpr static char* nonReserverdKeyWords[] = {
+	constexpr static char* const nonReserverdKeyWords[] = {
 		"ABS", "CHARACTER_LENGTH", "CONDITION_NUMBER",
 		"ADA", "CHARACTER_SET_CATALOG", "CONNECTION_NAME",
 		"ASENSITIVE", "CHARACTER_SET_NAME", "CONSTRAINT_CATALOG",
@@ -146,7 +146,7 @@ namespace SQL_PARSER {
 
 	struct sqlParserStack;
 	struct keyWordInfo {
-		std::function<dsStatus& (sqlParserStack*, token*&, const char*&)> func;
+		std::function<DS (sqlParserStack*, token*&, char*&)> func;
 		bool couldBeValue;
 	};
 
