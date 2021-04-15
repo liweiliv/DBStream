@@ -37,16 +37,13 @@ namespace SQL_PARSER
 		const operationInfo* op;
 	};
 
-
-
-
 	struct keyWord :public token
 	{
 		static bool match(const char* s, const char* d, uint16_t size)
 		{
 			if (strncasecmp(s, d, size) != 0)
 				return false;
-			if (s[size] == '\0' || isSeparator(s + size) || KEY_CHAR[s[size]])
+			if (s[size] == '\0' || isSeparator(s + size) || KEY_CHAR[(uint8_t)s[size]])
 				return true;
 			else
 				return false;
@@ -55,7 +52,7 @@ namespace SQL_PARSER
 
 	struct identifier :public token
 	{
-		char count;
+		uint8_t count;
 		str identifiers[3];
 		inline void init(const char* pos, uint32_t size)
 		{
@@ -194,7 +191,7 @@ namespace SQL_PARSER
 		ALL_VALUE,
 		UNKNOWN
 	};
-	constexpr static char* const literalTypeStr[] = {
+	constexpr static const char* const literalTypeStr[] = {
 		"INT NUMBER",
 		"FLOAT NUMBER",
 		"NUMBER"

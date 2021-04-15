@@ -551,7 +551,6 @@
                 "BLOB": "blobType"
             },
             {
-                "optional": true,
                 "child": [
                     {
                         "or": true,
@@ -618,7 +617,6 @@
         ]
     },
     "DEFAULT_VALUE": {
-        "optional": true,
         "child": [
             {
                 "DEFAULT": null
@@ -652,7 +650,6 @@
                                 ]
                             },
                             {
-                                "optional": true,
                                 "child": [
                                      "ON",
                                      "UPDATE",
@@ -674,7 +671,6 @@
                         ]
                     },
                     {
-                        "optional": true,
                         "child": [
                             "ON",
                             "UPDATE",
@@ -1413,7 +1409,6 @@
                 ]
             },
             {
-                "optional": true,
                 "child": [
                     {
                         "optional": true,
@@ -1495,7 +1490,6 @@
                 ]
             },
             {
-                "optional": true,
                 "child": [
                     {
                         "or": true,
@@ -2384,7 +2378,6 @@
         ]
     },
     "alter_table_add_column": {
-        "optional": true,
         "child": [
             {
                 "ADD": null
@@ -2417,7 +2410,6 @@
         ]
     },
     "alter_table_add_columns": {
-        "optional": true,
         "child": [
             {
                 "ADD": null
@@ -2442,7 +2434,6 @@
         ]
     },
     "alter_table_MODIFY_column": {
-        "optional": true,
         "child": [
             {
                 "MODIFY": "alterTableModifyColumn"
@@ -2476,7 +2467,6 @@
         ]
     },
     "alter_table_add_CONSTRAINT": {
-        "optional": true,
         "child": [
             {
                 "ADD": null
@@ -2487,7 +2477,6 @@
         ]
     },
     "alter_table_add_key": {
-        "optional": true,
         "child": [
             {
                 "ADD": null
@@ -2498,7 +2487,6 @@
         ]
     },
     "alter_table_drop_index": {
-        "optional": true,
         "child": [
             {
                 "DROP": null
@@ -2520,7 +2508,6 @@
         ]
     },
     "alter_table_change_column": {
-        "optional": true,
         "child": [
             {
                 "CHANGE": "alterChangeColumn"
@@ -2557,7 +2544,6 @@
         ]
     },
     "alter_table_change_default_charset": {
-        "optional": true,
         "child": [
             {
                 "optional": true,
@@ -2604,7 +2590,6 @@
         ]
     },
     "alter_table_convert_default_charset": {
-        "optional": true,
         "child": [
             {
                 "CONVERT": "converTableCharset"
@@ -2649,7 +2634,6 @@
         ]
     },
     "alter_table_drop_column": {
-        "optional": true,
         "child": [
             {
                 "DROP": null
@@ -2664,7 +2648,6 @@
         ]
     },
     "alter_table_drop_primary_key": {
-        "optional": true,
         "child": [
             {
                 "DROP": null
@@ -2678,7 +2661,6 @@
         ]
     },
     "alter_table_drop_foreign_key": {
-        "optional": true,
         "child": [
             {
                 "DROP": null
@@ -2695,7 +2677,6 @@
         ]
     },
     "alter_table_rename_column": {
-        "optional": true,
         "child": [
             {
                 "RENAME": null
@@ -2715,7 +2696,6 @@
         ]
     },
     "alter_table_rename_key": {
-        "optional": true,
         "child": [
             {
                 "RENAME": null
@@ -2765,7 +2745,6 @@
         ]
     },
     "alter_index_visible": {
-        "optional": true,
         "child": [
             {
                 "INDEX": null
@@ -2901,8 +2880,7 @@
         ]
     },
     "alter_table": {
-        "optional": true,
-        "is head": true,
+       "is head": true,
         "child": [
             {
                 "ALTER": null
@@ -3065,7 +3043,6 @@
         ]
     },
     "create_index": {
-        "optional": true,
         "is head": true,
         "child": [
             "CREATE",
@@ -3185,7 +3162,6 @@
         ]
     },
     "drop_index": {
-        "optional": true,
         "is head": true,
         "child": [
             "DROP",
@@ -3237,7 +3213,6 @@
         ]
     },
     "DROP_TABLE": {
-        "optional": true,
         "is head": true,
         "child": [
             "DROP",
@@ -3270,7 +3245,6 @@
         ]
     },
     "RENAME_TABLE": {
-        "optional": true,
         "is head": true,
         "child": [
             "RENAME",
@@ -3317,7 +3291,6 @@
                 "or": true,
                 "child": [
                     {
-                        "optional": true,
                         "child": [
                             {
                                 "optional": true,
@@ -3345,7 +3318,6 @@
                         ]
                     },
                     {
-                        "optional": true,
                         "child": [
                             {
                                 "optional": true,
@@ -3362,7 +3334,6 @@
                         ]
                     },
                     {
-                        "optional": true,
                         "child": [
                             "ENCRYPTION",
                             {

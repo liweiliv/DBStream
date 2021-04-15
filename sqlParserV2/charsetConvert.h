@@ -34,7 +34,11 @@ namespace SQL_PARSER
 				if (scv == nullptr || dcv == nullptr)
 					return -1;
 				char tmpBuf[1024];
+#if defined OS_LINUX
+				char* srcPos = (char*)src;
+#else
 				const char* srcPos = src;
+#endif
 				char* destPos = dest;
 				size_t srcRemain = length;
 				size_t destRemain = destVolumn;
@@ -47,7 +51,11 @@ namespace SQL_PARSER
 					int charCount = iconv(scv, &srcPos, &srcRemain, &tmpWPos, &tmpRemain);
 					if (charCount < 0)
 						return -1;
+#if defined OS_LINUX
+					char* tmpRPos = srcPos;
+#else
 					const char* tmpRPos = srcPos;
+#endif
 					tmpRemain = sizeof(tmpBuf) - tmpRemain;
 					int destCharCount = iconv(dcv, &tmpRPos, &srcRemain, &destPos, &destRemain);
 					if (destCharCount < 0)
@@ -63,7 +71,11 @@ namespace SQL_PARSER
 			}
 			else
 			{
+#if defined OS_LINUX
+				char* srcPos = (char*)src;
+#else
 				const char* srcPos = src;
+#endif
 				char* destPos = dest;
 				size_t srcRemain = length;
 				size_t destRemain = destVolumn;
@@ -230,14 +242,14 @@ namespace SQL_PARSER
 				returnValue = gbkStrlen(str);
 				break;
 			case CHARSET::utf16:
-				if (length & 0x1 != 0)
+				if ((length & 0x1) != 0)
 					dsFailed(1, "utf16 and utf16le byte size must be even number");
 				if (length < 2)
 					dsFailed(1, "utf16 byte size must over 2");
 				returnValue = (length - 2) >> 1;
 				break;
 			case CHARSET::utf16le:
-				if (length & 0x1 != 0)
+				if ((length & 0x1) != 0)
 					dsFailed(1, "utf16 and utf16le byte size must be even number");
 				returnValue = utf16leStrlen(str);
 				break;

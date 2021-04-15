@@ -83,7 +83,7 @@ namespace SQL_PARSER
 			}
 			bool compare(const nodeInfo& n) const
 			{
-				if (optional != n.optional || branch != n.branch || loop != loop)
+				if (optional != n.optional || branch != n.branch || loop != n.loop)
 					return false;
 
 				if (nodeToken != nullptr && n.nodeToken != nullptr)
@@ -280,7 +280,7 @@ namespace SQL_PARSER
 				}
 				dsReturnIfFailedWithOp(piter->second(value, n), delete n);
 			}
-			else if (isKeyWord(key.c_str()) || (key.size() == 1 && KEY_CHAR[key.c_str()[0]]))
+			else if (isKeyWord(key.c_str()) || (key.size() == 1 && KEY_CHAR[(uint8_t)key.c_str()[0]]))
 			{
 				if (n->nodeToken != nullptr)
 				{
@@ -389,7 +389,7 @@ namespace SQL_PARSER
 		DS parseNode(const jsonObject* grammarMap, const jsonObject* grammar, nodeInfo*& result)
 		{
 			nodeInfo* n = new nodeInfo();
-			for (jsonObjectMap::const_iterator iter = grammar->m_values.begin(); iter != grammar->m_values.end(); iter++)
+			for (jsonObjectValueList::const_iterator iter = grammar->m_valueList.begin(); iter != grammar->m_valueList.end(); iter++)
 			{
 				if (isLowCaseString(iter->first.c_str()))
 				{
@@ -762,6 +762,7 @@ namespace SQL_PARSER
 			{
 				dsReturn(checkAndTryMergeTokenAndNotOptNode(first, second));
 			}
+			dsOk();
 		}
 
 		void mergeNodesWhenFirstContainSecond(nodeInfo*& first, nodeInfo*& second)
@@ -800,7 +801,7 @@ namespace SQL_PARSER
 			if (first->loop || second->loop)//can not merge loop node
 				dsReturn(nodeConflictCheck(first, second));
 
-			if (first->optional || second->optional)
+			if (first->optional != second->optional)
 				dsReturn(nodeConflictCheck(first, second));
 			else if (first->nodeToken != nullptr && second->nodeToken != nullptr)
 			{
@@ -912,6 +913,7 @@ namespace SQL_PARSER
 						p->child = new nodeInfo * [idx + 1];
 						p->childCount = idx + 1;
 						p->branch = false;
+						p->optional = first->optional;
 						memcpy(p->child, first->child, idx * sizeof(nodeInfo*));
 						p->child[idx] = new nodeInfo();
 						p->child[idx]->child = new nodeInfo * [2];
@@ -1004,7 +1006,7 @@ namespace SQL_PARSER
 						for (int m = 0; m < i; m++)
 							tmp[m] = node->child[m];
 						for (int m = i; m < node->childCount - 1; m++)
-							tmp[m] = node->child[m + i];
+							tmp[m] = node->child[m + 1];
 						int idx = node->childCount - 1;
 						for (int m = 0; m < c->childCount; m++)
 						{
@@ -1152,6 +1154,7 @@ namespace SQL_PARSER
 				m_allNodes.insert(std::pair<std::string, nodeInfo*>(iter->first, c));
 			}
 			//delete grammarTree;
+			dsOk();
 		}
 		DS optimize()
 		{
@@ -1190,7 +1193,7 @@ namespace SQL_PARSER
 		DS generateliteralCode(String& code, char* space, nodeInfo* node)
 		{
 			if (node->nodeToken->type != tokenType::literal)
-				dsFailedAndLogIt(-1, "unexpect tokenType:" << static_cast<int>(node->nodeToken->type), ERROR);
+				dsFailedAndLogIt(1, "unexpect tokenType:" << static_cast<int>(node->nodeToken->type), ERROR);
 			code.append(space).append("pos = sqlPos;\n");
 			code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, false, true ));\n");
 			dsReturn(generateliteralWithTokenCode(code, space, node));
@@ -1199,7 +1202,7 @@ namespace SQL_PARSER
 		DS generateliteralWithTokenCode(String& code, char* space, nodeInfo* node)
 		{
 			if (node->nodeToken->type != tokenType::literal)
-				dsFailedAndLogIt(-1, "unexpect tokenType:" << static_cast<int>(node->nodeToken->type), ERROR);
+				dsFailedAndLogIt(1, "unexpect tokenType:" << static_cast<int>(node->nodeToken->type), ERROR);
 			switch (static_cast<literal*>(node->nodeToken)->lType)
 			{
 			case literalType::INT_NUMBER:
@@ -1250,7 +1253,7 @@ namespace SQL_PARSER
 				code.append(space).append("if(matchAllLiteralToken(t) == 0);\n");
 				break;
 			default:
-				dsFailedAndLogIt(-1, "unsupport literalType:" << static_cast<int>(static_cast<literal*>(node->nodeToken)->lType), ERROR);
+				dsFailedAndLogIt(1, "unsupport literalType:" << static_cast<int>(static_cast<literal*>(node->nodeToken)->lType), ERROR);
 			}
 			code.append(space).append("{\n");
 			addSpace(space);
@@ -1261,7 +1264,7 @@ namespace SQL_PARSER
 		bool hasAlphabet(const char* str)
 		{
 			char c;
-			while ((c = *str) != '\0')
+			while ((c = *(str++)) != '\0')
 			{
 				if ((c <= 'z' && c >= 'a') || (c <= 'Z' && c >= 'A'))
 					return true;
@@ -1314,16 +1317,12 @@ namespace SQL_PARSER
 			{
 				if (hasAlphabet(word))
 				{
+					char s[2] = {0};
 					if ((word[0] <= 'z' && word[0] >= 'a'))
-					{
-						char s[2] = { word[0] + ('A' - 'a'),0 };
-						code.append(space).append("if(*sqlPos == '").append(word).append("' || *sqlPos == '").append(s).append("'\n");
-					}
+						s[0] = word[0] + ('A' - 'a');
 					else
-					{
-						char s[2] = { word[0] - ('A' - 'a'),0 };
-						code.append(space).append("if(*sqlPos == '").append(word).append("' || *sqlPos == '").append(s).append("'\n");
-					}
+						s[0] = word[0] - ('A' - 'a');
+					code.append(space).append("if(*sqlPos == '").append(word).append("' || *sqlPos == '").append(s).append("'\n");
 				}
 				else
 				{
@@ -1351,7 +1350,6 @@ namespace SQL_PARSER
 		void addFuncCode(char* space, const std::string& funcName, const std::string & keyWord, String& code)
 		{
 			code.append(space).append("dsReturnIfFailed(").append(funcName).append("(handle, ");
-			const char* tokenWord;
 			if (keyWord.empty())
 			{
 				code.append("t");
@@ -1401,11 +1399,12 @@ namespace SQL_PARSER
 					generateCodeForIdentifer(space, code);
 				}
 				else
-					dsFailedAndLogIt(-1, "not support token type" << (int)(node->nodeToken->type), ERROR);
+					dsFailedAndLogIt(1, "not support token type" << (int)(node->nodeToken->type), ERROR);
 				
 				appendTokenTailCode(space, node->funcName.empty() ? nullptr : node->funcName.c_str()
 					, node->nodeToken->type == tokenType::keyword ? node->nodeToken->value.toString().c_str() : nullptr
 					, code, matchCode, notMatchCode, node->loop);
+				dsOk();
 			}
 			else
 				dsFailedAndLogIt(1, "node must have nodeToken", ERROR);
@@ -1465,10 +1464,8 @@ namespace SQL_PARSER
 				code.append(space).append("{\n");
 				addSpace(space);
 			}
-			bool allIsKeyWord = true;
 			if (node->nodeToken == nullptr || node->nodeToken->type != tokenType::keyword)
 			{
-				allIsKeyWord = false;
 				code.append(space).append("DS s;\n");
 				if(!(node->branch && !node->loop))
 					code.append(space).append("bool matched = false;\n");
@@ -1502,7 +1499,7 @@ namespace SQL_PARSER
 					if (node->branch)
 					{
 						if (c->optional)
-							dsFailedAndLogIt(-1, "branch token node can be optional", ERROR);
+							dsFailedAndLogIt(1, "branch token node can be optional", ERROR);
 						if (i == node->childCount - 1)
 						{
 							matchedCode = nullptr;
@@ -1559,7 +1556,7 @@ namespace SQL_PARSER
 						else if (c->nodeToken->type == tokenType::identifier)
 							generateCodeForIdentifer(space, code);
 						else
-							dsFailedAndLogIt(-1, "not support token type" << (int)(c->nodeToken->type), ERROR);
+							dsFailedAndLogIt(1, "not support token type" << (int)(c->nodeToken->type), ERROR);
 						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
 							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
 							, code, matchedCode, notMatchCode, needSignMatchd);
@@ -1592,6 +1589,7 @@ namespace SQL_PARSER
 			decSpace(space);
 			code.append(space).append("}\n");
 			m_codes.insert(std::pair<int, String>(id, code));
+			dsOk();
 		}
 
 		DS generateCode(const char* parseFuncHeadFile, const char* className, const char* sourceFile)
@@ -1616,16 +1614,16 @@ namespace SQL_PARSER
 			}
 			fileHandle handle = openFile(sourceFile, true, true, true);
 			if (!fileHandleValid(handle))
-				dsFailedAndLogIt(-1, "open out put source file:" << sourceFile << " failed for " << errno << " " << strerror(errno), ERROR);
+				dsFailedAndLogIt(1, "open out put source file:" << sourceFile << " failed for " << errno << " " << strerror(errno), ERROR);
 			int writeSize = 0;
 			String code;
-			if (strlen(includeCode) != (writeSize = writeFile(handle, includeCode, strlen(includeCode))))
+			if ((writeSize = writeFile(handle, includeCode, strlen(includeCode))) != (int)(strlen(includeCode)))
 				goto FAILED;
 			if (parseFuncHeadFile != nullptr)
 			{
 				code.clear();
 				code.append("#include \"").append(parseFuncHeadFile).append("\"\n");
-				if (code.size() != (writeSize = writeFile(handle, code.c_str(), code.size())))
+				if ((writeSize = writeFile(handle, code.c_str(), code.size())) != (int)(code.size()))
 					goto FAILED;
 			}
 			code.assign("namespace SQL_PARSER{\n"
@@ -1637,23 +1635,23 @@ namespace SQL_PARSER
 					"			sqlPos = pos;\n"
 					"			dsOk();\n"
 					"		}\n");
-			if (code.size() != (writeSize = writeFile(handle, code.c_str(), code.size())))
+			if ((writeSize = writeFile(handle, code.c_str(), code.size())) != (int)code.size())
 				goto FAILED;
 
 			for (std::map<int, String>::iterator iter = m_codes.begin(); iter != m_codes.end(); iter++)
 			{
-				if (iter->second.size() != (writeSize = writeFile(handle, iter->second.c_str(), iter->second.size())))
+				if ((writeSize = writeFile(handle, iter->second.c_str(), iter->second.size())) != (int)iter->second.size())
 					goto FAILED;
 			}
 			code.assign("\t};\n}");
-			if (code.size() != (writeSize = writeFile(handle, code.c_str(), code.size())))
+			if ((writeSize = writeFile(handle, code.c_str(), code.size())) != (int)code.size())
 				goto FAILED;
 			closeFile(handle);
 			dsOk();
 		FAILED:
 			int err = errno;
 			closeFile(handle);
-			dsFailedAndLogIt(-1, "write code to source file:" << sourceFile << " failed for " << err << " " << strerror(err), ERROR);
+			dsFailedAndLogIt(1, "write code to source file:" << sourceFile << " failed for " << err << " " << strerror(err), ERROR);
 		}
 	};
 }

@@ -139,12 +139,12 @@ namespace SQL_PARSER {
 	public:
 		operationInfoTree() :m_root('\0') 
 		{
-			for (int i = 0; i < sizeof(operationInfos) / sizeof(operationInfo); i++)
+			for (uint32_t i = 0; i < sizeof(operationInfos) / sizeof(operationInfo); i++)
 				add(&operationInfos[i]);
 		}
 		void add(const operationInfo* info)
 		{
-			const char* s = &info->signStr[0];
+			const uint8_t * s = (const uint8_t *)&info->signStr[0];
 			if (*(s + 1) == '\0')
 			{
 				if (m_root.operations[*s] == nullptr)
@@ -183,7 +183,7 @@ namespace SQL_PARSER {
 			node* n = &m_root;
 			for(;;)
 			{
-				char c = *sql;
+				uint8_t c = (uint8_t)*sql;
 				if (*(sql + 1) == '\0')
 				{
 					if (n->operations[c] != nullptr)
@@ -195,7 +195,7 @@ namespace SQL_PARSER {
 				}
 				if (n->child[c] != nullptr)
 				{
-					if (n->child[c]->operations[*(sql + 1)] != nullptr || n->child[c]->child[*(sql + 1)] != nullptr)
+					if (n->child[c]->operations[(uint8_t)*(sql + 1)] != nullptr || n->child[c]->child[(uint8_t)*(sql + 1)] != nullptr)
 					{
 						sql++;
 						n = n->child[c];

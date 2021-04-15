@@ -52,6 +52,7 @@ public:
 	~jsonNum() {}
 };
 typedef std::map<std::string, jsonValue*> jsonObjectMap;
+typedef std::list<std::pair<std::string, jsonValue*> > jsonObjectValueList;
 class DLL_EXPORT jsonObject :public jsonValue
 {
 public:

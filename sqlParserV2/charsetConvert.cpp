@@ -1,3 +1,4 @@
+#include "util/min.h"
 #include "charsetConvert.h"
 #include "field.h"
 namespace SQL_PARSER {
@@ -16,7 +17,11 @@ namespace SQL_PARSER {
 				dsFailed(-1, "can not convert " << charsets[destType].name << " to utf8");
 			char tmpBuf[1024];
 			const char* srcPos = src;
+#if defined OS_LINUX
+			char* destPos = (char*)dest;
+#else
 			const char* destPos = dest;
+#endif 
 			size_t srcRemain = srcLength;
 			size_t destRemain = destLength;
 			do
@@ -31,7 +36,7 @@ namespace SQL_PARSER {
 				int charCount = iconv(dcv, &destPos, &destRemain, &tmpWPos, &tmpRemain);
 				if (charCount < 0)
 					dsFailed(-1, "can not convert " << charsets[destType].name << " to utf8");
-				int cl = min(srcRemain, sizeof(tmpBuf) - tmpRemain);
+				int cl = std::min<size_t>(srcRemain, sizeof(tmpBuf) - tmpRemain);
 				result = stringField::stringCompare(srcPos, cl, dest, cl, casesensitive);
 				if (result != 0)
 					dsOk();
@@ -93,8 +98,13 @@ namespace SQL_PARSER {
 					dsFailed(-1, "can not convert " << charsets[destType].name << " to utf8");
 				char srcTmp[1024];
 				char destTmp[1024];
+#if defined OS_LINUX
+				char* srcPos = (char*)src;
+				char* destPos = (char*)dest;
+#else 
 				const char* srcPos = src;
 				const char* destPos = dest;
+#endif 
 				size_t srcRemain = srcLength;
 				size_t destRemain = destLength;
 				size_t prevRemain = 0;
@@ -132,7 +142,7 @@ namespace SQL_PARSER {
 							dsFailed(-1, "can not convert " << charsets[destType].name << " to utf8");
 					}
 
-					int cl = min(sizeof(srcTmp) - srcTmpRemain, sizeof(destTmp) - destTmpRemain);
+					int cl = std::min<size_t>(sizeof(srcTmp) - srcTmpRemain, sizeof(destTmp) - destTmpRemain);
 					result = stringField::stringCompare(srcTmp, cl, destTmp, cl, casesensitive);
 					if (result != 0)
 						dsOk();

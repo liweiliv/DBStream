@@ -7,6 +7,7 @@
 #include "util/nameCompare.h"
 #include "token.h"
 #include "util/arena.h"
+#include "util/min.h"
 #include "sqlStack.h"
 #include "separator.h"
 #include "keyWords.h"
@@ -50,7 +51,6 @@ namespace SQL_PARSER {
 		bool leaf;
 	};
 #define NOT_MATHCH_RETURN if(matched){dsFailed(1, "grammar error @ "<< std::string(sqlPos, min(50, strlen(sqlPos))));}else{dsReturnCode(1);}
-#define NOT_MATCH_CHECK_ANNOTATION_RETRY(i) if() 
 
 #define tryProcessAnnotation(sqlPos) \
 			if ((sqlPos)[0] == '-') \
@@ -166,7 +166,7 @@ namespace SQL_PARSER {
 		}
 		void initKeyWords()
 		{
-			for (int i = 0; i < sizeof(reserverdKeyWords) / sizeof(const char*); i++)
+			for (uint32_t i = 0; i < sizeof(reserverdKeyWords) / sizeof(const char*); i++)
 				m_keyWords.insert(std::pair<const str*, keyWordInfo*>(new str(reserverdKeyWords[i]), nullptr));
 		}
 	public:
@@ -339,7 +339,7 @@ namespace SQL_PARSER {
 				}
 				else
 				{
-					while (!KEY_CHAR[*pos])
+					while (!KEY_CHAR[(uint8_t)*pos])
 						pos++;
 					str s(start, pos - start);
 					keyWordMap::iterator iter = m_keyWords.find(&s);
@@ -453,14 +453,12 @@ namespace SQL_PARSER {
 		{
 			uint32_t vt = stack->valueStack.size();
 			uint32_t ot = stack->opStack.size();
-			bool matchRightValue = false;
 			token* l = nullptr, * r = nullptr;
 			if (t != nullptr)
 			{
 				if (unlikely(!stack->valueStack.push(t)))
 					dsFailedAndLogIt(errorCode::OVER_LIMIT, "expression operation count over limit :" << pos, ERROR);
 				l = t;
-				matchRightValue = true;
 				goto MATCH_OP;
 			}
 			if (op != nullptr)
@@ -513,7 +511,7 @@ namespace SQL_PARSER {
 			}
 			else if (op->op->hasLeftValues && op->op->hasRightValue && (op->op->optType == OPERATION_TYPE::LOGIC || op->op->optType == OPERATION_TYPE::MATHS))
 			{
-				while (stack->opStack.size() > ot && stack->opStack.top()->op->optType != LEFT_BRACKET && stack->opStack.top()->op->priority <= op->op->priority)
+				while (stack->opStack.size() > ot && stack->opStack.top()->op->type != LEFT_BRACKET && stack->opStack.top()->op->priority <= op->op->priority)
 				{
 					if (unlikely(!stack->valueStack.push(stack->opStack.popAndGet())))
 						dsFailedAndLogIt(errorCode::OVER_LIMIT, "expression operation count over limit :" << pos, ERROR);
@@ -600,7 +598,7 @@ namespace SQL_PARSER {
 				while (*pos >= '0' && *pos <= '9')
 					pos++;
 			}
-			if (!KEY_CHAR[*pos])
+			if (!KEY_CHAR[(uint8_t)*pos])
 				dsFailedAndLogIt(errorCode::SYNTAX_ERROR, "not match :" << pos, ERROR);
 			literal* l = (literal*)stack->arena.AllocateAligned(sizeof(literal));
 			l->type = tokenType::literal;
@@ -753,7 +751,6 @@ namespace SQL_PARSER {
 			t = nullptr;
 			for (char i = 0; i < 3; i++)
 			{
-				DS s;
 				if (*pos == m_identifierQuote)
 					dsReturnIfNotOk(matchDelimitedIdentifier(stack, t, pos));
 				else
