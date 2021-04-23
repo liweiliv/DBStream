@@ -1312,7 +1312,6 @@
     },
     "table_options": {
         "loop": null,
-        "optional": true,
         "or": true,
         "child": [
             {
@@ -2299,10 +2298,10 @@
                                 ")": null
                             },
                             {
-                                "include": "table_options"
+                                "include": "table_options", "optional": true
                             },
                             {
-                                "include": "partition_options"
+                                "include": "partition_options", "optional": true
                             },
                             {
                                 "optional": true,

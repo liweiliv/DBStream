@@ -987,6 +987,13 @@ namespace SQL_PARSER
 									mergedCount++;
 									break;
 								}
+								else if (node->child[j] == nullptr)
+								{
+									for (int n = j; n < node->childCount - 1; n++)
+										node->child[n] = node->child[n+1];
+									node->childCount--;
+									break;
+								}
 								dsReturnIfFailed(nodeConflictCheck(c->child[m], node->child[j]));
 							}
 						}
@@ -1279,12 +1286,10 @@ namespace SQL_PARSER
 		}
 
 		void appendTokenTailCode(char* space, const char* funcName, const char* funcTokenArgv, String& code, 
-			const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes, bool signMatch)
+			const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes)
 		{
 			if (funcName != nullptr)
 				addFuncCode(space, funcName, funcTokenArgv == nullptr ? "" : funcTokenArgv, code);
-			if (signMatch)
-				code.append(space).append("matched = true;\n");
 			if (!matchedCodes.empty())
 			{
 				for (std::list<std::string>::const_iterator iter = matchedCodes.begin(); iter != matchedCodes.end(); iter++)
@@ -1410,21 +1415,21 @@ namespace SQL_PARSER
 
 				appendTokenTailCode(space, node->funcName.empty() ? nullptr : node->funcName.c_str()
 					, node->nodeToken->type == tokenType::keyword ? node->nodeToken->value.toString().c_str() : nullptr
-					, code, matchedCodes, notMatchCodes, node->loop);
+					, code, matchedCodes, notMatchCodes);
 				dsOk();
 			}
 			else
 				dsFailedAndLogIt(1, "node must have nodeToken", ERROR);
 		}
 
-		DS createChildFunc(nodeInfo* c, String& code, char* space, int& idx, const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes, bool needSignMatchd)
+		DS createChildFunc(nodeInfo* c, String& code, char* space, int& idx, const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes)
 		{
 			int funcId = ++idx;
 			dsReturnIfFailed(generateCodeForNode(c, idx));
-			if (!notMatchCodes.empty() || needSignMatchd || !matchedCodes.empty())
+			if (!notMatchCodes.empty() || !matchedCodes.empty())
 			{
 				code.append(space).append("dsReturnIfFailed(s = parse_").append(funcId).append("(handle, sqlPos, currentSql));\n");
-				if ((needSignMatchd || matchedCodes.empty()) && notMatchCodes.empty())
+				if (matchedCodes.empty() && notMatchCodes.empty())
 					code.append(space).append("if (s == 0)\n");
 				else
 					code.append(space).append("if (s != 0)\n");
@@ -1437,14 +1442,12 @@ namespace SQL_PARSER
 					decSpace(space);
 					code.append(space).append("}\n");
 				}
-				if (needSignMatchd || !matchedCodes.empty())
+				if (!matchedCodes.empty())
 				{
 					if (!notMatchCodes.empty())
 						code.append(space).append("else\n");
 					code.append(space).append("{\n");
 					addSpace(space);
-					if (needSignMatchd)
-						code.append(space).append("matched = true;\n");
 					if (!matchedCodes.empty())
 					{
 						for (std::list<std::string>::const_iterator iter = matchedCodes.begin(); iter != matchedCodes.end(); iter++)
@@ -1481,7 +1484,7 @@ namespace SQL_PARSER
 			if (node->branch)
 			{
 				if (c->optional)
-					dsFailedAndLogIt(1, "branch token node can be optional", ERROR);
+					dsFailedAndLogIt(1, "branch token node can not be optional", ERROR);
 				//notMatchCodes only exist in the last child node
 				if (i == node->childCount - 1)
 				{
@@ -1636,11 +1639,6 @@ namespace SQL_PARSER
 					nodeInfo* c = node->child[i];
 					std::list < std::string >  matchedCodes;
 					std::list < std::string >  notMatchCodes;
-					bool needSignMatchd = false;
-					if (node->branch)
-						needSignMatchd = node->loop;
-					else
-						needSignMatchd = !hasFetchToFirstNotOptinal && !(i == node->childCount - 1 && !node->loop);
 					dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
 					if (!node->branch)
 					{
@@ -1651,7 +1649,7 @@ namespace SQL_PARSER
 					code.append(space).append("nextWordPos(sqlPos);\n");
 					if (c->nodeToken == nullptr || c->loop)
 					{
-						dsReturnIfFailed(createChildFunc(c, code, space, idx, matchedCodes, notMatchCodes, needSignMatchd));
+						dsReturnIfFailed(createChildFunc(c, code, space, idx, matchedCodes, notMatchCodes));
 					}
 					else
 					{
@@ -1665,7 +1663,7 @@ namespace SQL_PARSER
 							dsFailedAndLogIt(1, "not support token type" << (int)(c->nodeToken->type), ERROR);
 						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
 							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
-							, code, matchedCodes, notMatchCodes, needSignMatchd);
+							, code, matchedCodes, notMatchCodes);
 					}
 					if (!node->branch && !c->optional)
 						hasFetchToFirstNotOptinal = true;
