@@ -45,7 +45,7 @@ namespace SQL_PARSER {
 		grammarHashMap nextKeyWordMap;
 		bool leaf;
 	};
-#define NOT_MATHCH_RETURN(c) if(matchedPartOfTokens){dsFailed(1, "grammar error @ "<< std::string(sqlPos, min(50, strlen(sqlPos))));}else{dsReturnCode(c);}
+#define NOT_MATHCH_RETURN(c) if(matchedPartOfTokens){dsFailed(1, "grammar error @ "<< std::string(sqlPos, std::min<size_t>(50, strlen(sqlPos))));}else{dsReturnCode(c);}
 
 #define tryProcessAnnotation(sqlPos) \
 			if ((sqlPos)[0] == '-') \
@@ -226,7 +226,7 @@ namespace SQL_PARSER {
 					if (version < m_mysqlVersion)
 					{
 						if (!seekToEndOfMultiLineAnnotation(pos))
-							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, std::min<size_t>(strlen(sqlPos), 50)));
 						sqlPos = pos;
 						dsOk();
 					}
@@ -236,7 +236,7 @@ namespace SQL_PARSER {
 							pos++;
 						sqlPos = pos;
 						if (!seekToEndOfMultiLineAnnotation(pos))
-							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+							dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, std::min<size_t>(strlen(sqlPos), 50)));
 						*(pos - 1) = ' ';
 						*(pos - 2) = ' ';
 						dsOk();
@@ -246,7 +246,7 @@ namespace SQL_PARSER {
 				{
 					sqlPos = pos;
 					if (!seekToEndOfMultiLineAnnotation(pos))
-						dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+						dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, std::min<size_t>(strlen(sqlPos), 50)));
 					*(pos - 1) = ' ';
 					*(pos - 2) = ' ';
 					dsOk();
@@ -255,7 +255,7 @@ namespace SQL_PARSER {
 			else
 			{
 				if (!seekToEndOfMultiLineAnnotation(sqlPos))
-					dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, min(strlen(sqlPos), 50)));
+					dsFailed(1, "can not find end of annotation @" << std::string(sqlPos, std::min<size_t>(strlen(sqlPos), 50)));
 				dsOk();
 			}
 		}
@@ -709,7 +709,7 @@ namespace SQL_PARSER {
 		DS matchDelimitedIdentifier(sqlParserStack* stack, token*& t, char*& pos)
 		{
 			if (*pos != m_identifierQuote)
-				dsFailed(1, "must be delimited identifier  @" << std::string(pos, min(strlen(pos), 50)));
+				dsFailed(1, "must be delimited identifier  @" << std::string(pos, std::min<size_t>(strlen(pos), 50)));
 			pos++;
 			const char* start = pos;
 			bool backslash = false;
@@ -738,7 +738,7 @@ namespace SQL_PARSER {
 				}
 				pos++;
 			}
-			dsFailed(1, "unexpect unfinished delimited identifier @" << std::string(pos, min(strlen(pos), 50)));
+			dsFailed(1, "unexpect unfinished delimited identifier @" << std::string(pos, std::min<size_t>(strlen(pos), 50)));
 		}
 
 		DS matchIdentifier(sqlParserStack* stack, token*& t, char*& pos)
@@ -799,7 +799,7 @@ namespace SQL_PARSER {
 				else if (*pos == '\0')
 					dsOk();
 				else
-					dsFailed(1, "unexpect sql @" << std::string(pos, min(strlen(pos), 50)));
+					dsFailed(1, "unexpect sql @" << std::string(pos, std::min<size_t>(strlen(pos), 50)));
 			}
 		}
 	};

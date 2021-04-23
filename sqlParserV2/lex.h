@@ -874,7 +874,7 @@ namespace SQL_PARSER
 				else
 				{
 					int idx = 0;
-					for (; idx < min(first->childCount, second->childCount); idx++)
+					for (; idx < std::min<int>(first->childCount, second->childCount); idx++)
 					{
 						if (first->child[idx]->compare(*second->child[idx]))
 							continue;
@@ -883,7 +883,7 @@ namespace SQL_PARSER
 					}
 					if (idx == 0)
 						dsOk();
-					if (idx == min(first->childCount, second->childCount))
+					if (idx == std::min<int>(first->childCount, second->childCount))
 					{
 						if (first->childCount == second->childCount)
 						{
@@ -1355,7 +1355,7 @@ namespace SQL_PARSER
 					id = m_staticTokens.insert(std::pair<std::string, int>(keyWord, m_staticTokens.size() + 1)).first->second;
 				else
 					id = iter->second;
-				code.append(space).append("m_staticToken_").append(id);
+				code.append("m_staticToken_").append(id);
 			}
 			code.append(", currentSql));\n");
 		}
@@ -1368,7 +1368,6 @@ namespace SQL_PARSER
 			{
 				if (node->loop && node->optional)
 					dsFailedAndLogIt(1, "loop token node can be optional", ERROR);
-				const char* matchCode = nullptr, * notMatchCode = nullptr;
 				if (node->loop)
 				{
 					if (node->loopSeparator == nullptr)
@@ -1384,14 +1383,14 @@ namespace SQL_PARSER
 					{
 						//if count == 0, not match, count >0 means has matched loopSeparator,grammar error
 						notMatchCodes.push_back("if (count > 0)");
-						notMatchCodes.push_back("\tdsFailed(1, \"grammar error @ \"<< std::string(sqlPos, min(50, strlen(sqlPos))));");
+						notMatchCodes.push_back("\tdsFailed(1, \"grammar error @ \"<< std::string(sqlPos, std::min<size_t>(50, strlen(sqlPos))));");
 						notMatchCodes.push_back("else");
 						notMatchCodes.push_back("\tdsReturn(1);");
 					}
 				}
 				else
 				{
-					notMatchCode = "dsReturnCode(1);";
+					notMatchCodes.push_back("dsReturnCode(1);");
 				}
 				code.append(space).append("nextWordPos(sqlPos);\n");
 				if (node->nodeToken->type == tokenType::keyword)
@@ -1494,7 +1493,7 @@ namespace SQL_PARSER
 							notMatchCodes.push_back("if(count == 0)");
 							notMatchCodes.push_back("\tdsReturnCode(1);");
 							notMatchCodes.push_back("else");
-							notMatchCodes.push_back("\tdsFailed(1, \"grammar error @ \" << std::string(sqlPos, min(50, strlen(sqlPos))));");
+							notMatchCodes.push_back("\tdsFailed(1, \"grammar error @ \" << std::string(sqlPos, std::min<size_t>(50, strlen(sqlPos))));");
 						}
 						else
 						{
@@ -1588,6 +1587,7 @@ namespace SQL_PARSER
 						matchedCodes.push_back("matchedPartOfTokens = true;");
 				}
 			}
+			dsOk();
 		}
 
 		DS generateCodeForNode(nodeInfo* node, int& idx)
@@ -1716,13 +1716,13 @@ namespace SQL_PARSER
 		{
 			char space[20] = { '\t',0 };
 			code.append("\tprivate:\n");
-			for (int i = 1; i < m_staticTokens.size(); i++)
+			for (size_t i = 1; i < m_staticTokens.size(); i++)
 				code.append("\t\ttoken * m_staticToken_").append(i).append(";\n");
 			code.append("\n");
 			code.append(space).append("void initStaticTokens()\n");
 			code.append(space).append("{\n");
 			addSpace(space);
-			for (int i = 1; i < m_staticTokens.size(); i++)
+			for (int i = 1; i < (int)m_staticTokens.size(); i++)
 			{
 				for (std::map<std::string, int>::iterator iter = m_staticTokens.begin(); iter != m_staticTokens.end(); iter++)
 				{
@@ -1794,7 +1794,7 @@ namespace SQL_PARSER
 			code.append("\t\t").append("{\n");
 			if (!m_staticTokens.empty())
 			{
-				for (int i = 1; i < m_staticTokens.size(); i++)
+				for (int i = 1; i < (int)m_staticTokens.size(); i++)
 					code.append("\t\t\t").append("delete m_staticToken_").append(i).append(";\n");
 			}
 			code.append("\t\t").append("}\n");
