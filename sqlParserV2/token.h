@@ -65,6 +65,7 @@ namespace SQL_PARSER
 		{
 			identifiers[count++].assign(pos, size);
 		}
+		/*
 		static bool matchNonDelimitedIdentifier(token*& t, char quote, const char*& pos, leveldb::Arena* arena, bool funcName)
 		{
 			const char* start = pos;
@@ -157,7 +158,7 @@ namespace SQL_PARSER
 			matchIdentifier(t, quote, sql, arena, false);
 			return static_cast<identifier*>(t);
 		}
-
+		*/
 		std::string toString()
 		{
 			std::string s;

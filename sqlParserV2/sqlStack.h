@@ -1,6 +1,7 @@
 #pragma once
-#include<stdint.h>
+#include <stdint.h>
 #include "util/likely.h"
+#include "meta/metaData.h"
 namespace SQL_PARSER
 {
 	static constexpr auto MAX_EXPRESSION_OPERATION_COUNT = 1024;
@@ -55,6 +56,10 @@ namespace SQL_PARSER
 	struct sqlParserStack {
 		sqlStack<operatorSymbol*> opStack;
 		sqlStack<token*> valueStack;
+
+		sqlStack<META::tableMeta*> allocedTables;
+		sqlStack<META::columnMeta*> allocedColumns;
+
 		leveldb::Arena arena;
 		inline void clear()
 		{

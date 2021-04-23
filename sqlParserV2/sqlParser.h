@@ -15,7 +15,9 @@
 #include "operationInfo.h"
 #include "errorCode.h"
 #include "lex.h"
+#include "sql.h"
 #include "literalTranslate.h"
+#include "instanceInfo.h"
 namespace SQL_PARSER {
 
 	struct grammarToken;
@@ -31,18 +33,11 @@ namespace SQL_PARSER {
 		FLOAT_NUMBER,
 		SYMBOL
 	};
-	enum class SQL_TYPE {
-		ORACLE,
-		MYSQL,
-		POSTGRESQL,
-		SQL_SERVER,
-		DB2
-	};
+
 	struct grammarToken {
 		token word;
 		bool matchAnyValueToekn;
 		literalType type;
-		parserFuncType func;
 		const grammarToken* valueNext;//next is value, include literal,identifier,function,expression,some keyword
 		const grammarToken* symbNext;
 		const grammarToken* keyWordNext;
@@ -50,14 +45,14 @@ namespace SQL_PARSER {
 		grammarHashMap nextKeyWordMap;
 		bool leaf;
 	};
-#define NOT_MATHCH_RETURN if(matched){dsFailed(1, "grammar error @ "<< std::string(sqlPos, min(50, strlen(sqlPos))));}else{dsReturnCode(1);}
+#define NOT_MATHCH_RETURN(c) if(matchedPartOfTokens){dsFailed(1, "grammar error @ "<< std::string(sqlPos, min(50, strlen(sqlPos))));}else{dsReturnCode(c);}
 
 #define tryProcessAnnotation(sqlPos) \
 			if ((sqlPos)[0] == '-') \
 			{\
 				if ((sqlPos)[1] == '-')\
 				{\
-					if (m_sqlType == SQL_TYPE::MYSQL)\
+					if (m_sqlType == DATABASE_TYPE::MYSQL)\
 					{\
 						if ((sqlPos)[2] == ' ')\
 						{\
@@ -87,7 +82,7 @@ namespace SQL_PARSER {
 			{\
 				if ((sqlPos)[1] == '-')\
 				{\
-					if (m_sqlType == SQL_TYPE::MYSQL)\
+					if (m_sqlType == DATABASE_TYPE::MYSQL)\
 					{\
 						if ((sqlPos)[2] == ' ')\
 						{\
@@ -130,7 +125,7 @@ namespace SQL_PARSER {
 		threadLocal<sqlParserStack> m_stack;
 		literalTranslate m_litTrans;
 	protected:
-		SQL_TYPE m_sqlType;
+		DATABASE_TYPE m_sqlType;
 		int m_mysqlVersion;
 	private:
 		template<typename T>
@@ -221,7 +216,7 @@ namespace SQL_PARSER {
 		DS processMultiLineAnnotation(char*& sqlPos)
 		{
 			sqlPos += 2;
-			if (m_sqlType == SQL_TYPE::MYSQL && *sqlPos == '!')
+			if (m_sqlType == DATABASE_TYPE::MYSQL && *sqlPos == '!')
 			{
 				char* pos = sqlPos + 1;
 				nextWordPos(pos);
@@ -755,24 +750,49 @@ namespace SQL_PARSER {
 					dsReturnIfNotOk(matchDelimitedIdentifier(stack, t, pos));
 				else
 					dsReturnIfNotOk(matchNonDelimitedIdentifier(stack, t, pos, false));
+				nextWordPos(pos);
 				if (*pos != '.')
 					break;
 			}
 			dsOk();
 		}
 
-		DLL_EXPORT virtual DS parseOneSentence(sqlHandle* handle, char*& sqlStr, sql* s);
+		DS matchOracleIdentifier(sqlParserStack* stack, token*& t, char*& pos)
+		{
+			t = nullptr;
+			for (char i = 0; i < 3; i++)
+			{
+				if (*pos == m_identifierQuote)
+					dsReturnIfNotOk(matchDelimitedIdentifier(stack, t, pos));
+				else
+					dsReturnIfNotOk(matchNonDelimitedIdentifier(stack, t, pos, false));
+				nextWordPos(pos);
+				if (*pos != '.')
+				{
+					if (*pos == '@')
+					{
+						//db link
+					}
+					else
+						break;
+				}
+
+			}
+			dsOk();
+		}
+
+		DLL_EXPORT virtual DS parseOneSentence(sqlHandle* handle, char*& sqlStr, sql*& s);
 	public:
-		DLL_EXPORT DS parse(sqlHandle* handle, char* sqlStr, DS(*handleFunc)(sqlHandle*))
+		DLL_EXPORT DS parse(sqlHandle* handle, char* sqlStr, DS(*handleFunc)(sqlHandle*, sql*))
 		{
 			char* pos = sqlStr;
 			nextWordPos(pos);
 			for (;;)
 			{
-				sql s;
-				dsReturnIfFailed(parseOneSentence(handle, pos, &s));
+				sql *s = nullptr;
+				dsReturnIfFailed(parseOneSentence(handle, pos, s));
 				if(handleFunc != nullptr)
-					dsReturnIfFailed(handleFunc(handle));
+					dsReturnIfFailed(handleFunc(handle, s));
 				nextWordPos(pos);
 				if (*pos == ';')
 					pos++;

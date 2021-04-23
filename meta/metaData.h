@@ -180,6 +180,8 @@ namespace META {
 	struct DLL_EXPORT tableMeta
 	{
 		std::string  m_dbName;
+		//for postgresql
+		std::string  m_schemaName;
 		std::string  m_tableName;
 		const charsetInfo *m_charset;
 		std::string m_collate;

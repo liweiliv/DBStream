@@ -2879,6 +2879,159 @@
             }
         ]
     },
+
+    "alter_table_add_partition":{
+        "child":[
+            "ADD",
+            {"PARTITION":"alterAddPatition"},
+            "(",
+            {"include":"partition_definition"},
+            ")"
+        ]
+    },
+
+    "alter_table_drop_partition":{
+        "child":[
+            "DROP",
+            "PARTITION",
+            {"identifier word": "alterDropPatition"}
+        ]
+    },
+
+    "alter_table_discard_partition":{
+        "child":[
+            "DISCARD",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterDiscardAllPatition"},
+                {"identifier word": "alterDiscardPatitionName"}
+            ]},
+            "TABLESPACE"
+        ]
+    },
+
+    "alter_table_import_partition":{
+        "child":[
+            "IMPORT",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterImportAllPatition"},
+                {"identifier word": "alterImportPatitionName"}
+            ]},
+            "TABLESPACE"
+        ]
+    },
+
+    "alter_table_truncate_partition":{
+        "child":[
+            "TRUNCATE",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterTruncateAllPatition"},
+                {"identifier word": "altertruncatePatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_coalesce_partition":{
+        "child":[
+            "COALESCE",
+            "PARTITION",
+            "int value"
+        ]
+    },
+
+    "alter_table_reorganize_partition":{
+        "child":[
+            "REORGANIZE",
+            "PARTITION",
+            {"identifier word":"reorganizePartitionName"},
+            "INTO",
+             "(",
+            {"include":"partition_definition"},
+            ")"
+        ]
+    },
+    "alter_table_exchange_partition":{
+        "child":[
+            "EXCHANGE",
+            "PARTITION",
+            {"identifier word":"exchangePartitionName"},
+            "WITH",
+            "TABLE",
+            {"identifier word":"exchangePartitionTableName"},
+            {"optional":true,"child":[
+                {"or":true,"child":[
+                    {"WITH":"exchangePartitionWith"},
+                    {"WITHOUT":"exchangePartitionWithout"}
+                ]},
+                "VALIDATION"
+            ]}
+        ]
+    },
+
+    "alter_table_analyze_partition":{
+        "child":[
+            "ANALYZE",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterAnalyzeAllPatition"},
+                {"identifier word": "alterAnalyzePatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_check_partition":{
+        "child":[
+            "CHECK",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterCheckAllPatition"},
+                {"identifier word": "alterCheckPatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_optimize_partition":{
+        "child":[
+            "OPTIMIZE",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterOptimizeAllPatition"},
+                {"identifier word": "alterOptimizePatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_rebuild_partition":{
+        "child":[
+            "REBUILD",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterRebuildAllPatition"},
+                {"identifier word": "alterRebuildPatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_repair_partition":{
+        "child":[
+            "REPAIR",
+            "PARTITION",
+            {"or":true,"child":[
+                {"ALL":"alterRepairAllPatition"},
+                {"identifier word": "alterRepairPatitionName"}
+            ]}
+        ]
+    },
+
+    "alter_table_remove_partitioning":{
+        "child":[
+            "REMOVE",
+            {"PARTITIONING":"removePartitioning"}
+        ]
+    },
+
     "alter_table": {
        "is head": true,
         "child": [
@@ -2897,6 +3050,9 @@
                     {
                         "or": true,
                         "child": [
+                            {
+                                "include":"table_options"
+                            },
                             {
                                 "include": "alter_table_add_column"
                             },
@@ -2947,6 +3103,48 @@
                             },
                             {
                                 "include": "alter_table_alter_index"
+                            },
+                            {
+                                "include": "alter_table_add_partition"
+                            },
+                            {
+                                "include": "alter_table_drop_partition"
+                            },
+                            {
+                                "include": "alter_table_discard_partition"
+                            },
+                            {
+                                "include": "alter_table_import_partition"
+                            },
+                            {
+                                "include": "alter_table_truncate_partition"
+                            },
+                            {
+                                "include": "alter_table_coalesce_partition"
+                            },
+                            {
+                                "include": "alter_table_reorganize_partition"
+                            },
+                            {
+                                "include": "alter_table_exchange_partition"
+                            },
+                            {
+                                "include": "alter_table_analyze_partition"
+                            },
+                            {
+                                "include": "alter_table_check_partition"
+                            },
+                            {
+                                "include": "alter_table_optimize_partition"
+                            },
+                            {
+                                "include": "alter_table_rebuild_partition"
+                            },
+                            {
+                                "include": "alter_table_repair_partition"
+                            },
+                            {
+                                "include": "alter_table_remove_partitioning"
                             },
                             {
                                 "FORCE": null

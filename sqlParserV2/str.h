@@ -52,7 +52,10 @@ namespace SQL_PARSER
 		}
 		inline std::string toString()
 		{
-			return std::string(pos, size);
+			if (pos != nullptr)
+				return std::string(pos, size);
+			else
+				return "";
 		}
 	};
 	class strCompare {

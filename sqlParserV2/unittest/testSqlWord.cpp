@@ -67,10 +67,10 @@ int test()
 int test1()
 {
 	SQL_PARSER::lex l;
-	//if (!dsCheck(l.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\sql\\mysql\\sql"))) 
+	if (!dsCheck(l.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\sql\\mysql\\sql"))) 
 	//if (!dsCheck(l.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\unittest\\testSql")))
 	//if (!dsCheck(l.loadFromFile("sqlParserV2/unittest/testSql")))
-	if (!dsCheck(l.loadFromFile("sqlParserV2/sql/mysql/sql"))) 
+	//if (!dsCheck(l.loadFromFile("sqlParserV2/sql/mysql/sql"))) 
 		LOG(ERROR)<<getLocalStatus().toString();
 	if (!dsCheck(l.optimize()))
 		LOG(ERROR) << getLocalStatus().toString();
