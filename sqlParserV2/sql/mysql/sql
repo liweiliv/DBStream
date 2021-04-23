@@ -2747,6 +2747,10 @@
     "alter_index_visible": {
         "child": [
             {
+
+                "ALTER": null
+            },
+            {
                 "INDEX": null
             },
             {
@@ -3087,9 +3091,6 @@
                                 "include": "alter_table_convert_default_charset"
                             },
                             {
-                                "include": "alter_table_change_default_charset"
-                            },
-                            {
                                 "include": "alter_table_rename_column"
                             },
                             {
@@ -3217,20 +3218,6 @@
                                     {
                                         "loop": ",",
                                         "identifier word": null
-                                    }
-                                ]
-                            },
-                            {
-                                "child": [
-                                    {
-                                        "COMMENT": null
-                                    },
-                                    {
-                                        "optional": true,
-                                        "=": null
-                                    },
-                                    {
-                                        "string value": null
                                     }
                                 ]
                             }
