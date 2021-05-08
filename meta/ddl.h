@@ -205,7 +205,6 @@ namespace META {
 	{
 		std::string name;
 		dropKey() :alterTableHead(ALTER_TABLE_DROP_INDEX) {}
-
 	};
 	struct defaultCharset :public alterTableHead
 	{

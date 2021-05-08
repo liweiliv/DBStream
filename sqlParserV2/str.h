@@ -70,12 +70,12 @@ namespace SQL_PARSER
 			const char* s = v->pos, * e = v->pos + v->size;
 			if (caseSensitive)
 			{
-				while (s <= e)
+				while (s < e)
 					hash ^= ((hash << 5) + (*s++) + (hash >> 2));
 			}
 			else
 			{
-				while (s <= e)
+				while (s < e)
 				{
 					if (*s >= 'A' && *s <= 'Z')
 						hash ^= ((hash << 5) + (*s++) + ('a' - 'A') + (hash >> 2));
@@ -99,5 +99,10 @@ namespace SQL_PARSER
 			else
 				return strncasecmp(src->pos, dest->pos, src->size) == 0;
 		}
+	};
+
+	class strCompareCaseSensitive :public strCompare {
+	public:
+		strCompareCaseSensitive() :strCompare(true) {}
 	};
 }

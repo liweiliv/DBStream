@@ -686,6 +686,10 @@ namespace SQL_PARSER {
 			//a-z A-Z 0-9 $#_
 			while ((c = *pos) && ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '1' && c <= '9') || c == '$' || c == '#' || c == '_' || c > 0x80))
 				pos++;
+			str s(start, pos - start);
+			keyWordMap::iterator iter = m_keyWords.find(&s);
+			if (iter != m_keyWords.end())
+				dsReturnCode(1);
 			if (funcName)
 			{
 				t = (token*)stack->arena.AllocateAligned(sizeof(token));
@@ -741,9 +745,10 @@ namespace SQL_PARSER {
 			dsFailed(1, "unexpect unfinished delimited identifier @" << std::string(pos, std::min<size_t>(strlen(pos), 50)));
 		}
 
-		DS matchIdentifier(sqlParserStack* stack, token*& t, char*& pos)
+		DS matchIdentifier(sqlParserStack* stack, token*& t, char*& sqlPos, bool needMatchExpression)
 		{
 			t = nullptr;
+			char* pos = sqlPos;
 			for (char i = 0; i < 3; i++)
 			{
 				if (*pos == m_identifierQuote)
@@ -754,6 +759,15 @@ namespace SQL_PARSER {
 				if (*pos != '.')
 					break;
 			}
+			if (t == nullptr || static_cast<identifier*>(t)->count == 0)
+				dsReturnCode(1);
+			if (needMatchExpression)
+			{
+				nextWordPos(pos);
+				if (*pos != '(' && *pos != ')' && m_opTress.match(pos) != nullptr)//expression
+					dsReturnCode(1);
+			}
+			sqlPos = pos;
 			dsOk();
 		}
 

@@ -24,7 +24,12 @@ namespace SQL_PARSER
 			std::string funcName;
 			std::string include;
 			int ref;
-			nodeInfo() :loop(false), loopSeparatorIsOptional(false), loopSeparator(nullptr), optional(false), branch(false), childJson(nullptr), child(nullptr), childCount(0), nodeToken(nullptr), ref(1)
+			uint64_t nodeScanVersion;
+			bool inOptimize;
+			int funcId;
+			const char* name;
+			nodeInfo() :loop(false), loopSeparatorIsOptional(false), loopSeparator(nullptr), optional(false), branch(false),
+				childJson(nullptr), child(nullptr), childCount(0), nodeToken(nullptr), ref(1), nodeScanVersion(0), inOptimize(false), funcId(0), name(nullptr)
 			{
 			}
 			~nodeInfo()
@@ -33,11 +38,13 @@ namespace SQL_PARSER
 					delete nodeToken;
 				if (child != nullptr)
 				{
+					/*
 					for (int i = 0; i < childCount; i++)
 					{
 						if (child[i] != nullptr && --child[i]->ref <= 0)
 							delete child[i];
 					}
+					*/
 					delete[] child;
 				}
 			}
@@ -96,7 +103,6 @@ namespace SQL_PARSER
 						return false;
 					if (!compareLoop(*this, n))
 						return false;
-
 				}
 				else if (nodeToken != nullptr && n.child != nullptr)
 				{
@@ -132,8 +138,9 @@ namespace SQL_PARSER
 		std::map<int, String> m_codes;
 		std::map<std::string, int> m_staticTokens;
 
+		uint64_t m_currentNodeScanVersion;
 	public:
-		lex() :m_grammarTreeInJson(nullptr)
+		lex() :m_grammarTreeInJson(nullptr), m_currentNodeScanVersion(0)
 		{
 			initParseNodeFuncs();
 		}
@@ -208,6 +215,17 @@ namespace SQL_PARSER
 				}
 				else
 					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
+				}));
+			m_parseNodeFuncs.insert(parseNodeFuncPair("include", [](const jsonValue* v, nodeInfo* n) ->DS {
+				if (v != nullptr)
+				{
+					if (v->t != JSON_TYPE::J_STRING)
+						dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed for include type is not string", ERROR);
+					n->include = static_cast<const jsonString*>(v)->m_value;
+					dsOk();
+				}
+				else
+					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed for include is null", ERROR);
 				}));
 			m_parseNodeFuncs.insert(parseNodeFuncPair("is head", [](const jsonValue* v, nodeInfo* n) ->DS {dsOk(); }));
 
@@ -320,11 +338,12 @@ namespace SQL_PARSER
 			else if (v->t == JSON_TYPE::J_OBJECT)
 			{
 				nodeInfo* child = nullptr;
-				if (static_cast<const jsonObject*>(v)->get("include") != nullptr)
+				bool isInclude;
+				if (isInclude = (static_cast<const jsonObject*>(v)->get("include") != nullptr))
 					dsReturnIfFailed(parseInclude(grammarMap, static_cast<const jsonObject*>(v), child));
 				else
-					dsReturnIfFailed(parseNode(grammarMap, static_cast<const jsonObject*>(v), child));
-				if (n->loop && child->loop && (n->loopSeparator != nullptr && child->loopSeparator != nullptr))
+					dsReturnIfFailed(parseNode(grammarMap, nullptr, static_cast<const jsonObject*>(v), child));
+				if (isInclude || (n->loop && child->loop && (n->loopSeparator != nullptr && child->loopSeparator != nullptr)))
 				{
 					n->child = new nodeInfo * [1];
 					n->child[0] = child;
@@ -354,28 +373,60 @@ namespace SQL_PARSER
 		{
 			const jsonValue* include = grammar->get("include");
 			if (include == nullptr)
-				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
-			const jsonValue* includeJson;
+				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed, expect include", ERROR);
 			if (include->t != JSON_TYPE::J_STRING)
-				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
-			if ((includeJson = grammarMap->get(static_cast<const jsonString*>(include)->m_value)) == nullptr)
-				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed for inlcude node:" << static_cast<const jsonString*>(include)->m_value << " not exist", ERROR);
-			if (includeJson->t != JSON_TYPE::J_OBJECT)
-				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
-			nodeInfo* self = new nodeInfo();
-			for (jsonObjectMap::const_iterator iter = grammar->m_values.begin(); iter != grammar->m_values.end(); iter++)
+				dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed, expect include value is string type", ERROR);
+
+			nodeInfo* includeNode = nullptr;
+			if (m_allNodes.find(static_cast<const jsonString*>(include)->m_value) != m_allNodes.end())
 			{
-				if (iter->first.compare("include") == 0)
-					continue;
-				dsReturnIfFailedWithOp(parseToken(self, iter->first, iter->second), delete self);
+				includeNode = m_allNodes.find(static_cast<const jsonString*>(include)->m_value)->second;
+				includeNode->ref++;
 			}
-			nodeInfo* includeNode = new nodeInfo();
-			if (!dsCheck(parseNode(grammarMap, static_cast<const jsonObject*>(includeJson), includeNode)))
+			else
 			{
-				delete self;
-				delete includeNode;
-				dsFailedAndReturn();
+				const jsonValue* includeJson;
+				if ((includeJson = grammarMap->get(static_cast<const jsonString*>(include)->m_value)) == nullptr)
+					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed for inlcude node:" << static_cast<const jsonString*>(include)->m_value << " not exist", ERROR);
+				if (includeJson->t != JSON_TYPE::J_OBJECT)
+					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
+				includeNode = new nodeInfo();
+				m_allNodes.insert(std::pair<std::string, nodeInfo*>(static_cast<const jsonString*>(include)->m_value, includeNode));
+				if (!dsCheck(parseNode(grammarMap, static_cast<const jsonString*>(include)->m_value.c_str(), static_cast<const jsonObject*>(includeJson), includeNode)))
+				{
+					m_allNodes.erase(static_cast<const jsonString*>(include)->m_value);
+					delete includeNode;
+					dsFailedAndReturn();
+				}
 			}
+
+			if (grammar->m_values.size() == 1)
+			{
+				result = includeNode;
+			}
+			else
+			{
+				nodeInfo* self = new nodeInfo();
+				for (jsonObjectMap::const_iterator iter = grammar->m_values.begin(); iter != grammar->m_values.end(); iter++)
+				{
+					if (iter->first.compare("include") == 0)
+						continue;
+					dsReturnIfFailedWithOp(parseToken(self, iter->first, iter->second), delete self);
+				}
+				if (self->loop == false && self->optional == false)
+				{
+					delete self;
+					result = includeNode;
+				}
+				else
+				{
+					self->child = new nodeInfo * [1];
+					self->childCount = 1;
+					self->child[0] = includeNode;
+					result = self;
+				}
+			}
+			/*
 			if (self->optional)
 				includeNode->optional = true;
 			if (self->loop)
@@ -392,12 +443,29 @@ namespace SQL_PARSER
 			}
 			delete self;
 			result = includeNode;
+			*/
+			dsOk();
+		}
+		DS checkIfNodeIsHead(const char* nodeName, const jsonObject* grammar, nodeInfo* n)
+		{
+			const jsonValue* isHead = grammar->get("is head");
+			if (isHead != nullptr)
+			{
+				if (isHead->t != JSON_TYPE::J_BOOL)
+					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
+				if(nodeName == nullptr)
+					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
+				if (static_cast<const jsonBool*>(isHead)->m_value)
+					m_headNodes.insert(std::pair<std::string, nodeInfo*>(nodeName, n));
+			}
 			dsOk();
 		}
 
-		DS parseNode(const jsonObject* grammarMap, const jsonObject* grammar, nodeInfo*& result)
+
+		DS parseNode(const jsonObject* grammarMap, const char* nodeName, const jsonObject* grammar, nodeInfo*& result)
 		{
-			nodeInfo* n = new nodeInfo();
+			nodeInfo* n = result == nullptr ? new nodeInfo() : result;
+			n->name = nodeName;
 			for (jsonObjectValueList::const_iterator iter = grammar->m_valueList.begin(); iter != grammar->m_valueList.end(); iter++)
 			{
 				if (isLowCaseString(iter->first.c_str()))
@@ -412,14 +480,11 @@ namespace SQL_PARSER
 				}
 				else
 				{
-
 					if (n->nodeToken == nullptr)
 						dsReturnIfFailedWithOp(parseToken(n, iter->first, iter->second), delete n);
-
 				}
-
 			}
-			// must have one of t, child,include,and at most have one
+			// must have one of nodeToken, child, include, and at most have one
 			if ((n->nodeToken != nullptr ? 1 : 0) + (n->childJson != nullptr ? 1 : 0) + (n->include.empty() ? 0 : 1) != 1)
 			{
 				delete n;
@@ -439,6 +504,7 @@ namespace SQL_PARSER
 						delete n;
 						dsFailedAndReturn();
 					}
+					dsReturnIfFailedWithOp(checkIfNodeIsHead(nodeName, grammar, n), delete n);
 					result = n;
 					dsOk();
 				}
@@ -493,7 +559,7 @@ namespace SQL_PARSER
 						}
 						else
 						{
-							if (!dsCheck(parseNode(grammarMap, static_cast<const jsonObject*>(v), c)))
+							if (!dsCheck(parseNode(grammarMap, nullptr, static_cast<const jsonObject*>(v), c)))
 							{
 								delete n;
 								dsFailedAndReturn();
@@ -509,6 +575,19 @@ namespace SQL_PARSER
 					count++;
 				}
 			}
+			else if (!n->include.empty())
+			{
+				nodeInfo* c = nullptr;
+				if (!dsCheck(parseInclude(grammarMap, grammar, c)))
+				{
+					delete n;
+					dsFailedAndReturn();
+				}
+				n->child = new nodeInfo * [1];
+				n->childCount = 1;
+				n->child[0] = c;
+			}
+			dsReturnIfFailedWithOp(checkIfNodeIsHead(nodeName, grammar, n), delete n);
 			result = n;
 			dsOk();
 		}
@@ -541,14 +620,24 @@ namespace SQL_PARSER
 			}
 			dsOk();
 		}
+
 		DS nodeAndTokenConflictCheck(token* src, nodeInfo* dest)
 		{
+			m_currentNodeScanVersion++;
+			dsReturn(_nodeAndTokenConflictCheck(src, dest));
+		}
+
+		DS _nodeAndTokenConflictCheck(token* src, nodeInfo* dest)
+		{
+			if (dest->nodeScanVersion >= m_currentNodeScanVersion)
+				dsFailedAndLogIt(1, "not support node chain direct inlcude it self", ERROR);
+			dest->nodeScanVersion = m_currentNodeScanVersion;
 			for (int i = 0; i < dest->childCount; i++)
 			{
 				nodeInfo* child = dest->child[i];
 				if (child->child != nullptr)
 				{
-					dsReturnIfFailed(nodeAndTokenConflictCheck(src, child));
+					dsReturnIfFailed(_nodeAndTokenConflictCheck(src, child));
 				}
 				else
 				{
@@ -559,8 +648,18 @@ namespace SQL_PARSER
 			}
 			dsOk();
 		}
+
+
 		DS nodeAndNodeConflictCheck(nodeInfo* src, nodeInfo* dest)
 		{
+			m_currentNodeScanVersion++;
+			dsReturn(_nodeAndNodeConflictCheck(src, dest));
+		}
+
+		DS _nodeAndNodeConflictCheck(nodeInfo* src, nodeInfo* dest)
+		{
+			if (dest->nodeScanVersion >= m_currentNodeScanVersion)
+				dsFailedAndLogIt(1, "not support node chain direct inlcude it self", ERROR);
 			if (src->branch && dest->branch)
 			{
 				for (int i = 0; i < src->childCount; i++)
@@ -614,21 +713,27 @@ namespace SQL_PARSER
 
 		DS nodeConflictCheck(nodeInfo* src, nodeInfo* dest)
 		{
+			m_currentNodeScanVersion++;
+			dsReturn(_nodeConflictCheck(src, dest));
+		}
+
+		DS _nodeConflictCheck(nodeInfo* src, nodeInfo* dest)
+		{
 			if (src->nodeToken != nullptr && dest->nodeToken != nullptr)
 			{
 				dsReturnIfFailed(tokenConflictCheck(src->nodeToken, dest->nodeToken));
 			}
 			else if (src->nodeToken != nullptr && dest->child != nullptr)
 			{
-				dsReturnIfFailed(nodeAndTokenConflictCheck(src->nodeToken, dest));
+				dsReturnIfFailed(_nodeAndTokenConflictCheck(src->nodeToken, dest));
 			}
 			else if (src->child != nullptr && dest->nodeToken != nullptr)
 			{
-				dsReturnIfFailed(nodeAndTokenConflictCheck(dest->nodeToken, src));
+				dsReturnIfFailed(_nodeAndTokenConflictCheck(dest->nodeToken, src));
 			}
 			else
 			{
-				dsReturnIfFailed(nodeAndNodeConflictCheck(src, dest));
+				dsReturnIfFailed(_nodeAndNodeConflictCheck(src, dest));
 			}
 			dsOk();
 		}
@@ -636,6 +741,8 @@ namespace SQL_PARSER
 		DS checkAndTryMergeTokenAndNotOptNode(nodeInfo*& first, nodeInfo* second)
 		{
 			token* t = first->nodeToken;
+			if (second->ref > 1)
+				dsReturnIfFailed((nodeAndTokenConflictCheck(t, second)));
 			for (int i = 0; i < second->childCount; i++)
 			{
 				nodeInfo* c = second->child[i];
@@ -690,6 +797,8 @@ namespace SQL_PARSER
 		DS checkAndTryMergeTokenAndNode(nodeInfo*& first, nodeInfo* second)
 		{
 			token* t = first->nodeToken;
+			if (second->ref > 1)
+				dsReturnIfFailed((nodeAndTokenConflictCheck(t, second)));
 			if (second->branch)
 			{
 				for (int i = 0; i < second->childCount; i++)
@@ -781,6 +890,8 @@ namespace SQL_PARSER
 		{
 			if (first == nullptr || second == nullptr)
 				dsOk();
+			if (first->ref > 1 || second->ref > 1)
+				dsReturn(nodeConflictCheck(first, second));
 			if (first->compare(*second))
 			{
 				second = nullptr;
@@ -956,8 +1067,9 @@ namespace SQL_PARSER
 		}
 		DS optimizeChild(nodeInfo* node)
 		{
-			if (node->child == nullptr)
+			if (node->child == nullptr || node->inOptimize)
 				dsOk();
+			node->inOptimize = true;
 			for (int i = 0; i < node->childCount; i++)
 			{
 				if (node->child[i]->child != nullptr)
@@ -990,7 +1102,7 @@ namespace SQL_PARSER
 								else if (node->child[j] == nullptr)
 								{
 									for (int n = j; n < node->childCount - 1; n++)
-										node->child[n] = node->child[n+1];
+										node->child[n] = node->child[n + 1];
 									node->childCount--;
 									break;
 								}
@@ -1041,7 +1153,7 @@ namespace SQL_PARSER
 							break;
 						}
 					}
-					if (node->loop && c->loop)
+					if ((node->loop && c->loop) || c->ref > 1)
 					{
 						nodeInfo** nodes = new nodeInfo * [1];
 						nodes[0] = c;
@@ -1126,25 +1238,14 @@ namespace SQL_PARSER
 					m_grammarTreeInJson = nullptr;
 					dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
 				}
+				if (m_allNodes.find(iter->first) != m_allNodes.end())
+					continue;
 				nodeInfo* c = nullptr;
-				if (!dsCheck(parseNode(m_grammarTreeInJson, static_cast<const jsonObject*>(iter->second), c)))
+				if (!dsCheck(parseNode(m_grammarTreeInJson, iter->first.c_str(), static_cast<const jsonObject*>(iter->second), c)))
 				{
 					delete m_grammarTreeInJson;
 					m_grammarTreeInJson = nullptr;
 					dsFailedAndReturn();
-				}
-				const jsonValue* isHead = static_cast<jsonObject*>(iter->second)->get("is head");
-				if (isHead != nullptr)
-				{
-					if (isHead->t != JSON_TYPE::J_BOOL)
-					{
-						delete m_grammarTreeInJson;
-						m_grammarTreeInJson = nullptr;
-						delete c;
-						dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
-					}
-					if (static_cast<const jsonBool*>(isHead)->m_value)
-						m_headNodes.insert(std::pair<std::string, nodeInfo*>(iter->first, c));
 				}
 				m_allNodes.insert(std::pair<std::string, nodeInfo*>(iter->first, c));
 			}
@@ -1270,7 +1371,7 @@ namespace SQL_PARSER
 		void generateCodeForIdentifer(char* space, String& code)
 		{
 			code.append(space).append("pos = sqlPos;\n");
-			code.append(space).append("dsReturnIfFailed(s = matchIdentifier(handle->stack, t, pos));\n");
+			code.append(space).append("dsReturnIfFailed(s = matchIdentifier(handle->stack, t, pos, true));\n");
 			code.append(space).append("if(s == 0)\n");
 			code.append(space).append("{\n");
 			addSpace(space);
@@ -1285,7 +1386,7 @@ namespace SQL_PARSER
 			code.append(space).append("sqlPos = pos;\n");
 		}
 
-		void appendTokenTailCode(char* space, const char* funcName, const char* funcTokenArgv, String& code, 
+		void appendTokenTailCode(char* space, const char* funcName, const char* funcTokenArgv, String& code,
 			const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes)
 		{
 			if (funcName != nullptr)
@@ -1377,7 +1478,7 @@ namespace SQL_PARSER
 				{
 					if (node->loopSeparator == nullptr)
 					{
-						notMatchCodes.push_back("dsReturnCode(count == 0)");
+						notMatchCodes.push_back("dsReturnCode(count == 0);");
 					}
 					else if (node->loopSeparatorIsOptional)
 					{
@@ -1424,12 +1525,15 @@ namespace SQL_PARSER
 
 		DS createChildFunc(nodeInfo* c, String& code, char* space, int& idx, const std::list<std::string>& matchedCodes, const std::list<std::string>& notMatchCodes)
 		{
-			int funcId = ++idx;
-			dsReturnIfFailed(generateCodeForNode(c, idx));
+			if (c->funcId == 0)
+			{
+				c->funcId = ++idx;
+				dsReturnIfFailed(generateCodeForNode(c, idx));
+			}
 			if (!notMatchCodes.empty() || !matchedCodes.empty())
 			{
-				code.append(space).append("dsReturnIfFailed(s = parse_").append(funcId).append("(handle, sqlPos, currentSql));\n");
-				if (matchedCodes.empty() && notMatchCodes.empty())
+				code.append(space).append("dsReturnIfFailed(s = parse_").append(c->funcId).append("(handle, sqlPos, currentSql));\n");
+				if (!matchedCodes.empty() && notMatchCodes.empty())
 					code.append(space).append("if (s == 0)\n");
 				else
 					code.append(space).append("if (s != 0)\n");
@@ -1437,7 +1541,7 @@ namespace SQL_PARSER
 				{
 					code.append(space).append("{\n");
 					addSpace(space);
-					for(std::list<std::string>::const_iterator iter = notMatchCodes.begin();iter!= notMatchCodes.end();iter++)
+					for (std::list<std::string>::const_iterator iter = notMatchCodes.begin(); iter != notMatchCodes.end(); iter++)
 						code.append(space).append(*iter).append("\n");
 					decSpace(space);
 					code.append(space).append("}\n");
@@ -1459,7 +1563,7 @@ namespace SQL_PARSER
 			}
 			else
 			{
-				code.append(space).append("dsReturnIfFailed(parse_").append(funcId).append("(handle, sqlPos, currentSql));\n");
+				code.append(space).append("dsReturnIfFailed(parse_").append(c->funcId).append("(handle, sqlPos, currentSql));\n");
 			}
 			dsOk();
 		}
@@ -1485,28 +1589,7 @@ namespace SQL_PARSER
 			{
 				if (c->optional)
 					dsFailedAndLogIt(1, "branch token node can not be optional", ERROR);
-				//notMatchCodes only exist in the last child node
-				if (i == node->childCount - 1)
-				{
-					if (node->loop)
-					{
-						if (node->loopSeparator != nullptr && !node->loopSeparatorIsOptional)
-						{
-							//if count == 0 , not match, otherwise we must have matched loopSeparator, so this is grammar error
-							notMatchCodes.push_back("if(count == 0)");
-							notMatchCodes.push_back("\tdsReturnCode(1);");
-							notMatchCodes.push_back("else");
-							notMatchCodes.push_back("\tdsFailed(1, \"grammar error @ \" << std::string(sqlPos, std::min<size_t>(50, strlen(sqlPos))));");
-						}
-						else
-						{
-							notMatchCodes.push_back("dsReturnCode(count == 0);");
-						}
-					}
-					else
-						notMatchCodes.push_back("dsReturnCode(1);");
-				}
-				else if (node->loop)
+				if (node->loop)
 				{
 					if (i != node->childCount)
 					{
@@ -1549,8 +1632,8 @@ namespace SQL_PARSER
 							}
 							else //node->loopSeparator is null,not need to check node->loopSeparator has matched
 							{
-								if(i == 0) // if this is the first node, count == 0 return 1,count > 0 ,return ok
-									notMatchCodes.push_back("dsReturnCode(count == 0)");
+								if (i == 0) // if this is the first node, count == 0 return 1,count > 0 ,return ok
+									notMatchCodes.push_back("dsReturnCode(count == 0);");
 								else // if this is not the first node,need to check if prev optional node has matched
 									notMatchCodes.push_back("NOT_MATHCH_RETURN(count == 0)");
 							}
@@ -1577,20 +1660,176 @@ namespace SQL_PARSER
 							notMatchCodes.push_back("dsReturnCode(1);");
 					}
 				}
-				if (i == node->childCount - 1 && !hasFetchToFirstNotOptional)
+				if (isNeedMatchedPartOfTokensCode(node))
 				{
-					//if all child node is optional, set matchedPartOfTokens, and in end of loop check if has matched any node
-					//otherwise ,we do not need to set matchedPartOfTokens when this is the last child node
-					if(node->loop)
-						matchedCodes.push_back("matchedPartOfTokens = true;");
-				}
-				else
-				{
-					if (!hasFetchToFirstNotOptional)
-						matchedCodes.push_back("matchedPartOfTokens = true;");
+					if (i == node->childCount - 1)
+					{
+						//if all child node is optional, set matchedPartOfTokens, and in end of loop check if has matched any node
+						//otherwise ,we do not need to set matchedPartOfTokens when this is the last child node
+						if (node->loop)
+							matchedCodes.push_back("matchedPartOfTokens = false;");
+					}
+					else
+					{
+						if (!hasFetchToFirstNotOptional)
+							matchedCodes.push_back("matchedPartOfTokens = true;");
+					}
 				}
 			}
 			dsOk();
+		}
+
+		DS generateCodeForBranchNode(String & code,char * space,nodeInfo* node, int& idx)
+		{
+			int keyWordCount = 0;
+			int literalCount = 0;
+			int identiferCount = 0;
+			for (int i = 0; i < node->childCount; i++)
+			{
+				nodeInfo* c = node->child[i];
+				if (c->nodeToken != nullptr && !c->loop)
+				{
+					if (c->nodeToken->type == tokenType::keyword)
+						keyWordCount++;
+					else if (c->nodeToken->type == tokenType::literal)
+						literalCount++;
+					else if (c->nodeToken->type == tokenType::identifier)
+						identiferCount++;
+				}
+			}
+			if (identiferCount > 1)
+				dsFailedAndLogIt(1, "identifer count must be 0 or 1", ERROR);
+			code.append(space).append("nextWordPos(sqlPos);\n");
+			code.append(space).append("tryProcessAnnotation(sqlPos);\n");
+			if (keyWordCount > 0)
+			{
+				for (int i = 0; i < node->childCount; i++)
+				{
+					nodeInfo* c = node->child[i];
+					if (c->nodeToken != nullptr&& !c->loop && c->nodeToken->type == tokenType::keyword)
+					{
+						std::list < std::string >  matchedCodes;
+						std::list < std::string >  notMatchCodes;
+						dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
+						generateCodeForMatchStaticWords(code, space, c->nodeToken->value.pos);
+						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
+							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
+							, code, matchedCodes, notMatchCodes);
+					}
+				}
+			}
+			if (identiferCount + literalCount > 0 && !(identiferCount>0&& literalCount ==0))
+			{
+				code.append(space).append("pos = sqlPos;\n");
+				code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, false, true ));\n");
+				for (int i = 0; i < node->childCount; i++)
+				{
+					nodeInfo* c = node->child[i];
+					if (c->nodeToken != nullptr && !c->loop)
+					{
+						std::list < std::string >  matchedCodes;
+						std::list < std::string >  notMatchCodes;
+						dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
+						if (c->nodeToken->type == tokenType::literal)
+							dsReturnIfFailed(generateliteralWithTokenCode(code, space, c));
+						else if (c->nodeToken->type == tokenType::identifier)
+						{
+							code.append(space).append("if (unlikely(t->type != tokenType::literal))\n");
+							code.append(space).append("{\n");
+							addSpace(space);
+							code.append(space).append("sqlPos = pos;\n");
+						}
+						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
+							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
+							, code, matchedCodes, notMatchCodes);
+					}
+				}
+			}
+			else if (identiferCount ==1 && literalCount == 0)
+			{
+				for (int i = 0; i < node->childCount; i++)
+				{
+					nodeInfo* c = node->child[i];
+					if (c->nodeToken != nullptr && !c->loop && c->nodeToken->type == tokenType::identifier)
+					{
+						std::list < std::string >  matchedCodes;
+						std::list < std::string >  notMatchCodes;
+						dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
+						generateCodeForIdentifer(space, code);
+						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
+							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
+							, code, matchedCodes, notMatchCodes);
+						break;
+					}
+				}
+			}
+
+			for (int i = 0; i < node->childCount; i++)
+			{
+				nodeInfo* c = node->child[i];
+				if (c->nodeToken == nullptr || c->loop)
+				{
+					std::list < std::string >  matchedCodes;
+					std::list < std::string >  notMatchCodes;
+					dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
+					dsReturnIfFailed(createChildFunc(c, code, space, idx, matchedCodes, notMatchCodes));
+				}
+			}
+			if (node->loop)
+			{
+				if (node->loopSeparator != nullptr && !node->loopSeparatorIsOptional)
+				{
+					//if count == 0 , not match, otherwise we must have matched loopSeparator, so this is grammar error
+					code.append(space).append("if(count == 0)");
+					addSpace(space);
+					code.append(space).append("dsReturnCode(1);\n");
+					decSpace(space);
+					code.append(space).append("else\n");
+					addSpace(space);
+					code.append(space).append("dsFailed(1, \"grammar error @ \" << std::string(sqlPos, std::min<size_t>(50, strlen(sqlPos))));\n");
+					decSpace(space);
+				}
+				else
+				{
+					code.append(space).append("dsReturnCode(count == 0);");
+				}
+			}
+			else
+				code.append(space).append("dsReturnCode(1);\n");
+			dsOk();
+		}
+
+		DS generateCodeForNotBranchNode(String& code, char* space, nodeInfo* node, int& idx)
+		{
+			for (int i = 0; i < node->childCount; i++)
+			{
+				nodeInfo* c = node->child[i];
+				decSpace(space);
+				code.append(space).append("MATCH_").append(i).append(":\n");
+				addSpace(space);
+				code.append(space).append("nextWordPos(sqlPos);\n");
+				std::list < std::string >  matchedCodes;
+				std::list < std::string >  notMatchCodes;
+				dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
+				if (c->nodeToken == nullptr || c->loop)
+				{
+					dsReturnIfFailed(createChildFunc(c, code, space, idx, matchedCodes, notMatchCodes));
+				}
+				else
+				{
+					if (c->nodeToken->type == tokenType::keyword)
+						generateCodeForMatchStaticWords(code, space, c->nodeToken->value.pos);
+					else if (c->nodeToken->type == tokenType::literal)
+						dsReturnIfFailed(generateliteralCode(code, space, c));
+					else if (c->nodeToken->type == tokenType::identifier)
+						generateCodeForIdentifer(space, code);
+					else
+						dsFailedAndLogIt(1, "not support token type" << (int)(c->nodeToken->type), ERROR);
+					appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
+						, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
+						, code, matchedCodes, notMatchCodes);
+				}
+			}
 		}
 
 		DS generateCodeForNode(nodeInfo* node, int& idx)
@@ -1598,6 +1837,8 @@ namespace SQL_PARSER
 			String code;
 			int id = idx;
 			char space[256] = { '\t','\t',0 };
+			if(node->name != nullptr)
+				code.append(space).append("//").append(node->name).append("\n");
 			code.append(space).append("inline DS parse_").append(idx).append("(sqlHandle * handle, char *& sqlPos, sql*& currentSql)\n");
 			code.append(space).append("{\n");
 			addSpace(space);
@@ -1608,17 +1849,28 @@ namespace SQL_PARSER
 
 			if (node->loop)
 			{
-				code.append(space).append("for(uint32_t count = 0;; count++)\n");
+				code.append(space).append("for(uint32_t count = 0; ; count++)\n");
 				code.append(space).append("{\n");
 				addSpace(space);
 			}
 
-
-
 			if (node->nodeToken == nullptr || node->nodeToken->type != tokenType::keyword)
 			{
 				code.append(space).append("DS s;\n");
-				code.append(space).append("char * pos;\n");
+				if (node->nodeToken != nullptr && (node->nodeToken->type == tokenType::literal || node->nodeToken->type == tokenType::identifier))
+					code.append(space).append("char * pos;\n");
+				else if (node->child != nullptr)
+				{
+					for (int i = 0; i < node->childCount; i++)
+					{
+						if (node->child[i]->nodeToken != nullptr
+							&& (node->child[i]->nodeToken->type == tokenType::literal || node->child[i]->nodeToken->type == tokenType::identifier))
+						{
+							code.append(space).append("char * pos;\n");
+							break;
+						}
+					}
+				}
 				code.append(space).append("token * t = nullptr;\n");
 			}
 			if (node->nodeToken != nullptr)
@@ -1627,47 +1879,12 @@ namespace SQL_PARSER
 			}
 			else
 			{
-				bool hasMatchedLable = node->childCount > 1 && (node->branch && node->loopSeparator != nullptr);
-				bool hasFetchToFirstNotOptinal = false;
 				if (node->branch)
-				{
-					code.append(space).append("nextWordPos(sqlPos);\n");
-					code.append(space).append("tryProcessAnnotation(sqlPos);\n");
-				}
-				for (int i = 0; i < node->childCount; i++)
-				{
-					nodeInfo* c = node->child[i];
-					std::list < std::string >  matchedCodes;
-					std::list < std::string >  notMatchCodes;
-					dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
-					if (!node->branch)
-					{
-						decSpace(space);
-						code.append(space).append("MATCH_").append(i).append(":\n");
-						addSpace(space);
-					}
-					code.append(space).append("nextWordPos(sqlPos);\n");
-					if (c->nodeToken == nullptr || c->loop)
-					{
-						dsReturnIfFailed(createChildFunc(c, code, space, idx, matchedCodes, notMatchCodes));
-					}
-					else
-					{
-						if (c->nodeToken->type == tokenType::keyword)
-							generateCodeForMatchStaticWords(code, space, c->nodeToken->value.pos);
-						else if (c->nodeToken->type == tokenType::literal)
-							dsReturnIfFailed(generateliteralCode(code, space, c));
-						else if (c->nodeToken->type == tokenType::identifier)
-							generateCodeForIdentifer(space, code);
-						else
-							dsFailedAndLogIt(1, "not support token type" << (int)(c->nodeToken->type), ERROR);
-						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
-							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
-							, code, matchedCodes, notMatchCodes);
-					}
-					if (!node->branch && !c->optional)
-						hasFetchToFirstNotOptinal = true;
-				}
+					dsReturnIfFailed(generateCodeForBranchNode(code, space, node, idx));
+				else
+					dsReturnIfFailed(generateCodeForNotBranchNode(code, space, node, idx));
+
+				bool hasMatchedLable = node->childCount > 1 && (node->branch && node->loopSeparator != nullptr);
 				if (node->branch && hasMatchedLable)
 				{
 					decSpace(space);
@@ -1680,7 +1897,7 @@ namespace SQL_PARSER
 				if (node->loopSeparator != nullptr)
 				{
 					generateCodeForMatchStaticWords(code, space, node->loopSeparator);
-					if(needMatchedPartOfTokensCode)
+					if (needMatchedPartOfTokensCode)
 						code.append(space).append("matchedPartOfTokens = true;\n");
 					decSpace(space);
 					code.append(space).append("}\n");
@@ -1693,18 +1910,28 @@ namespace SQL_PARSER
 						code.append(space).append("continue;\n");
 					}
 					else
+					{
+						code.append(space).append("if(count > 0)\n");
+						addSpace(space);
 						code.append(space).append("break;\n");
+						decSpace(space);
+						code.append(space).append("else\n");
+						addSpace(space);
+						code.append(space).append("dsReturnCode(1);\n");
+						decSpace(space);
+					}
 					code.append(space).append("}\n");
 				}
 				else
 				{
-					if(needMatchedPartOfTokensCode)
+					if (needMatchedPartOfTokensCode)
 						code.append(space).append("matchedPartOfTokens = false;\n");
 				}
 				decSpace(space);
 				code.append(space).append("}\n");
 			}
-			code.append(space).append("dsOk();\n");
+			if(!(node->branch && !node->loop))
+				code.append(space).append("dsOk();\n");
 			decSpace(space);
 			code.append(space).append("}\n");
 			m_codes.insert(std::pair<int, String>(id, code));

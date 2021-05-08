@@ -1,6 +1,7 @@
 #include "sqlParserV2/sqlParser.h"
 #include "sqlParserV2/lex.h"
 //#include "sqlParserV2/p1.h"
+#include "sqlParserV2/p2.h"
 int test()
 {
 	SQL_PARSER::sqlParser p;
@@ -96,6 +97,26 @@ int test2()
 	}
 	return 0;
 }
+int test4()
+{
+	SQL_PARSER::lex l;
+	if (!dsCheck(l.loadFromFile("D:\\git\\DBStream\\sqlParserV2\\unittest\\testSql1")))
+		LOG(ERROR) << getLocalStatus().toString();
+	if (!dsCheck(l.optimize()))
+		LOG(ERROR) << getLocalStatus().toString();
+	l.generateCode("p2f.h", "p2", "p2.h");
+	return 0;
+}
+int test5()
+{
+	SQL_PARSER::p2 p;
+	SQL_PARSER::sqlHandle h;
+	char sql[] = "int createTable(int a, char b,string c){int m = a + b;return m;}";
+	char* pos = sql;
+	if(!dsCheck(p.parse(&h, pos, nullptr)))
+		LOG(ERROR) << getLocalStatus().toString();
+	return 0;
+}
 #if 0
 int test3()
 {
@@ -109,5 +130,5 @@ int test3()
 #endif
 int main()
 {
-	test1();
+	test4();
 }

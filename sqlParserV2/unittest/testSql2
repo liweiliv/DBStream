@@ -1,0 +1,32 @@
+{
+	"a": {
+		"is head": true,
+		"child": [
+			"AA",
+			"BB",
+			{ "include": "f" },
+			"CC"
+		]
+	},
+	"b": {
+		"is head": true,
+		"child": [
+			"DD",
+			"EE",
+			"FF",
+			{ "include": "f" }
+		]
+	},
+	"c": {
+		"or": true,
+		"child": [
+			{ "include": "a" },
+			{ "include": "b" },
+			"FF"
+		]
+	},
+	"f": {
+		"loop": null,
+		"include": "c"
+	}
+}

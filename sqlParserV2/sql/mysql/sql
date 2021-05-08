@@ -3063,13 +3063,13 @@
                                 "include": "alter_table_add_columns"
                             },
                             {
+                                "include": "alter_table_add_key"
+                            },
+                            {
                                 "include": "alter_table_MODIFY_column"
                             },
                             {
                                 "include": "alter_table_add_CONSTRAINT"
-                            },
-                            {
-                                "include": "alter_table_add_key"
                             },
                             {
                                 "include": "alter_table_drop_index"
@@ -3673,5 +3673,102 @@
                 "ROLLBACK": "rollback"
             }
         ]
+    },
+
+    "DECLARE_STMT":{
+        "child":[
+            "DECLARE",
+            {"loop":",","identifier":"declareVarName"},
+            {"or":true,"child":[
+                {"child":[
+                    {"include":"COLUMN_TYPE"},
+                    {"optional":true,"include":"DEFAULT_VALUE"}
+                ]},
+                {"child":[
+                    "CURSOR",
+                    "FOR",
+                    {"include":"SELECT_STMT"}
+                ]},
+                {"child":[
+                    "CONDITION",
+                    "FOR",
+                    {"or":true,"child":[
+                        "int value",
+                        {"child":[
+                            "SQLSTATE",
+                            {"optional":true,"VALUE":null},
+                            "string value"
+                        ]}
+                    ]}
+                ]},
+                {"child":[
+                    {"or":true,"child":[
+                        "CONTINUE",
+                        "EXIT",
+                        "UNDO"
+                    ]},
+                    "HANDLER",
+                    "FOR",
+                    {"or":true,"child":[
+                        "int value",
+                        {"child":[
+                            "SQLSTATE",
+                            {"optional":true,"VALUE":null},
+                            "string value"
+                        ]},
+                        "SQLEXCEPTION",
+                        "SQLWARNING",
+                        {"child":[
+                            "NOT",
+                            "FOUND"
+                        ]}
+                    ]}
+                ]}
+            ]}
+            ";"
+        ]
+    },
+
+    "SET_VAR":{
+        "child":[
+            "SET"
+        ]
+    },
+
+    "OPEN_CURSOR":{
+        "child":[
+            "OPEN",
+            {"identifier":"openCurName"},
+            ";"
+        ]
+    },
+
+    "CLOSE_CURSOR":{
+        "child":[
+            "CLOSE",
+            {"identifier":"closeCurName"},
+            ";"
+        ]
+    },
+
+    "FETCH_CURSOR":{
+        "child":[
+            "FETCH",
+            {"optional":true,"child":[
+                {"optional":true,"NEXT":null},
+                "FROM"
+            ]},
+            {"identifier":"fetchCurName"},
+            "INTO",
+            {"loop":",","identifier":"fetchVarName"}
+        ]
+    },
+
+    "ROUTINE_STMT_LIST"
+
+    "ROUTINE" :{
+
+    },
+    "SELECT_STMT":{
     }
 }

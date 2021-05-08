@@ -1,0 +1,360 @@
+{
+	"doWhile": {
+		"child": [
+			"DO",
+			"{",
+			{ "include": "stmts" },
+			"}",
+			"WHILE",
+			";"
+		]
+	},
+	"while": {
+		"child": [
+			"WHILE",
+			"(",
+			"bool expression value",
+			")",
+			"{",
+			{ "include": "stmts" },
+			"}"
+		]
+	},
+	"forLoop": {
+		"child": [
+			"FOR",
+			"(",
+			{
+				"optional": true,
+				"child": [
+					"string value",
+					"identifier word"
+				]
+			},
+			";",
+			{
+				"optional": true,
+				"bool expression value": null
+			},
+			";",
+			{
+				"optional": true,
+				"expression value": null
+			},
+			")",
+			{
+				"or": true,
+				"child": [
+					";",
+					{ "include": "stmt" },
+					{
+						"child": [
+							"{",
+							{ "include": "stmts" },
+							"}"
+						]
+					}
+				]
+			}
+		]
+	},
+	"varType": {
+		"child": [
+			{
+				"or": true,
+				"child": [
+					"INT",
+					"UINT",
+					"CHAR",
+					"UCHAR",
+					"SHORT",
+					"USHORT",
+					"LONG",
+					"ULONG",
+					"STRING"
+				]
+			},
+			{
+				"optional": true,
+				"*": null
+			}
+		]
+	},
+	"define": {
+		"child": [
+			{
+				"or": true,
+				"child": [
+					"INT",
+					"UINT",
+					"CHAR",
+					"UCHAR",
+					"SHORT",
+					"USHORT",
+					"LONG",
+					"ULONG",
+					"STRING"
+				]
+			},
+			{
+				"optional": true,
+				"*": null
+			},
+			{
+				"loop": ",",
+				"child": [
+					"identifier word",
+					{
+						"optional": true,
+						"child": [
+							"[",
+							{
+								"optional": true,
+								"int value": null
+							},
+							"]"
+						]
+					},
+					{
+						"optional": true,
+						"child": [
+							"=",
+							{ "include": "rightValue" }
+						]
+					}
+				]
+			},
+			";"
+		]
+	},
+	"set": {
+		"child": [
+			{ "include": "leftValue" },
+			"=",
+			{ "include": "rightValue" },
+			";"
+		]
+	},
+	"if": {
+		"child": [
+			"IF",
+			"(",
+			"bool expression value",
+			")",
+			{
+				"or": true,
+				"child": [
+					{
+						"child": [
+							"{",
+							{ "include": "stmts" },
+							"}"
+						]
+					},
+					{ "include": "stmt" }
+				]
+			},
+			{
+				"optional": true,
+				"loop": null,
+				"child": [
+					"ELSE",
+					{
+						"optional": true,
+						"child": [
+							"IF",
+							"(",
+							"bool expression value",
+							")"
+						]
+					},
+					{
+						"or": true,
+						"child": [
+							{
+								"child": [
+									"{",
+									{ "include": "stmts" },
+									"}"
+								]
+							},
+							{ "include": "stmt" }
+						]
+					}
+				]
+			}
+		]
+	},
+	"newValue": {
+		"child": [
+			"NEW",
+			{
+				"optional": true,
+				"child": [
+					"(",
+					{
+						"or": true,
+						"child": [
+							"NOTHROW",
+							"identifier word"
+						]
+					},
+					")"
+				]
+			},
+			"identifier word",
+			{
+				"optional": true,
+				"or": true,
+				"child": [
+					{
+						"child": [
+							"[",
+							"int value",
+							"]"
+						]
+					},
+					{
+						"child": [
+							"(",
+							{
+								"loop": ",",
+								"include": "rightValue"
+							},
+							")"
+						]
+					}
+				]
+			}
+		]
+	},
+	"rightValue": {
+		"or": true,
+		"child": [
+			{ "include": "leftValue" },
+			"int value",
+			"float value",
+			"expression value",
+			"string value",
+			"function value",
+			{ "include": "newValue" }
+		]
+	},
+	"leftValue": {
+		"or": true,
+		"child": [
+			"identifier word",
+			{
+				"child": [
+					"*",
+					{
+						"or": true,
+						"child": [
+							"identifier word",
+							"function value"
+						]
+					}
+				]
+			}
+		]
+	},
+	"stmt": {
+		"or": true,
+		"child": [
+			{ "include": "while" },
+			{ "include": "doWhile" },
+			{ "include": "forLoop" },
+			{ "include": "if" },
+			{ "include": "set" },
+			{ "include": "define" },
+			{ "child": [ "CONTINUE", ";" ] },
+			{ "child": [ "BREAK", ";" ] },
+			{
+				"child": [
+					"RETURN",
+					{
+						"optional": true,
+						"include": "rightValue"
+					},
+					";"
+				]
+			}
+		]
+	},
+	"stmts": {
+		"child": [
+			{
+				"loop": null,
+				"include": "stmt"
+			}
+		]
+	},
+
+	"function": {
+		"is head": true,
+		"child": [
+			{ "include": "varType" },
+			"identifier word",
+			"(",
+			{
+				"loop": ",",
+				"child": [
+					{ "include": "varType" },
+					"identifier word"
+				]
+			},
+			")",
+			"{",
+			{ "include": "stmts" },
+			"}"
+		]
+	},
+
+	"struct": {
+		"is head": true,
+		"child": [
+			"STRUCT",
+			"identifier word",
+			"{",
+			{
+				"loop": null,
+				"child": [
+					{
+						"or": true,
+						"child": [
+							{ "include": "define" },
+							{ "include": "function" }
+						]
+					}
+				]
+			},
+			"}",
+			";"
+		]
+	},
+	"class": {
+		"is head": true,
+		"child": [
+			"CLASS",
+			"identifier word",
+			"{",
+			{
+				"loop": null,
+				"child": [
+					{
+						"or": true,
+						"child": [
+							{ "include": "define" },
+							{ "include": "function" },
+							"PRIVATE",
+							"PUBLIC",
+							"PROTECTED"
+						]
+					}
+				]
+			},
+			"}",
+			";"
+		]
+	}
+}
