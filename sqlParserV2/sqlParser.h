@@ -454,7 +454,8 @@ namespace SQL_PARSER {
 				if (unlikely(!stack->valueStack.push(t)))
 					dsFailedAndLogIt(errorCode::OVER_LIMIT, "expression operation count over limit :" << pos, ERROR);
 				l = t;
-				goto MATCH_OP;
+				if(op == nullptr)
+					goto MATCH_OP;
 			}
 			if (op != nullptr)
 			{

@@ -17,6 +17,7 @@ namespace SQL_PARSER
 			const char* loopSeparator;
 			bool optional;
 			bool branch;
+			bool pureIdentifier;
 			const jsonArray* childJson;
 			nodeInfo** child;
 			int childCount;
@@ -28,7 +29,7 @@ namespace SQL_PARSER
 			bool inOptimize;
 			int funcId;
 			const char* name;
-			nodeInfo() :loop(false), loopSeparatorIsOptional(false), loopSeparator(nullptr), optional(false), branch(false),
+			nodeInfo() :loop(false), loopSeparatorIsOptional(false), loopSeparator(nullptr), optional(false), branch(false), pureIdentifier(false),
 				childJson(nullptr), child(nullptr), childCount(0), nodeToken(nullptr), ref(1), nodeScanVersion(0), inOptimize(false), funcId(0), name(nullptr)
 			{
 			}
@@ -255,6 +256,19 @@ namespace SQL_PARSER
 				identifier* i = new identifier();
 				i->type = tokenType::identifier;
 				n->nodeToken = i;
+				dsOk();
+				}));
+			m_parseNodeFuncs.insert(parseNodeFuncPair("pure identifier word", [](const jsonValue* v, nodeInfo* n)->DS {
+				if (v != nullptr)
+				{
+					if (v->t != JSON_TYPE::J_STRING)
+						dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "parse grammar failed", ERROR);
+					n->funcName = static_cast<const jsonString*>(v)->m_value;
+				}
+				identifier* i = new identifier();
+				i->type = tokenType::identifier;
+				n->nodeToken = i;
+				n->pureIdentifier = true;
 				dsOk();
 				}));
 
@@ -1291,7 +1305,7 @@ namespace SQL_PARSER
 			if (node->nodeToken->type != tokenType::literal)
 				dsFailedAndLogIt(1, "unexpect tokenType:" << static_cast<int>(node->nodeToken->type), ERROR);
 			code.append(space).append("pos = sqlPos;\n");
-			code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, false, true ));\n");
+			code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, true, false ));\n");
 			dsReturn(generateliteralWithTokenCode(code, space, node));
 		}
 
@@ -1368,10 +1382,10 @@ namespace SQL_PARSER
 			return false;
 		}
 
-		void generateCodeForIdentifer(char* space, String& code)
+		void generateCodeForIdentifer(char* space, String& code, bool pureIdentifier)
 		{
 			code.append(space).append("pos = sqlPos;\n");
-			code.append(space).append("dsReturnIfFailed(s = matchIdentifier(handle->stack, t, pos, true));\n");
+			code.append(space).append("dsReturnIfFailed(s = matchIdentifier(handle->stack, t, pos, ").append(pureIdentifier?"false":"true").append("));\n");
 			code.append(space).append("if(s == 0)\n");
 			code.append(space).append("{\n");
 			addSpace(space);
@@ -1509,7 +1523,7 @@ namespace SQL_PARSER
 				}
 				else if (node->nodeToken->type == tokenType::identifier)
 				{
-					generateCodeForIdentifer(space, code);
+					generateCodeForIdentifer(space, code, node->pureIdentifier);
 				}
 				else
 					dsFailedAndLogIt(1, "not support token type" << (int)(node->nodeToken->type), ERROR);
@@ -1721,7 +1735,7 @@ namespace SQL_PARSER
 			if (identiferCount + literalCount > 0 && !(identiferCount>0&& literalCount ==0))
 			{
 				code.append(space).append("pos = sqlPos;\n");
-				code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, false, true ));\n");
+				code.append(space).append("dsReturnIfFailed(matchToken(handle->stack, t, pos, true, false ));\n");
 				for (int i = 0; i < node->childCount; i++)
 				{
 					nodeInfo* c = node->child[i];
@@ -1745,7 +1759,7 @@ namespace SQL_PARSER
 					}
 				}
 			}
-			else if (identiferCount ==1 && literalCount == 0)
+			else if (identiferCount == 1 && literalCount == 0)
 			{
 				for (int i = 0; i < node->childCount; i++)
 				{
@@ -1755,7 +1769,7 @@ namespace SQL_PARSER
 						std::list < std::string >  matchedCodes;
 						std::list < std::string >  notMatchCodes;
 						dsReturnIfFailed(generateMatchedCode(node, i, matchedCodes, notMatchCodes));
-						generateCodeForIdentifer(space, code);
+						generateCodeForIdentifer(space, code, c->pureIdentifier);
 						appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
 							, c->nodeToken->type == tokenType::keyword ? c->nodeToken->value.toString().c_str() : nullptr
 							, code, matchedCodes, notMatchCodes);
@@ -1822,7 +1836,7 @@ namespace SQL_PARSER
 					else if (c->nodeToken->type == tokenType::literal)
 						dsReturnIfFailed(generateliteralCode(code, space, c));
 					else if (c->nodeToken->type == tokenType::identifier)
-						generateCodeForIdentifer(space, code);
+						generateCodeForIdentifer(space, code, c->pureIdentifier);
 					else
 						dsFailedAndLogIt(1, "not support token type" << (int)(c->nodeToken->type), ERROR);
 					appendTokenTailCode(space, c->funcName.empty() ? nullptr : c->funcName.c_str()
