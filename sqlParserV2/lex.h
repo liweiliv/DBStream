@@ -338,8 +338,8 @@ namespace SQL_PARSER
 			else if (v->t == JSON_TYPE::J_OBJECT)
 			{
 				nodeInfo* child = nullptr;
-				bool isInclude;
-				if (isInclude = (static_cast<const jsonObject*>(v)->get("include") != nullptr))
+				bool isInclude = static_cast<const jsonObject*>(v)->get("include") != nullptr;
+				if (isInclude)
 					dsReturnIfFailed(parseInclude(grammarMap, static_cast<const jsonObject*>(v), child));
 				else
 					dsReturnIfFailed(parseNode(grammarMap, nullptr, static_cast<const jsonObject*>(v), child));
@@ -1082,7 +1082,7 @@ namespace SQL_PARSER
 					nodeInfo* c = node->child[i];
 					if (c->branch)
 					{
-						if (c->loop)
+						if (c->loop || c->ref > 1)
 							continue;
 						if (c->optional)
 							dsFailedAndLogIt(LOAD_GRAMMAR_FAILED, "child node in [or] node can not be optional", ERROR);
@@ -1830,6 +1830,7 @@ namespace SQL_PARSER
 						, code, matchedCodes, notMatchCodes);
 				}
 			}
+			dsOk();
 		}
 
 		DS generateCodeForNode(nodeInfo* node, int& idx)
