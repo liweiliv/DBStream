@@ -81,6 +81,7 @@
 		]
 	},
 	"define": {
+		"is head": true,
 		"child": [
 			{
 				"or": true,
@@ -100,31 +101,85 @@
 				"optional": true,
 				"*": null
 			},
+			"pure identifier word",
 			{
-				"loop": ",",
+				"or": true,
 				"child": [
-					"identifier word",
 					{
-						"optional": true,
 						"child": [
-							"[",
+							"(",
 							{
-								"optional": true,
-								"int value": null
+								"loop": ",",
+								"child": [
+									{ "include": "varType" },
+									"identifier word"
+								]
 							},
-							"]"
+							")",
+							"{",
+							{ "include": "stmts" },
+							"}"
 						]
 					},
 					{
-						"optional": true,
 						"child": [
-							"=",
-							{ "include": "rightValue" }
+							{
+								"child": [
+									{
+										"optional": true,
+										"child": [
+											"[",
+											{
+												"optional": true,
+												"int value": null
+											},
+											"]"
+										]
+									},
+									{
+										"optional": true,
+										"child": [
+											"=",
+											{ "include": "rightValue" }
+										]
+									}
+								]
+							},
+							{
+								"optional": true,
+								"child": [
+									",",
+									{
+										"loop": ",",
+										"child": [
+											"pure identifier word",
+											{
+												"optional": true,
+												"child": [
+													"[",
+													{
+														"optional": true,
+														"int value": null
+													},
+													"]"
+												]
+											},
+											{
+												"optional": true,
+												"child": [
+													"=",
+													{ "include": "rightValue" }
+												]
+											}
+										]
+									}
+								]
+							},
+							";"
 						]
 					}
 				]
-			},
-			";"
+			}
 		]
 	},
 	"set": {
@@ -290,26 +345,6 @@
 		]
 	},
 
-	"function": {
-		"is head": true,
-		"child": [
-			{ "include": "varType" },
-			"identifier word",
-			"(",
-			{
-				"loop": ",",
-				"child": [
-					{ "include": "varType" },
-					"identifier word"
-				]
-			},
-			")",
-			"{",
-			{ "include": "stmts" },
-			"}"
-		]
-	},
-
 	"struct": {
 		"is head": true,
 		"child": [
@@ -318,15 +353,7 @@
 			"{",
 			{
 				"loop": null,
-				"child": [
-					{
-						"or": true,
-						"child": [
-							{ "include": "define" },
-							{ "include": "function" }
-						]
-					}
-				]
+				"include": "define"
 			},
 			"}",
 			";"
@@ -345,7 +372,6 @@
 						"or": true,
 						"child": [
 							{ "include": "define" },
-							{ "include": "function" },
 							"PRIVATE",
 							"PUBLIC",
 							"PROTECTED"

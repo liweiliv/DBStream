@@ -109,6 +109,7 @@ namespace KVDB
 					t = new table<int32_t>(meta->m_tableName.c_str(), meta);
 					break;
 				case META::COLUMN_TYPE::T_DATETIME:
+				case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 					t = new table<int64_t>(meta->m_tableName.c_str(), meta);
 					break;
 				case META::COLUMN_TYPE::T_TIMESTAMP:

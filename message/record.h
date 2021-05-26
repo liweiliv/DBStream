@@ -46,8 +46,14 @@ namespace DATABASE_INCREASE
 		R_UPDATE,
 		R_DELETE,
 		R_REPLACE,
-		R_ROLLBACK,
 		R_DDL,
+		R_BEGIN,
+		R_COMMIT,
+		R_ROLLBACK,
+		R_LOB_TRIM,
+		R_LOB_WRITE,
+		R_LOB_ERASE,
+		R_CONTROL,
 		R_TABLE_META,
 		M_TABLE_META_REQ,
 		R_DATABASE_META,
@@ -67,14 +73,15 @@ namespace DATABASE_INCREASE
 	{
 		uint8_t type;
 		uint8_t srcType;
-		uint8_t flag;
 		uint16_t charsetID;
+		uint32_t flag;
 		uint32_t size;
 		uint32_t precision;
 		uint32_t decimals;
 		uint32_t nameOffset;
 		uint32_t collateOffset;
 		uint32_t setOrEnumInfoOffset;
+		uint32_t defaultValueOffset;
 	};
 	struct record
 	{
@@ -133,27 +140,34 @@ namespace DATABASE_INCREASE
 	struct TableMetaMessage :public record
 	{
 		/*--------------version 0----------------*/
-		/*[64 bit tableMetaID][16 bit charsetID][16 bit column count][16 bit pk columns count][16 bit uk count][8 bit caseSensitive]
+		/*[64 bit tableMetaID][64 bit tableMetaObjectId][32 bit tableMetaSubObjectIdCount][16 bit charsetID][16 bit column count][16 bit pk columns count][16 bit uk count][16 bit unsused column count][8 bit caseSensitive]
 		 *[8 bit database size][database string+ 1 byte '\0'][8 bit table size][table string+ 1 byte '\0']
 		 * [columnDef 1]...[columnDef n]
+		 * [8 bit pkname size][pkname string+ 1 byte '\0']
 		 * [16 bit pk column id 1]...[16 bit pk column id n]
 		 * [16 bit uk 1 column count]...[16 bit uk n column count]
 		 *[32 bit uk 1 name offset][16 bit uk 1 column 1 id ]...[16 bit uk 1 column n id ]
 		 * ...
 		 *[32 bit uk m name offset][16 bit uk m column 1 id ]...[16 bit uk m column n id ]
+		 *[64bit tableMetaSubObjectId]...[64 bit tableMetaSubObjectIdCount]
 		 *[32 bit column names size]
 		 *[column 1 name string+'\0']...[column n name string+'\0']
 		 *[32 bit unique key names size]
 		 *[uk 1 name string+'\0']...[uk n name string+'\0']
 		 *[32 bit enum or set value lists size]
 		 *[enum or set value list 0+'\0']...[enum or set value list m+'\0']
+		 *[16 bit default value length,8 bit default value type, default value] ... [16 bit default value length,8 bit default value type, default value]
+		 *[16 bit unsused column id]...[16 bit unsused column id]
 		 * */
 		struct tableMetaHead {
 			uint64_t tableMetaID;
+			uint64_t tableMetaObjectId;
+			uint32_t tableMetaSubObjectIdCount;
 			uint16_t charsetId;
 			uint16_t columnCount;
 			uint16_t primaryKeyColumnCount;
 			uint16_t uniqueKeyCount;
+			uint16_t unusedColumnCount;
 			uint8_t caseSensitive;
 		};
 		tableMetaHead metaHead;
@@ -161,9 +175,12 @@ namespace DATABASE_INCREASE
 		const char* table;
 		const columnDef* columns;
 		const uint16_t* primaryKeys;
+		const char* primaryKeyName;
 		const uint16_t* uniqueKeyColumnCounts;
 		uint32_t* uniqueKeyNameOffset;
 		uint16_t** uniqueKeys;
+		uint64_t* tableMetaSubObjectIds;
+		uint16_t* unusedColumnIds;
 		/*-----------------------------------------------*/
 		TableMetaMessage(const char* data) :record(data) {
 			const char* ptr = data + head->minHead.headSize;
@@ -177,12 +194,16 @@ namespace DATABASE_INCREASE
 			ptr = (const char*)& columns[metaHead.columnCount];
 			if (metaHead.primaryKeyColumnCount != 0)
 			{
+				uint8_t pkNameSize = *ptr++;
+				primaryKeyName = ptr;
+				ptr += 1+ pkNameSize;
 				primaryKeys = (uint16_t*)ptr;
 				ptr = (const char*)& primaryKeys[metaHead.primaryKeyColumnCount];
 			}
 			else
 			{
-				primaryKeys = NULL;
+				primaryKeyName = nullptr;
+				primaryKeys = nullptr;
 			}
 			if (metaHead.uniqueKeyCount > 0)
 			{
@@ -202,6 +223,20 @@ namespace DATABASE_INCREASE
 				uniqueKeyNameOffset = nullptr;
 				uniqueKeyColumnCounts = nullptr;
 				uniqueKeys = nullptr;
+			}
+			if (metaHead.tableMetaSubObjectIdCount > 0)
+			{
+				tableMetaSubObjectIds = (uint64_t*)(ptr);
+				ptr = (const char*)&uniqueKeyColumnCounts[metaHead.tableMetaSubObjectIdCount];
+			}
+			else
+			{
+				tableMetaSubObjectIds = nullptr;
+			}
+			if (metaHead.uniqueKeyCount > 0)
+			{
+				unusedColumnIds = (uint16_t*)ptr;
+				ptr = (const char*)&unusedColumnIds[metaHead.uniqueKeyCount];
 			}
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over column names
 			ptr += *(uint32_t*)ptr + sizeof(uint32_t);//jump over uk names
@@ -578,6 +613,7 @@ namespace DATABASE_INCREASE
 			}
 			break;
 			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 			{
 				META::dateTime d;
 				d.time = *(const uint64_t*)value;

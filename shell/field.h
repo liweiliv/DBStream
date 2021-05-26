@@ -99,6 +99,7 @@ namespace SHELL {
 				return (void*)(uint64_t) * (uint32_t*)value;
 			case META::COLUMN_TYPE::T_INT64:
 			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 				return (void*)(uint64_t) * (int64_t*)value;
 			case META::COLUMN_TYPE::T_UINT64:
 			case META::COLUMN_TYPE::T_TIMESTAMP:

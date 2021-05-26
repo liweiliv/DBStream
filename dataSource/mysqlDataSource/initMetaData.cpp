@@ -400,7 +400,7 @@ namespace DATA_SOURCE {
 							}
 							else if (keyIter->second->type == META::KEY_TYPE::UNIQUE_KEY)
 							{
-								table->m_uniqueKeys[ukCount] = table->createUnionKey(ukCount,META::KEY_TYPE::UNIQUE_KEY,keyIdxs,keyCount);
+								table->m_uniqueKeys[ukCount] = table->createUnionKey(ukCount, META::KEY_TYPE::UNIQUE_KEY, keyIdxs, keyCount);
 								table->m_uniqueKeyNames[ukCount++] = keyIter->first;
 							}
 							else

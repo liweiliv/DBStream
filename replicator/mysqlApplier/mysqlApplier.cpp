@@ -289,6 +289,7 @@ RESET:
 			break;
 		}
 		case META::COLUMN_TYPE::T_DATETIME:
+		case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ://todo
 		{
 			META::dateTime t;
 			t.time = *(const int64_t*)value;

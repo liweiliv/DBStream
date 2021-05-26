@@ -76,6 +76,7 @@ namespace DATABASE {
 			break;
 		case META::COLUMN_TYPE::T_INT64:
 		case META::COLUMN_TYPE::T_DATETIME:
+		case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 		case META::COLUMN_TYPE::T_TIME:
 			m_index = new leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >(keyComparator<int64_t>(), m_arena);
 			break;
@@ -129,6 +130,7 @@ namespace DATABASE {
 				break;
 			case META::COLUMN_TYPE::T_INT64:
 			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 			case META::COLUMN_TYPE::T_TIME:
 				delete static_cast<leveldb::SkipList< KeyTemplate<int64_t>*, keyComparator<int64_t> >*>(m_index);
 				break;

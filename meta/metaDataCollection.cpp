@@ -360,6 +360,19 @@ namespace META {
 		}
 		return 0;
 	}
+
+	DLL_EXPORT MetaTimeline<tableMeta>* metaDataCollection::_getTableInfo(const char* database, const char* table)
+	{
+		dbInfo* currentDB = nullptr;
+		MetaTimeline<dbInfo>* db;
+		getDbInfo(database, db);
+		if (db == nullptr || (currentDB = db->get()) == nullptr)
+			return nullptr;
+		MetaTimeline<tableMeta>* metas;
+		getTableInfo(table, metas, currentDB);
+		return metas;
+	}
+
 	int metaDataCollection::createDatabase(const ddl* database, uint64_t originCheckPoint)
 	{
 		if (getDatabase(static_cast<const dataBaseDDL*>(database)->name.c_str(), originCheckPoint) != nullptr)
@@ -442,7 +455,7 @@ namespace META {
 				if (meta->m_columns[idx].m_size != 0)
 					meta->m_columns[idx].m_size *= meta->m_charset->byteSizePerChar;
 			}
-			if (meta->m_columns[idx].m_isPrimary)
+			if (meta->m_columns[idx].testFlag(COL_FLAG_PRIMARY_KEY))
 			{
 				std::list<std::string> pk;
 				pk.push_back(meta->m_columns[idx].m_columnName);
@@ -453,7 +466,7 @@ namespace META {
 					return -1;
 				}
 			}
-			if (meta->m_columns[idx].m_isUnique)
+			if (meta->m_columns[idx].testFlag(COL_FLAG_UNIQUE_KEY))
 			{
 				std::list<std::string> uk;
 				uk.push_back(meta->m_columns[idx].m_columnName);
@@ -464,7 +477,7 @@ namespace META {
 					return -1;
 				}
 			}
-			if (meta->m_columns[idx].m_isIndex)
+			if (meta->m_columns[idx].testFlag(COL_FLAG_INDEX))
 			{
 				std::list<std::string> index;
 				index.push_back(meta->m_columns[idx].m_columnName);
@@ -475,7 +488,7 @@ namespace META {
 					return -1;
 				}
 			}
-			if (columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].stringType&& meta->m_columns[idx].m_charset == nullptr)
+			if (columnInfos[static_cast<int>(meta->m_columns[idx].m_columnType)].stringType && meta->m_columns[idx].m_charset == nullptr)
 				meta->m_columns[idx].m_charset = meta->m_charset;
 		}
 		if (!table->primaryKey.columnNames.empty())

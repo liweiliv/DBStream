@@ -73,6 +73,8 @@ namespace META {
 		DLL_EXPORT int processDDL(const char* ddl, const char* database, uint64_t originCheckPoint);
 		DLL_EXPORT int setDefaultCharset(const charsetInfo* defaultCharset);
 		DLL_EXPORT const charsetInfo* getDefaultCharset();
+	protected:
+		DLL_EXPORT MetaTimeline<tableMeta>* _getTableInfo(const char* database, const char* table);
 	private:
 		int put(const char* database, uint64_t offset, dbInfo* db);
 		dbInfo* getDatabaseMetaFromRemote(uint64_t databaseID);

@@ -56,6 +56,7 @@ enum CHARSET {
 	cp932,
 	eucjpms,
 	gb18030,
+	latin9,
 	MAX_CHARSET
 };
 
@@ -100,7 +101,8 @@ constexpr charsetInfo charsets[] = {
 	{"geostd8", 7,1,geostd8},
 	{"cp932", 5,2,cp932},
 	{"eucjpms",7, 3,eucjpms},
-	{"gb18030", 7,4,gb18030}
+	{"gb18030", 7,4,gb18030},
+	{"latin9", 6,1,latin9}
 };
 DLL_EXPORT const charsetInfo* getCharset(const char * name, uint32_t size);
 DLL_EXPORT const charsetInfo* getCharset(const char* name);

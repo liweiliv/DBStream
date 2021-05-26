@@ -31,21 +31,24 @@ namespace META {
 		T_DECIMAL = 12,
 		T_TIMESTAMP = 13,
 		T_DATETIME = 14,
-		T_DATE = 15,
-		T_YEAR = 16,
-		T_TIME = 17,
-		T_BLOB = 18,
-		T_STRING = 19,
-		T_JSON = 20,
-		T_XML = 21,
-		T_GEOMETRY = 22,
-		T_SET = 23,
-		T_ENUM = 24,
-		T_BYTE = 25,
-		T_BINARY = 26,
-		T_TEXT = 27,
-		T_BOOL = 28,
-		T_CURRENT_VERSION_MAX_TYPE = 29,
+		T_DATETIME_ZERO_TZ = 15,
+		T_DATE = 16,
+		T_YEAR = 17,
+		T_TIME = 18,
+		T_BLOB = 19,
+		T_STRING = 20,
+		T_JSON = 21,
+		T_XML = 22,
+		T_GEOMETRY = 23,
+		T_SET = 24,
+		T_ENUM = 25,
+		T_BYTE = 26,
+		T_BINARY = 27,
+		T_TEXT = 28,
+		T_BOOL = 29,
+		T_INTERVER_YEAR_TO_MONTH,
+		T_INTERVER_DAY_TO_SECOND,
+		T_CURRENT_VERSION_MAX_TYPE = 30,
 		T_MAX_TYPE = 255
 	};
 #define TID(t) static_cast<uint8_t>(t)
@@ -73,6 +76,7 @@ namespace META {
 	{COLUMN_TYPE::T_DECIMAL,4,false,false,true},
 	{COLUMN_TYPE::T_TIMESTAMP,8 ,true,true,false},
 	{COLUMN_TYPE::T_DATETIME,8,true,true,false},
+	{COLUMN_TYPE::T_DATETIME_ZERO_TZ,8,true,true,false},
 	{COLUMN_TYPE::T_DATE,4,true,true,false},
 	{COLUMN_TYPE::T_YEAR,2,true,true,false},
 	{COLUMN_TYPE::T_TIME,8,true,true,false},
@@ -121,8 +125,13 @@ namespace META {
 		{
 			return sizeof(unionKeyMeta) + sizeof(uniqueKeyTypePair) * (keyCount - 1);
 		}
-		unionKeyMeta()
+		unionKeyMeta(int columnCount = 0):columnCount(columnCount), size(0), fixed(1), keyType(static_cast<int>(KEY_TYPE::INDEX)), keyId(0), varColumnCount(0)
 		{
+			for (int i = 0; i < columnCount; i++)
+			{
+				columnInfo[i].type = 0;
+				columnInfo[i].columnId = 0;
+			}
 		}
 		unionKeyMeta(const unionKeyMeta& dest)
 		{
@@ -320,7 +329,6 @@ namespace META {
 			}
 			else
 				return len;
-
 		}
 	};
 	/*[20byte usec][6 byte second][6 byte min][5 byte hour][5 byte day][4 byte month][18 bit year]*/

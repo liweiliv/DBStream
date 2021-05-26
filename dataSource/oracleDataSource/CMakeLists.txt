@@ -36,7 +36,9 @@ ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 #oracleDataSource
 aux_source_directory(. oracleDataSourceDir)
-add_library(oracleDataSource SHARED ${oracleDataSourceDir})
+aux_source_directory(./logminer logminerSourceDir)
+aux_source_directory(./xstream xstreamSourceDir)
+add_library(oracleDataSource SHARED ${oracleDataSourceDir} ${logminerSourceDir} ${xstreamSourceDir})
 target_include_directories(oracleDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 target_include_directories(oracleDataSource PRIVATE ${ORACLE_INCLUDE_PATH})
 message(STATUS "pwd: ${ORACLE_INCLUDE_PATH}")

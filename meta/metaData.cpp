@@ -60,6 +60,7 @@ namespace META {
 			sql.append("BIGINT");
 			break;
 		case COLUMN_TYPE::T_DATETIME:
+		case COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 			sql.append("DATETIME");
 			if (m_precision > 0)
 			{
@@ -137,20 +138,24 @@ namespace META {
 		default:
 			abort();
 		}
-		if (!m_nullable)
+		if (!testFlag(COL_FLAG_NOT_NULL))
 			sql.append(" not null");
 		return sql;
 
 	}
 	tableMeta::tableMeta(bool caseSensitive) :m_charset(nullptr), m_columns(nullptr), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
-		m_columnsCount(0), m_id(0), m_primaryKey(nullptr), m_uniqueKeysCount(0), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_nameCompare(caseSensitive), userData(nullptr)
+		m_columnsCount(0), m_id(0), m_objectIdInDB(0), m_subObjectIdInDBListSize(0), m_subObjectIdInDBList(nullptr), m_primaryKey(nullptr), m_uniqueKeysCount(0), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr),
+		m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_unusedColumnIds(nullptr), m_unusedColumnIdCount(0), m_nameCompare(caseSensitive), userData(nullptr)
 	{
 	}
 	tableMeta::tableMeta(DATABASE_INCREASE::TableMetaMessage* msg) : m_dbName(msg->database ? msg->database : ""), m_tableName(msg->table ? msg->table : ""),
 		m_charset(&charsets[msg->metaHead.charsetId]), m_realIndexInRowFormat(nullptr), m_fixedColumnOffsetsInRecord(nullptr), m_fixedColumnCount(0), m_varColumnCount(0),
 		m_columnsCount(msg->metaHead.columnCount),
-		m_id(msg->metaHead.tableMetaID), m_primaryKey(nullptr), m_uniqueKeysCount(msg->metaHead.uniqueKeyCount), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr), m_nameCompare(msg->metaHead.caseSensitive > 0)
+		m_id(msg->metaHead.tableMetaID), m_objectIdInDB(msg->metaHead.tableMetaObjectId), m_subObjectIdInDBListSize(msg->metaHead.tableMetaSubObjectIdCount), m_subObjectIdInDBList(nullptr), 
+		m_primaryKey(nullptr), m_primaryKeyName(msg->primaryKeyName ? msg->primaryKeyName : ""), m_uniqueKeysCount(msg->metaHead.uniqueKeyCount), m_uniqueKeys(nullptr), m_uniqueKeyNames(nullptr), m_indexCount(0), m_indexs(nullptr), m_indexNames(nullptr),
+		m_unusedColumnIds(nullptr), m_unusedColumnIdCount(msg->metaHead.unusedColumnCount), m_nameCompare(msg->metaHead.caseSensitive > 0)
 	{
+		
 		m_columns = new columnMeta[m_columnsCount];
 		for (uint32_t i = 0; i < m_columnsCount; i++)
 		{
@@ -164,8 +169,7 @@ namespace META {
 			m_columns[i].m_srcColumnType = msg->columns[i].srcType;
 			m_columns[i].m_decimals = msg->columns[i].decimals;
 			m_columns[i].m_precision = msg->columns[i].precision;
-			m_columns[i].m_generated = msg->columns[i].flag & COLUMN_FLAG_VIRTUAL;
-			m_columns[i].m_signed = msg->columns[i].flag & COLUMN_FLAG_SIGNED;
+			m_columns[i].m_flag = msg->columns[i].flag;
 			m_columns[i].m_size = msg->columns[i].size;
 			if (msg->columns[i].setOrEnumInfoOffset != 0)
 			{
@@ -180,8 +184,6 @@ namespace META {
 					memcpy(m_columns[i].m_setAndEnumValueList.m_array[j], base + valueList[j], valueList[j + 1] - valueList[j]);
 				}
 			}
-			m_columns[i].m_isPrimary = false;
-			m_columns[i].m_isUnique = false;
 		}
 
 		buildColumnOffsetList();
@@ -189,7 +191,7 @@ namespace META {
 		{
 			m_primaryKey = createUnionKey(0, KEY_TYPE::PRIMARY_KEY, msg->primaryKeys, msg->metaHead.primaryKeyColumnCount);
 			for (uint16_t i = 0; i < m_primaryKey->columnCount; i++)
-				((columnMeta*)getColumn(m_primaryKey->columnInfo[i].columnId))->m_isPrimary = true;
+				((columnMeta*)getColumn(m_primaryKey->columnInfo[i].columnId))->setFlag(COL_FLAG_PRIMARY_KEY);
 		}
 		if (msg->metaHead.uniqueKeyCount > 0)
 		{
@@ -200,9 +202,19 @@ namespace META {
 				m_uniqueKeys[i] = createUnionKey(i, KEY_TYPE::UNIQUE_KEY, msg->uniqueKeys[i], msg->uniqueKeyColumnCounts[i]);
 				m_uniqueKeyNames[i].assign(msg->data + msg->uniqueKeyNameOffset[i]);
 				for (uint16_t j = 0; j < m_uniqueKeys[i]->columnCount; j++)
-					((columnMeta*)getColumn(m_uniqueKeys[i]->columnInfo[j].columnId))->m_isUnique = true;
+					((columnMeta*)getColumn(m_uniqueKeys[i]->columnInfo[j].columnId))->setFlag(COL_FLAG_UNIQUE_KEY);
 			}
 			m_uniqueKeysCount = msg->metaHead.uniqueKeyCount;
+		}
+		if (m_subObjectIdInDBListSize > 0)
+		{
+			m_subObjectIdInDBList = new uint64_t[m_subObjectIdInDBListSize];
+			memcpy(m_subObjectIdInDBList, msg->tableMetaSubObjectIds, sizeof(uint64_t) * m_subObjectIdInDBListSize);
+		}
+		if (msg->metaHead.unusedColumnCount > 0)
+		{
+			m_unusedColumnIds = new uint16_t[msg->metaHead.unusedColumnCount];
+			memcpy(m_unusedColumnIds, msg->unusedColumnIds, sizeof(uint16_t) * msg->metaHead.unusedColumnCount);
 		}
 	}
 	const char* tableMeta::createTableMetaRecord()const
@@ -218,6 +230,7 @@ namespace META {
 		m_fixedColumnCount = 0;
 		m_varColumnCount = 0;
 		m_id = 0;
+		m_uniqueKeysCount = 0;
 		if (m_primaryKey != nullptr)
 		{
 			free(m_primaryKey);
@@ -227,6 +240,11 @@ namespace META {
 		{
 			delete[]m_columns;
 			m_columns = nullptr;
+		}
+		if (m_subObjectIdInDBList != nullptr)
+		{
+			delete[]m_subObjectIdInDBList;
+			m_subObjectIdInDBList = nullptr;
 		}
 		if (m_uniqueKeys != nullptr)
 		{
@@ -264,7 +282,11 @@ namespace META {
 			delete[]m_fixedColumnOffsetsInRecord;
 			m_fixedColumnOffsetsInRecord = nullptr;
 		}
-
+		if (m_unusedColumnIds != nullptr)
+		{
+			delete[]m_unusedColumnIds;
+			m_unusedColumnIds = nullptr;
+		}
 	}
 	tableMeta::~tableMeta()
 	{
@@ -291,6 +313,7 @@ namespace META {
 			m_primaryKey = (unionKeyMeta*)malloc(unionKeyMeta::memSize(t.m_primaryKey->columnCount));
 			*m_primaryKey = *t.m_primaryKey;
 		}
+		m_primaryKeyName = t.m_primaryKeyName;
 		/*copy unique key*/
 		m_uniqueKeysCount = t.m_uniqueKeysCount;
 		if (t.m_uniqueKeys != nullptr)
@@ -338,7 +361,7 @@ namespace META {
 		{
 			if (columnIds[i] >= m_columnsCount || !columnInfos[TID(m_columns[columnIds[i]].m_columnType)].asIndex)
 			{
-				LOG(ERROR) << "create key failed for column is not in column list or column type can not used as index";
+				LOG(ERROR) << "create key of " << m_dbName << "." << m_tableName << "failed for column is not in column list or column type can not used as index";
 				free(uk);
 				return nullptr;
 			}
@@ -355,6 +378,28 @@ namespace META {
 		}
 		return uk;
 	}
+
+	DS tableMeta::prepareUnionKey(unionKeyMeta* key)
+	{
+		for (int i = 0; i < key->columnCount; i++)
+		{
+			if (key->columnInfo[i].columnId >= m_columnsCount || !columnInfos[TID(m_columns[key->columnInfo[i].columnId].m_columnType)].asIndex)
+			{
+				dsFailedAndLogIt(1, "create key failed for column is not in column list or column type can not used as index", ERROR);
+			}
+			key->columnInfo[i].type = TID(m_columns[key->columnInfo[i].columnId].m_columnType);
+			if (!columnInfos[key->columnInfo[i].type].fixed)
+			{
+				key->varColumnCount++;
+				key->size += sizeof(uint16_t);
+				key->fixed = 0;
+			}
+			else
+				key->size += columnInfos[key->columnInfo[i].type].columnTypeSize;
+		}
+		dsOk();
+	}
+
 
 	void tableMeta::buildColumnOffsetList()
 	{
@@ -496,9 +541,8 @@ namespace META {
 			return -1;
 		}
 		int idx = old->m_columnIndex;
-
-		bool isPk = old->m_isPrimary, isUk = old->m_isUnique, isIndex = old->m_isIndex;
-		if (isPk || isUk || isIndex)
+		uint32_t indexFlags = old->getFlag(COL_FLAG_PRIMARY_KEY | COL_FLAG_UNIQUE_KEY | COL_FLAG_INDEX);
+		if (indexFlags != 0)
 		{
 			if (!columnInfos[static_cast<int>(column->m_columnType)].asIndex)
 			{
@@ -511,9 +555,7 @@ namespace META {
 		{
 			m_columns[idx] = *column;
 			m_columns[idx].m_columnIndex = idx;
-			m_columns[idx].m_isPrimary = isPk;
-			m_columns[idx].m_isUnique = isUk;
-			m_columns[idx].m_isIndex = isIndex;
+			m_columns[idx].setFlag(indexFlags);
 			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType&& m_columns[idx].m_charset == nullptr)
 			{
 				m_columns[idx].m_charset = m_charset;
@@ -557,9 +599,7 @@ namespace META {
 			}
 			m_columns[to] = *column;
 			m_columns[to].m_columnIndex = to;
-			m_columns[to].m_isPrimary = isPk;
-			m_columns[to].m_isUnique = isUk;
-			m_columns[to].m_isIndex = isIndex;
+			m_columns[to].setFlag(indexFlags);
 			if (columnInfos[static_cast<int>(m_columns[to].m_columnType)].stringType&& m_columns[to].m_charset == nullptr)
 			{
 				m_columns[to].m_charset = m_charset;
@@ -585,8 +625,8 @@ namespace META {
 			return -1;
 		}
 		int idx = old->m_columnIndex;
-		bool isPk = old->m_isPrimary, isUk = old->m_isUnique, isIndex = old->m_isIndex;
-		if (isPk || isUk || isIndex)
+		uint32_t indexFlags = old->getFlag(COL_FLAG_PRIMARY_KEY | COL_FLAG_UNIQUE_KEY | COL_FLAG_INDEX);
+		if (indexFlags != 0)
 		{
 			if (!columnInfos[static_cast<int>(newColumn->m_columnType)].asIndex)
 			{
@@ -598,9 +638,7 @@ namespace META {
 		{
 			m_columns[idx] = *newColumn;
 			m_columns[idx].m_columnIndex = idx;
-			m_columns[idx].m_isPrimary = isPk;
-			m_columns[idx].m_isUnique = isUk;
-			m_columns[idx].m_isIndex = isIndex;
+			m_columns[idx].setFlag(indexFlags);
 			if (columnInfos[static_cast<int>(m_columns[idx].m_columnType)].stringType&& m_columns[idx].m_charset == nullptr)
 			{
 				m_columns[idx].m_charset = m_charset;
@@ -643,9 +681,7 @@ namespace META {
 			}
 			m_columns[to] = *newColumn;
 			m_columns[to].m_columnIndex = to;
-			m_columns[to].m_isPrimary = isPk;
-			m_columns[to].m_isUnique = isUk;
-			m_columns[to].m_isIndex = isIndex;
+			m_columns[to].setFlag(indexFlags);
 			if (columnInfos[static_cast<int>(m_columns[to].m_columnType)].stringType&& m_columns[to].m_charset == nullptr)
 			{
 				m_columns[to].m_charset = m_charset;
@@ -706,7 +742,7 @@ namespace META {
 		if (m_primaryKey != nullptr)
 		{
 			for (uint16_t i = 0; i < m_primaryKey->columnCount; i++)
-				((columnMeta*)getColumn(m_primaryKey->columnInfo[i].columnId))->m_isPrimary = false;
+				((columnMeta*)getColumn(m_primaryKey->columnInfo[i].columnId))->unsetFlag(COL_FLAG_PRIMARY_KEY);
 			free(m_primaryKey);
 			m_primaryKey = nullptr;
 		}
@@ -740,7 +776,7 @@ namespace META {
 		if (m_primaryKey != nullptr)
 		{
 			for (int i = 0; i < columnCount; i++)
-				m_columns[columnIds[i]].m_isPrimary = true;
+				m_columns[columnIds[i]].setFlag(COL_FLAG_PRIMARY_KEY);
 			return 0;
 		}
 		else
@@ -761,7 +797,7 @@ namespace META {
 		if (m_uniqueKeysCount == 1)
 		{
 			for (uint16_t i = 0; i < m_uniqueKeys[idx]->columnCount; i++)
-				((columnMeta*)getColumn(m_uniqueKeys[idx]->columnInfo[i].columnId))->m_isUnique = false;
+				((columnMeta*)getColumn(m_uniqueKeys[idx]->columnInfo[i].columnId))->unsetFlag(COL_FLAG_UNIQUE_KEY);
 			free(m_uniqueKeys[0]);
 			free(m_uniqueKeys);
 			delete[]m_uniqueKeyNames;
@@ -794,7 +830,7 @@ namespace META {
 						goto COLUMN_IS_STILL_UK;
 				}
 			}
-			((columnMeta*)getColumn(m_uniqueKeys[idx]->columnInfo[i].columnId))->m_isUnique = false;
+			((columnMeta*)getColumn(m_uniqueKeys[idx]->columnInfo[i].columnId))->unsetFlag(COL_FLAG_UNIQUE_KEY);
 		COLUMN_IS_STILL_UK:
 			continue;
 		}
@@ -862,9 +898,9 @@ namespace META {
 				return -1;
 			}
 			if (keyType == KEY_TYPE::UNIQUE_KEY)
-				c->m_isUnique = true;
+				c->setFlag(COL_FLAG_UNIQUE_KEY);
 			else if (keyType == KEY_TYPE::INDEX)
-				c->m_isIndex = true;
+				c->setFlag(COL_FLAG_INDEX);
 			columnIds[columnCount++] = c->m_columnIndex;
 		}
 
@@ -895,7 +931,7 @@ namespace META {
 		if (index != nullptr)
 		{
 			for (int i = 0; i < columnCount; i++)
-				m_columns[columnIds[i]].m_isIndex = true;
+				m_columns[columnIds[i]].setFlag(COL_FLAG_INDEX);
 		}
 		else
 		{
@@ -940,7 +976,7 @@ namespace META {
 		if (indexCount == 1)
 		{
 			for (uint16_t i = 0; i < indexs[idx]->columnCount; i++)
-				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->unsetFlag(COL_FLAG_INDEX);
 			free(indexs[0]);
 			free(indexs);
 			delete[]indexNames;
@@ -974,9 +1010,9 @@ namespace META {
 				}
 			}
 			if (keyType == KEY_TYPE::UNIQUE_KEY)
-				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isUnique = false;
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->unsetFlag(COL_FLAG_UNIQUE_KEY);
 			else if (keyType == KEY_TYPE::INDEX)
-				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->m_isIndex = false;
+				((columnMeta*)getColumn(indexs[idx]->columnInfo[i].columnId))->unsetFlag(COL_FLAG_INDEX);
 		COLUMN_IS_STILL_INDEX:
 			continue;
 		}

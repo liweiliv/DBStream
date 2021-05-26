@@ -17,6 +17,7 @@
 #include "charset.h"
 #include "util/winDll.h"
 #include "util/nameCompare.h"
+#include "util/status.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }
@@ -25,7 +26,7 @@ namespace META {
 #define MAX_KEY_SIZE 2048
 	struct stringArray
 	{
-		char ** m_array;
+		char** m_array;
 		uint32_t m_count;
 		stringArray() :m_array(nullptr), m_count(0) {}
 		~stringArray()
@@ -60,7 +61,7 @@ namespace META {
 			m_array = nullptr;
 
 		}
-		stringArray &operator =(const stringArray &c)
+		stringArray& operator =(const stringArray& c)
 		{
 			clean();
 			m_count = c.m_count;
@@ -77,10 +78,10 @@ namespace META {
 			}
 			return *this;
 		}
-		stringArray &operator =(const std::list<std::string> &l)
+		stringArray& operator =(const std::list<std::string>& l)
 		{
 			clean();
-			m_array = (char**)malloc(sizeof(char*)*l.size());
+			m_array = (char**)malloc(sizeof(char*) * l.size());
 			for (std::list<std::string>::const_iterator iter = l.begin(); iter != l.end(); iter++)
 			{
 				m_array[m_count] = (char*)malloc((*iter).size() + 1);
@@ -102,77 +103,146 @@ namespace META {
 		}
 		bool operator!=(const stringArray& dest)const
 		{
-			return !(*this==(dest));
+			return !(*this == (dest));
 		}
 
 	};
+	struct defaultValue
+	{
+		void* m_defaultValue;
+		COLUMN_TYPE  m_defaultValueType;
+		uint32_t m_defaultValueSize;
+		defaultValue() :m_defaultValue(nullptr), m_defaultValueType(COLUMN_TYPE::T_MAX_TYPE), m_defaultValueSize(0) {}
+		~defaultValue()
+		{
+			if (m_defaultValue != nullptr)
+				free(m_defaultValue);
+		}
+		defaultValue(const defaultValue& v) :m_defaultValue(nullptr), m_defaultValueType(v.m_defaultValueType), m_defaultValueSize(v.m_defaultValueSize)
+		{
+			if (v.m_defaultValue != nullptr && v.m_defaultValueSize > 0)
+			{
+				m_defaultValue = malloc(m_defaultValueSize);
+				memcpy(m_defaultValue, v.m_defaultValue, m_defaultValueSize);
+			}
+		}
+		defaultValue& operator=(const defaultValue& v)
+		{
+			m_defaultValueSize = v.m_defaultValueSize;
+			m_defaultValueType = v.m_defaultValueType;
+			if (v.m_defaultValue != nullptr && v.m_defaultValueSize > 0)
+			{
+				m_defaultValue = malloc(m_defaultValueSize);
+				memcpy(m_defaultValue, v.m_defaultValue, m_defaultValueSize);
+			}
+			else
+			{
+				m_defaultValue = nullptr;
+			}
+			return *this;
+		}
+		bool operator==(const defaultValue& v) const
+		{
+			if (m_defaultValueType != v.m_defaultValueType)
+				return false;
+			if (m_defaultValueSize != v.m_defaultValueSize)
+				return false;
+			if (m_defaultValue == nullptr && v.m_defaultValue == nullptr)
+				return true;
+			if (m_defaultValue == nullptr || v.m_defaultValue == nullptr)
+				return false;
+			return memcmp(m_defaultValue, v.m_defaultValue, m_defaultValueSize) == 0;
+		}
+		bool operator!=(const defaultValue& v) const
+		{
+			return !(*this == (v)); 
+		}
+	};
+#define COL_FLAG_SIGNED  0x01
+#define COL_FLAG_NOT_NULL  0x02
+#define COL_FLAG_PRIMARY_KEY  0x04
+#define COL_FLAG_UNIQUE_KEY  0x08
+#define COL_FLAG_INDEX  0x10
+#define COL_FLAG_GENERATED  0x20
+#define COL_FLAG_HIDDEN  0x40
+
 	struct columnMeta
 	{
 		COLUMN_TYPE m_columnType; //type in DBStream
 		uint8_t m_srcColumnType;// type in database
+		uint8_t m_segmentCount;//int oracle
+		uint16_t m_segmentStartId;//in oracle
 		uint16_t m_columnIndex;  //column id in table
 		std::string m_columnName;
 		std::string m_alias;
+		defaultValue m_default;
 		std::string m_collate;
 		const charsetInfo* m_charset;
 		uint32_t m_size;
 		uint32_t m_precision;
 		uint32_t m_decimals;
 		stringArray m_setAndEnumValueList;
-		bool m_signed;
-		bool m_nullable;
-		bool m_isPrimary;
-		bool m_isUnique;
-		bool m_isIndex;
-		bool m_generated;
-		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
-			m_setAndEnumValueList(), m_signed(false), m_nullable(true), m_isPrimary(false), m_isUnique(false), m_isIndex(false), m_generated(false)
+		uint32_t m_flag;
+		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_segmentCount(0), m_segmentStartId(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
+			m_setAndEnumValueList(), m_flag(0)
 		{}
 		columnMeta& operator =(const columnMeta& c)
 		{
 			m_columnType = c.m_columnType;
 			m_srcColumnType = c.m_srcColumnType;
+			m_segmentCount = c.m_segmentCount;
+			m_segmentStartId = c.m_segmentStartId;
 			m_columnIndex = c.m_columnIndex;
 			m_columnName = c.m_columnName;
+			m_default = c.m_default;
 			m_charset = c.m_charset;
 			m_collate = c.m_collate;
 			m_size = c.m_size;
 			m_precision = c.m_precision;
 			m_decimals = c.m_decimals;
 			m_setAndEnumValueList = c.m_setAndEnumValueList;
-			m_signed = c.m_signed;
-			m_nullable = c.m_nullable;
-			m_isPrimary = c.m_isPrimary;
-			m_isUnique = c.m_isUnique;
-			m_isIndex = c.m_isIndex;
-			m_generated = c.m_generated;
+			m_flag = c.m_flag;
 			return *this;
 		}
 		bool operator==(const columnMeta& c)const
 		{
 			if (m_columnType != c.m_columnType ||
 				m_srcColumnType != c.m_srcColumnType ||
+				m_segmentCount != c.m_segmentCount ||
+				m_segmentStartId != c.m_segmentStartId ||
 				m_columnIndex != c.m_columnIndex ||
 				m_columnName != c.m_columnName ||
+				m_default != c.m_default ||
 				m_collate != c.m_collate ||
 				m_charset != c.m_charset ||
 				m_size != c.m_size ||
 				m_precision != c.m_precision ||
 				m_decimals != c.m_decimals ||
 				m_setAndEnumValueList != c.m_setAndEnumValueList ||
-				m_signed != c.m_signed ||
-				m_nullable != c.m_nullable ||
-				m_isPrimary != c.m_isPrimary ||
-				m_isUnique != c.m_isUnique ||
-				m_isIndex != c.m_isIndex ||
-				m_generated != c.m_generated
+				m_flag != c.m_flag
 				)
 				return false;
 			return true;
 		}
-		bool operator!=(const columnMeta& c)const
+		bool operator!=(const columnMeta& c) const
 		{
 			return !(*this == c);
+		}
+		inline bool testFlag(uint32_t flag) const
+		{
+			return m_flag & flag;
+		}
+		inline uint32_t getFlag(uint32_t flag) const
+		{
+			return m_flag & flag;
+		}
+		inline void setFlag(uint32_t flag)
+		{
+			m_flag |= flag;
+		}
+		inline void unsetFlag(uint32_t flag)
+		{
+			m_flag &= ~flag;
 		}
 		std::string toString()const;
 	};
@@ -183,50 +253,56 @@ namespace META {
 		//for postgresql
 		std::string  m_schemaName;
 		std::string  m_tableName;
-		const charsetInfo *m_charset;
+		const charsetInfo* m_charset;
 		std::string m_collate;
-		columnMeta * m_columns;
-		uint16_t * m_realIndexInRowFormat;
-		uint16_t * m_fixedColumnOffsetsInRecord;
+		columnMeta* m_columns;
+		uint16_t* m_realIndexInRowFormat;
+		uint16_t* m_fixedColumnOffsetsInRecord;
 		uint16_t m_fixedColumnCount;
 		uint16_t m_varColumnCount;
 		uint16_t m_columnsCount;
 		uint64_t m_id;
+		uint64_t m_objectIdInDB;//object id of table in source database,now used in oracle
+		uint32_t m_subObjectIdInDBListSize;
+		uint64_t* m_subObjectIdInDBList;//sub object id of table (like partition id) in source database,now used in oracle
 		unionKeyMeta* m_primaryKey;
+		std::string m_primaryKeyName;
 		uint16_t m_uniqueKeysCount;
 		unionKeyMeta** m_uniqueKeys;
 		std::string* m_uniqueKeyNames;
 		uint16_t m_indexCount;
 		unionKeyMeta** m_indexs;
 		std::string* m_indexNames;
+		uint16_t* m_unusedColumnIds;
+		uint16_t m_unusedColumnIdCount;
 		UTIL::nameCompare m_nameCompare;
-		void * userData;
+		void* userData;
 		constexpr static inline uint16_t tableVersion(uint64_t tableIDInfo)
 		{
 			return tableIDInfo & 0xffff;
 		}
 		constexpr static inline uint64_t tableID(uint64_t tableIDInfo)
 		{
-			return (tableIDInfo & 0xffffffffffff0000ul)>>16;
+			return (tableIDInfo & 0xffffffffffff0000ul) >> 16;
 		}
-		constexpr static inline uint64_t genTableId(uint64_t tableid,uint16_t version)
+		constexpr static inline uint64_t genTableId(uint64_t tableid, uint16_t version)
 		{
-			return (tableid<<16)|version;
+			return (tableid << 16) | version;
 		}
 		tableMeta(bool caseSensitive);
-		tableMeta(DATABASE_INCREASE::TableMetaMessage * msg);
-		const char * createTableMetaRecord()const;
+		tableMeta(DATABASE_INCREASE::TableMetaMessage* msg);
+		const char* createTableMetaRecord()const;
 		void clean();
 		~tableMeta();
-		tableMeta &operator =(const tableMeta &t);
-		inline const columnMeta *getColumn(uint16_t idx) const
+		tableMeta& operator =(const tableMeta& t);
+		inline const columnMeta* getColumn(uint16_t idx) const
 		{
 			if (idx > m_columnsCount)
 				return nullptr;
 			return &m_columns[idx];
 		}
 
-		inline const columnMeta * getColumn(const char * columnName) const
+		inline const columnMeta* getColumn(const char* columnName) const
 		{
 			for (uint32_t i = 0; i < m_columnsCount; i++)
 			{
@@ -244,7 +320,7 @@ namespace META {
 			}
 			return -1;
 		}
-		inline unionKeyMeta *getUniqueKey(const char *UniqueKeyname)const 
+		inline unionKeyMeta* getUniqueKey(const char* UniqueKeyname)const
 		{
 			int id = getUniqueKeyId(UniqueKeyname);
 			if (id > 0)
@@ -274,20 +350,23 @@ namespace META {
 			return m_nameCompare.compare(database, m_dbName.c_str()) == 0 && m_nameCompare.compare(table, m_tableName.c_str()) == 0;
 		}
 		unionKeyMeta* createUnionKey(uint16_t keyId, KEY_TYPE keyType, const uint16_t* columnIds, uint16_t columnCount);
+
+		DS prepareUnionKey(unionKeyMeta* key);
+
 		void buildColumnOffsetList();
 		void updateKeysWhenColumnUpdate(int from, int to, COLUMN_TYPE newType);
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
-		int dropColumn(const char *column);
+		int dropColumn(const char* column);
 		int renameColumn(const char* oldName, const char* newName);
 		int modifyColumn(const columnMeta* column, bool first, const char* addAfter);
-		int changeColumn(const columnMeta* newColumn,const char * columnName, bool first, const char* addAfter);
-		int addColumn(const columnMeta* column, const char * addAfter = nullptr,bool first = false);
+		int changeColumn(const columnMeta* newColumn, const char* columnName, bool first, const char* addAfter);
+		int addColumn(const columnMeta* column, const char* addAfter = nullptr, bool first = false);
 		int dropPrimaryKey();
-		int createPrimaryKey(const std::list<std::string> &columns);
-		int dropUniqueKey(const char *ukName);
-		int _addIndex(uint16_t &count,unionKeyMeta** &indexs,std::string*& indexNames,unionKeyMeta*index,const char* indexName);
-		int addIndex(const char* indexName, const std::list<std::string>& columns,KEY_TYPE keyType);
-		int _dropIndex(int idx,uint16_t& indexCount,unionKeyMeta** &indexs,std::string*& indexNames,KEY_TYPE keyType);
+		int createPrimaryKey(const std::list<std::string>& columns);
+		int dropUniqueKey(const char* ukName);
+		int _addIndex(uint16_t& count, unionKeyMeta**& indexs, std::string*& indexNames, unionKeyMeta* index, const char* indexName);
+		int addIndex(const char* indexName, const std::list<std::string>& columns, KEY_TYPE keyType);
+		int _dropIndex(int idx, uint16_t& indexCount, unionKeyMeta**& indexs, std::string*& indexNames, KEY_TYPE keyType);
 		int dropIndex(const char* indexName);
 		int renameIndex(const char* oldName, const char* newName);
 		int defaultCharset(const charsetInfo* charset, const char* collationName);

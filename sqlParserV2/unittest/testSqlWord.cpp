@@ -111,7 +111,9 @@ int test5()
 {
 	SQL_PARSER::p2 p;
 	SQL_PARSER::sqlHandle h;
-	char sql[] = "int createTable(int a, char b,string c){int m = a + b;return m;}";
+	//char sql[] = "int createTable(int a, char b,string c){int m = a + b;return a+c;}";
+	char sql[] = "int a=0; class b{ private: int c; public char b[10]; b(){return;}};";
+
 	char* pos = sql;
 	if(!dsCheck(p.parse(&h, pos, nullptr)))
 		LOG(ERROR) << getLocalStatus().toString();
@@ -130,5 +132,5 @@ int test3()
 #endif
 int main()
 {
-	test4();
+	test5();
 }

@@ -5,25 +5,19 @@
 #include "util/config.h"
 #include "util/status.h"
 #include "dataSource/dataSourceConf.h"
-#include "oracleConnect.h"
+#include "occiConnect.h"
 namespace DATA_SOURCE
 {
-	DLL_EXPORT oracleConnect::oracleConnect(config* conf) :m_env(nullptr), m_isScanIp(false)
+	DLL_EXPORT occiConnect::occiConnect(config* conf) :oracleConnectBase(conf), m_env(nullptr)
 	{
-		m_host = conf->get(SECTION, HOST);
-		m_port = conf->get(SECTION, PORT);
-		m_user = conf->get(SECTION, USER);
-		m_password = conf->get(SECTION, PASSWORD);
-		m_serviceName = conf->get(SECTION, SERVICE_NAME);
-		m_sid = conf->get(SECTION, SID);
 	}
 
-	DLL_EXPORT oracleConnect::~oracleConnect()
+	DLL_EXPORT occiConnect::~occiConnect()
 	{
 		if (m_env != nullptr)
 			delete m_env;
 	}
-	DLL_EXPORT DS oracleConnect::connect(oracle::occi::Connection*& conn, const std::string& sid, const std::string& serviceName)
+	DLL_EXPORT DS occiConnect::connect(oracle::occi::Connection*& conn, const std::string& sid, const std::string& serviceName)
 	{
 		conn = nullptr;
 		std::string errInfo;
@@ -44,7 +38,7 @@ namespace DATA_SOURCE
 			}
 			else
 			{
-				dsFailedAndLogIt(-1, "sid or service name must set in oracle datasource config", ERROR);
+				dsFailedAndLogIt(1, "sid or service name must set in oracle datasource config", ERROR);
 			}
 		}
 		netkvPair.append(")");
@@ -60,14 +54,14 @@ namespace DATA_SOURCE
 			{
 				LOG(ERROR) << "create connect to oracle " << netkvPair << " failed for:" << e.what();
 				if (!errorRecoverable(e.getErrorCode()))
-					dsFailedAndLogIt(-1, "create connect to oracle " << netkvPair << " failed for:" << e.what(), ERROR);
+					dsFailedAndLogIt(1, "create connect to oracle " << netkvPair << " failed for:" << e.what(), ERROR);
 				errInfo = e.what();
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 			}
 		}
-		dsFailedAndLogIt(-1, "create connect to oracle " << netkvPair << " failed for retry too many times, last error:" << errInfo, ERROR);
+		dsFailedAndLogIt(1, "create connect to oracle " << netkvPair << " failed for retry too many times, last error:" << errInfo, ERROR);
 	}
-	DLL_EXPORT void oracleConnect::closeStmt(oracle::occi::Connection* conn, oracle::occi::Statement*& stmt, oracle::occi::ResultSet*& rs)
+	DLL_EXPORT void occiConnect::closeStmt(oracle::occi::Connection* conn, oracle::occi::Statement*& stmt, oracle::occi::ResultSet*& rs)
 	{
 		if (rs != nullptr)
 		{
@@ -81,7 +75,7 @@ namespace DATA_SOURCE
 		}
 	}
 
-	DLL_EXPORT void oracleConnect::close(oracle::occi::Connection*& conn)
+	DLL_EXPORT void occiConnect::close(oracle::occi::Connection*& conn)
 	{
 		if (conn != nullptr)
 		{
@@ -90,18 +84,13 @@ namespace DATA_SOURCE
 		}
 	}
 
-	DLL_EXPORT void oracleConnect::close(oracle::occi::Connection*& conn, oracle::occi::Statement*& stmt, oracle::occi::ResultSet*& rs)
+	DLL_EXPORT void occiConnect::close(oracle::occi::Connection*& conn, oracle::occi::Statement*& stmt, oracle::occi::ResultSet*& rs)
 	{
 		closeStmt(conn, stmt, rs);
 		close(conn);
 	}
 
-	DLL_EXPORT bool oracleConnect::isRac()
-	{
-		return m_allNodes.size() > 1;
-	}
-
-	DLL_EXPORT DS oracleConnect::init()
+	DLL_EXPORT DS occiConnect::init()
 	{
 		oracle::occi::Connection* conn = nullptr;
 		oracle::occi::Statement* stmt = nullptr;
@@ -111,7 +100,7 @@ namespace DATA_SOURCE
 			m_env = oracle::occi::Environment::createEnvironment(oracle::occi::Environment::DEFAULT);
 			dsReturnIfFailed(connect(conn));
 			stmt = conn->createStatement();
-			oracle::occi::ResultSet* rs = stmt->executeQuery("select THREAD#, STATUS, ENABLED, INSTANCE from V$THREAD");
+			oracle::occi::ResultSet* rs = stmt->executeQuery(GET_THREAD_INFO_SQL);
 			if (rs == nullptr || !rs->next())
 			{
 				close(conn, stmt, rs);
@@ -145,40 +134,22 @@ namespace DATA_SOURCE
 		catch (oracle::occi::SQLException e)
 		{
 			close(conn, stmt, rs);
-			dsFailedAndLogIt(-1, "select data from V$THREAD failed for" << e.what(), ERROR);
+			dsFailedAndLogIt(1, "select data from V$THREAD failed for" << e.what(), ERROR);
 		}
 	}
 
-	DLL_EXPORT DS oracleConnect::connect(oracle::occi::Connection*& conn)
+	DLL_EXPORT DS occiConnect::connect(oracle::occi::Connection*& conn)
 	{
 		dsReturn(connect(conn, m_sid, m_serviceName));
 	}
 
-	DLL_EXPORT DS oracleConnect::connectByNodeId(int threadId, oracle::occi::Connection*& conn)
+	DLL_EXPORT DS occiConnect::connectByNodeId(int threadId, oracle::occi::Connection*& conn)
 	{
 		std::map<int, nodeInfo>::const_iterator iter = m_allNodes.find(threadId);
 		if (iter == m_allNodes.end())
-			dsFailedAndLogIt(-1, "threadId:" << threadId << " not exist", ERROR);
+			dsFailedAndLogIt(1, "threadId:" << threadId << " not exist", ERROR);
 		dsReturn(connect(conn, iter->second.sid, ""));
 	}
 
-	DLL_EXPORT bool oracleConnect::errorRecoverable(int errorCode)
-	{
-		switch (errorCode)
-		{
-		case 28:
-		case 106:
-		case 107:
-		case 115:
-		case 587:
-		case 1090:
-		case 1092:
-		case 1093:
-		case 1094:
-		case 17002:
-			return true;
-		default:
-			return false;
-		}
-	}
+
 }

@@ -179,6 +179,7 @@ namespace REPLICATOR {
 				return new spp::sparse_hash_map<uint32_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_INT64:
 			case META::COLUMN_TYPE::T_DATETIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 			case META::COLUMN_TYPE::T_TIME:
 				return new spp::sparse_hash_map<int64_t, blockListNode*>();
 			case META::COLUMN_TYPE::T_UINT64:
@@ -223,6 +224,7 @@ namespace REPLICATOR {
 			case META::COLUMN_TYPE::T_UINT64:
 			case META::COLUMN_TYPE::T_DATETIME:
 			case META::COLUMN_TYPE::T_TIMESTAMP:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 			case META::COLUMN_TYPE::T_TIME:
 				delete static_cast<spp::sparse_hash_map<uint64_t, blockListNode*>*>(bucket);
 				break;
@@ -314,6 +316,7 @@ namespace REPLICATOR {
 			case META::COLUMN_TYPE::T_DATETIME:
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			case META::COLUMN_TYPE::T_TIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 				FIXED_INSERT(uint64_t, v, blockNode, bucket, prev);
 				break;
 			case META::COLUMN_TYPE::T_YEAR:
@@ -378,6 +381,7 @@ namespace REPLICATOR {
 			case META::COLUMN_TYPE::T_DATETIME:
 			case META::COLUMN_TYPE::T_TIMESTAMP:
 			case META::COLUMN_TYPE::T_TIME:
+			case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ:
 				FIXED_ERASE(uint64_t, blockNode, bucket, empty);
 				break;
 			case META::COLUMN_TYPE::T_YEAR:
