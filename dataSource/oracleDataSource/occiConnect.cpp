@@ -50,7 +50,7 @@ namespace DATA_SOURCE
 				conn = m_env->createConnection(m_user.c_str(), m_password.c_str(), netkvPair.c_str());
 				dsOk();
 			}
-			catch (oracle::occi::SQLException e)
+			catch (oracle::occi::SQLException &e)
 			{
 				LOG(ERROR) << "create connect to oracle " << netkvPair << " failed for:" << e.what();
 				if (!errorRecoverable(e.getErrorCode()))
@@ -131,7 +131,7 @@ namespace DATA_SOURCE
 			}
 			dsOk();
 		}
-		catch (oracle::occi::SQLException e)
+		catch (oracle::occi::SQLException &e)
 		{
 			close(conn, stmt, rs);
 			dsFailedAndLogIt(1, "select data from V$THREAD failed for" << e.what(), ERROR);
@@ -151,5 +151,14 @@ namespace DATA_SOURCE
 		dsReturn(connect(conn, iter->second.sid, ""));
 	}
 
-
+	template<>
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, int argv)
+	{
+		stmt->setInt(idx, argv);
+	}
+	template<>
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, std::string& argv)
+	{
+		stmt->setString(idx, argv);
+	}
 }

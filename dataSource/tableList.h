@@ -25,6 +25,7 @@ namespace DATA_SOURCE
 			fragmentType type;
 			virtual bool match(const char*& str) = 0;
 			fragment(fragmentType t) :type(t) {}
+			virtual ~fragment(){}
 		};
 		struct strFragment : public fragment
 		{
@@ -156,7 +157,7 @@ namespace DATA_SOURCE
 		{
 			if (fragments != nullptr)
 			{
-				for (int i = 0; i < count; i++)
+				for (uint32_t i = 0; i < count; i++)
 				{
 					if (fragments[i] != nullptr)
 						delete fragments[i];
@@ -167,7 +168,7 @@ namespace DATA_SOURCE
 		bool match(const char* str) const
 		{
 			const char* pos = str;
-			for (int i = 0; i < count; i++)
+			for (uint32_t i = 0; i < count; i++)
 			{
 				if (!fragments[i]->match(pos))
 					return false;
@@ -375,12 +376,13 @@ namespace DATA_SOURCE
 				{
 					dsReturn(schemaInfo::loadAttr(iter));
 				}
+				dsOk();
 			}
 			DS load(jsonObject* json)
 			{
 				if (json->get(SCHEMA) != nullptr && json->get(TABLE) != nullptr)
 					dsFailedAndLogIt(1, "db:" << name << " can not have both " << SCHEMA << " and " << TABLE, ERROR);
-				for (jsonObjectMap::iterator iter = json->m_values.begin(); iter != json->m_values.end(); iter++)
+				for (jsonObjectMap::const_iterator iter = json->m_values.begin(); iter != json->m_values.end(); iter++)
 					dsReturnIfFailed(loadAttr(iter));
 				dsOk();
 			}

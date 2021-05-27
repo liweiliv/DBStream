@@ -13,7 +13,7 @@
 #include "meta/metaDataCollection.h"
 #include "memory/ringBuffer.h"
 #include "dataSource/oracleDataSource/ociConnect.h"
-#include "dataSource/oracleDataSource/oracleMetadataCollection.h"
+#include "dataSource/oracleDataSource/oracleMetaDataCollection.h"
 #include "XStreamRecord.h"
 namespace DATA_SOURCE
 {
@@ -82,6 +82,7 @@ namespace DATA_SOURCE
 				if (timezoneOffset[0] == '-')
 					m_dbTimezoneOffset = -m_dbTimezoneOffset;
 			} while (OCIStmtFetch(m_currentConn->stmtp, m_currentConn->errp, 1, OCI_FETCH_NEXT, OCI_DEFAULT) == OCI_SUCCESS);
+			dsOk();
 		}
 		DS readLcr()
 		{
@@ -103,7 +104,7 @@ namespace DATA_SOURCE
 					LOG(WARNING) << (const char*)m_lcrHeader.cmdType << "," << (const char*)m_lcrHeader.txid << "," << (const char*)m_lcrHeader.srcDbName << "," << (const char*)m_lcrHeader.position;
 					if (lcrType == OCI_LCR_XDDL)
 					{
-						readDDLInfo(lcr);
+						dsReturnIfFailedWithOp(readDDLInfo(lcr), OCILCRFree(m_currentConn->svcp, m_currentConn->errp, lcr, OCI_DEFAULT));
 					}
 					else if (lcrType == OCI_LCR_XROW)
 					{
@@ -134,7 +135,15 @@ namespace DATA_SOURCE
 					{
 						LOG(WARNING) << "unkown lcr type:" << lcrType;
 					}
-					OCILCRFree(m_currentConn->svcp, m_currentConn->errp, lcr, OCI_DEFAULT);
+					/*
+					if(!OCI_SUCCESS == OCILCRFree(m_currentConn->svcp, m_currentConn->errp, lcr, OCI_DEFAULT))
+					{
+						int32_t errcode;
+						uint8_t errBuf[512] = { 0 };
+						OCIErrorGet(m_currentConn->errp, (ub4)1, (text*)NULL, &errcode, errBuf, (ub4)sizeof(errBuf), (ub4)OCI_HTYPE_ERROR);
+						dsFailedAndLogIt(1, "call OCIXStreamOutLCRReceive failed for " << errcode << "," << (char*)errBuf, ERROR);
+					}
+					*/
 				}
 			}
 			if (status != OCI_SUCCESS)
@@ -228,7 +237,7 @@ namespace DATA_SOURCE
 			columnValuesInfo* column = columnValueType == OCI_LCR_ROW_COLVAL_NEW ? &m_newColumns : &m_oldColumns;
 			if (OCI_SUCCESS != OCILCRRowColumnInfoGet(m_currentConn->svcp, m_currentConn->errp, columnValueType,
 				&column->columnNumber, column->columnNames, column->columnNamelengths, column->columnDataTypes, column->columnValues,
-				column->columnIndicators, column->columnValueLengths, column->columnCharsets, column->columnFlags, column->columnCharsetIds, lcr, columnCount, OCI_DEFAULT))
+				column->columnIndicators, column->columnValueLengths, column->columnCharsets, column->columnFlags, column->columnCharsetIds, lcr, MAX_COLUMN_COUNT, OCI_DEFAULT))
 			{
 				int32_t errcode;
 				uint8_t errBuf[512] = { 0 };
@@ -357,6 +366,7 @@ namespace DATA_SOURCE
 		uint64_t getTimestamp()
 		{
 			tm t;
+			memset(&t, 0, sizeof(t));
 			t.tm_year = m_lcrHeader.srcTime.OCIDateYYYY;
 			t.tm_mon = m_lcrHeader.srcTime.OCIDateMM;
 			t.tm_mday = m_lcrHeader.srcTime.OCIDateDD;

@@ -1,4 +1,6 @@
 #pragma once
+#include <thread>
+#include <chrono>
 #include <initializer_list>
 #include "oracleConnectBase.h"
 #include "occi.h"
@@ -41,6 +43,7 @@ namespace DATA_SOURCE
 		{
 			abort();//dot not direct use
 		}
+		/*
 		template<>
 		static void setParament(oracle::occi::Statement* stmt, int idx, int argv)
 		{
@@ -51,7 +54,7 @@ namespace DATA_SOURCE
 		{
 			stmt->setString(idx, argv);
 		}
-
+		*/
 		template<typename T>
 		static DLL_EXPORT DS query(occiConnect* connector, oracle::occi::Connection*& conn, bool& stopRetryFlag, int fetchSize, 
 			std::function<DS(occiConnect*, oracle::occi::Connection*&)> reConnectFunc, std::function<DS(oracle::occi::ResultSet*)> func,
@@ -83,14 +86,14 @@ namespace DATA_SOURCE
 					connector->closeStmt(conn, stmt, rs);
 					dsReturn(s);
 				}
-				catch (oracle::occi::SQLException e)
+				catch (oracle::occi::SQLException &e)
 				{
 					exp = e;
 					if (errorRecoverable(e.getErrorCode()))
 					{
 						LOG(WARNING) << "excute query failed for " << e.what();
 						connector->close(conn, stmt, rs);
-						for (int c = 0; !stopRetryFlag && c < i < 5 ? i : i * i; c++)
+						for (int c = 0; !stopRetryFlag && c < (i < 5 ? i : i * i); c++)
 							std::this_thread::sleep_for(std::chrono::milliseconds(100));
 						dsReturnIfFailed(reConnectFunc(connector, conn));
 					}
@@ -138,14 +141,14 @@ namespace DATA_SOURCE
 					connector->closeStmt(conn, stmt, rs);
 					dsReturn(s);
 				}
-				catch (oracle::occi::SQLException e)
+				catch (oracle::occi::SQLException &e)
 				{
 					exp = e;
 					if (errorRecoverable(e.getErrorCode()))
 					{
 						LOG(WARNING) << "excute query failed for " << e.what();
 						connector->close(conn, stmt, rs);
-						for (int c = 0; !stopRetryFlag && c < i < 5 ? i : i * i; c++)
+						for (int c = 0; !stopRetryFlag && c < (i < 5 ? i : i * i); c++)
 							std::this_thread::sleep_for(std::chrono::milliseconds(100));
 						dsReturnIfFailed(reConnectFunc(connector, conn));
 					}
@@ -161,4 +164,17 @@ namespace DATA_SOURCE
 			dsFailedAndLogIt(1, "excute query failed for " << exp.what() << ", sql:" << sql, ERROR);
 		}
 	};
+	/*
+	template<>
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, int argv)
+	{
+		stmt->setInt(idx, argv);
+	}
+	template<>
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, std::string& argv)
+	{
+		stmt->setString(idx, argv);
+	}
+	*/
+
 }

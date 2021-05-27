@@ -8,13 +8,10 @@ namespace DATA_SOURCE
 		std::string indexName;
 		META::unionKeyMeta* keyMeta;
 		indexInfo() :indexObjectId(0), tableObjectId(0), keyMeta(nullptr) {}
-		indexInfo(const indexInfo& i) :indexObjectId(i.indexObjectId), tableObjectId(i.tableObjectId), indexName(i.indexName), keyMeta(i.keyMeta) {}
-		indexInfo& operator=(const indexInfo& i)
+		~indexInfo()
 		{
-			indexObjectId = i.indexObjectId;
-			tableObjectId = i.tableObjectId;
-			indexName = i.indexName;
-			keyMeta = i.keyMeta;
+			if(keyMeta != nullptr)
+				free(keyMeta);
 		}
 	};
 
@@ -217,7 +214,7 @@ namespace DATA_SOURCE
 		col->m_segmentStartId = rs->getInt(3);
 		col->m_size = rs->getInt(4);
 		col->m_columnName = rs->getString(5);
-		int type = rs->getInt(7);
+		col->m_srcColumnType = rs->getInt(6);
 		col->m_precision = rs->getInt(8);
 		col->m_decimals = rs->getInt(9);
 		if (rs->getInt(10) == 1)
@@ -231,7 +228,7 @@ namespace DATA_SOURCE
 			strcpy((char*)col->m_default.m_defaultValue, defaultValue.c_str());
 		}
 		*/
-		int charsetId = rs->getInt(11);
+		//int charsetId = rs->getInt(11);
 		int charsetForm = rs->getInt(12);
 		col->m_columnType = translateType(col);
 		setCharset(col, charsetForm);
@@ -261,7 +258,7 @@ namespace DATA_SOURCE
 	DS oracleMetaDataCollection::getColumns(std::map<uint64_t, std::string>& tables, userColumnsList* userColumns)
 	{
 		std::map<uint64_t, std::string>::iterator iter = tables.begin();
-		for (int i = 0; i <= tables.size() / 512; i++)
+		for (uint32_t i = 0; i <= tables.size() / 512; i++)
 		{
 			String sql = SELECT_COLUMNS;
 			sql.append(" IN (");
@@ -380,6 +377,7 @@ namespace DATA_SOURCE
 			m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::tableMeta>*>(titer->first, tableInfo));
 		}
 		clearUserColumnsList(&userColumns);
+		dsOk();
 	}
 
 	DS oracleMetaDataCollection::initPartitons(std::string& owner, std::map<std::string, std::list<uint64_t>*>& partitionList)
@@ -399,6 +397,7 @@ namespace DATA_SOURCE
 				m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::tableMeta>*>(id, titer->second));
 			}
 		}
+		dsOk();
 	}
 
 	void clearPartitionsList(std::map<std::string, std::list<uint64_t>*>& partitionList)
@@ -411,11 +410,7 @@ namespace DATA_SOURCE
 	void clearIndexList(std::map<uint64_t, indexInfo*>& neededIndexs)
 	{
 		for (auto iter : neededIndexs)
-		{
-			if (iter.second->keyMeta != nullptr)
-				delete iter.second->keyMeta;
 			delete iter.second;
-		}
 		neededIndexs.clear();
 	}
 
@@ -423,7 +418,7 @@ namespace DATA_SOURCE
 		std::map<uint64_t, indexInfo*>& neededIndexs, std::map<uint64_t, std::list<indexInfo*>>& tableIndexInfo)
 	{
 		std::map<uint64_t, std::string>::const_iterator iter = indexList.begin();
-		for (int i = 0; i <= indexList.size() / 512; i++)
+		for (uint32_t i = 0; i <= indexList.size() / 512; i++)
 		{
 			String sql = SELECT_INDEXS;
 			sql.append(" IN (");
@@ -479,7 +474,7 @@ namespace DATA_SOURCE
 		std::map<uint64_t, indexInfo*>& neededIndexs)
 	{
 		std::map<uint64_t, indexInfo*>::iterator iter = neededIndexs.begin();
-		for (int i = 0; i <= neededIndexs.size() / 512; i++)
+		for (uint32_t i = 0; i <= neededIndexs.size() / 512; i++)
 		{
 			String sql = SELECT_INDEX_COLS;
 			sql.append(" IN (");
