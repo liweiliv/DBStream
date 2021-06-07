@@ -184,6 +184,9 @@ namespace DATA_SOURCE
 				FindClose(hFind);
 #endif
 			}
+#ifdef OS_LINUX
+			closedir(dir);
+#endif
 		if (fileIds.empty())
 		{
 			if (m_rotateBySize || m_rotateByTime)
