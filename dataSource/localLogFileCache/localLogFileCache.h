@@ -125,7 +125,7 @@ namespace DATA_SOURCE
 		}
 	public:
 		localLogFileCache(config* conf) :m_current(nullptr), m_begin(nullptr), m_firstUnFlushed(nullptr), m_firstNotNeedPurged(nullptr),
-			m_baseDir(conf->get(SECTION, LOCAL_LOG_FILE_DIR, ".\\localLog")),
+			m_baseDir(conf->get(SECTION, LOCAL_LOG_FILE_DIR, "./localLog")),
 			m_maxFileSize(conf->getLong(SECTION, LOCAL_LOG_FILE_SIZE, 0, 0, 4LL * 1024 * 1024)), m_rotateBySize(m_maxFileSize > 0),
 			m_maxFileTime(conf->getLong(SECTION, LOCAL_LOG_FILE_ROLL_TIME, 0, 0, 3600 * 24 * 356) * 1000), m_rotateByTime(m_maxFileTime > 0), m_currentFileCreateTime(0),
 			m_compressBuf(nullptr), m_compressBufSize(0),
@@ -184,6 +184,9 @@ namespace DATA_SOURCE
 				FindClose(hFind);
 #endif
 			}
+#ifdef OS_LINUX
+			closedir(dir);
+#endif
 		if (fileIds.empty())
 		{
 			if (m_rotateBySize || m_rotateByTime)

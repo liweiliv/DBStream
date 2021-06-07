@@ -27,7 +27,8 @@ namespace DATA_SOURCE
 
 		volatile bool m_running;
 	public:
-		memoryInfo(uint32_t defaultShardSize, uint64_t maxMem) :m_defaultShardSize(defaultShardSize), m_maxMem(maxMem), m_largeDataSize(maxMem / 4), m_running(false)
+		memoryInfo(uint32_t defaultShardSize, uint64_t maxMem) :m_defaultShardSize(defaultShardSize), m_maxMem(maxMem), m_largeDataSize(maxMem / 4), m_highFlow((maxMem *3) / 4), m_veryHighFlow((maxMem *9) / 10),
+	       		m_largeDataCount(0), m_largeDataMemused(0), m_memused(0), m_running(false)
 		{
 		}
 		bool isRunning()

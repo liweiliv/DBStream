@@ -90,16 +90,16 @@ namespace DATA_SOURCE
 		logFileShardMetaInfo metaInfo;
 
 		char* mem;
-		logFileShard(memoryInfo* memInfo, uint32_t shardId, uint64_t seqNo, uint32_t volumn = DEFAULT_SHARED_SIZE) :begin(nullptr), end(nullptr), compress(true), flushed(false), memInfo(memInfo),
-			metaInfo(shardId, seqNo), next(nullptr), volumn(volumn), beginCheckpointSize(0), finished(false), mem(nullptr)
+		logFileShard(memoryInfo* memInfo, uint32_t shardId, uint64_t seqNo, uint32_t volumn = DEFAULT_SHARED_SIZE) :begin(nullptr), end(nullptr), compress(true), flushed(false), next(nullptr),
+			volumn(volumn), beginCheckpointSize(0), finished(false), memInfo(memInfo),metaInfo(shardId, seqNo), mem(nullptr)
 		{
 			memInfo->addMemSize(sizeof(logFileShard));
 			if (volumn > 0)
 				mem = memInfo->alloc(volumn);
 		}
 
-		logFileShard(memoryInfo* memInfo, logFileShardMetaInfo* meta) :begin(nullptr), end(nullptr), compress(true), flushed(true), memInfo(memInfo),
-			next(nullptr), volumn(0), beginCheckpointSize(0), finished(true), mem(nullptr)
+		logFileShard(memoryInfo* memInfo, logFileShardMetaInfo* meta) :begin(nullptr), end(nullptr), compress(true), flushed(true),next(nullptr),
+			 volumn(0), beginCheckpointSize(0), finished(true), memInfo(memInfo), mem(nullptr)
 		{
 			memInfo->addMemSize(sizeof(logFileShard));
 			memcpy(&metaInfo, meta, sizeof(metaInfo));
@@ -532,10 +532,10 @@ namespace DATA_SOURCE
 				if (m_first->next == nullptr)
 				{
 					if (!m_metaInfo.getFlag(META_FLAG::FINISHED))
-						return;
+						break;
 					if (m_first->readStatus.try_lock())
 					{
-						if (m_first->next = nullptr)
+						if (m_first->next == nullptr)
 						{
 							delete m_first;
 							m_first = nullptr;
