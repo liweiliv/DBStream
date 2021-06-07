@@ -348,10 +348,14 @@ namespace META {
 				int32_t year : 18;
 			};
 		};
+		dateTime() {}
+		dateTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
+		{
+			set(year, month, day, hour, mi, sec, usec);
+		}
 		static inline int64_t createDate(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
 		{
-			dateTime d;
-			d.set(year, month, day, hour, mi, sec, usec);
+			dateTime d(year, month, day, hour, mi, sec, usec);
 			return d.time;
 		}
 		inline void set(int32_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _mi, uint8_t _sec, uint32_t _usec)

@@ -403,6 +403,7 @@ namespace META {
 
 	void tableMeta::buildColumnOffsetList()
 	{
+		m_colsByName.clear();
 		m_fixedColumnCount = m_varColumnCount = 0;
 		for (uint16_t i = 0; i < m_columnsCount; i++)
 		{
@@ -410,6 +411,7 @@ namespace META {
 				m_fixedColumnCount++;
 			else
 				m_varColumnCount++;
+			m_colsByName.insert(std::pair<const char*, columnMeta*>(m_columns[i].m_columnName.c_str(), &m_columns[i]));
 		}
 		if (m_realIndexInRowFormat)
 			delete[] m_realIndexInRowFormat;

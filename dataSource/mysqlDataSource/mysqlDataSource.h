@@ -27,18 +27,14 @@ namespace DATA_SOURCE
 		void readThread();
 		DATABASE_INCREASE::record* syncRead();
 		DATABASE_INCREASE::record* asyncRead();
-		static void asyncReadThread(mysqlDataSource* dataSource)
-		{
-			dataSource->readThread();
-		}
-		std::thread m_thread;
+		std::thread m_readerThread;
 	public:
 		mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
-		virtual bool start();
-		virtual bool stop();
+		virtual DS start();
+		virtual DS stop();
 		virtual bool running() const;
 		virtual ~mysqlDataSource();
-		virtual DATABASE_INCREASE::record* read();
+		virtual DS read(DATABASE_INCREASE::record*&);
 		virtual const char* dataSourceName() const;
 	};
 }

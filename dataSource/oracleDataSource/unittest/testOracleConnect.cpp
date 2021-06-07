@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include "dataSource/oracleDataSource/occiConnect.h"
 #include "dataSource/oracleDataSource/ociConnect.h"
-#include "dataSource/oracleDataSource/xstream/oracleXStreamLogReader.h"
+#include "dataSource/oracleDataSource/xstream/OracleXStreamDataSource.h"
 #include "dataSource/oracleDataSource/oracleMetaDataCollection.h"
 int testOcci(config& conf)
 {
@@ -91,18 +91,18 @@ int testXstream(config& conf)
 		return -1;
 	}
 	ringBuffer buf;
-	DATA_SOURCE::oracleXStreamLogReader reader(&conn, &im, "XOUT1", &buf);
+	DATA_SOURCE::oracleXStreamLogReader reader(&conf,nullptr,nullptr);
 	if (!dsCheck(reader.init()))
 	{
 		LOG(ERROR)<<getLocalStatus().toString();
 	}
-	if (!dsCheck(reader.attach()))
+	if (!dsCheck(reader.start()))
 	{
 		LOG(ERROR) << getLocalStatus().toString();
 	}
-	if (!dsCheck(reader.readLcr()))
+	while (reader.running())
 	{
-		LOG(ERROR) << getLocalStatus().toString();
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 	return 0;
 }

@@ -1,0 +1,7 @@
+ADD_EXECUTABLE(testLocalLogFile  testLocalLogFile.cpp)
+TARGET_LINK_LIBRARIES(testLocalLogFile util dataSource  ${GLOG})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testLocalLogFile pthread)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+target_include_directories(testLocalLogFile PUBLIC)
+INSTALL(TARGETS testLocalLogFile RUNTIME DESTINATION ${UT_EXECUTABLE_OUTPUT_PATH})

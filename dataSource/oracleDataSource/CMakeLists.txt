@@ -42,7 +42,7 @@ add_library(oracleDataSource SHARED ${oracleDataSourceDir} ${logminerSourceDir} 
 target_include_directories(oracleDataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 target_include_directories(oracleDataSource PRIVATE ${ORACLE_INCLUDE_PATH})
 message(STATUS "pwd: ${ORACLE_INCLUDE_PATH}")
-TARGET_LINK_LIBRARIES(oracleDataSource util thread store meta ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(oracleDataSource util dataSource thread store meta ${GLOG} ${GFLAGS})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(oracleDataSource pthread ${ORACLE_CLIENT_OCIEI} ${ORACLE_CLIENT_CLNTSH} ${ORACLE_CLIENT_NNZ21} ${ORACLE_CLIENT_OCCI})
 ELSEIF (CMAKE_SYSTEM_NAME MATCHES "Windows")

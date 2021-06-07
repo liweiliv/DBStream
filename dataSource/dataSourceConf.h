@@ -27,6 +27,23 @@ namespace DATA_SOURCE
 
 	static constexpr auto START_TIMESTAMP = "startTimestamp";
 	static constexpr auto START_LOGPOSITION = "startLogPosition";
+
+	static constexpr auto ASYNC_READ = "asyncRead";
+	static constexpr auto READER_AND_PARSER_INDEPENDET = "readerAndParserIndependent";
+
+	static constexpr auto MAX_LOCAL_CACHE_MEM = "maxLocalCacheMem";
+	static constexpr auto DEFAULT_LOCAL_LOG_SHARD_SIZE = "defaultLocalLogShardSize";
+
+
+	static constexpr auto LOCAL_LOG_FILE_DIR = "localLogDir";
+
+	static constexpr auto LOCAL_LOG_FILE_SIZE = "localLogFileSize";
+
+	static constexpr auto LOCAL_LOG_FILE_ROLL_TIME = "localLogFileRollTime";
+
+	constexpr static auto DEFAULT_MAX_LOCAL_CACHE_MEM = 1024 * 1024 * 128;
+	constexpr static auto DEFAULT_SHARED_SIZE = 2 * 1024 * 1024;
+
 }
 
 

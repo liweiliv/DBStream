@@ -18,6 +18,8 @@
 #include "util/winDll.h"
 #include "util/nameCompare.h"
 #include "util/status.h"
+#include "util/sparsepp/spp.h"
+#include "util/unorderMapUtil.h"
 namespace DATABASE_INCREASE {
 	struct TableMetaMessage;
 }
@@ -246,7 +248,7 @@ namespace META {
 		}
 		std::string toString()const;
 	};
-
+	typedef spp::sparse_hash_map<const char*, columnMeta*, StrHash, StrCompare> tableColMap;
 	struct DLL_EXPORT tableMeta
 	{
 		std::string  m_dbName;
@@ -276,6 +278,7 @@ namespace META {
 		uint16_t* m_unusedColumnIds;
 		uint16_t m_unusedColumnIdCount;
 		UTIL::nameCompare m_nameCompare;
+		tableColMap m_colsByName;
 		void* userData;
 		constexpr static inline uint16_t tableVersion(uint64_t tableIDInfo)
 		{
@@ -304,13 +307,24 @@ namespace META {
 
 		inline const columnMeta* getColumn(const char* columnName) const
 		{
-			for (uint32_t i = 0; i < m_columnsCount; i++)
+			if (m_columnsCount < 5)
 			{
-				if (m_nameCompare.compare(m_columns[i].m_columnName.c_str(), columnName) == 0)
-					return &m_columns[i];
+				for (uint32_t i = 0; i < m_columnsCount; i++)
+				{
+					if (m_nameCompare.compare(m_columns[i].m_columnName.c_str(), columnName) == 0)
+						return &m_columns[i];
+				}
+				return nullptr;
 			}
-			return nullptr;
+			else
+			{
+				tableColMap::const_iterator iter = m_colsByName.find(columnName);
+				if (iter == m_colsByName.end())
+					return nullptr;
+				return iter->second;
+			}
 		}
+
 		inline int getUniqueKeyId(const char* UniqueKeyname)const
 		{
 			for (uint16_t i = 0; i < m_uniqueKeysCount; i++)

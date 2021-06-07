@@ -1,6 +1,7 @@
 #datasource
 aux_source_directory(. dataSourceDir)
-add_library(dataSource SHARED ${dataSourceDir})
+aux_source_directory(./localLogFileCache logFile)
+add_library(dataSource SHARED ${dataSourceDir} ${logFile})
 TARGET_LINK_LIBRARIES(dataSource  util store meta ${GLOG} ${GFLAGS})
 target_include_directories(dataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -10,3 +11,4 @@ message(STATUS "dir: ${CMAKE_INSTALL_LIBDIR}")
 INSTALL(TARGETS dataSource LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ADD_SUBDIRECTORY(mysqlDataSource)
 ADD_SUBDIRECTORY(oracleDataSource)
+ADD_SUBDIRECTORY(localLogFileCache/unittest)

@@ -32,17 +32,41 @@ public:
 	DS code;
 	std::string errMessage;
 	std::vector<stackInfo> stacks;
-	DLL_EXPORT dsStatus() :code(0) {}
-	DLL_EXPORT dsStatus(int code) :code(code) {}
-	DLL_EXPORT dsStatus(int code, const std::string& errMessage) :code(code), errMessage(errMessage) {}
-	DLL_EXPORT dsStatus(int code, const char* errMessage) :code(code), errMessage(errMessage) {}
-	DLL_EXPORT dsStatus(const dsStatus& status) :code(status.code), errMessage(status.errMessage), stacks(status.stacks) {}
-	DLL_EXPORT virtual ~dsStatus() {}
+	dsStatus* cause;
+	DLL_EXPORT dsStatus() :code(0), cause(nullptr) {}
+	DLL_EXPORT dsStatus(int code) :code(code), cause(nullptr) {}
+	DLL_EXPORT dsStatus(int code, const std::string& errMessage) :code(code), errMessage(errMessage), cause(nullptr) {}
+	DLL_EXPORT dsStatus(int code, const char* errMessage) :code(code), errMessage(errMessage), cause(nullptr) {}
+	DLL_EXPORT dsStatus(const dsStatus& status) :code(status.code), errMessage(status.errMessage), stacks(status.stacks), cause(nullptr)
+	{
+		if (status.cause != nullptr)
+			cause = new dsStatus(*status.cause);
+	}
+	DLL_EXPORT virtual ~dsStatus()
+	{
+		if (cause != nullptr)
+			delete cause;
+	}
 	DLL_EXPORT void clear()
 	{
 		code = 0;
 		errMessage.clear();
 		stacks.clear();
+		if (cause != nullptr)
+		{
+			delete cause;
+			cause = nullptr;
+		}
+	}
+	void setCause(const dsStatus* s)
+	{
+		if (s == nullptr)
+			return;
+		if (cause != nullptr)
+		{
+			delete cause;
+		}
+		cause = new dsStatus(*s);
 	}
 	DLL_EXPORT void addStack(const stackInfo &s)
 	{
@@ -59,6 +83,10 @@ public:
 			if (!iter->errInfo.empty())
 				s.append("\t").append(iter->errInfo);
 			s.append("\n");
+		}
+		if (cause != nullptr)
+		{
+			s.append("caused by \n").append(cause->toString());
 		}
 		return s;
 	}
@@ -103,7 +131,13 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 
 #define dsFailed(code,errInfo)  do{String __s;__s = __s<<errInfo;setFailed((code),(__s),currentStack(__s));return getLocalStatus().getCode();}while(0)
 
+#define dsFailedWithCause(code,errInfo, cause)  do{String __s;__s = __s<<errInfo;setFailed((code),(__s),currentStack(__s));getLocalStatus().setCause(cause);return getLocalStatus().getCode();}while(0)
+
+
 #define dsFailedAndLogIt(code,errInfo,logType)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));return getLocalStatus().getCode();}while(0)
+
+#define dsFailedAndLogItWithCause(code,errInfo,logType,cause)  do{String __s;__s = __s<<errInfo;LOG(logType)<<__s;setFailed((code),__s,currentStack(__s));getLocalStatus().setCause(cause);return getLocalStatus().getCode();}while(0)
+
 
 #define resetStatus() do{if(&getLocalStatus() != &DS_OK ){getLocalStatus().clear();setLocalStatus(DS_OK);}}while(0);
 

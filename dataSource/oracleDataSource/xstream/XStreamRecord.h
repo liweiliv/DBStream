@@ -146,4 +146,18 @@ namespace DATA_SOURCE
 			memset(&columnName, 0, sizeof(chunk));
 		}
 	};
+
+	struct XStreamRecord
+	{
+		void* lcr;
+		DATABASE_INCREASE::RecordType recordType;
+		lcrHeader m_lcrHeader;
+		columnValuesInfo m_newColumns;
+		columnValuesInfo m_oldColumns;
+		ddlInfo m_ddlInfo;
+		lcrAttributes m_attrs;
+		chunk m_chunkHead;
+		chunk* m_lastChunk;
+		int m_chunkCount;
+	};
 }

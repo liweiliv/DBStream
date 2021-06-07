@@ -63,14 +63,18 @@ namespace DATA_SOURCE {
 	}
 	void mysqlDataSource::readThread()
 	{
-		BinlogEventParser::ParseStatus parseStatus;
+		DS parseStatus;
 		while (likely(m_running))
 		{
 			const char* logEvent;
 			size_t size;
 			if(unlikely(m_reader->readBinlog(logEvent, size)!= mysqlBinlogReader::READ_OK|| logEvent == nullptr))
 				goto FAILED;
-			parseStatus = m_parser->parser(logEvent, size);
+			if (!dsCheck(parseStatus = m_parser->parser(logEvent, size)))
+			{
+				m_errStatus = getLocalStatus();
+				goto FAILED;
+			}
 			switch (parseStatus)
 			{
 			case BinlogEventParser::ParseStatus::OK:
@@ -178,15 +182,11 @@ namespace DATA_SOURCE {
 	{
 		return NAME;
 	}
-	bool mysqlDataSource::start()
+	DS mysqlDataSource::start()
 	{
 		std::string rtv = m_connector->initByConf();
 		if (!rtv.empty())
-		{
-			LOG(ERROR) << rtv;
-			m_lastError = std::string("init connect failed for").append(rtv);
-			return false;
-		}
+			dsFailedAndLogIt(1, "mysqlDataSource init from conf failed for:" << rtv, ERROR);
 		uint64_t timestamp = 0, logOffset = 0;
 		if (!m_store->checkpoint(timestamp, logOffset))
 		{
@@ -203,57 +203,51 @@ namespace DATA_SOURCE {
 		{
 			if (mysqlBinlogReader::READ_OK != m_reader->seekBinlogByCheckpoint(fileId(logOffset), offsetInFile(logOffset)))
 			{
-				LOG(ERROR) << "mysql datasource init from binlog position:" << offsetInFile(logOffset) << "@" << fileId(logOffset) << " failed";
-				return false;
+				dsFailedAndLogIt(1, "mysql datasource init from binlog position:" << offsetInFile(logOffset) << "@" << fileId(logOffset) << " failed", ERROR);
 			}
 		}
 		else if (timestamp > 0)
 		{
 			if (mysqlBinlogReader::READ_OK != m_reader->seekBinlogByTimestamp(timestamp))
 			{
-				LOG(ERROR) << "mysql datasource init from timestamp:" << timestamp << " failed";
-				return false;
+				dsFailedAndLogIt(1, "mysql datasource init from timestamp:" << timestamp << " failed", ERROR);
 			}
 		}
 		else
 		{
-			LOG(ERROR) << "can not find nether "<< START_TIMESTAMP<<" or "<< START_LOGPOSITION<<" in config";
-			return false;
+			dsFailedAndLogIt(1, "can not find nether " << START_TIMESTAMP << " or " << START_LOGPOSITION << " in config", ERROR);
 		}
 		initMetaData imd(m_connector);
 		std::vector<std::string> databases;
 		if (0 != imd.getAllUserDatabases(databases))
 		{
-			LOG(ERROR) << "get database list from mysql server failed";
-			return false;
+			dsFailedAndLogIt(1, "get database list from mysql server failed", ERROR);
 		}
 		if (0 != imd.loadMeta(m_metaDataCollection, databases))
 		{
-			LOG(ERROR) << "load meta from mysql server failed";
-			return false;
+			dsFailedAndLogIt(1, "load meta from mysql server failed", ERROR);
 		}
 		m_metaDataCollection->print();
 		m_running = true;
 		if (m_conf->get(SECTION, ASYNC, "false").compare("true") == 0)
 		{
 			m_async = true;
-			m_thread = std::thread(asyncReadThread, this);
+			m_readerThread = std::thread(asyncReadThread, this);
 		}
 		else
 			m_async = false;
 		if(0 != m_parser->init(mysqlFuncLib,mysqlParserTree))
 		{
-			LOG(ERROR) << "init binlog parser failed";
-			return false;
+			dsFailedAndLogIt(1, "init binlog parser failed", ERROR);
 		}
-		return true;
+		dsOk();
 	}
-	bool mysqlDataSource::stop()
+	DS mysqlDataSource::stop()
 	{
 		m_running = false;
 		if (m_async)
-			m_thread.join();
-		return true;
+			m_readerThread.join();
+		dsOk();
 	}
 	bool mysqlDataSource::running()const
 	{

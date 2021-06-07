@@ -1,5 +1,5 @@
 ADD_EXECUTABLE(testOracleConect  testOracleConnect.cpp)
-TARGET_LINK_LIBRARIES(testOracleConect util oracleDataSource ${GLOG})
+TARGET_LINK_LIBRARIES(testOracleConect util dataSource oracleDataSource ${GLOG})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	TARGET_LINK_LIBRARIES(testOracleConect pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

@@ -4,6 +4,8 @@
 #include "mysqlConnector.h"
 #include "glog/logging.h"
 #include "util/file.h"
+#include "util/status.h"
+#include "util/String.h"
 #include "BinaryLogEvent.h"
 class ringBuffer;
 class fileList;
@@ -22,7 +24,8 @@ namespace DATA_SOURCE
 			READ_FAILED,
 			READ_FAILED_NEED_RETRY,
 			READ_END_OF_LOCAL_FILE,
-			READ_FILE_NOT_EXIST
+			READ_FILE_NOT_EXIST,
+			LOCAL_FILE_DAMAGED
 		};
 	private:
 		mysqlConnector* m_mysqlConnector;
@@ -36,7 +39,7 @@ namespace DATA_SOURCE
 		fileList* m_localBinlogList;
 		ReadBinlogFile* m_localFile;
 
-		std::string m_serverVersion;
+		String m_serverVersion;
 		formatEvent* m_descriptionEvent;
 		uint32_t  m_currFileID;
 		uint64_t m_currentPos;
@@ -44,30 +47,30 @@ namespace DATA_SOURCE
 		int m_currentFileRotateCount;
 
 		bool m_isTypeNeedParse[ENUM_END_EVENT];
-		int initFmtDescEvent();
-		int checkMasterVesion();
-		int connectAndDumpBinlog(const char* fileName, uint64_t offset);
-		int dumpLocalBinlog(const char* fileName, uint64_t offset);
-		int readLocalBinlog(const char *& binlogEvent,size_t &size);
-		int readRemoteBinlog(const char * &binlogEvent,size_t &size);
-		int readBinlogWrap(const char*& logEvent, size_t& size);
-		int seekBinlogInRemote(uint32_t fileID, uint64_t position);
-		int seekBinlogInLocal(uint32_t fileID, uint64_t position);
-		int getBinlogFileList(std::map<uint64_t, fileInfo>& files, bool localORRemote);
-		int getFirstLogeventTimestamp(const char* file, uint64_t& timestamp, bool localORRemote = false);
-		int seekBinlogFile(const std::map<uint64_t, fileInfo>& binaryLogs, uint64_t timestamp, bool strick, bool localORRemmote);
-		int seekBinlogInFile(uint64_t timestamp, const char* fileName, bool localORRemmote = false, bool strick = false);
-		int dumpBinlog(const char* file, uint64_t offset, bool localORRemote = false);
+		DS initFmtDescEvent();
+		DS checkMasterVesion();
+		DS connectAndDumpBinlog(const char* fileName, uint64_t offset);
+		DS dumpLocalBinlog(const char* fileName, uint64_t offset);
+		DS readLocalBinlog(const char *& binlogEvent,size_t &size);
+		DS readRemoteBinlog(const char * &binlogEvent,size_t &size);
+		DS readBinlogWrap(const char*& logEvent, size_t& size);
+		DS seekBinlogInRemote(uint32_t fileID, uint64_t position);
+		DS seekBinlogInLocal(uint32_t fileID, uint64_t position);
+		DS getBinlogFileList(std::map<uint64_t, fileInfo>& files, bool localORRemote);
+		DS getFirstLogeventTimestamp(const char* file, uint64_t& timestamp, bool localORRemote = false);
+		DS seekBinlogFile(const std::map<uint64_t, fileInfo>& binaryLogs, uint64_t timestamp, bool strick, bool localORRemmote);
+		DS seekBinlogInFile(uint64_t timestamp, const char* fileName, bool localORRemmote = false, bool strick = false);
+		DS dumpBinlog(const char* file, uint64_t offset, bool localORRemote = false);
 	public:
 		mysqlBinlogReader(mysqlConnector* mysqlConnector);
 		~mysqlBinlogReader();
-		int seekBinlogByCheckpoint(uint32_t fileID, uint64_t position);
-		int seekBinlogByTimestamp(uint64_t timestamp, bool strick = true);
-		int seekBinlogFile(uint64_t timestamp, bool strick = true);
-		int startDump();
-		int init();
-		int initRemoteServerID(uint32_t serverID);
+		DS seekBinlogByCheckpoint(uint32_t fileID, uint64_t position);
+		DS seekBinlogByTimestamp(uint64_t timestamp, bool strick = true);
+		DS seekBinlogFile(uint64_t timestamp, bool strick = true);
+		DS startDump();
+		DS init();
+		DS initRemoteServerID(uint32_t serverID);
 		formatEvent* getFmtDescEvent();
-		int readBinlog(const char*& data,size_t &size);
+		DS readBinlog(const char*& data,size_t &size);
 	};
 }

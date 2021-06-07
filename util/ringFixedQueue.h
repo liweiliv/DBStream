@@ -51,6 +51,8 @@ public:
 		head = next;
 		return true;
 	}
+
+
 	/*
 	thread safe,multi thread can pop
 	if queue is empty,return false

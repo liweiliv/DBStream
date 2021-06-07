@@ -17,6 +17,7 @@
 #include "glog/logging.h"
 #include "util/sparsepp/spp.h"
 #include "util/unorderMapUtil.h"
+#include "util/winString.h"
 typedef spp::sparse_hash_map<std::string, std::string, StrHash, StrCompare> SECTION_TYPE;
 typedef spp::sparse_hash_map<std::string, SECTION_TYPE*, StrHash, StrCompare> CONFIG_TYPE;
 class config {
@@ -96,6 +97,24 @@ public:
 			return _value;
 		}
 	}
+
+	bool getBool(const char* section, const char* key)
+	{
+		std::string c = get(section, key);
+		if (c.empty() || strcasecmp(c.c_str(), "true") != 0)
+			return false;
+		else
+			return true;
+	}
+
+	bool getBool(const char* section, const char* key, bool defaultValue)
+	{
+		std::string c = get(section, key);
+		if (c.empty())
+			return defaultValue;
+		return strcasecmp(c.c_str(), "true") == 0;
+	}
+
 	void set(const char* section, const char* key, const char* value)
 	{
 		SECTION_TYPE* sec = nullptr;
@@ -303,6 +322,7 @@ public:
 		value = tmpValue;
 		return "";
 	}
+
 	static std::string getUint32(const char* str, uint32_t& value, uint32_t min = 0, uint32_t max = UINT32_MAX)
 	{
 		uint32_t tmpValue;

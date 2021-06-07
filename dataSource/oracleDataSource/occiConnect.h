@@ -43,18 +43,6 @@ namespace DATA_SOURCE
 		{
 			abort();//dot not direct use
 		}
-		/*
-		template<>
-		static void setParament(oracle::occi::Statement* stmt, int idx, int argv)
-		{
-			stmt->setInt(idx, argv);
-		}
-		template<>
-		static void setParament(oracle::occi::Statement* stmt, int idx, std::string& argv)
-		{
-			stmt->setString(idx, argv);
-		}
-		*/
 		template<typename T>
 		static DLL_EXPORT DS query(occiConnect* connector, oracle::occi::Connection*& conn, bool& stopRetryFlag, int fetchSize, 
 			std::function<DS(occiConnect*, oracle::occi::Connection*&)> reConnectFunc, std::function<DS(oracle::occi::ResultSet*)> func,
@@ -164,17 +152,9 @@ namespace DATA_SOURCE
 			dsFailedAndLogIt(1, "excute query failed for " << exp.what() << ", sql:" << sql, ERROR);
 		}
 	};
-	/*
+	
 	template<>
-	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, int argv)
-	{
-		stmt->setInt(idx, argv);
-	}
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, int argv);
 	template<>
-	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, std::string& argv)
-	{
-		stmt->setString(idx, argv);
-	}
-	*/
-
+	void occiConnect::setParament(oracle::occi::Statement* stmt, int idx, std::string& argv);
 }

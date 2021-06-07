@@ -9,8 +9,9 @@
 #define BINLOGEVENTPARSER_H_
 #include <stdint.h>
 #include <stdlib.h>
-#include "util/String.h"
 #include <map>
+#include "util/String.h"
+#include "util/status.h"
 #include "message/record.h"
 #include "memory/ringBuffer.h"
 #include "columnParser.h"
@@ -65,21 +66,21 @@ namespace DATA_SOURCE
 		~BinlogEventParser();
 		void setInstance(const char* instance);
 	private:
-		ParseStatus createDescEvent(const char* logEvent, size_t size);
-		ParseStatus updateFile(const char* logEvent, size_t size);
-		ParseStatus parseDDL(const char* logEvent, size_t size);
-		ParseStatus parseQuery(const char* logEvent, size_t size);
-		ParseStatus parseTableMap(const char* logEvent, size_t size);
-		ParseStatus rollback(const char* logEvent, size_t size);
-		ParseStatus ddl(const char* logEvent, size_t size);
-		ParseStatus begin(const char* logEvent, size_t size);
-		ParseStatus commit(const char* logEvent, size_t size);
+		DS createDescEvent(const char* logEvent, size_t size);
+		DS updateFile(const char* logEvent, size_t size);
+		DS parseDDL(const char* logEvent, size_t size);
+		DS parseQuery(const char* logEvent, size_t size);
+		DS parseTableMap(const char* logEvent, size_t size);
+		DS rollback(const char* logEvent, size_t size);
+		DS ddl(const char* logEvent, size_t size);
+		DS begin(const char* logEvent, size_t size);
+		DS commit(const char* logEvent, size_t size);
 		void parseRowLogEventHeader(const char*& logevent, uint64_t size, uint64_t& tableId, const uint8_t*& columnBitMap, const uint8_t*& updatedColumnBitMap);
-		ParseStatus parseRowData(DATABASE_INCREASE::DMLRecord* record, const char*& data, size_t size, bool newORold,const uint8_t* columnBitmap);
+		DS parseRowData(DATABASE_INCREASE::DMLRecord* record, const char*& data, size_t size, bool newORold,const uint8_t* columnBitmap);
 		inline uint64_t getTableID(const char* data, Log_event_type event_type);
-		ParseStatus parseRowLogevent(const char* logEvent, size_t size,DATABASE_INCREASE::RecordType type);
-		ParseStatus parseUpdateRowLogevent(const char* logEvent, size_t size);
-		ParseStatus parseTraceID(const char* rawData, size_t size);
+		DS parseRowLogevent(const char* logEvent, size_t size,DATABASE_INCREASE::RecordType type);
+		DS parseUpdateRowLogevent(const char* logEvent, size_t size);
+		DS parseTraceID(const char* rawData, size_t size);
 	public:
 		inline  DATABASE_INCREASE::record*  getRecord()
 		{
@@ -88,9 +89,8 @@ namespace DATA_SOURCE
 			else
 				return nullptr;
 		}
-		ParseStatus parser(const char * logEvent,size_t size);
-		int init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
-		String getError();
+		DS parser(const char * logEvent,size_t size);
+		DS init(const char * sqlParserFuncLibPath,const char * sqlParserTreePath);
 	};
 }
 #endif /* BINLOGEVENTPARSER_H_ */

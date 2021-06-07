@@ -17,6 +17,7 @@
 #include "mysql/my_byteorder.h"
 #include "mysql.h" 
 #include "mysqlx_error.h"
+#include "util/status.h"
 
 namespace DATA_SOURCE {
 	class mysqlConnector {
@@ -91,9 +92,10 @@ namespace DATA_SOURCE {
 				return std::string("unknown config:") + key + ":" + value;
 			return "";
 		}
-		MYSQL* getConnect()
+
+		DS getConnect(MYSQL*& conn)
 		{
-			MYSQL* conn = mysql_init(NULL);
+			conn = mysql_init(NULL);
 			mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &m_connectTimeOut);
 			mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &m_readTimeOut);
 			if (m_sslKey.empty() && m_sslCert.empty() && m_sslCa.empty())
@@ -105,9 +107,11 @@ namespace DATA_SOURCE {
 			{
 				if (mysql_ssl_set(conn, m_sslKey.empty() ? nullptr : m_sslKey.c_str(), m_sslCert.empty() ? nullptr : m_sslCert.c_str(), m_sslCa.empty() ? nullptr : m_sslCa.c_str(), NULL, NULL) != 0)
 				{
-					LOG(ERROR) << "init ssl failed for " << mysql_errno(conn) << "," << mysql_error(conn);
+					int errCode = mysql_errno(conn);
+					std::string errInfo = mysql_error(conn);
 					mysql_close(conn);
-					return nullptr;
+					conn = nullptr;
+					dsFailedAndLogIt(errCode, "init ssl failed for " << errCode << "," << errInfo, ERROR);
 				}
 				else
 				{
@@ -116,13 +120,17 @@ namespace DATA_SOURCE {
 			}
 			if (!mysql_real_connect(conn, m_host.c_str(), m_user.c_str(), m_password.c_str(), nullptr, m_port, nullptr, 0))
 			{
-				LOG(ERROR) << "connect to " << m_host << ":" << m_port << " by user " << m_user << " failed for " << mysql_errno(conn) << "," << mysql_error(conn);
+				int errCode = mysql_errno(conn);
+				std::string errInfo = mysql_error(conn);
 				mysql_close(conn);
-				return nullptr;
+				conn = nullptr;
+				dsFailedAndLogIt(errCode, "connect to " << m_host << ":" << m_port << " by user " << m_user << " failed for " << errCode << "," << errInfo, ERROR);
+
 			}
-			return conn;
+			dsOk();
 		}
-		static bool getVariables(MYSQL* conn, const char* variableName, std::string& v)
+
+		static DS getVariables(MYSQL* conn, const char* variableName, std::string& v)
 		{
 			MYSQL_RES* res;
 			MYSQL_ROW row;
@@ -130,45 +138,40 @@ namespace DATA_SOURCE {
 				+ std::string(variableName) + std::string("'");
 			if (0 != mysql_real_query(conn, sql.c_str(), sql.length()))
 			{
-				LOG(ERROR) << "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql.c_str();
-				return false;
+				dsFailedAndLogIt(mysql_errno(conn), "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql, ERROR);
 			}
 			if (mysql_field_count(conn) == 0)
 			{
-				LOG(ERROR) << "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql.c_str();
-				return false;
+				dsFailedAndLogIt(mysql_errno(conn), "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql, ERROR);
 			}
 			if (NULL == ((res) = mysql_store_result(conn)))
 			{
-				LOG(ERROR) << "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql.c_str();
-				return false;
+				dsFailedAndLogIt(mysql_errno(conn), "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql, ERROR);
 			}
 			if (NULL != (row = mysql_fetch_row(res)))
 			{
 				v.assign(row[1]);
 				mysql_free_result(res);
-				return true;
+				dsOk();
 			}
 			else
 			{
 				mysql_free_result(res);
-				LOG(ERROR) << "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql.c_str();
-				return false;
+				dsFailedAndLogIt(mysql_errno(conn), "show variabls :" << variableName << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn) << ",sql:" << sql, ERROR);
 			}
 		}
-		static int startDumpBinlog(MYSQL* conn, const char* file, uint64_t pos,int32_t serverId)
+
+		static DS startDumpBinlog(MYSQL* conn, const char* file, uint64_t pos,int32_t serverId)
 		{
 			const char* cmd = "set @master_binlog_checksum = 'NONE'";
 			if (mysql_query(conn, cmd) != 0)
 			{
-				LOG(ERROR) << "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn);
-				return -1;
+				dsFailedAndLogIt(mysql_errno(conn), "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn), ERROR);
 			}
 			cmd = "SET @master_heartbeat_period = 500000000";
 			if (mysql_query(conn, cmd) != 0)
 			{
-				LOG(ERROR) << "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn);
-				return -1;
+				dsFailedAndLogIt(mysql_errno(conn), "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn), ERROR);
 			}
 			size_t len = strlen(file);
 			unsigned char buf[128];
@@ -178,10 +181,9 @@ namespace DATA_SOURCE {
 			memcpy(buf + 10, file, len);
 			if (simple_command(conn, COM_BINLOG_DUMP, buf, len + 10, 1))
 			{
-				LOG(ERROR) << "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn);
-				return -1;
+				dsFailedAndLogIt(mysql_errno(conn), "exec sql :" << cmd << " failed for:" << mysql_errno(conn) << "," << mysql_errno(conn), ERROR);
 			}
-			return 0;
+			dsOk();
 		}
 #ifdef OS_LINUX
 		static uint32_t genSrvierId(uint32_t seed)
@@ -210,7 +212,7 @@ namespace DATA_SOURCE {
 			if (ifAddrStruct != NULL)
 				freeifaddrs(ifAddrStruct);
 			if (0 == serverId)
-				LOG(ERROR) << ("auto gen server id error.");
+				LOG(ERROR) << "auto gen server id error.";
 			return serverId;
 		}
 #endif
@@ -243,7 +245,7 @@ namespace DATA_SOURCE {
 			::WSACleanup();
 			if (ip == nullptr) 
 			{
-				LOG(ERROR) << ("auto gen server id error.");
+				LOG(ERROR) << "auto gen server id error.";
 				return 0;
 			}
 			srand(seed);
