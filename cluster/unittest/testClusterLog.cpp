@@ -3,29 +3,29 @@
 using namespace CLUSTER;
 void clear(const std::string logDir)
 {
-	std::vector<std::string> files;
+	std::vector<String> files;
 	fileList::getFileList(logDir, files);
-	for (std::vector<std::string>::iterator iter = files.begin(); iter != files.end(); iter++)
-		remove((logDir + "/" + *iter).c_str());
+	for (auto &iter: files)
+		remove((logDir + "/" + iter).c_str());
 }
 DS wFunc(clusterLog* log)
 {
 	for (int i = 1; i < 100000; i++)
 	{
 		char buf[sizeof(nodeInfoLogEntry) + 256];
-		nodeInfoLogEntry* logEntry = (nodeInfoLogEntry*)buf;
-		sprintf(logEntry->host, "%d.%d.%d.%d", i, i, i, i);
-		logEntry->size = sizeof(nodeInfoLogEntry) + strlen(logEntry->host);
-		logEntry->version = VERSION;
-		logEntry->recordType = static_cast<uint8_t>(rpcType::nodeInfoLogEntry);
-		logEntry->prevRecordLogIndex.logIndex = i - 1;
-		logEntry->prevRecordLogIndex.term = 1;
-		logEntry->logIndex.logIndex = i;
-		logEntry->logIndex.term = 1;
-		logEntry->nodeId = i;
-		logEntry->port = i % 65535;
-		logEntry->opt = 1;
-		dsTest(log->append(logEntry));
+		nodeInfoLogEntry* LogEntry = (nodeInfoLogEntry*)buf;
+		sprintf(LogEntry->host, "%d.%d.%d.%d", i, i, i, i);
+		LogEntry->size = sizeof(nodeInfoLogEntry) + strlen(LogEntry->host);
+		LogEntry->version = VERSION;
+		LogEntry->recordType = static_cast<uint8_t>(rpcType::nodeInfoLogEntry);
+		LogEntry->prevRecordLogIndex.logIndex = i - 1;
+		LogEntry->prevRecordLogIndex.term = 1;
+		LogEntry->logIndex.logIndex = i;
+		LogEntry->logIndex.term = 1;
+		LogEntry->nodeId = i;
+		LogEntry->port = i % 65535;
+		LogEntry->opt = 1;
+		dsTest(log->append(LogEntry));
 	}
 	dsOk();
 }
@@ -37,16 +37,16 @@ DS rFunc(clusterLog* logFile)
 	for (int i = 1; i < 100000; i++)
 	{
 		dsTest(iter.next(entry));
-		const nodeInfoLogEntry* logEntry = static_cast<const nodeInfoLogEntry*>(entry);
-		assert(logEntry->version == VERSION);
-		assert(logEntry->recordType == static_cast<uint8_t>(rpcType::nodeInfoLogEntry));
-		assert(logEntry->prevRecordLogIndex.logIndex == (uint64_t)(i - 1));
-		assert(logEntry->prevRecordLogIndex.term == 1L);
-		assert(logEntry->logIndex.logIndex == (uint64_t)i);
-		assert(logEntry->logIndex.term == 1L);
-		assert(logEntry->nodeId == (uint64_t)i);
-		assert(logEntry->port == i % 65535);
-		assert(logEntry->opt == 1);
+		const nodeInfoLogEntry* LogEntry = static_cast<const nodeInfoLogEntry*>(entry);
+		assert(LogEntry->version == VERSION);
+		assert(LogEntry->recordType == static_cast<uint8_t>(rpcType::nodeInfoLogEntry));
+		assert(LogEntry->prevRecordLogIndex.logIndex == (uint64_t)(i - 1));
+		assert(LogEntry->prevRecordLogIndex.term == 1L);
+		assert(LogEntry->logIndex.logIndex == (uint64_t)i);
+		assert(LogEntry->logIndex.term == 1L);
+		assert(LogEntry->nodeId == (uint64_t)i);
+		assert(LogEntry->port == i % 65535);
+		assert(LogEntry->opt == 1);
 	}
 	dsOk();
 }

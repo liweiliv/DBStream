@@ -37,10 +37,10 @@ namespace DATA_SOURCE
 		OCIDate m_prevDate;
 		uint64_t m_prevTimestamp;
 		arrayQueue<XStreamRecord*> m_innerQueue;
-		arrayQueue<DATABASE_INCREASE::record*> m_outputQueue;
+		arrayQueue<RPC::Record*> m_outputQueue;
 		sword m_readStatus;
 	public:
-		oracleXStreamLogReader(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :oracleIncreaceDataSource(conf, metaDataCollection, store), m_connect(conf), m_currentConn(nullptr),
+		oracleXStreamLogReader(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::store* store) :oracleIncreaceDataSource(conf, metaDataCollection, store), m_connect(conf), m_currentConn(nullptr),
 			m_startScn(0),  m_metaDataCollection(nullptr), m_prevTimestamp(0),
 			m_innerQueue(2048)
 		{
@@ -85,7 +85,7 @@ namespace DATA_SOURCE
 					m_parserThread = std::thread([this]()-> DS {
 						while (m_parserThreadIsRunning)
 						{
-							DATABASE_INCREASE::record* r = nullptr;
+							RPC::Record* r = nullptr;
 							if (!dsCheck(getRecordFormQueueAndParse(r)))
 								goto FAILED;
 							if (!dsCheck(pushIncreRecord(r)))
@@ -104,7 +104,7 @@ namespace DATA_SOURCE
 					m_parserThread = std::thread([this]()-> DS {
 						while (m_parserThreadIsRunning)
 						{
-							DATABASE_INCREASE::record* r = nullptr;
+							RPC::Record* r = nullptr;
 							if (!dsCheck(readRecordAndParse(r)))
 								goto FAILED;
 							if (!dsCheck(pushIncreRecord(r)))
@@ -176,7 +176,7 @@ namespace DATA_SOURCE
 			dsFailedAndLogIt(1, "oracleXStreamLogReader has stopped", ERROR);
 		}
 
-		inline DS pushIncreRecord(DATABASE_INCREASE::record* r)
+		inline DS pushIncreRecord(RPC::Record* r)
 		{
 			do {
 				if (m_outputQueue.pushWithCond(r, 100))
@@ -220,7 +220,7 @@ namespace DATA_SOURCE
 				{
 					if(!dsCheck(readDDLInfo(m_currentRecord->lcr)))
 						goto FAILED;
-					m_currentRecord->recordType = DATABASE_INCREASE::RecordType::R_DDL;
+					m_currentRecord->recordType = RPC::RecordType::R_DDL;
 					if (m_readerAndParserIndependent)
 						dsReturn(pushCurrentRecord());
 					dsOk();
@@ -228,7 +228,7 @@ namespace DATA_SOURCE
 				else if (lcrType == OCI_LCR_XROW)
 				{
 					m_currentRecord->recordType = getType(m_currentRecord->m_lcrHeader.cmdType, m_currentRecord->m_lcrHeader.cmdTypeLen);
-					if (m_currentRecord->recordType == DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE)
+					if (m_currentRecord->recordType == RPC::RecordType::MAX_RECORD_TYPE)
 					{
 						if (m_readerAndParserIndependent)
 							OCILCRFree(m_currentConn->svcp, m_currentConn->errp, m_currentRecord->lcr, OCI_DEFAULT);
@@ -238,13 +238,13 @@ namespace DATA_SOURCE
 					if (!dsCheck(readExtraAttribute(m_currentRecord->lcr)))
 						goto FAILED;
 
-					if (m_currentRecord->recordType == DATABASE_INCREASE::RecordType::R_INSERT || m_currentRecord->recordType == DATABASE_INCREASE::RecordType::R_UPDATE)
+					if (m_currentRecord->recordType == RPC::RecordType::R_INSERT || m_currentRecord->recordType == RPC::RecordType::R_UPDATE)
 					{
 						if (!dsCheck(readColumnsValue(m_currentRecord->lcr, OCI_LCR_ROW_COLVAL_NEW, m_currentRecord->m_lcrHeader.newColumns)))
 							goto FAILED;
 					}
 
-					if (m_currentRecord->recordType == DATABASE_INCREASE::RecordType::R_DELETE || m_currentRecord->recordType == DATABASE_INCREASE::RecordType::R_UPDATE)
+					if (m_currentRecord->recordType == RPC::RecordType::R_DELETE || m_currentRecord->recordType == RPC::RecordType::R_UPDATE)
 					{
 						if (!dsCheck(readColumnsValue(m_currentRecord->lcr, OCI_LCR_ROW_COLVAL_OLD, m_currentRecord->m_lcrHeader.oldColumns)))
 							goto FAILED;
@@ -359,103 +359,103 @@ namespace DATA_SOURCE
 			}
 			dsOk();
 		}
-		inline DATABASE_INCREASE::RecordType getType(oratext* cmdType, ub2 cmdTypeLength)
+		inline RPC::RecordType getType(oratext* cmdType, ub2 cmdTypeLength)
 		{
 			if (cmdTypeLength == 6)
 			{
 				if (memcmp(OCI_LCR_ROW_CMD_INSERT, cmdType, 6) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_INSERT;
+					return RPC::RecordType::R_INSERT;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_UPDATE, cmdType, 6) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_UPDATE;
+					return RPC::RecordType::R_UPDATE;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_DELETE, cmdType, 6) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_DELETE;
+					return RPC::RecordType::R_DELETE;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_COMMIT, cmdType, 6) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_COMMIT;
+					return RPC::RecordType::R_COMMIT;
 				}
 				else
 				{
-					return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+					return RPC::RecordType::MAX_RECORD_TYPE;
 				}
 			}
 			else if (cmdTypeLength == 8)
 			{
 				if (memcmp(OCI_LCR_ROW_CMD_START_TX, cmdType, 8) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_BEGIN;
+					return RPC::RecordType::R_BEGIN;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_ROLLBACK, cmdType, 8) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_ROLLBACK;
+					return RPC::RecordType::R_ROLLBACK;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_LOB_TRIM, cmdType, 8) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_LOB_TRIM;
+					return RPC::RecordType::R_LOB_TRIM;
 				}
 				else
 				{
-					return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+					return RPC::RecordType::MAX_RECORD_TYPE;
 				}
 			}
 			else if (cmdTypeLength == 9)
 			{
 				if (memcmp(OCI_LCR_ROW_CMD_LOB_WRITE, cmdType, 9) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_LOB_WRITE;
+					return RPC::RecordType::R_LOB_WRITE;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_LOB_ERASE, cmdType, 9) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_LOB_ERASE;
+					return RPC::RecordType::R_LOB_ERASE;
 				}
 				else
 				{
-					return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+					return RPC::RecordType::MAX_RECORD_TYPE;
 				}
 			}
 			else if (cmdTypeLength == 9)
 			{
 				if (memcmp(OCI_LCR_ROW_CMD_LOB_WRITE, cmdType, 9) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_LOB_WRITE;
+					return RPC::RecordType::R_LOB_WRITE;
 				}
 				else if (memcmp(OCI_LCR_ROW_CMD_LOB_ERASE, cmdType, 9) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_LOB_ERASE;
+					return RPC::RecordType::R_LOB_ERASE;
 				}
 				else
 				{
-					return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+					return RPC::RecordType::MAX_RECORD_TYPE;
 				}
 			}
 			else if (cmdTypeLength == 12)
 			{
 				if (memcmp(OCI_LCR_ROW_CMD_CTRL_INFO, cmdType, 12) == 0)
 				{
-					return DATABASE_INCREASE::RecordType::R_CONTROL;
+					return RPC::RecordType::R_CONTROL;
 				}
 				else
 				{
-					return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+					return RPC::RecordType::MAX_RECORD_TYPE;
 				}
 			}
-			return DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE;
+			return RPC::RecordType::MAX_RECORD_TYPE;
 		}
 
-		uint32_t allocSize(XStreamRecord* xr, DATABASE_INCREASE::RecordType type)
+		uint32_t allocSize(XStreamRecord* xr, RPC::RecordType type)
 		{
 			uint32_t s = 0;
-			if (type == DATABASE_INCREASE::RecordType::R_INSERT || type == DATABASE_INCREASE::RecordType::R_UPDATE)
+			if (type == RPC::RecordType::R_INSERT || type == RPC::RecordType::R_UPDATE)
 			{
 				for (int i = 0; i < xr->m_newColumns.columnNumber; i++)
 					s += xr->m_newColumns.columnValueLengths[i];
 			}
-			if (type == DATABASE_INCREASE::RecordType::R_DELETE || type == DATABASE_INCREASE::RecordType::R_UPDATE)
+			if (type == RPC::RecordType::R_DELETE || type == RPC::RecordType::R_UPDATE)
 			{
 				for (int i = 0; i < xr->m_oldColumns.columnNumber; i++)
 					s += xr->m_oldColumns.columnValueLengths[i];
@@ -485,7 +485,7 @@ namespace DATA_SOURCE
 			}
 		}
 
-		inline DS setColumnValue(DATABASE_INCREASE::DMLRecord* record, const META::columnMeta* col, void* data, uint32_t dataLength, ORACLE_COLUMN_TYPE type, bool isUpdateOldValue)
+		inline DS setColumnValue(RPC::DMLRecord* record, const META::ColumnMeta* col, void* data, uint32_t dataLength, ORACLE_COLUMN_TYPE type, bool isUpdateOldValue)
 		{
 
 			if (META::columnInfos[static_cast<int>(col->m_columnType)].fixed)
@@ -537,7 +537,7 @@ namespace DATA_SOURCE
 					break;
 					case ORACLE_COLUMN_TYPE::date:
 					{
-						META::dateTime d;
+						META::DateTime d;
 						OCIDate* src = (OCIDate*)data;
 						d.createDate(src->OCIDateYYYY, src->OCIDateMM, src->OCIDateDD, src->OCIDateTime.OCITimeHH, src->OCIDateTime.OCITimeMI, src->OCIDateTime.OCITimeSS, 0);
 						isUpdateOldValue ? record->setFixedUpdatedColumn(col->m_columnIndex, d.time) : record->setFixedColumn(col->m_columnIndex, d.time);
@@ -545,7 +545,7 @@ namespace DATA_SOURCE
 					break;
 					case ORACLE_COLUMN_TYPE::timestamp:
 					{
-						META::dateTime d;
+						META::DateTime d;
 						OCIDate* src = (OCIDate*)data;
 						d.createDate(src->OCIDateYYYY, src->OCIDateMM, src->OCIDateDD, src->OCIDateTime.OCITimeHH, src->OCIDateTime.OCITimeMI, src->OCIDateTime.OCITimeSS, 0);
 						isUpdateOldValue ? record->setFixedUpdatedColumn(col->m_columnIndex, d.time) : record->setFixedColumn(col->m_columnIndex, d.time);
@@ -587,32 +587,32 @@ namespace DATA_SOURCE
 			dsOk();
 		}
 
-		inline const META::columnMeta* getColumn(META::tableMeta* meta, char* name, ub2 length)
+		inline const META::ColumnMeta* getColumn(META::TableMeta* meta, char* name, ub2 length)
 		{
 			char c = name[length];
 			name[length] = '\0';
-			const META::columnMeta* col = meta->getColumn(name);
+			const META::ColumnMeta* col = meta->getColumn(name);
 			if (col == nullptr)
 				return nullptr;
 			name[length] = c;
 			return col;
 		}
 
-		inline DS parseDml(XStreamRecord* xr, DATABASE_INCREASE::record*& r)
+		inline DS parseDml(XStreamRecord* xr, RPC::Record*& r)
 		{
-			META::tableMeta* meta = m_metaDataCollection->get((const char*)xr->m_lcrHeader.owner, (const char*)xr->m_lcrHeader.oname);
+			META::TableMeta* meta = m_metaDataCollection->get((const char*)xr->m_lcrHeader.owner, (const char*)xr->m_lcrHeader.oname);
 			if (meta == nullptr)
 				dsFailedAndLogIt(1, "can not find table meta for table:" << (const char*)xr->m_lcrHeader.owner << "." << (const char*)xr->m_lcrHeader.oname, ERROR);
-			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_buffer.alloc(sizeof(DATABASE_INCREASE::DMLRecord)
-				+ DATABASE_INCREASE::recordHeadSize + (allocSize(xr, xr->recordType) * 4));
-			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, xr->recordType);
+			RPC::DMLRecord* record = (RPC::DMLRecord*)m_buffer.alloc(sizeof(RPC::DMLRecord)
+				+ RPC::recordHeadSize + (allocSize(xr, xr->recordType) * 4));
+			record->initRecord(((char*)record) + sizeof(RPC::DMLRecord), meta, xr->recordType);
 			record->head->timestamp = getTimestamp(xr->m_lcrHeader.srcTime);
 
-			if (xr->recordType == DATABASE_INCREASE::RecordType::R_INSERT || xr->recordType == DATABASE_INCREASE::RecordType::R_UPDATE)//insert and update
+			if (xr->recordType == RPC::RecordType::R_INSERT || xr->recordType == RPC::RecordType::R_UPDATE)//insert and update
 			{
 				for (int i = 0; i < xr->m_newColumns.columnNumber; i++)
 				{
-					const META::columnMeta* col = getColumn(meta, (char*)xr->m_newColumns.columnNames[i], xr->m_newColumns.columnNamelengths[i]);
+					const META::ColumnMeta* col = getColumn(meta, (char*)xr->m_newColumns.columnNames[i], xr->m_newColumns.columnNamelengths[i]);
 					if (col == nullptr)
 						dsFailedAndLogIt(1, "can not find column " << (const char*)xr->m_newColumns.columnNames[i] << " in table:" << (const char*)xr->m_lcrHeader.owner << "." << (const char*)xr->m_lcrHeader.oname, ERROR);
 					dsReturnIfFailed(setColumnValue(record, col, xr->m_newColumns.columnValues[i], xr->m_newColumns.columnValueLengths[i], static_cast<ORACLE_COLUMN_TYPE>(xr->m_newColumns.columnDataTypes[i]), false));
@@ -622,18 +622,18 @@ namespace DATA_SOURCE
 			{
 				for (int i = 0; i < xr->m_oldColumns.columnNumber; i++)
 				{
-					const META::columnMeta* col = getColumn(meta, (char*)xr->m_oldColumns.columnNames[i], xr->m_oldColumns.columnNamelengths[i]);
+					const META::ColumnMeta* col = getColumn(meta, (char*)xr->m_oldColumns.columnNames[i], xr->m_oldColumns.columnNamelengths[i]);
 					if (col == nullptr)
 						dsFailedAndLogIt(1, "can not find column " << (const char*)xr->m_oldColumns.columnNames[i] << " in table:" << (const char*)xr->m_lcrHeader.owner << "." << (const char*)xr->m_lcrHeader.oname, ERROR);
 					dsReturnIfFailed(setColumnValue(record, col, xr->m_oldColumns.columnValues[i], xr->m_oldColumns.columnValueLengths[i], static_cast<ORACLE_COLUMN_TYPE>(xr->m_oldColumns.columnDataTypes[i]), false));
 				}
 			}
 
-			if (xr->recordType == DATABASE_INCREASE::RecordType::R_UPDATE)
+			if (xr->recordType == RPC::RecordType::R_UPDATE)
 			{
 				for (int i = 0; i < xr->m_oldColumns.columnNumber; i++)
 				{
-					const META::columnMeta* col = getColumn(meta, (char*)xr->m_oldColumns.columnNames[i], xr->m_oldColumns.columnNamelengths[i]);
+					const META::ColumnMeta* col = getColumn(meta, (char*)xr->m_oldColumns.columnNames[i], xr->m_oldColumns.columnNamelengths[i]);
 					if (col == nullptr)
 						dsFailedAndLogIt(1, "can not find column " << (const char*)xr->m_oldColumns.columnNames[i] << " in table:" << (const char*)xr->m_lcrHeader.owner << "." << (const char*)xr->m_lcrHeader.oname, ERROR);
 					dsReturnIfFailed(setColumnValue(record, col, xr->m_oldColumns.columnValues[i], xr->m_oldColumns.columnValueLengths[i], static_cast<ORACLE_COLUMN_TYPE>(xr->m_oldColumns.columnDataTypes[i]), true));
@@ -643,13 +643,13 @@ namespace DATA_SOURCE
 			dsOk();
 		}
 
-		DS lcrToRecord(XStreamRecord* xr, DATABASE_INCREASE::record*& record)
+		DS lcrToRecord(XStreamRecord* xr, RPC::Record*& record)
 		{
 			switch (xr->recordType)
 			{
-			case DATABASE_INCREASE::RecordType::R_INSERT:
-			case DATABASE_INCREASE::RecordType::R_UPDATE:
-			case DATABASE_INCREASE::RecordType::R_DELETE:
+			case RPC::RecordType::R_INSERT:
+			case RPC::RecordType::R_UPDATE:
+			case RPC::RecordType::R_DELETE:
 				dsReturn(parseDml(xr, record));
 			}
 			dsOk();
@@ -664,7 +664,7 @@ namespace DATA_SOURCE
 			return nullptr;
 		}
 		
-		inline DS getRecordFormQueueAndParse(DATABASE_INCREASE::record*& r)
+		inline DS getRecordFormQueueAndParse(RPC::Record*& r)
 		{
 			XStreamRecord* xr = nullptr;
 			do {
@@ -679,7 +679,7 @@ namespace DATA_SOURCE
 			dsFailedAndLogItWithCause(1, "oracleXStreamLogReader has stopped", ERROR, getFailedCause());
 		}
 
-		inline DS readRecordAndParse(DATABASE_INCREASE::record*& r)
+		inline DS readRecordAndParse(RPC::Record*& r)
 		{
 			do {
 				dsReturnIfFailed(readXStreamRecord());
@@ -690,7 +690,7 @@ namespace DATA_SOURCE
 			dsFailedAndLogItWithCause(1, "oracleXStreamLogReader has stopped", ERROR, getFailedCause());
 		}
 
-		inline DS parse(DATABASE_INCREASE::record*& r)
+		inline DS parse(RPC::Record*& r)
 		{
 			if (m_readerAndParserIndependent)
 			{
@@ -703,7 +703,7 @@ namespace DATA_SOURCE
 		}
 
 	public:
-		DS read(DATABASE_INCREASE::record *& r)
+		DS read(RPC::Record *& r)
 		{
 			r = nullptr;
 			if (m_asyncRead)

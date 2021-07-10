@@ -12,7 +12,7 @@ namespace DATA_SOURCE
 	private:
 		oracle::occi::Environment* m_env;
 	public:
-		DLL_EXPORT occiConnect(config* conf);
+		DLL_EXPORT occiConnect(Config* conf);
 		DLL_EXPORT ~occiConnect();
 	private:
 		DLL_EXPORT DS connect(oracle::occi::Connection*& conn, const std::string& sid, const std::string& serviceName);
@@ -62,7 +62,7 @@ namespace DATA_SOURCE
 					{
 						int id = 1;
 						for (auto& it : argvList)
-							setParament(stmt, id, it);
+							setParament(stmt, id++, it);
 					}
 					if (nullptr == (rs = stmt->executeQuery()) || !rs->next())
 					{

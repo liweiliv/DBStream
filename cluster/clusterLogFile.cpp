@@ -1,16 +1,16 @@
 #include "clusterLogFile.h"
 namespace CLUSTER
 {
-	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry) :
-		idx(offset, logEntry->logIndex), data(nullptr), id(0), volumn(0), size(0), writedSize(0), next(nullptr), m_ref(this, loadFunc)
+	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* LogEntry) :
+		idx(offset, LogEntry->logIndex), data(nullptr), id(0), volumn(0), size(0), writedSize(0), next(nullptr), m_ref(this, loadFunc)
 	{
-		if (logEntry->size > defaultBlockSize)
-			volumn = logEntry->size;
+		if (LogEntry->size > defaultBlockSize)
+			volumn = LogEntry->size;
 		else
 			volumn = defaultBlockSize;
 		data = new char[volumn];
-		memcpy(data, logEntry, logEntry->size);
-		size = logEntry->size;
+		memcpy(data, LogEntry, LogEntry->size);
+		size = LogEntry->size;
 	}
 	DLL_EXPORT clusterLogFile::block::block(std::function<DS (block*)>& loadFunc, const index& i) :
 		idx(i.offset, i.logIndex), data(nullptr), volumn(0),
@@ -37,18 +37,18 @@ namespace CLUSTER
 		if (data == nullptr)
 			return INVALID_RESULT;
 		uint32_t currentSize = size;
-		const logEntryRpcBase* logEntry = (const logEntryRpcBase*)data;
-		while (((const char*)logEntry) - data < currentSize && logEntry->logIndex < logIndex)
-			logEntry = (const logEntryRpcBase*)(((const char*)logEntry) + logEntry->size);
-		if (((const char*)logEntry) - data >= currentSize)
+		const logEntryRpcBase* LogEntry = (const logEntryRpcBase*)data;
+		while (((const char*)LogEntry) - data < currentSize && LogEntry->logIndex < logIndex)
+			LogEntry = (const logEntryRpcBase*)(((const char*)LogEntry) + LogEntry->size);
+		if (((const char*)LogEntry) - data >= currentSize)
 			return INVALID_RESULT;
-		return ((const char*)logEntry) - data;
+		return ((const char*)LogEntry) - data;
 	}
-	void clusterLogFile::block::append(const logEntryRpcBase* logEntry)
+	void clusterLogFile::block::append(const logEntryRpcBase* LogEntry)
 	{
-		memcpy(data + size, logEntry, logEntry->size);
+		memcpy(data + size, LogEntry, LogEntry->size);
 		wmb();
-		size += logEntry->size;
+		size += LogEntry->size;
 	}
 	DLL_EXPORT clusterLogFile::clusterLogFile(const char* filePath, uint64_t fileId, logConfig& config) :m_filePath(filePath), m_fileId(fileId), m_offset(0),
 		m_blockCount(0), m_blocks(nullptr), m_currentBlock(nullptr),
@@ -343,33 +343,33 @@ namespace CLUSTER
 		dsReturn(logFile->load());
 	}
 
-	inline DS clusterLogFile::_append(const logEntryRpcBase* logEntry)
+	inline DS clusterLogFile::_append(const logEntryRpcBase* LogEntry)
 	{
 		if (unlikely(m_currentBlock == nullptr))
 		{
-			dsReturnIfFailed(appendToNewBlock(logEntry));
+			dsReturnIfFailed(appendToNewBlock(LogEntry));
 		}
-		else if (unlikely(m_currentBlock->size + logEntry->size + sizeof(raftRpcHead) > m_currentBlock->volumn))
+		else if (unlikely(m_currentBlock->size + LogEntry->size + sizeof(raftRpcHead) > m_currentBlock->volumn))
 		{
 			if (m_blockCount + 1 >= m_maxBlockCount)
 				dsFailed(errorCode::full, nullptr);
-			dsReturnIfFailed(appendToNewBlock(logEntry));
+			dsReturnIfFailed(appendToNewBlock(LogEntry));
 		}
 		else
 		{
-			m_currentBlock->append(logEntry);
+			m_currentBlock->append(LogEntry);
 		}
-		m_logIndex = logEntry->logIndex;
-		m_offset += logEntry->size;
+		m_logIndex = LogEntry->logIndex;
+		m_offset += LogEntry->size;
 		notify();
 		dsOk();
 	}
-	DLL_EXPORT DS clusterLogFile::appendToNewBlock(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLogFile::appendToNewBlock(const logEntryRpcBase* LogEntry)
 	{
 		//flush current block
 		if (m_currentBlock != nullptr)
 			dsReturnIfFailed(writeCurrentBlock());
-		block* newBlock = new block(m_blockLoadFunc, m_config.getDefaultBlockSize(), m_offset, logEntry);
+		block* newBlock = new block(m_blockLoadFunc, m_config.getDefaultBlockSize(), m_offset, LogEntry);
 
 		if (m_indexFd == INVALID_HANDLE_VALUE)
 		{
@@ -595,25 +595,25 @@ namespace CLUSTER
 		m_currentBlock->writedSize = m_currentBlock->size;
 		dsOk();
 	}
-	DLL_EXPORT DS clusterLogFile::append(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLogFile::append(const logEntryRpcBase* LogEntry)
 	{
-		if (unlikely(m_logIndex != logEntry->prevRecordLogIndex))
+		if (unlikely(m_logIndex != LogEntry->prevRecordLogIndex))
 		{
-			if (m_logIndex < logEntry->prevRecordLogIndex)
+			if (m_logIndex < LogEntry->prevRecordLogIndex)
 			{
-				dsFailedAndLogIt(errorCode::prevNotMatch, "prev log index of new logEntry :" << logEntry->prevRecordLogIndex.term << "." << logEntry->prevRecordLogIndex.logIndex << " is large than current logIndex:" <<
+				dsFailedAndLogIt(errorCode::prevNotMatch, "prev log index of new logEntry :" << LogEntry->prevRecordLogIndex.term << "." << LogEntry->prevRecordLogIndex.logIndex << " is large than current logIndex:" <<
 					m_logIndex.term << "." << m_logIndex.logIndex, WARNING);
 			}
 			else
 			{
-				dsFailedAndLogIt(errorCode::rollback, "prev log index of new logEntry :" << logEntry->prevRecordLogIndex.term << "." << logEntry->prevRecordLogIndex.logIndex << " is less than current logIndex:" <<
+				dsFailedAndLogIt(errorCode::rollback, "prev log index of new logEntry :" << LogEntry->prevRecordLogIndex.term << "." << LogEntry->prevRecordLogIndex.logIndex << " is less than current logIndex:" <<
 					m_logIndex.term << "." << m_logIndex.logIndex, WARNING);
 			}
 		}
 		//check if is full
-		if (unlikely(m_offset + logEntry->size >= m_config.getDefaultLogFileSize()))
+		if (unlikely(m_offset + LogEntry->size >= m_config.getDefaultLogFileSize()))
 			dsFailed(errorCode::full, nullptr);
-		dsReturn(_append(logEntry));
+		dsReturn(_append(LogEntry));
 	}
 	DLL_EXPORT DS clusterLogFile::clear()
 	{
@@ -725,7 +725,7 @@ namespace CLUSTER
 		dsOk();
 	}
 
-	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry)
+	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& LogEntry)
 	{
 		do {
 			if (m_offset == m_block->size)
@@ -739,29 +739,29 @@ namespace CLUSTER
 				}
 				else
 				{
-					logEntry = nullptr;
+					LogEntry = nullptr;
 					dsOk();
 				}
 			}
 			else
 			{
-				logEntry = (const logEntryRpcBase*)(m_block->data + m_offset);
-				if (unlikely(logEntry->recordType == static_cast<uint8_t>(rpcType::endOfFile)))
+				LogEntry = (const logEntryRpcBase*)(m_block->data + m_offset);
+				if (unlikely(LogEntry->recordType == static_cast<uint8_t>(rpcType::endOfFile)))
 				{
-					if (m_block->next != nullptr || m_offset + logEntry->size != m_block->size)
+					if (m_block->next != nullptr || m_offset + LogEntry->size != m_block->size)
 						dsFailedAndLogIt(errorCode::illegalLogEntry, "find illegal endOfFile type logEntry in middle of log file:" << m_file->m_filePath, WARNING);
 					dsFailed(errorCode::endOfFile, "");
 				}
-				m_offset += logEntry->size;
+				m_offset += LogEntry->size;
 				dsOk();
 			}
 		} while (true);
 	}
-	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& logEntry, long outTime)
+	DLL_EXPORT DS clusterLogFile::iterator::next(const logEntryRpcBase*& LogEntry, long outTime)
 	{
 		do {
-			dsReturnIfFailed(next(logEntry));
-			if (likely(logEntry != nullptr))
+			dsReturnIfFailed(next(LogEntry));
+			if (likely(LogEntry != nullptr))
 				dsOk();
 			if (outTime > 0)
 			{

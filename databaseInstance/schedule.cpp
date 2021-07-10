@@ -1,12 +1,13 @@
 #include "schedule.h"
 #include "stream.h"
 #include "database/iterator.h"
-namespace STORE {
-	bool schedule::streamCmp::operator()(job* a, job* b) const
+#include "instanceConf.h"
+namespace DB_INSTANCE {
+	bool Schedule::streamCmp::operator()(job* a, job* b) const
 	{
 		return a->m_vtime < b->m_vtime;
 	}
-	std::string schedule::updateConfig(const char* key, const char* value)
+	std::string Schedule::updateConfig(const char* key, const char* value)
 	{
 		if (strcmp(key, C_MAX_WORKERS) == 0)
 		{
@@ -38,10 +39,10 @@ namespace STORE {
 		}
 		else
 			return std::string("unknown config:") + key;
-		m_config->set("store", key, value);
+		m_config->set(INSTANCE_SECTION, key, value);
 		return std::string("update config:") + key + " success";
 	}
-	void schedule::process(job* j)
+	void Schedule::process(job* j)
 	{
 		j->sign();
 		clock_t now, begin = clock();
@@ -62,7 +63,7 @@ namespace STORE {
 			}
 		}
 	}
-	void schedule::worker()
+	void Schedule::worker()
 	{
 		uint16_t idleRound = 0;
 		while (likely(m_running))
@@ -92,7 +93,7 @@ namespace STORE {
 		}
 		return;
 	}
-	job* schedule::getNextActiveHandle()
+	job* Schedule::getNextActiveHandle()
 	{
 		m_taskLock.lock();
 		if (!m_task.empty())

@@ -14,11 +14,11 @@ namespace DATABASE {
 	template<typename T>
 	class increaseCompare {
 	public:
-		inline bool operator()(const blockIndexIterator* i, const blockIndexIterator* j)
+		inline bool operator()(const BlockIndexIterator* i, const BlockIndexIterator* j)
 		{
 			return *static_cast<const T*>(i->key()) < *static_cast<const T*>(j->key());
 		}
-		static inline bool equal(const blockIndexIterator* i, const blockIndexIterator* j)
+		static inline bool equal(const BlockIndexIterator* i, const BlockIndexIterator* j)
 		{
 			return *static_cast<const T*>(i->key()) == *static_cast<const T*>(j->key());
 		}
@@ -26,27 +26,27 @@ namespace DATABASE {
 	template<typename T>
 	class decreaseCompare {
 	public:
-		inline bool operator()(const blockIndexIterator* i, const blockIndexIterator* j)
+		inline bool operator()(const BlockIndexIterator* i, const BlockIndexIterator* j)
 		{
 			return *static_cast<const T*>(i->key()) > * static_cast<const T*>(j->key());
 		}
-		static inline bool equal(const blockIndexIterator* i, const blockIndexIterator* j)
+		static inline bool equal(const BlockIndexIterator* i, const BlockIndexIterator* j)
 		{
 			return *static_cast<const T*>(i->key()) == *static_cast<const T*>(j->key());
 		}
 	};
 	template<typename T, typename COMPARE>
-	class kWaySortIterator :public iterator {
+	class KWaySortIterator :public Iterator {
 	private:
-		blockIndexIterator** m_iters;
+		BlockIndexIterator** m_iters;
 		uint32_t m_iterCount;
-		heap< blockIndexIterator*, COMPARE > m_heap;
-		blockIndexIterator* m_current;
+		heap< BlockIndexIterator*, COMPARE > m_heap;
+		BlockIndexIterator* m_current;
 	public:
-		kWaySortIterator(blockIndexIterator** iters, uint32_t iterCount) :iterator(0, nullptr), m_iters(iters), m_iterCount(iterCount),
+		KWaySortIterator(BlockIndexIterator** iters, uint32_t iterCount) :Iterator(0, nullptr), m_iters(iters), m_iterCount(iterCount),
 			m_heap(iterCount), m_current(nullptr) {
 		}
-		virtual ~kWaySortIterator()
+		virtual ~KWaySortIterator()
 		{
 			for (uint32_t idx = 0; idx < m_iterCount; idx++)
 				delete m_iters[idx];
@@ -68,11 +68,11 @@ namespace DATABASE {
 				m_current = m_heap.get();
 			return true;
 		}
-		inline status next()
+		inline Status next()
 		{
 			if (m_heap.size() == 0)
-				return status::ENDED;
-			if (m_current->next() == status::OK)
+				return Status::ENDED;
+			if (m_current->next() == Status::OK)
 			{
 				m_heap.popAndInsert(m_current);
 			}
@@ -80,18 +80,18 @@ namespace DATABASE {
 			{
 				m_heap.pop();
 				if (m_heap.size() == 0)
-					return m_status = status::ENDED;
+					return m_status = Status::ENDED;
 			}
 			m_current = m_heap.get();
 			while (m_heap.size() > 1)
 			{
-				blockIndexIterator* second;
+				BlockIndexIterator* second;
 				int sid = m_heap.getSecond(second);
 				if (COMPARE::equal(m_current, second))
 				{
 					if (second->getBlockId() > m_current->getBlockId())
 					{
-						if (m_current->next() != status::OK)
+						if (m_current->next() != Status::OK)
 							m_heap.pop();
 						else
 							m_heap.popAndInsert(m_current);
@@ -99,7 +99,7 @@ namespace DATABASE {
 					}
 					else
 					{
-						if (second->next() != status::OK)
+						if (second->next() != Status::OK)
 							m_heap.popAt(sid);
 						else
 							m_heap.replaceAt(second, sid);
@@ -108,7 +108,7 @@ namespace DATABASE {
 				else
 					break;
 			}
-			return status::OK;
+			return Status::OK;
 		}
 		inline const void* key() const
 		{

@@ -8,7 +8,7 @@
 #include "occiConnect.h"
 namespace DATA_SOURCE
 {
-	DLL_EXPORT occiConnect::occiConnect(config* conf) :oracleConnectBase(conf), m_env(nullptr)
+	DLL_EXPORT occiConnect::occiConnect(Config* conf) :oracleConnectBase(conf), m_env(nullptr)
 	{
 	}
 

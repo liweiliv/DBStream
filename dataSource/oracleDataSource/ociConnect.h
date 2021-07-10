@@ -84,7 +84,7 @@ namespace DATA_SOURCE
 		DS createEnv();
 		DLL_EXPORT DS connect(oci*& conn, const std::string& sid, const std::string& serviceName);
 	public:
-		DLL_EXPORT ociConnect(config* conf);
+		DLL_EXPORT ociConnect(Config* conf);
 		DLL_EXPORT ~ociConnect();
 		DLL_EXPORT DS init();
 		DLL_EXPORT DS connect(oci*& conn);

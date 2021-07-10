@@ -9,11 +9,13 @@
 #include <assert.h>
 #include <thread>
 #include <map>
+#include "mysqlRecordOffset.h"
 #include "mysqlBinlogReader.h"
 #include "BinaryLogEvent.h"
 #include "memory/ringBuffer.h"
 #include "util/fileList.h"
 #include "util/winString.h"
+#include "meta/columnType.h"
 #include "BinlogFile.h"
 
 
@@ -26,7 +28,7 @@ namespace DATA_SOURCE {
 		binlogFileInfo(const binlogFileInfo& info) :file(info.file), size(info.size) {}
 	};
 
-	mysqlBinlogReader::mysqlBinlogReader(mysqlConnector* connector) :m_mysqlConnector(connector), m_conn(nullptr),m_serverId(0),m_remoteServerID(0),m_localFile(nullptr),m_currentPos(0)
+	mysqlBinlogReader::mysqlBinlogReader(LocalLogFileCache* localLog, Config* conf, mysqlConnector* connector) :DataSourceReader(localLog, conf), m_mysqlConnector(connector), m_conn(nullptr),m_serverId(0),m_remoteServerID(0),m_localFile(nullptr),m_currentPos(0)
 	{
 		m_serverId = mysqlConnector::genSrvierId(time(nullptr));
 		m_readLocalBinlog = false;
@@ -48,6 +50,7 @@ namespace DATA_SOURCE {
 		m_isTypeNeedParse[FORMAT_DESCRIPTION_EVENT] = true;
 		m_isTypeNeedParse[ROTATE_EVENT] = true;
 	}
+
 	mysqlBinlogReader::~mysqlBinlogReader()
 	{
 		if (m_conn)
@@ -58,19 +61,46 @@ namespace DATA_SOURCE {
 			delete m_descriptionEvent;
 	}
 
-	DS mysqlBinlogReader::init()
+	DS mysqlBinlogReader::init(RPC::Checkpoint* currentCkp, RPC::Checkpoint* safeCkp)
 	{
-		dsOk(); //nothing to do
+
+		LogEntry* e;
+		dsReturnIfFailed(m_localLog->lastEntry(e));
+		if (e != nullptr && currentCkp != nullptr)
+		{
+			if (e->getCheckpoint()->seqNo.seqNo >= currentCkp->seqNo.seqNo)
+			{
+				dsReturnIfFailedWithOp(startFrom(e->getCheckpoint()), free(e));
+			}
+			else
+			{
+				if(e->getCheckpoint()->logOffset)
+			}
+		}
+		else
+		{
+
+		}
+		dsOk();
 	}
+
+	DS mysqlBinlogReader::startFrom(RPC::Checkpoint* ckp)
+	{
+		std::string serverId;
+		dsReturnIfFailed(mysqlConnector::getVariables(m_conn, "server_id", serverId));
+		if (m_serverId == 0)
+			m_serverId = atoi(serverId.c_str());
+		else if (m_serverId != atoi(serverId.c_str()))
+			m_serverId = atoi(serverId.c_str());//todo
+	}
+
 
 	DS mysqlBinlogReader::initRemoteServerID(uint32_t serverID)
 	{
 		if (m_remoteServerID == 0)
 			m_remoteServerID = serverID;
 		else if (m_remoteServerID != serverID)
-		{
-			dsFailedAndLogIt(1, "initRemoteServerID failed, serverid changes from " << m_remoteServerID << " to " << serverID,ERROR);
-		}
+			dsFailedAndLogIt(1, "initRemoteServerID failed, serverid changes from " << m_remoteServerID << " to " << serverID, ERROR);
 		dsOk();
 	}
 
@@ -688,14 +718,61 @@ namespace DATA_SOURCE {
 
 	DS mysqlBinlogReader::seekBinlogByTimestamp(uint64_t timestamp, bool strick)
 	{
-		int ret = READ_OK;
 		dsReturnIfFailed(seekBinlogFile(timestamp, strick));
 		dsReturnIfFailed(seekBinlogInFile(timestamp, m_currFile.c_str(), m_readLocalBinlog, strick));
 		m_currentFileRotateCount = 0;
 		LOG(INFO)<<"seek timestamp:"<<timestamp<<" in log pos:"<<m_currFile<<"."<<m_currentPos;
-		dsReturnIfFailed(dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog));
-		dsOk();
+		dsReturn(dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog));
 	}
+
+	DS mysqlBinlogReader::seekBinlogByGtid(const char* gtid)
+	{
+		if (m_conn == nullptr)
+			dsReturnIfFailed(m_mysqlConnector->getConnect(m_conn));
+		dsReturn(mysqlConnector::startDumpBinlogByGtid(m_conn, gtid, m_serverId));
+	}
+
+
+	DS mysqlBinlogReader::seekBinlogByNow()
+	{
+		if(m_conn == nullptr)
+			dsReturnIfFailed(m_mysqlConnector->getConnect(m_conn));
+		dsReturnIfFailed(mysqlConnector::query(m_conn,
+			[this](MYSQL_ROW row) {m_currFile.assign(row[0]); m_currentPos = atol(row[1]); },
+			"show master status"));
+		LOG(INFO) << "mysql now checkpoint is " << m_currentPos << "@" << m_currFile;
+		dsReturn(dumpBinlog(m_currFile.c_str(), m_currentPos, m_readLocalBinlog));
+	}
+
+	DS mysqlBinlogReader::startDumpByCheckpoint(const RPC::Checkpoint* ckp)
+	{
+		if (ckp == nullptr)
+		{
+			dsReturnIfFailed(seekBinlogByNow());
+		}
+		else
+		{
+			if (ckp->seqNo.seqNo > 0)
+			{
+
+			}
+			else if (ckp->srcPosition > 0)
+			{
+				dsReturnIfFailed(seekBinlogByCheckpoint(fileId(ckp->srcPosition), offsetInFile(ckp->srcPosition)));
+			}
+			else if (ckp->timestamp > 0)
+			{
+				META::Timestamp t;
+				t.time = ckp->timestamp;
+				dsReturnIfFailed(seekBinlogByTimestamp(t.seconds));
+			}
+			else
+			{
+				dsReturnIfFailed(seekBinlogByNow());
+			}
+		}
+	}
+
 
 	DS mysqlBinlogReader::startDump()
 	{

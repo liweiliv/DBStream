@@ -2,7 +2,7 @@
 #include "database.h"
 #include "solidBlock.h"
 namespace DATABASE {
-	int block::loadBlockInfo(fileHandle h, uint32_t id)
+	int Block::loadBlockInfo(fileHandle h, uint32_t id)
 	{
 		uint8_t loadStatus = m_loading.load(std::memory_order_relaxed);
 		do {
@@ -23,7 +23,7 @@ namespace DATABASE {
 				return -1;
 		} while (1);
 		int readSize = 0;
-		int headSize = sizeof(m_crc) + offsetof(solidBlock, m_crc) - offsetof(solidBlock, m_version);
+		int headSize = sizeof(m_crc) + offsetof(SolidBlock, m_crc) - offsetof(SolidBlock, m_version);
 		if (headSize != (readSize = readFile(h, (char*)&m_version, headSize)))
 		{
 			LOG(ERROR) << "load block file " << id << " failed for read head failed ";
@@ -47,7 +47,7 @@ namespace DATABASE {
 		m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED_HEAD), std::memory_order_release);
 		return 0;
 	}
-	block* block::loadFromFile(uint32_t id, database* db, META::metaDataBaseCollection* metaDataCollection)
+	Block* Block::loadFromFile(uint32_t id, Database* db, META::MetaDataBaseCollection* metaDataCollection)
 	{
 		char fileName[524];
 		db->genBlockFileName(id, fileName);
@@ -57,7 +57,7 @@ namespace DATABASE {
 			LOG(ERROR) << "open block file:" << fileName << " failed for error:" << errno << "," << strerror(errno);
 			return nullptr;
 		}
-		solidBlock* b = new solidBlock(id, db, metaDataCollection, 0);
+		SolidBlock* b = new SolidBlock(id, db, metaDataCollection, 0);
 		if (0 != b->loadBlockInfo(h, id))
 		{
 			closeFile(h);

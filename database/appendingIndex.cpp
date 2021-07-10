@@ -7,9 +7,9 @@
 #include "appendingIndex.h"
 #include "solidIndex.h"
 namespace DATABASE {
-	void appendingIndex::appendBinaryIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate)
+	void appendingIndex::appendBinaryIndex(appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate)
 	{
-		KeyTemplate<META::binaryType> c;
+		KeyTemplate<META::BinaryType> c;
 		c.key.data = r->column(index->m_ukMeta->columnInfo[0].columnId);
 		c.key.size = r->varColumnSize(index->m_ukMeta->columnInfo[0].columnId);
 		if (appendIndex(index, r, &c, id, false))
@@ -23,7 +23,7 @@ namespace DATABASE {
 		}
 
 	}
-	void appendingIndex::appendUnionIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate)
+	void appendingIndex::appendUnionIndex(appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate)
 	{
 		KeyTemplate<META::unionKey> c;
 		uint16_t size = META::unionKey::memSize(r, index->m_ukMeta, false);
@@ -43,7 +43,7 @@ namespace DATABASE {
 				index->m_varSize += *(uint16_t*)c.key.key - index->m_ukMeta->size;
 		}
 	}
-	DLL_EXPORT appendingIndex::appendingIndex(const META::unionKeyMeta* ukMeta, const META::tableMeta* meta, leveldb::Arena* arena) :
+	DLL_EXPORT appendingIndex::appendingIndex(const META::UnionKeyMeta* ukMeta, const META::TableMeta* meta, leveldb::Arena* arena) :
 		m_meta(meta), m_ukMeta(ukMeta), m_arena(arena), m_localArena(arena == nullptr), m_allCount(0), m_keyCount(0), m_varSize(0)
 	{
 		if (m_arena == nullptr)
@@ -92,7 +92,7 @@ namespace DATABASE {
 			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
-			m_index = new leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >(keyComparator<META::binaryType>(), m_arena);
+			m_index = new leveldb::SkipList< KeyTemplate<META::BinaryType>*, keyComparator<META::BinaryType> >(keyComparator<META::BinaryType>(), m_arena);
 			break;
 		case META::COLUMN_TYPE::T_UNION:
 			m_index = new leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >(keyComparator<META::unionKey>(), m_arena);
@@ -146,7 +146,7 @@ namespace DATABASE {
 				break;
 			case META::COLUMN_TYPE::T_STRING:
 			case META::COLUMN_TYPE::T_BLOB:
-				delete static_cast<leveldb::SkipList< KeyTemplate<META::binaryType>*, keyComparator<META::binaryType> >*>(m_index);
+				delete static_cast<leveldb::SkipList< KeyTemplate<META::BinaryType>*, keyComparator<META::BinaryType> >*>(m_index);
 				break;
 			case META::COLUMN_TYPE::T_UNION:
 				delete static_cast<leveldb::SkipList< KeyTemplate<META::unionKey>*, keyComparator<META::unionKey> >*>(m_index);
@@ -189,10 +189,10 @@ namespace DATABASE {
 		appendBinaryIndex,//T_TEXT
 		nullptr//T_BOOL
 	};
-	DLL_EXPORT void  appendingIndex::append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id)
+	DLL_EXPORT void  appendingIndex::append(const RPC::DMLRecord* r, uint32_t id)
 	{
-		if ((r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) ||
-			r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) && r->isKeyUpdated(m_ukMeta)
+		if ((r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_UPDATE) ||
+			r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_REPLACE)) && r->isKeyUpdated(m_ukMeta)
 			)
 		{
 			m_appendIndexFuncs[TID(m_type)](this, r, id, true);
@@ -262,7 +262,7 @@ namespace DATABASE {
 		((solidIndexHead*)(data))->size = externCurretPos - data;
 	}
 	template<>
-	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter)
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::BinaryType>(char* data, appendingIndex::iterator<META::BinaryType>& iter)
 	{
 		char* indexPos = data + sizeof(solidIndexHead), * externCurretPos = indexPos + sizeof(uint32_t) * (m_keyCount + 1);
 		((solidIndexHead*)(data))->flag = 0;
@@ -274,9 +274,9 @@ namespace DATABASE {
 			const keyChildInfo* k = iter.keyDetail();
 			*(uint32_t*)indexPos = externCurretPos - data;
 			indexPos += sizeof(uint32_t);
-			*(uint16_t*)externCurretPos = static_cast<const META::binaryType*>(iter.key())->size;
-			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::binaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
-			externCurretPos += static_cast<const META::binaryType*>(iter.key())->size + sizeof(uint16_t);
+			*(uint16_t*)externCurretPos = static_cast<const META::BinaryType*>(iter.key())->size;
+			memcpy(externCurretPos + sizeof(uint16_t), static_cast<const META::BinaryType*>(iter.key())->data, *(uint16_t*)externCurretPos);
+			externCurretPos += static_cast<const META::BinaryType*>(iter.key())->size + sizeof(uint16_t);
 			*(uint32_t*)externCurretPos = k->count;
 			memcpy(externCurretPos + sizeof(uint32_t), k->subArray, sizeof(uint32_t) * k->count);
 			externCurretPos += sizeof(uint32_t) + sizeof(uint32_t) * k->count;

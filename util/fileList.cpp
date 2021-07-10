@@ -68,7 +68,7 @@ DLL_EXPORT int fileList::load()
 	FindClose(hFind);
 #endif
 #ifdef OS_LINUX
-	}
+}
 	closedir(dir);
 #endif
 	return 0;
@@ -97,7 +97,7 @@ DLL_EXPORT DS fileList::getFileList(const std::string& dirPath, std::vector<std:
 #endif
 
 #ifdef OS_WIN
-DLL_EXPORT DS fileList::getFileList(const std::string& dirPath, std::vector<std::string>& files)
+DLL_EXPORT DS fileList::getFileList(const std::string& dirPath, std::vector<String>& files)
 {
 	WIN32_FIND_DATA findFileData;
 	HANDLE hFind = FindFirstFile((dirPath + "\\*").c_str(), &findFileData);

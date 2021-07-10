@@ -54,7 +54,7 @@ namespace DATA_SOURCE
 		};
 		occiConnect* m_connector;
 		oracle::occi::Connection* m_conn;
-		config* m_conf;
+		Config* m_conf;
 		std::string m_currentFileName;
 		uint64_t m_currentScn;
 		uint64_t m_currenttTimestamp;

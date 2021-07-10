@@ -5,7 +5,7 @@
 #include "thread/barrier.h"
 #include "util/winDll.h"
 namespace META {
-	class tableIdTree
+	class TableIdTree
 	{
 	private:
 		struct node
@@ -23,14 +23,14 @@ namespace META {
 		};
 		struct tableMetaWrap
 		{
-			tableMeta* meta;
+			TableMeta* meta;
 			tableMetaWrap* prev;
 		};
 		node* m_root;
 		std::mutex m_writeLock;
 
 	public:
-		tableIdTree()
+		TableIdTree()
 		{
 			m_root = new node();
 			m_root->endId = 0;
@@ -39,7 +39,7 @@ namespace META {
 			m_root->parent = nullptr;
 			m_root->serial = true;
 		}
-		~tableIdTree()
+		~TableIdTree()
 		{
 			cleanNode(m_root);
 		}
@@ -66,9 +66,9 @@ namespace META {
 			}
 			delete n;
 		}
-		void put(tableMeta* meta)
+		void put(TableMeta* meta)
 		{
-			uint64_t tableId = tableMeta::tableID(meta->m_id);
+			uint64_t tableId = TableMeta::tableID(meta->m_id);
 			m_writeLock.lock();
 			node* n = m_root;
 			while (true)
@@ -126,8 +126,8 @@ namespace META {
 						if (n->level == 0)
 						{
 							tableMetaWrap* m = static_cast<tableMetaWrap*>(n->child[cid]);
-							assert(tableMeta::tableID(m->meta->m_id) == tableId);
-							assert(tableMeta::tableVersion(m->meta->m_id) < tableMeta::tableVersion(meta->m_id));
+							assert(TableMeta::tableID(m->meta->m_id) == tableId);
+							assert(TableMeta::tableVersion(m->meta->m_id) < TableMeta::tableVersion(meta->m_id));
 							tableMetaWrap* newMetaWrap = new tableMetaWrap;
 							newMetaWrap->meta = meta;
 							newMetaWrap->prev = m;
@@ -154,9 +154,9 @@ namespace META {
 				}
 			}
 		}
-		inline tableMeta* getPrevVersion(uint64_t tableId)
+		inline TableMeta* getPrevVersion(uint64_t tableId)
 		{
-			uint64_t id = tableMeta::tableID(tableId);
+			uint64_t id = TableMeta::tableID(tableId);
 			node* n = m_root;
 			for (;;)
 			{
@@ -170,7 +170,7 @@ namespace META {
 					if (n->level == 0)
 					{
 						tableMetaWrap* m = static_cast<tableMetaWrap*>(n->child[cid]);
-						assert(tableMeta::tableID(m->meta->m_id) == id);
+						assert(TableMeta::tableID(m->meta->m_id) == id);
 						if (m->meta->m_id < tableId)
 							return nullptr;
 						for (; m != nullptr;)
@@ -191,9 +191,9 @@ namespace META {
 				}
 			}
 		}
-		inline tableMeta* get(uint64_t tableId)
+		inline TableMeta* get(uint64_t tableId)
 		{
-			uint64_t id = tableMeta::tableID(tableId);
+			uint64_t id = TableMeta::tableID(tableId);
 			node* n = m_root;
 			for (;;)
 			{
@@ -207,7 +207,7 @@ namespace META {
 					if (n->level == 0)
 					{
 						tableMetaWrap* m = static_cast<tableMetaWrap*>(n->child[cid]);
-						assert(tableMeta::tableID(m->meta->m_id) == id);
+						assert(TableMeta::tableID(m->meta->m_id) == id);
 						if (m->meta->m_id < tableId)
 							return nullptr;
 						for (; m != nullptr;)

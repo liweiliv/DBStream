@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string>
 #include "job.h"
-namespace STORE {
+namespace DB_INSTANCE {
 	class iterator;
 	class streamProcesser:public jobProcess
 	{

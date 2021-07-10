@@ -11,11 +11,11 @@
 
 #include "userHandle.h"
 #include "userManager.h"
-#include "storeError.h"
+#include "instanceError.h"
 #include "sqlParser/sqlParser.h"
 #include "schedule.h"
 #include "glog/logging.h"
-namespace STORE
+namespace DB_INSTANCE
 {
 #define CMD_AUTH 0x01
 #define CMD_SQL  0x02
@@ -74,7 +74,7 @@ class command
 private:
     userManager * m_userManager;
     SQL_PARSER::sqlParser m_sqlParser;
-    schedule m_schedule;
+    Schedule m_schedule;
 public:
     int processCmd(userHandle * user, const char * cmd, uint32_t size)
     {

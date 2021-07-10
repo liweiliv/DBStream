@@ -3,7 +3,7 @@
 #include "oracleConfig.h"
 #include "xstream/OracleXStreamDataSource.h"
 namespace DATA_SOURCE {
-	DLL_EXPORT oracleIncreaceDataSource::oracleIncreaceDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :dataSource(conf, metaDataCollection, store)
+	DLL_EXPORT oracleIncreaceDataSource::oracleIncreaceDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance) :dataSource(conf, metaDataCollection, instance)
 	{
 
 	}
@@ -13,7 +13,7 @@ namespace DATA_SOURCE {
 	}
 
 
-	extern "C" DLL_EXPORT dataSource * instance(config * conf, META::metaDataCollection * metaDataCollection, STORE::store * store)
+	extern "C" DLL_EXPORT dataSource * instance(Config * conf, META::metaDataCollection * metaDataCollection, DB_INSTANCE::DatabaseInstance * instance)
 	{
 		std::string readerType = conf->get(SECTION, READ_TYPE, LOGMINER);
 		if (readerType.compare(LOGMINER) == 0)
@@ -22,7 +22,7 @@ namespace DATA_SOURCE {
 		}
 		else if (readerType.compare(XSTREAM) == 0)
 		{
-			return new oracleXStreamLogReader(conf, metaDataCollection, store);
+			return new oracleXStreamLogReader(conf, metaDataCollection, instance);
 		}
 		else
 		{

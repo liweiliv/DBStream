@@ -3,7 +3,7 @@
 #include "dataSource/oracleDataSource/ociConnect.h"
 #include "dataSource/oracleDataSource/xstream/OracleXStreamDataSource.h"
 #include "dataSource/oracleDataSource/oracleMetaDataCollection.h"
-int testOcci(config& conf)
+int testOcci(Config& conf)
 {
 	DATA_SOURCE::occiConnect conn(&conf);
 	oracle::occi::Connection* c;
@@ -19,7 +19,7 @@ int testOcci(config& conf)
 	conn.close(c);
 }
 
-int testOci(config& conf)
+int testOci(Config& conf)
 {
 	DATA_SOURCE::ociConnect conn(&conf);
 	DATA_SOURCE::ociConnect::oci* c;
@@ -67,7 +67,7 @@ int testOci(config& conf)
 	}
 	delete c;
 }
-int testXstream(config& conf)
+int testXstream(Config& conf)
 {
 	DATA_SOURCE::occiConnect conni(&conf);
 	if (!dsCheck(conni.init()))
@@ -106,7 +106,7 @@ int testXstream(config& conf)
 	}
 	return 0;
 }
-int testInitMeta(config& conf)
+int testInitMeta(Config& conf)
 {
 	DATA_SOURCE::occiConnect conn(&conf);
 	if (!dsCheck(conn.init()))
@@ -127,7 +127,7 @@ int testInitMeta(config& conf)
 }
 int main()
 {
-	config conf;
+	Config conf;
 	conf.set(DATA_SOURCE::SECTION, DATA_SOURCE::HOST, "localhost");
 	conf.set(DATA_SOURCE::SECTION, DATA_SOURCE::PORT, "1521");
 	conf.set(DATA_SOURCE::SECTION, DATA_SOURCE::USER, "c##oraTest");

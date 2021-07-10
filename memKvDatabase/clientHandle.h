@@ -9,7 +9,7 @@
 namespace AUTH {
 	class serverHandle;
 }
-namespace DATABASE_INCREASE{
+namespace RPC{
 	struct DMLRecord;
 }
 namespace KVDB {
@@ -40,7 +40,7 @@ namespace KVDB {
 		volatile bool m_busy;
 		arrayQueue<rpcHead *> m_preProcessResp;
 		char m_resultDefaultBuffer[2048];
-		const DATABASE_INCREASE::DMLRecord* m_result;
+		const RPC::DMLRecord* m_result;
 
 
 	public:

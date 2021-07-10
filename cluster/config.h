@@ -62,9 +62,9 @@ namespace CLUSTER {
 	public:
 		logConfig() :m_defaultBlockSize(DEFAULT_BLOCK_SIZE), m_defaultLogFileSize(DEFAULT_LOG_FILE_SIZE), m_maxLogEntrySize(DEFAULT_MAX_LOG_ENTRY_SIZE)
 		{
-			registe("defaultBlockSize", [=](UPD_ARGV) {return ::config::getUint32(value.c_str(), m_defaultBlockSize, 1, MAX_BLOCK_SIZE); });
-			registe("defaultLogFileSize", [=](UPD_ARGV) {return::config::getUint32(value.c_str(), m_defaultLogFileSize, 1, MAX_LOG_FILE_SIZE); });
-			registe("maxLogEntrySize", [=](UPD_ARGV) {return ::config::getUint32(value.c_str(), m_maxLogEntrySize, sizeof(logEntryRpcBase), MAX_LOG_ENTRY_SIZE); });
+			registe("defaultBlockSize", [=](UPD_ARGV) {return ::Config::getUint32(value.c_str(), m_defaultBlockSize, 1, MAX_BLOCK_SIZE); });
+			registe("defaultLogFileSize", [=](UPD_ARGV) {return::Config::getUint32(value.c_str(), m_defaultLogFileSize, 1, MAX_LOG_FILE_SIZE); });
+			registe("maxLogEntrySize", [=](UPD_ARGV) {return ::Config::getUint32(value.c_str(), m_maxLogEntrySize, sizeof(logEntryRpcBase), MAX_LOG_ENTRY_SIZE); });
 		}
 		logConfig(const logConfig& conf) :configBase(conf), m_defaultBlockSize(conf.m_defaultBlockSize), m_defaultLogFileSize(conf.m_defaultLogFileSize), m_maxLogEntrySize(conf.m_maxLogEntrySize) {}
 		logConfig& operator=(const logConfig& conf)
@@ -107,9 +107,9 @@ namespace CLUSTER {
 		clusterLogConfig() :m_purgePeriod(DEFAULT_PURGE_PERIOD), m_storageTime(DEFAULT_STORAGE_TIME), m_maxFilesSize(DEFAULT_MAX_LOGS_SIZE)
 			, m_logDir(DEFAULT_CLUSTER_LOG_DIR), m_logFileNamePrefix(DEFAULT_CLUSTER_LOG_NAME_PREFIX)
 		{
-			registe("purgePeriod", [=](UPD_ARGV) {return::config::getUint32(value.c_str(), m_purgePeriod); });
-			registe("storageTime", [=](UPD_ARGV) {return::config::getUint32(value.c_str(), m_storageTime); });
-			registe("maxFilesSize", [=](UPD_ARGV) {return::config::getUint64(value.c_str(), m_maxFilesSize); });
+			registe("purgePeriod", [=](UPD_ARGV) {return::Config::getUint32(value.c_str(), m_purgePeriod); });
+			registe("storageTime", [=](UPD_ARGV) {return::Config::getUint32(value.c_str(), m_storageTime); });
+			registe("maxFilesSize", [=](UPD_ARGV) {return::Config::getUint64(value.c_str(), m_maxFilesSize); });
 			registe("logDir", [=](UPD_ARGV) {
 				if (!isInit)
 					return "can not change logDir";

@@ -2,7 +2,7 @@
 namespace DATA_SOURCE
 {
 
-	DLL_EXPORT ociConnect::ociConnect(config* conf) :oracleConnectBase(conf), m_envp(nullptr)
+	DLL_EXPORT ociConnect::ociConnect(Config* conf) :oracleConnectBase(conf), m_envp(nullptr)
 	{
 	}
 

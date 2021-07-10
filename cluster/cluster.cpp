@@ -69,12 +69,12 @@ namespace CLUSTER
 		"term bigint unsigned,"\
 		"logIndex bigint unsigned,"\
 		"}";
-	constexpr static auto nodeTableId = META::tableMeta::genTableId(1, 1);
-	constexpr static auto processorTableId = META::tableMeta::genTableId(2, 1);
-	constexpr static auto endPointTableId = META::tableMeta::genTableId(3, 1);
-	constexpr static auto heartbeatTableId = META::tableMeta::genTableId(4, 1);
-	constexpr static auto checkpointTableId = META::tableMeta::genTableId(5, 1);
-	constexpr static auto rollbackTableId = META::tableMeta::genTableId(6, 1);
+	constexpr static auto nodeTableId = META::TableMeta::genTableId(1, 1);
+	constexpr static auto processorTableId = META::TableMeta::genTableId(2, 1);
+	constexpr static auto endPointTableId = META::TableMeta::genTableId(3, 1);
+	constexpr static auto heartbeatTableId = META::TableMeta::genTableId(4, 1);
+	constexpr static auto checkpointTableId = META::TableMeta::genTableId(5, 1);
+	constexpr static auto rollbackTableId = META::TableMeta::genTableId(6, 1);
 
 	void cluster::formatAuthRspMsg(char* msg, uint32_t migicNum, authReturnCode code) {
 		authRsp* rsp = (authRsp*)msg;
@@ -277,11 +277,11 @@ namespace CLUSTER
 			if (rpc->leaderCommitIndex > m_myself->getNodeInfo().m_currentLogIndex.logIndex)
 			{
 				/*
-				const logEntryRpcBase* logEntry;
+				const logEntryRpcBase* LogEntry;
 				do {
-					dsReturnIfFailed(m_logIter->next(logEntry));
-					dsReturnIfFailed(apply(logEntry));
-				} while (logEntry->logIndex.logIndex < rpc->leaderCommitIndex);
+					dsReturnIfFailed(m_logIter->next(LogEntry));
+					dsReturnIfFailed(apply(LogEntry));
+				} while (LogEntry->logIndex.logIndex < rpc->leaderCommitIndex);
 				*/
 				//todo
 			}

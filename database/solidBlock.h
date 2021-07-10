@@ -31,52 +31,52 @@
 
 namespace DATABASE
 {
-	class solidBlockIterator;
-	class appendingBlock;
+	class SolidBlockIterator;
+	class AppendingBlock;
 	template<class T>
-	class solidBlockIndexIterator;
+	class SolidBlockIndexIterator;
 	static threadLocal<char> compressBuffer;
 	static threadLocal<uint32_t> compressBufferSize;
 #pragma pack(1)
-	class solidBlock :public block {
+	class SolidBlock :public Block {
 		fileHandle m_fd;
-		tableDataInfo* m_tableInfo;
-		recordGeneralInfo* m_recordInfos;
+		TableDataInfo* m_tableInfo;
+		RecordGeneralInfo* m_recordInfos;
 		uint32_t* m_recordIdOrderyTable;
-		tableFullData* m_tables;
+		TableFullData* m_tables;
 		uint64_t* pageOffsets;
 		char* pageInfo;
-		page** pages;
-		page* firstPage;
+		Page** pages;
+		Page* firstPage;
 		std::mutex m_fileLock;
-		friend class appendingBlock;
-		friend class solidBlockIterator;
-		friend class solidBlockTimestampIterator;
-		friend class solidBlockCheckpointIterator;
+		friend class AppendingBlock;
+		friend class SolidBlockIterator;
+		friend class SolidBlockTimestampIterator;
+		friend class SolidBlockCheckpointIterator;
 		template <class T>
-		friend class solidBlockIndexIterator;
+		friend class SolidBlockIndexIterator;
 	public:
-		solidBlock(uint32_t blockId, database* db, META::metaDataBaseCollection* metaDataCollection, uint32_t flag) :block(blockId, db, metaDataCollection, flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+		SolidBlock(uint32_t blockId, Database* db, META::MetaDataBaseCollection* metaDataCollection, uint32_t flag) :Block(blockId, db, metaDataCollection, flag), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 		}
-		solidBlock(block* b) :block(b), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
+		SolidBlock(Block* b) :Block(b), m_fd(INVALID_HANDLE_VALUE), m_tableInfo(nullptr), m_recordInfos(nullptr),
 			m_recordIdOrderyTable(nullptr), m_tables(nullptr), pageOffsets(nullptr), pageInfo(nullptr), pages(nullptr), firstPage(nullptr)
 		{
 
 		}
-		~solidBlock();
+		~SolidBlock();
 	public:
 		int load(int id = 0);
 	private:
 		int loadFirstPage();
-		int loadPage(page* p, size_t size, size_t offset);
+		int loadPage(Page* p, size_t size, size_t offset);
 		inline char* getCompressbuffer(uint32_t size);
-		int64_t writepage(page* p, uint64_t offset, bool compress);
-		const tableDataInfo* getTableInfo(uint64_t tableId);
-		inline page* getPage(int pageId)
+		int64_t writepage(Page* p, uint64_t offset, bool compress);
+		const TableDataInfo* getTableInfo(uint64_t tableId);
+		inline Page* getPage(int pageId)
 		{
-			page* p = pages[pageId];
+			Page* p = pages[pageId];
 			p->use();
 		RETRY:
 			if (p->pageData == nullptr)
@@ -102,9 +102,9 @@ namespace DATABASE
 		{
 			return pageId(m_recordInfos[recordId].offset);
 		}
-		page* getIndex(const META::tableMeta* table, META::KEY_TYPE type, int keyId);
+		Page* getIndex(const META::TableMeta* table, META::KEY_TYPE type, int keyId);
 		char* getRecordByInnerId(uint32_t recordId);
-		inline const char* getRecordFromPage(page* p, uint32_t recordId)
+		inline const char* getRecordFromPage(Page* p, uint32_t recordId)
 		{
 			return p->pageData + offsetInPage(m_recordInfos[recordId].offset);
 		}
@@ -115,27 +115,27 @@ namespace DATABASE
 		}
 		int writeToFile();
 		int loadFromFile();
-		int getTableIndexPageId(const tableDataInfo* tableInfo, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
+		int getTableIndexPageId(const TableDataInfo* tableInfo, const META::TableMeta* table, META::KEY_TYPE type, int keyId);
 		void clear();
-		blockIndexIterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
+		BlockIndexIterator* createIndexIterator(uint32_t flag, const META::TableMeta* table, META::KEY_TYPE type, int keyId);
+		char* getRecord(const META::TableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};
 #pragma pack()
-	class solidBlockIterator :public iterator {
+	class SolidBlockIterator :public Iterator {
 	protected:
 		uint32_t m_recordId;
 		uint32_t m_seekedId;
 		uint64_t m_realRecordId;
-		solidBlock* m_block;
-		page* m_pageCache[16];
+		SolidBlock* m_block;
+		Page* m_pageCache[16];
 	public:
-		solidBlockIterator(solidBlock* block, int flag, filter* filter) :iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block)
+		SolidBlockIterator(SolidBlock* block, int flag, Filter* filter) :Iterator(flag, filter), m_recordId(0), m_seekedId(0), m_realRecordId(0), m_block(block)
 		{
 			memset(m_pageCache, 0, sizeof(m_pageCache));
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 			begin();
 		}
-		~solidBlockIterator()
+		~SolidBlockIterator()
 		{
 			for (int i = 0; i < SOLID_ITER_PAGE_CACHE_SIZE; i++)
 			{
@@ -168,14 +168,14 @@ namespace DATABASE
 				}
 				if (filterCurrentSeekRecord() != 0)
 				{
-					if (m_status == status::INVALID)
+					if (m_status == Status::INVALID)
 						m_status = next();
 				}
 				else
-					m_status = status::OK;
+					m_status = Status::OK;
 			}
 		}
-		void resetBlock(solidBlock* block);
+		void resetBlock(SolidBlock* block);
 		bool seekByLogOffset(uint64_t logOffset, bool equalOrAfter);
 		bool seekByRecordId(uint64_t recordId);
 		inline bool valid()
@@ -183,7 +183,7 @@ namespace DATABASE
 			return m_block != nullptr && m_recordId < m_block->m_recordCount;
 		}
 		int filterCurrentSeekRecord();
-		status next();
+		Status next();
 		inline const void* key()const
 		{
 			return &m_realRecordId;
@@ -217,16 +217,16 @@ namespace DATABASE
 		}
 		inline bool end()
 		{
-			return m_status == status::ENDED;
+			return m_status == Status::ENDED;
 		}
 	};
-	class solidBlockTimestampIterator :public solidBlockIterator
+	class SolidBlockTimestampIterator :public SolidBlockIterator
 	{
 	private:
 		bool seekIncrease(const void* key);
 		bool seekDecrease(const void* key);
 	public:
-		solidBlockTimestampIterator(solidBlock* block, int flag, filter* filter) :solidBlockIterator(block, flag, filter)
+		SolidBlockTimestampIterator(SolidBlock* block, int flag, Filter* filter) :SolidBlockIterator(block, flag, filter)
 		{
 			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
 		}
@@ -242,10 +242,10 @@ namespace DATABASE
 			return &m_block->m_recordInfos[m_recordId].timestamp;
 		}
 	};
-	class solidBlockCheckpointIterator :public solidBlockIterator
+	class SolidBlockCheckpointIterator :public SolidBlockIterator
 	{
 	public:
-		solidBlockCheckpointIterator(solidBlock* block, int flag, filter* filter) :solidBlockIterator(block, flag, filter)
+		SolidBlockCheckpointIterator(SolidBlock* block, int flag, Filter* filter) :SolidBlockIterator(block, flag, filter)
 		{
 			this->m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
 		}
@@ -255,10 +255,10 @@ namespace DATABASE
 			return &m_block->m_recordInfos[m_recordId].timestamp;
 		}
 	};
-	class solidBlockRecordIdIterator :public solidBlockIterator
+	class solidBlockRecordIdIterator :public SolidBlockIterator
 	{
 	public:
-		solidBlockRecordIdIterator(solidBlock* block, int flag, filter* filter) :solidBlockIterator(block, flag, filter)
+		solidBlockRecordIdIterator(SolidBlock* block, int flag, Filter* filter) :SolidBlockIterator(block, flag, filter)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 		}
@@ -269,16 +269,16 @@ namespace DATABASE
 		}
 	};
 	template<class INDEX_TYPE>
-	class solidBlockIndexIterator :public blockIndexIterator
+	class SolidBlockIndexIterator :public BlockIndexIterator
 	{
 	private:
-		solidBlock* m_block;
+		SolidBlock* m_block;
 		INDEX_TYPE m_index;
-		indexIterator<INDEX_TYPE>* indexIter;
-		page* m_currentPage;
+		IndexIterator<INDEX_TYPE>* indexIter;
+		Page* m_currentPage;
 
 	public:
-		solidBlockIndexIterator(uint32_t flag, solidBlock* block, INDEX_TYPE& index) :blockIndexIterator(flag, nullptr, block->m_blockID), m_block(block), m_index(index), m_currentPage(nullptr)
+		SolidBlockIndexIterator(uint32_t flag, SolidBlock* block, INDEX_TYPE& index) :BlockIndexIterator(flag, nullptr, block->m_blockID), m_block(block), m_index(index), m_currentPage(nullptr)
 		{
 			switch (index.getType())
 			{
@@ -320,13 +320,13 @@ namespace DATABASE
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				indexIter = new solidIndexIterator<META::binaryType, INDEX_TYPE>(flag, &m_index);
+				indexIter = new solidIndexIterator<META::BinaryType, INDEX_TYPE>(flag, &m_index);
 				break;
 			default:
 				abort();
 			}
 		}
-		virtual ~solidBlockIndexIterator()
+		virtual ~SolidBlockIndexIterator()
 		{
 			if (indexIter != nullptr)
 				delete indexIter;
@@ -345,12 +345,12 @@ namespace DATABASE
 		{
 			return indexIter->valid();//todo
 		};
-		virtual status next()
+		virtual Status next()
 		{
 			if (increase())
-				return indexIter->prevKey() ? status::OK : status::ENDED;
+				return indexIter->prevKey() ? Status::OK : Status::ENDED;
 			else
-				return indexIter->nextKey() ? status::OK : status::ENDED;
+				return indexIter->nextKey() ? Status::OK : Status::ENDED;
 		}
 		virtual const void* key() const
 		{

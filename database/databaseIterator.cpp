@@ -10,10 +10,10 @@ namespace DATABASE
 		[IN]interval, micro second,effect when equalOrAfter is true,find in a range [timestamp,timestamp+interval]
 		[IN]equalOrAfter,if true ,find in a range [timestamp,timestamp+interval],if has no data,return false,if false ,get first data equal or after [timestamp]
 	*/
-	DLL_EXPORT bool databaseTimestampIterator::seek(const void* key)//timestamp not increase strictly,so we have to check all block
+	DLL_EXPORT bool DatabaseTimestampIterator::seek(const void* key)//timestamp not increase strictly,so we have to check all block
 	{
 		uint64_t timestamp = *(const uint64_t*)key;
-		m_status = status::UNINIT;
+		m_status = Status::UNINIT;
 		m_errInfo.clear();
 		uint32_t blockId;
 		while ((m_current = m_database->getBasciBlock(blockId = m_database->m_firstBlockId.load(std::memory_order_relaxed))) == nullptr)
@@ -35,7 +35,7 @@ namespace DATABASE
 		} while (1);
 		if (!(m_current->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID)))
 		{
-			block* tmp = m_database->getBlock(m_current->m_blockID);
+			Block* tmp = m_database->getBlock(m_current->m_blockID);
 			m_current->unuse();
 			if (tmp == nullptr)
 				return false;
@@ -43,7 +43,7 @@ namespace DATABASE
 		}
 		if (m_current->m_flag & BLOCK_FLAG_APPENDING)
 		{
-			appendingBlockIterator* iter = new appendingBlockTimestampIterator(static_cast<appendingBlock*>(m_current), m_filter, m_flag);
+			appendingBlockIterator* iter = new appendingBlockTimestampIterator(static_cast<AppendingBlock*>(m_current), m_filter, m_flag);
 			if (!iter->seek(&timestamp))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -53,7 +53,7 @@ namespace DATABASE
 		}
 		else
 		{
-			solidBlockIterator* iter = new solidBlockTimestampIterator(static_cast<solidBlock*>(m_current), m_flag, m_filter);
+			SolidBlockIterator* iter = new SolidBlockTimestampIterator(static_cast<SolidBlock*>(m_current), m_flag, m_filter);
 			if (!iter->seek(&timestamp))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -61,13 +61,13 @@ namespace DATABASE
 			}
 			m_blockIter = iter;
 		}
-		m_status = status::OK;
+		m_status = Status::OK;
 		return true;
 	}
-	DLL_EXPORT bool databaseCheckpointIterator::seek(const void* key)
+	DLL_EXPORT bool DatabaseCheckpointIterator::seek(const void* key)
 	{
 		uint64_t logOffset = *(const uint64_t*)key;
-		m_status = status::UNINIT;
+		m_status = Status::UNINIT;
 		m_errInfo.clear();
 		int64_t _s, s, _e, e, m;
 	RESEEK:
@@ -142,9 +142,9 @@ namespace DATABASE
 			}
 		}
 	FIND:
-		if ((m_current->m_flag & BLOCK_FLAG_SOLID) && static_cast<solidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed) <= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
+		if ((m_current->m_flag & BLOCK_FLAG_SOLID) && static_cast<SolidBlock*>(m_current)->m_loading.load(std::memory_order_relaxed) <= static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADING_FIRST_PAGE))
 		{
-			if (0 != static_cast<solidBlock*>(m_current)->load())
+			if (0 != static_cast<SolidBlock*>(m_current)->load())
 			{
 				m_current->unuse();
 				return false;
@@ -152,7 +152,7 @@ namespace DATABASE
 		}
 		if (m_current->m_flag & BLOCK_FLAG_APPENDING)
 		{
-			appendingBlockCheckpointIterator* iter = new appendingBlockCheckpointIterator(static_cast<appendingBlock*>(m_current), m_filter, m_flag);
+			appendingBlockCheckpointIterator* iter = new appendingBlockCheckpointIterator(static_cast<AppendingBlock*>(m_current), m_filter, m_flag);
 			if (!iter->seek(&logOffset))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -162,7 +162,7 @@ namespace DATABASE
 		}
 		else
 		{
-			solidBlockIterator* iter = new solidBlockCheckpointIterator(static_cast<solidBlock*>(m_current), m_flag, m_filter);
+			SolidBlockIterator* iter = new SolidBlockCheckpointIterator(static_cast<SolidBlock*>(m_current), m_flag, m_filter);
 			if (!iter->seek(&logOffset))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -170,13 +170,13 @@ namespace DATABASE
 			}
 			m_blockIter = iter;
 		}
-		m_status = status::OK;
+		m_status = Status::OK;
 		return true;
 	}
-	DLL_EXPORT bool databaseRecordIdIterator::seek(const void* key)
+	DLL_EXPORT bool DatabaseRecordIdIterator::seek(const void* key)
 	{
 		uint64_t recordId = *(const uint64_t*)key;
-		m_status = status::UNINIT;
+		m_status = Status::UNINIT;
 		m_errInfo.clear();
 		int64_t s = m_database->m_firstBlockId.load(std::memory_order_relaxed), e = m_database->m_lastBlockId.load(std::memory_order_relaxed), m;
 		while (s <= e)
@@ -207,7 +207,7 @@ namespace DATABASE
 	FIND:
 		if (!(m_current->m_flag & (BLOCK_FLAG_APPENDING | BLOCK_FLAG_SOLID)))
 		{
-			block* tmp = m_database->getBlock(m_current->m_blockID);
+			Block* tmp = m_database->getBlock(m_current->m_blockID);
 			m_current->unuse();
 			if (tmp == nullptr)
 				return false;
@@ -215,7 +215,7 @@ namespace DATABASE
 		}
 		if (m_current->m_flag & BLOCK_FLAG_APPENDING)
 		{
-			appendingBlockIterator* iter = new appendingBlockRecordIdIterator(static_cast<appendingBlock*>(m_current), m_filter, m_flag);
+			appendingBlockIterator* iter = new appendingBlockRecordIdIterator(static_cast<AppendingBlock*>(m_current), m_filter, m_flag);
 			if (!iter->seek(&recordId))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -225,7 +225,7 @@ namespace DATABASE
 		}
 		else
 		{
-			solidBlockIterator* iter = new solidBlockRecordIdIterator(static_cast<solidBlock*>(m_current), m_flag, m_filter);
+			SolidBlockIterator* iter = new solidBlockRecordIdIterator(static_cast<SolidBlock*>(m_current), m_flag, m_filter);
 			if (!iter->seek(&recordId))
 			{
 				delete iter;//delete will call m_current->unuse();
@@ -233,37 +233,37 @@ namespace DATABASE
 			}
 			m_blockIter = iter;
 		}
-		m_status = status::OK;
+		m_status = Status::OK;
 		return true;
 	}
-	DLL_EXPORT databaseIterator::databaseIterator(uint32_t flag, DB_ITER_TYPE type, filter* filter, database* db) :iterator(flag, filter), m_current(nullptr), m_blockIter(nullptr), m_database(db), m_iterType(type)
+	DLL_EXPORT DatabaseIterator::DatabaseIterator(uint32_t flag, DB_ITER_TYPE type, Filter* filter, Database* db) :Iterator(flag, filter), m_current(nullptr), m_blockIter(nullptr), m_database(db), m_iterType(type)
 	{
 		m_keyType = META::COLUMN_TYPE::T_UINT64;
 	}
-	DLL_EXPORT databaseIterator::~databaseIterator()
+	DLL_EXPORT DatabaseIterator::~DatabaseIterator()
 	{
 		if (m_blockIter)
 			delete m_blockIter;
 	}
-	DLL_EXPORT iterator::status databaseIterator::next()
+	DLL_EXPORT Iterator::Status DatabaseIterator::next()
 	{
-		status s = m_blockIter->next();
-		if (unlikely(s == status::ENDED))
+		Status s = m_blockIter->next();
+		if (unlikely(s == Status::ENDED))
 		{
 			do {
-				block* nextBlock;
+				Block* nextBlock;
 				do
 				{
 					if (!(m_flag & ITER_FLAG_DESC))
 					{
 						if (nullptr == (nextBlock = m_current->next.load(std::memory_order_relaxed)))
-							return m_status = status::BLOCKED;
+							return m_status = Status::BLOCKED;
 
 					}
 					else
 					{
 						if (nullptr == (nextBlock = m_current->prev.load(std::memory_order_relaxed)))
-							return m_status = status::ENDED;
+							return m_status = Status::ENDED;
 					}
 					if (nextBlock->use())
 						break;
@@ -273,7 +273,7 @@ namespace DATABASE
 				{
 					if (m_current->m_flag & BLOCK_FLAG_APPENDING)
 					{
-						static_cast<appendingBlockIterator*>(m_blockIter)->resetBlock(static_cast<appendingBlock*>(nextBlock));
+						static_cast<appendingBlockIterator*>(m_blockIter)->resetBlock(static_cast<AppendingBlock*>(nextBlock));
 					}
 					else
 					{
@@ -281,18 +281,18 @@ namespace DATABASE
 						switch (m_iterType)
 						{
 						case DB_ITER_TYPE::TIMESTAMP_TYPE:
-							iter = new appendingBlockRecordIdIterator(static_cast<appendingBlock*>(nextBlock), m_filter, m_flag);
+							iter = new appendingBlockRecordIdIterator(static_cast<AppendingBlock*>(nextBlock), m_filter, m_flag);
 							break;
 						case DB_ITER_TYPE::CHECKPOINT_TYPE:
-							iter = new appendingBlockRecordIdIterator(static_cast<appendingBlock*>(nextBlock), m_filter, m_flag);
+							iter = new appendingBlockRecordIdIterator(static_cast<AppendingBlock*>(nextBlock), m_filter, m_flag);
 							break;
 						case DB_ITER_TYPE::RECORD_ID_TYPE:
-							iter = new appendingBlockRecordIdIterator(static_cast<appendingBlock*>(nextBlock), m_filter, m_flag);
+							iter = new appendingBlockRecordIdIterator(static_cast<AppendingBlock*>(nextBlock), m_filter, m_flag);
 							break;
 						default:
 							abort();
 						}
-						iterator* tmp = m_blockIter;
+						Iterator* tmp = m_blockIter;
 						m_blockIter = iter;
 						delete tmp;
 					}
@@ -301,32 +301,32 @@ namespace DATABASE
 				{
 					if (m_current->m_flag & BLOCK_FLAG_SOLID)
 					{
-						static_cast<solidBlockIterator*>(m_blockIter)->resetBlock(static_cast<solidBlock*>(nextBlock));
+						static_cast<SolidBlockIterator*>(m_blockIter)->resetBlock(static_cast<SolidBlock*>(nextBlock));
 					}
 					else
 					{
-						solidBlockIterator* iter;
+						SolidBlockIterator* iter;
 						switch (m_iterType)
 						{
 						case DB_ITER_TYPE::TIMESTAMP_TYPE:
-							iter = new solidBlockRecordIdIterator(static_cast<solidBlock*>(nextBlock), m_flag, m_filter);
+							iter = new solidBlockRecordIdIterator(static_cast<SolidBlock*>(nextBlock), m_flag, m_filter);
 							break;
 						case DB_ITER_TYPE::CHECKPOINT_TYPE:
-							iter = new solidBlockRecordIdIterator(static_cast<solidBlock*>(nextBlock), m_flag, m_filter);
+							iter = new solidBlockRecordIdIterator(static_cast<SolidBlock*>(nextBlock), m_flag, m_filter);
 							break;
 						case DB_ITER_TYPE::RECORD_ID_TYPE:
-							iter = new solidBlockRecordIdIterator(static_cast<solidBlock*>(nextBlock), m_flag, m_filter);
+							iter = new solidBlockRecordIdIterator(static_cast<SolidBlock*>(nextBlock), m_flag, m_filter);
 							break;
 						default:
 							abort();
 						}
-						iterator* tmp = m_blockIter;
+						Iterator* tmp = m_blockIter;
 						m_blockIter = iter;
 						delete tmp;
 					}
 				}
 				m_current = nextBlock;
-				if (m_blockIter->getStatus() == status::ENDED)
+				if (m_blockIter->getStatus() == Status::ENDED)
 					continue;
 				else
 					return m_status = m_blockIter->getStatus();

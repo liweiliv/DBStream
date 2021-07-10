@@ -4,19 +4,19 @@
 #include "filter.h"
 #include "job.h"
 #include "blockManager.h"
-namespace DATABASE_INCREASE {
+namespace RPC {
 	struct  record;
 }
 namespace META{
 	struct tableMeta;
 }
-namespace STORE {
+namespace DB_INSTANCE {
 constexpr auto S_CACHED = 0x01;
 constexpr auto S_SAVE = 0x03; //save must have cache,so its not 0x02 ,but 0x02|0x01
 class DBStream :public job {
 private:
 		void * m_data;
-		DATABASE_INCREASE::record * m_currentData;
+		RPC::record * m_currentData;
 		META::tableMeta * m_meta;
 		uint32_t m_flag;
 		blockManager * m_blocks;

@@ -40,97 +40,97 @@ enum tableType
 	NO_PK,
 	MAX_TYPE
 };
-static config conf(nullptr);
-static DATABASE::database* db;
-static META::metaDataCollection* dbs;
+static Config conf(nullptr);
+static DATABASE::Database* db;
+static META::MetaDataCollection* dbs;
 static bufferPool *pool;
 static char mod1RecordBuf[1024];
 static uint64_t ckp = 1;
-META::tableMeta* createTable_INT_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_INT_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int primary key,b int,c char(30),d int,f timestamp)",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_CHAR_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_CHAR_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30) primary key,d int,f timestamp)",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_FIXED_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_FIXED_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int ,f timestamp, primary key(a,b))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_VAR_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_VAR_PRIMARY_KEY(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int,f timestamp, primary key(a,c))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_INT_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_INT_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int unique key,b int,c char(30),d int,f timestamp)",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_CHAR_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_CHAR_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30) unique key,d int ,f timestamp)",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_FIXED_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_FIXED_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int,f timestamp, unique key uk1(a,b))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_VAR_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_VAR_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int,f timestamp, unique key uk1(a,c))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_MUTIL_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_MUTIL_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int,f timestamp, unique key uk1(a,c),unique key uk2(a,b))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_PK_AND_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_PK_AND_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int primary key,b int,c char(30),d int,f timestamp, unique key uk1(a,c))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_PK_AND_MULTI_UK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_PK_AND_MULTI_UK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int primary key,b int,c char(30),d int,f timestamp, unique key uk1(a,c),unique key uk1(a,b))",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable_NO_PK(const char * db,const char * table,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable_NO_PK(const char * db,const char * table,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create table `%s` (a int ,b int,c char(30),d int,f timestamp)",table);
 	dbs->processDDL(sql,db,checkpoint);
 	return dbs->get(db,table);
 }
-META::tableMeta* createTable(const char * db,const char * table,tableType type,uint64_t checkpoint,META::metaDataCollection *dbs)
+META::TableMeta* createTable(const char * db,const char * table,tableType type,uint64_t checkpoint,META::MetaDataCollection *dbs)
 {
 	char sql[512] = {0};
 	snprintf(sql,511,"create database if not exists `%s`",db);
@@ -167,40 +167,40 @@ META::tableMeta* createTable(const char * db,const char * table,tableType type,u
 		abort();
 	}
 }
-DATABASE_INCREASE::DMLRecord* createInsertRecord_mod1(META::tableMeta* table,int pk)
+RPC::DMLRecord* createInsertRecord_mod1(META::TableMeta* table,int pk)
 {
 	char sbuf[31] = {0};
-	DATABASE_INCREASE::DMLRecord *r = new DATABASE_INCREASE::DMLRecord(mod1RecordBuf, table, DATABASE_INCREASE::RecordType::R_INSERT);
-	r->head->logOffset = ckp++;
-	r->head->timestamp = META::timestamp::create(time(nullptr),0);
+	RPC::DMLRecord *r = new RPC::DMLRecord(mod1RecordBuf, table, RPC::RecordType::R_INSERT);
+	r->head->checkpoint.logOffset = ckp++;
+	r->head->checkpoint.timestamp = META::Timestamp::create(time(nullptr),0);
 	r->setFixedColumn(0, pk);
 	r->setFixedColumn(1, pk*pk);
 	snprintf(sbuf,30,"%dwad%d_sw", pk, pk + 1);
 	r->setVarColumn(2, sbuf, strlen(sbuf));
 	r->setFixedColumn(3, pk>>2);
-	r->setFixedColumn(4, META::timestamp::create(time(nullptr), 0));
+	r->setFixedColumn(4, META::Timestamp::create(time(nullptr), 0));
 
 	r->finishedSet();
 	return r;
 }
-DATABASE_INCREASE::DMLRecord* createUpdateRecord_mod1(META::tableMeta* table,int pk,bool updatePk)
+RPC::DMLRecord* createUpdateRecord_mod1(META::TableMeta* table,int pk,bool updatePk)
 {
 	char sbuf[31] = {0};
-	DATABASE_INCREASE::DMLRecord *r = new DATABASE_INCREASE::DMLRecord(mod1RecordBuf, table, DATABASE_INCREASE::RecordType::R_UPDATE);
-	r->head->logOffset = ckp++;
-	r->head->timestamp = META::timestamp::create(time(nullptr),0);
+	RPC::DMLRecord *r = new RPC::DMLRecord(mod1RecordBuf, table, RPC::RecordType::R_UPDATE);
+	r->head->checkpoint.logOffset = ckp++;
+	r->head->checkpoint.timestamp = META::Timestamp::create(time(nullptr),0);
 	r->setFixedColumn(0, pk);
 	r->setFixedColumn(1, pk*pk);
 	snprintf(sbuf,30,"%dwad%d_sw",pk,pk+1);
 	r->setVarColumn(2, sbuf, strlen(sbuf));
 	r->setFixedColumn(3, pk>>2);
-	r->setFixedColumn(4, META::timestamp::create(time(nullptr), 0));
+	r->setFixedColumn(4, META::Timestamp::create(time(nullptr), 0));
 	r->startSetUpdateOldValue();
 	if (updatePk)
 	{
 		for (int i = 0; i < table->m_columnsCount; i++)
 		{
-			if (table->m_columns[0].m_isPrimary || table->m_columns[0].m_isUnique)
+			if (table->m_columns[0].getFlag(COL_FLAG_PRIMARY_KEY) || table->m_columns[0].getFlag(COL_FLAG_UNIQUE_KEY))
 			{
 				switch(i)
 				{
@@ -223,26 +223,26 @@ DATABASE_INCREASE::DMLRecord* createUpdateRecord_mod1(META::tableMeta* table,int
 			}
 		}
 	}
-	r->setFixedUpdatedColumn(4, META::timestamp::create(time(nullptr)-10, 0));
+	r->setFixedUpdatedColumn(4, META::Timestamp::create(time(nullptr)-10, 0));
 	r->finishedSet();
 	return r;
 }
-DATABASE_INCREASE::DMLRecord* createDeleteRecord_mod1(META::tableMeta* table, int pk)
+RPC::DMLRecord* createDeleteRecord_mod1(META::TableMeta* table, int pk)
 {
 	char sbuf[31] = { 0 };
-	DATABASE_INCREASE::DMLRecord* r = new DATABASE_INCREASE::DMLRecord(mod1RecordBuf, table, DATABASE_INCREASE::RecordType::R_DELETE);
-	r->head->logOffset = ckp++;
-	r->head->timestamp = META::timestamp::create(time(nullptr), 0);
+	RPC::DMLRecord* r = new RPC::DMLRecord(mod1RecordBuf, table, RPC::RecordType::R_DELETE);
+	r->head->checkpoint.logOffset = ckp++;
+	r->head->checkpoint.timestamp = META::Timestamp::create(time(nullptr), 0);
 	r->setFixedColumn(0, pk);
 	r->setFixedColumn(1, pk * pk);
 	snprintf(sbuf, 30, "%dwad%d_sw", pk, pk + 1);
 	r->setVarColumn(2, sbuf, strlen(sbuf));
 	r->setFixedColumn(3, pk >> 2);
-	r->setFixedColumn(4, META::timestamp::create(time(nullptr), abs(rand())));
+	r->setFixedColumn(4, META::Timestamp::create(time(nullptr), abs(rand())));
 	r->finishedSet();
 	return r;
 }
-bool mod1ValueCheck(DATABASE_INCREASE::DMLRecord * dml,int id)
+bool mod1ValueCheck(RPC::DMLRecord * dml,int id)
 {
 	char sbuf[31] = { 0 };
 	if (*(int*)dml->column(0) != id)
@@ -263,14 +263,14 @@ int init()
 	initKeyWords();
 	defaultBufferBaseAllocer * allocer = new defaultBufferBaseAllocer();
 	pool = new bufferPool(allocer);
-	dbs = new META::metaDataCollection("utf8");
+	dbs = new META::MetaDataCollection("utf8");
 	if (0 != dbs->initSqlParser(mysqlParserTree, mysqlFuncLib))
 	{
 		printf("load sqlparser failed");
 		return -1;
 	}
 	removeDir("data");
-	db = new DATABASE::database("test", &conf, pool, dbs);
+	db = new DATABASE::Database("test", &conf, pool, dbs);
 	if (0 != db->load())
 		return -1;
 	if (0 != db->start())

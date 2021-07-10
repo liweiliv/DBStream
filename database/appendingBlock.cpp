@@ -1,8 +1,8 @@
 #include "appendingBlock.h"
 namespace DATABASE {
-	static DATABASE_INCREASE::DMLRecord dml;
-	static DATABASE_INCREASE::DDLRecord ddl;
-	appendingBlock::tableData::tableData(uint64_t blockID, const META::tableMeta* meta,
+	static RPC::DMLRecord dml;
+	static RPC::DDLRecord ddl;
+	AppendingBlock::tableData::tableData(uint64_t blockID, const META::TableMeta* meta,
 		leveldb::Arena* arena, uint32_t _pageSize) :
 		blockID(blockID), meta(meta), primaryKey(nullptr), uniqueKeys(
 			nullptr), recordIds(arena), pages(arena), current(
@@ -10,7 +10,7 @@ namespace DATABASE {
 	{
 		if (meta != nullptr)
 		{
-			if (meta->m_primaryKey!=nullptr)
+			if (meta->m_primaryKey != nullptr)
 				primaryKey = new appendingIndex(
 					meta->m_primaryKey, meta, arena);
 			if (meta->m_uniqueKeysCount > 0)
@@ -22,7 +22,7 @@ namespace DATABASE {
 			}
 		}
 	}
-	void appendingBlock::tableData::clean()
+	void AppendingBlock::tableData::clean()
 	{
 		if (primaryKey != nullptr)
 		{
@@ -36,18 +36,18 @@ namespace DATABASE {
 				if (uniqueKeys[idx] != nullptr)
 					delete uniqueKeys[idx];
 			}
-			delete []uniqueKeys;
+			delete[]uniqueKeys;
 			uniqueKeys = nullptr;
 		}
 	}
-	void appendingBlock::tableData::init(uint64_t blockID, const META::tableMeta* meta,
+	void AppendingBlock::tableData::init(uint64_t blockID, const META::TableMeta* meta,
 		leveldb::Arena* arena, uint32_t _pageSize)
 	{
 		this->blockID = blockID;
 		this->meta = meta;
 		if (meta != nullptr)
 		{
-			if (meta->m_primaryKey!=nullptr)
+			if (meta->m_primaryKey != nullptr)
 				primaryKey = new appendingIndex(
 					meta->m_primaryKey, meta, arena);
 			else
@@ -72,7 +72,7 @@ namespace DATABASE {
 		current = nullptr;
 		pageSize = _pageSize; //todo
 	}
-	int appendingBlock::openRedoFile(bool w)
+	int AppendingBlock::openRedoFile(bool w)
 	{
 		char fileName[524];
 		m_database->genBlockFileName(m_blockID, fileName);
@@ -113,7 +113,7 @@ namespace DATABASE {
 * 			0: redo file ended,and  read success
 * 				-1:read redo file failed
 * 					*/
-	int appendingBlock::recoveryFromRedo()
+	int AppendingBlock::recoveryFromRedo()
 	{
 		int ret = 1;
 		if (m_redoFd > 0)
@@ -151,18 +151,18 @@ namespace DATABASE {
 		}
 		m_flag &= (~BLOCK_FLAG_HAS_REDO); //unset BLOCK_FLAG_HAS_REDO,so call [append] will not write redo file
 		m_minRecordId = *(uint64_t*)buf;
-		DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) (buf + sizeof(uint64_t));
+		RPC::RecordHead* head = (RPC::RecordHead*)(buf + sizeof(uint64_t));
 		while ((char*)head <= buf + size)
 		{
 			/*redo end normally*/
-			if (unlikely(((char*)head - buf) + sizeof(DATABASE_INCREASE::minRecordHead::size) == (uint32_t)size) && head->minHead.size == ENDOF_REDO_NUM)
+			if (unlikely(((char*)head - buf) + sizeof(RPC::MinRecordHead::size) == (uint32_t)size) && head->minHead.size == ENDOF_REDO_NUM)
 			{
 				ret = 0;
 				break;
 			}
 
 			/*redo truncated*/
-			if (((char*)head) + sizeof(DATABASE_INCREASE::recordHead) > buf + size || ((char*)head) + head->minHead.size > buf + size) //unfinished write ,truncate
+			if (((char*)head) + sizeof(RPC::RecordHead) > buf + size || ((char*)head) + head->minHead.size > buf + size) //unfinished write ,truncate
 			{
 				LOG(WARNING) << "get an incomplete redo data in redo file of block:" << m_blockID << ",offset is " << ((char*)head) - buf << ",truncate it";
 
@@ -174,25 +174,25 @@ namespace DATABASE {
 				}
 				break;
 			}
-			if (append(DATABASE_INCREASE::createRecord((const char*)head, m_metaDataCollection)) != appendingBlockStaus::B_OK)
+			if (append(RPC::createRecord((const char*)head, m_metaDataCollection)) != appendingBlockStaus::B_OK)
 			{
 				LOG(ERROR) << "recoveryFromRedo from redo file of block:" << m_blockID << " failed for append data failed";
 				free(buf);
 				m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
 				return -1;
 			}
-			head = (DATABASE_INCREASE::recordHead*)(((char*)head) + head->minHead.size);
+			head = (RPC::RecordHead*)(((char*)head) + head->minHead.size);
 		}
 		m_flag |= BLOCK_FLAG_HAS_REDO; //reset BLOCK_FLAG_HAS_REDO
 		LOG(INFO) << "recoveryFromRedo from redo file :" << m_blockID << " success";
 		free(buf);
 		return ret;
 	}
-	appendingBlock::appendingBlockStaus appendingBlock::writeRedo(const char* data)
+	AppendingBlock::appendingBlockStaus AppendingBlock::writeRedo(const char* data)
 	{
 		if (!fileHandleValid(m_redoFd) && 0 != openRedoFile(true))
 			return appendingBlockStaus::B_FAULT;
-		DATABASE_INCREASE::recordHead* head = (DATABASE_INCREASE::recordHead*) data;
+		RPC::RecordHead* head = (RPC::RecordHead*)data;
 		int64_t writeSize;
 		if (head->minHead.size != (uint64_t)(writeSize = writeFile(m_redoFd, data, head->minHead.size)))
 		{
@@ -212,8 +212,8 @@ namespace DATABASE {
 			m_redoFlushPeriod == 0 ||//m_redoFlushPeriod == 0 also means flush immediately
 			(m_redoFlushDataSize > 0 && (m_redoUnflushDataSize += head->minHead.size) >= m_redoFlushDataSize) ||//check if unflushed data big enough
 			(m_redoFlushPeriod > 0 &&//check if time from last flush is long enough
-			(now = clock(),
-				now<m_lastFLushTime || now - m_lastFLushTime > m_redoFlushPeriod * CLOCKS_PER_SEC / 1000)))
+				(now = clock(),
+					now<m_lastFLushTime || now - m_lastFLushTime > m_redoFlushPeriod * CLOCKS_PER_SEC / 1000)))
 		{
 			if (0 != fsync(m_redoFd))
 			{
@@ -226,7 +226,7 @@ namespace DATABASE {
 		}
 		return appendingBlockStaus::B_OK;
 	}
-	int appendingBlock::finishRedo()
+	int AppendingBlock::finishRedo()
 	{
 		if (!fileHandleValid(m_redoFd) && 0 != openRedoFile(true))
 			return -1;
@@ -240,7 +240,7 @@ namespace DATABASE {
 		}
 		return closeRedo();
 	}
-	int appendingBlock::closeRedo()
+	int AppendingBlock::closeRedo()
 	{
 		if (m_flag & BLOCK_FLAG_HAS_REDO && fileHandleValid(m_redoFd))
 		{
@@ -254,7 +254,7 @@ namespace DATABASE {
 		}
 		return 0;
 	}
-	appendingBlock::appendingBlockStaus appendingBlock::allocMemForRecord(tableData* t, size_t size, void*& mem)
+	AppendingBlock::appendingBlockStaus AppendingBlock::allocMemForRecord(tableData* t, size_t size, void*& mem)
 	{
 		if (m_recordCount >= maxRecordInBlock)
 		{
@@ -267,13 +267,13 @@ namespace DATABASE {
 			size_t psize = size > t->pageSize ? size : t->pageSize;
 			if (t->current == nullptr)
 			{
-				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount))) >= m_maxPageCount || m_size + psize >= m_maxSize)
+				if ((m_pageCount + 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey != nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount))) >= m_maxPageCount || m_size + psize >= m_maxSize)
 				{
 					m_flag |= BLOCK_FLAG_FINISHED;
 					m_cond.wakeUp();
 					return appendingBlockStaus::B_FULL;
 				}
-				m_pageCount += 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey!=nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount));//every index look as a page
+				m_pageCount += 1 + (t->meta == nullptr ? 0 : ((t->meta->m_primaryKey != nullptr ? 1 : 0) + t->meta->m_uniqueKeysCount));//every index look as a page
 			}
 			else
 			{
@@ -286,18 +286,18 @@ namespace DATABASE {
 				m_pageCount++;
 			}
 			t->current = m_database->allocPage(psize);
-			t->current->pageId = m_pageCount-1;
-			m_pages[m_pageCount-1] = t->current;
+			t->current->pageId = m_pageCount - 1;
+			m_pages[m_pageCount - 1] = t->current;
 			m_size += t->current->pageSize;
 			t->pages.append(t->current);
 		}
 		mem = t->current->pageData + t->current->pageUsedSize;
 		return appendingBlockStaus::B_OK;
 	}
-	inline appendingBlock::appendingBlockStaus appendingBlock::copyRecord(const DATABASE_INCREASE::record* &record)
+	inline AppendingBlock::appendingBlockStaus AppendingBlock::copyRecord(const RPC::Record*& record)
 	{
-		tableData* t = getTableData(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) ? (META::tableMeta*)((DATABASE_INCREASE::DMLRecord*)record)->meta : nullptr);
-		page* current = t->current;
+		tableData* t = getTableData(likely(record->head->minHead.type <= static_cast<uint8_t>(RPC::RecordType::R_REPLACE)) ? (META::TableMeta*)((RPC::DMLRecord*)record)->meta : nullptr);
+		Page* current = t->current;
 		if (unlikely(current == nullptr || current->pageData + current->pageUsedSize != record->data))
 		{
 			appendingBlockStaus s;
@@ -306,12 +306,12 @@ namespace DATABASE {
 				return s;
 			memcpy(mem, record->data, record->head->minHead.size);
 			current = t->current;
-			if(likely(record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)))
+			if (likely(record->head->minHead.type <= static_cast<uint8_t>(RPC::RecordType::R_REPLACE)))
 			{
-				dml.load((char*)mem,((const DATABASE_INCREASE::DMLRecord*)record)->meta);
+				dml.load((char*)mem, ((const RPC::DMLRecord*)record)->meta);
 				record = &dml;
 			}
-			else if(record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
+			else if (record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL))
 			{
 				ddl.load((char*)mem);
 				record = &ddl;
@@ -319,24 +319,24 @@ namespace DATABASE {
 			else
 				abort();
 		}
-		((DATABASE_INCREASE::recordHead*)(current->pageData + current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
+		((RPC::RecordHead*)(current->pageData + current->pageUsedSize))->recordId = m_minRecordId + m_recordCount;
 		setRecordPosition(m_recordIDs[m_recordCount], current->pageId, current->pageUsedSize);
 		current->pageUsedSize += record->head->minHead.size;
 		return appendingBlockStaus::B_OK;
 	}
-	appendingBlock::appendingBlockStaus appendingBlock::append(const DATABASE_INCREASE::record* record)
+	AppendingBlock::appendingBlockStaus AppendingBlock::append(const RPC::Record* record)
 	{
-		if (unlikely(m_maxLogOffset > record->head->logOffset))
+		if (unlikely(m_maxLogOffset > record->head->checkpoint.logOffset))
 		{
-			LOG(ERROR) << "can not append record to block for record log offset " << record->head->logOffset << "is less than max log offset:" << m_maxLogOffset
+			LOG(ERROR) << "can not append record to block for record log offset " << record->head->checkpoint.logOffset << "is less than max log offset:" << m_maxLogOffset
 				<< "record type:" << record->head->minHead.type;
 			return appendingBlockStaus::B_ILLEGAL;
 		}
 		appendingBlockStaus s;
-		if(record->head->minHead.type>=4)
-			vSave(record,record->head->minHead.size+sizeof(DATABASE_INCREASE::DMLRecord));
+		if (record->head->minHead.type >= 4)
+			vSave(record, record->head->minHead.size + sizeof(RPC::DMLRecord));
 		else
-			vSave(record,record->head->minHead.size+sizeof(DATABASE_INCREASE::DDLRecord));
+			vSave(record, record->head->minHead.size + sizeof(RPC::DDLRecord));
 		if ((s = copyRecord(record)) != appendingBlockStaus::B_OK)
 			return s;
 		if (m_flag & BLOCK_FLAG_HAS_REDO)
@@ -348,34 +348,34 @@ namespace DATABASE {
 				return rtv;
 			}
 		}
-		if (record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) //build index
+		if (record->head->minHead.type <= static_cast<uint8_t>(RPC::RecordType::R_REPLACE)) //build index
 		{
-			const META::tableMeta* meta = ((const DATABASE_INCREASE::DMLRecord*)record)->meta;
+			const META::TableMeta* meta = ((const RPC::DMLRecord*)record)->meta;
 			tableData* table = static_cast<tableData*>(meta->userData);
 			table->recordIds.append(m_recordCount);
 			if (table->primaryKey)
-				table->primaryKey->append((const DATABASE_INCREASE::DMLRecord*)record, m_recordCount);
+				table->primaryKey->append((const RPC::DMLRecord*)record, m_recordCount);
 			for (int i = 0; i < meta->m_uniqueKeysCount; i++)
-				table->uniqueKeys[i]->append((const DATABASE_INCREASE::DMLRecord*)record, m_recordCount);
+				table->uniqueKeys[i]->append((const RPC::DMLRecord*)record, m_recordCount);
 		}
-		m_maxLogOffset = record->head->logOffset;
+		m_maxLogOffset = record->head->checkpoint.logOffset;
 		if (m_minLogOffset == 0)
-			m_minLogOffset = record->head->logOffset;
+			m_minLogOffset = record->head->checkpoint.logOffset;
 		if (m_minTime == 0)
-			m_minTime = record->head->timestamp;
-		if (m_maxTime < record->head->timestamp)
-			m_maxTime = record->head->timestamp;
+			m_minTime = record->head->checkpoint.timestamp;
+		if (m_maxTime < record->head->checkpoint.timestamp)
+			m_maxTime = record->head->checkpoint.timestamp;
 		m_recordCount++;
-		if (record->head->txnId > m_txnId || record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
+		if (record->head->checkpoint.txnId > m_txnId || record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL))
 			m_committedRecordID.store(m_recordCount, std::memory_order_relaxed);
-		m_txnId = record->head->txnId;
+		m_txnId = record->head->checkpoint.txnId;
 		m_cond.wakeUp();
 		return appendingBlockStaus::B_OK;
 	}
-	page* appendingBlock::createSolidIndexPage(appendingIndex* index, const META::unionKeyMeta *ukMeta, const META::tableMeta* meta)
+	Page* AppendingBlock::createSolidIndexPage(appendingIndex* index, const META::UnionKeyMeta* ukMeta, const META::TableMeta* meta)
 	{
-		page* p = m_database->allocPage(index->toSolidIndexSize());
-		memset(p->pageData,0,p->pageSize);
+		Page* p = m_database->allocPage(index->toSolidIndexSize());
+		memset(p->pageData, 0, p->pageSize);
 		if (ukMeta->columnCount == 1)
 		{
 			switch (static_cast<META::COLUMN_TYPE>(ukMeta->columnInfo[0].type))
@@ -413,7 +413,7 @@ namespace DATABASE {
 				break;
 			case META::COLUMN_TYPE::T_BLOB:
 			case META::COLUMN_TYPE::T_STRING:
-				index->toString<META::binaryType>(p->pageData);
+				index->toString<META::BinaryType>(p->pageData);
 				break;
 			default:
 				abort();
@@ -426,24 +426,24 @@ namespace DATABASE {
 		p->pageUsedSize = p->pageSize = ((solidIndexHead*)(p->pageData))->size;
 		return p;
 	}
-	solidBlock* appendingBlock::toSolidBlock()
+	SolidBlock* AppendingBlock::toSolidBlock()
 	{
 		if (!use())
 			return nullptr;
 		uint32_t memSize = 0;
-		uint32_t* pageMap = (uint32_t*)m_arena.Allocate(sizeof(uint32_t)*m_pageCount);
-		solidBlock* block = new solidBlock(m_blockID,m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED|BLOCK_FLAG_SOLID);
-		uint32_t firstPageSize = sizeof(tableDataInfo) * m_tableCount + (sizeof(recordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(page, _ref);
+		uint32_t* pageMap = (uint32_t*)m_arena.Allocate(sizeof(uint32_t) * m_pageCount);
+		SolidBlock* block = new SolidBlock(m_blockID, m_database, m_metaDataCollection, (m_flag & (~BLOCK_FLAG_APPENDING)) | BLOCK_FLAG_FINISHED | BLOCK_FLAG_SOLID);
+		uint32_t firstPageSize = sizeof(TableDataInfo) * m_tableCount + (sizeof(RecordGeneralInfo) + sizeof(uint32_t)) * m_recordCount + sizeof(uint64_t) * (m_pageCount + 1) + m_pageCount * offsetof(Page, _ref);
 		block->firstPage = m_database->allocPage(firstPageSize);
-		memset(block->firstPage->pageData,0,block->firstPage->pageSize);
-		block->pages = (page**)m_database->allocMem(sizeof(page*) * m_pageCount);
-		block->m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED),std::memory_order_relaxed);
-		memcpy(&block->m_blockID, &m_blockID, offsetof(solidBlock, m_fd) - offsetof(solidBlock, m_blockID));
+		memset(block->firstPage->pageData, 0, block->firstPage->pageSize);
+		block->pages = (Page**)m_database->allocMem(sizeof(Page*) * m_pageCount);
+		block->m_loading.store(static_cast<uint8_t>(BLOCK_LOAD_STATUS::BLOCK_LOADED), std::memory_order_relaxed);
+		memcpy(&block->m_blockID, &m_blockID, offsetof(SolidBlock, m_fd) - offsetof(SolidBlock, m_blockID));
 		char* pos = block->firstPage->pageData;
-		block->m_tableInfo = (tableDataInfo*)pos;
-		pos += sizeof(tableDataInfo) * m_tableCount;
-		block->m_recordInfos = (recordGeneralInfo*)pos;
-		pos += sizeof(recordGeneralInfo) * m_recordCount;
+		block->m_tableInfo = (TableDataInfo*)pos;
+		pos += sizeof(TableDataInfo) * m_tableCount;
+		block->m_recordInfos = (RecordGeneralInfo*)pos;
+		pos += sizeof(RecordGeneralInfo) * m_recordCount;
 		block->m_recordIdOrderyTable = (uint32_t*)pos;
 		pos += sizeof(uint32_t) * m_recordCount;
 		block->pageOffsets = (uint64_t*)pos;
@@ -453,7 +453,7 @@ namespace DATABASE {
 		uint16_t pageId = 0;
 		uint16_t tableIdx = 0;
 		uint32_t recordIdsOffset = 0;
-		assert(m_tableCount==m_tableDatas.size());
+		assert(m_tableCount == m_tableDatas.size());
 		for (std::map<uint64_t, tableData*>::iterator iter = m_tableDatas.begin(); iter != m_tableDatas.end(); iter++)
 		{
 			block->m_tableInfo[tableIdx].firstPageId = pageId;
@@ -485,7 +485,7 @@ namespace DATABASE {
 				block->m_tableInfo[tableIdx].tableId = 0;
 			if (!t->pages.empty())
 			{
-				arrayList<page*>::iterator piter;
+				arrayList<Page*>::iterator piter;
 				t->pages.begin(piter);
 				do {
 					pageMap[piter.value()->pageId] = pageId;
@@ -506,27 +506,28 @@ namespace DATABASE {
 					uint32_t& currentOffset = m_recordIDs[rid], & newOffset = block->m_recordInfos[rid].offset;
 					setRecordPosition(newOffset, pageMap[pageId(currentOffset)], offsetInPage(currentOffset));
 					block->m_recordIdOrderyTable[recordIdsOffset++] = rid;
-					const DATABASE_INCREASE::recordHead* head = (const DATABASE_INCREASE::recordHead*)getRecordByIdx(rid);
+					const RPC::RecordHead* head = (const RPC::RecordHead*)getRecordByIdx(rid);
 					block->m_recordInfos[rid].tableIndex = tableIdx;
 					block->m_recordInfos[rid].recordType = head->minHead.type;
-					block->m_recordInfos[rid].timestamp = head->timestamp;
-					block->m_recordInfos[rid].logOffset = head->logOffset;
+					block->m_recordInfos[rid].timestamp = head->checkpoint.timestamp;
+					block->m_recordInfos[rid].logOffset = head->checkpoint.logOffset;
 				} while (riter.next());
 			}
 			tableIdx++;
 		}
-		assert(pageId==m_pageCount);
-		char * pageInfoPos = block->pageInfo;
-		for(int i=0;i<pageId;i++)
+		assert(pageId == m_pageCount);
+		char* pageInfoPos = block->pageInfo;
+		for (int i = 0; i < pageId; i++)
 		{
-			memcpy(pageInfoPos,(void*)block->pages[i], offsetof(page, _ref));
-			pageInfoPos += offsetof(page, _ref);
+			memcpy(pageInfoPos, (void*)block->pages[i], offsetof(Page, _ref));
+			pageInfoPos += offsetof(Page, _ref);
 		}
 		unuse();
-		LOG(INFO)<<"block:"<<m_blockID<<" trans to solid block success,size:"<<memSize<<",record count:"<<m_recordCount<<",table count:"<<m_tableCount;
+		LOG(INFO) << "block:" << m_blockID << " trans to solid block success,size:" << memSize << ",record count:" << m_recordCount << ",table count:" << m_tableCount;
 		return block;
 	}
-	blockIndexIterator* appendingBlock::createIndexIterator(uint32_t flag,const META::tableMeta* table, META::KEY_TYPE type, int keyId)
+
+	BlockIndexIterator* AppendingBlock::createIndexIterator(uint32_t flag, const META::TableMeta* table, META::KEY_TYPE type, int keyId)
 	{
 		if (!use())
 			return nullptr;
@@ -542,50 +543,51 @@ namespace DATABASE {
 			unuse();
 			return nullptr;
 		}
-		return new appendingBlockIndexIterator(flag,this, index);
+		return new AppendingBlockIndexIterator(flag, this, index);
 	}
-	appendingBlockIndexIterator::appendingBlockIndexIterator(uint32_t flag,appendingBlock* block, appendingIndex* index) :blockIndexIterator(0, nullptr,block->m_blockID), m_index(index), m_block(block), indexIter(nullptr)
+
+	AppendingBlockIndexIterator::AppendingBlockIndexIterator(uint32_t flag, AppendingBlock* block, appendingIndex* index) :BlockIndexIterator(0, nullptr, block->m_blockID), m_index(index), m_block(block), indexIter(nullptr)
 	{
 		m_table = m_block->getTableData(index->getMeta()->m_id);
 		switch (index->getType())
 		{
 		case META::COLUMN_TYPE::T_UNION:
-			indexIter =  new appendingIndex::iterator<META::unionKey>(flag,index);
+			indexIter = new appendingIndex::iterator<META::unionKey>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_INT8:
-			indexIter =  new appendingIndex::iterator<int8_t>(flag,index);
+			indexIter = new appendingIndex::iterator<int8_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_UINT8:
-			indexIter =  new appendingIndex::iterator<uint8_t>(flag,index);
+			indexIter = new appendingIndex::iterator<uint8_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_INT16:
-			indexIter =  new appendingIndex::iterator<int16_t>(flag,index);
+			indexIter = new appendingIndex::iterator<int16_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_UINT16:
-			indexIter =  new appendingIndex::iterator<uint16_t>(flag,index);
+			indexIter = new appendingIndex::iterator<uint16_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_INT32:
-			indexIter =  new appendingIndex::iterator<int32_t>(flag,index);
+			indexIter = new appendingIndex::iterator<int32_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_UINT32:
-			indexIter =  new appendingIndex::iterator<uint32_t>(flag,index);
+			indexIter = new appendingIndex::iterator<uint32_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_INT64:
-			indexIter =  new appendingIndex::iterator<int64_t>(flag,index);
+			indexIter = new appendingIndex::iterator<int64_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		case META::COLUMN_TYPE::T_UINT64:
-			indexIter =  new appendingIndex::iterator<uint64_t>(flag,index);
+			indexIter = new appendingIndex::iterator<uint64_t>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_FLOAT:
-			indexIter =  new appendingIndex::iterator<float>(flag,index);
+			indexIter = new appendingIndex::iterator<float>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_DOUBLE:
-			indexIter =  new appendingIndex::iterator<double>(flag,index);
+			indexIter = new appendingIndex::iterator<double>(flag, index);
 			break;
 		case META::COLUMN_TYPE::T_BLOB:
 		case META::COLUMN_TYPE::T_STRING:
-			indexIter =  new appendingIndex::iterator<META::binaryType>(flag,index);
+			indexIter = new appendingIndex::iterator<META::BinaryType>(flag, index);
 			break;
 		default:
 			abort();

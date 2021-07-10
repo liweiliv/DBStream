@@ -205,10 +205,10 @@ namespace DATA_SOURCE {
 
 
 
-	int parse_MYSQL_TYPE_TINY(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_TINY(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (colMeta->m_signed)
+		if (colMeta->getFlag(COLUMN_FLAG_SIGNED))
 		{
 			if (newOrOld)
 				record->setFixedColumn(colMeta->m_columnIndex, *(int8_t*)(data));
@@ -225,10 +225,10 @@ namespace DATA_SOURCE {
 		data += 1;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_SHORT(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_SHORT(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (colMeta->m_signed)
+		if (colMeta->getFlag(COLUMN_FLAG_SIGNED))
 		{
 			if (newOrOld)
 				record->setFixedColumn(colMeta->m_columnIndex, *(int16_t*)(data));
@@ -245,10 +245,10 @@ namespace DATA_SOURCE {
 		data += 2;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_INT24(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_INT24(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (colMeta->m_signed)
+		if (colMeta->getFlag(COLUMN_FLAG_SIGNED))
 		{
 			if (newOrOld)
 				record->setFixedColumn(colMeta->m_columnIndex, sint3korr((const uint8_t*)data));
@@ -265,10 +265,10 @@ namespace DATA_SOURCE {
 		data += 3;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_LONG(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_LONG(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (colMeta->m_signed)
+		if (colMeta->getFlag(COLUMN_FLAG_SIGNED))
 		{
 			if (newOrOld)
 				record->setFixedColumn(colMeta->m_columnIndex, *(int32_t*)(data));
@@ -285,10 +285,10 @@ namespace DATA_SOURCE {
 		data += 4;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_LONGLONG(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_LONGLONG(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
-		if (colMeta->m_signed)
+		if (colMeta->getFlag(COLUMN_FLAG_SIGNED))
 		{
 			if (newOrOld)
 				record->setFixedColumn(colMeta->m_columnIndex, *(int64_t*)(data));
@@ -305,7 +305,7 @@ namespace DATA_SOURCE {
 		data += 8;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_FLOAT(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_FLOAT(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (newOrOld)
@@ -315,7 +315,7 @@ namespace DATA_SOURCE {
 		data += 4;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_DOUBLE(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_DOUBLE(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (newOrOld)
@@ -435,7 +435,7 @@ namespace DATA_SOURCE {
 		*pos++ = '\0';
 		return pos - to;
 	}
-	int parse_MYSQL_TYPE_NEWDECIMAL(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_NEWDECIMAL(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 
@@ -451,23 +451,23 @@ namespace DATA_SOURCE {
 			record->filledVardUpdatedColumn(colMeta->m_columnIndex, length);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_TIMESTAMP(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_TIMESTAMP(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data, 0));
+			record->setFixedColumn(colMeta->m_columnIndex, META::Timestamp::create(*(uint32_t*)data, 0));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(*(uint32_t*)data, 0));
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::Timestamp::create(*(uint32_t*)data, 0));
 		data += 4;
 		return 0;
 	}
 
-	uint32_t lengthOf_MYSQL_TYPE_TIMESTAMP2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	uint32_t lengthOf_MYSQL_TYPE_TIMESTAMP2(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		return my_datetime_binary_length(colMeta->m_decimals);
 	}
-	int parse_MYSQL_TYPE_TIMESTAMP2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_TIMESTAMP2(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t seconds, nanoSeconds = 0;
@@ -490,14 +490,14 @@ namespace DATA_SOURCE {
 			nanoSeconds = mi_sint3korr((uint8_t*)data + 4) * 1000;
 		}
 		if (newOrOld)
-			record->setFixedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds, nanoSeconds));
+			record->setFixedColumn(colMeta->m_columnIndex, META::Timestamp::create(seconds, nanoSeconds));
 		else
-			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::timestamp::create(seconds, nanoSeconds));
+			record->setFixedUpdatedColumn(colMeta->m_columnIndex, META::Timestamp::create(seconds, nanoSeconds));
 
 		data += my_timestamp_binary_length(colMeta->m_precision);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_DATETIME2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_DATETIME2(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint64_t intpart = mi_uint5korr((const uint8_t*)data) - DATETIMEF_INT_OFS;
@@ -522,7 +522,7 @@ namespace DATA_SOURCE {
 		int64_t ymd = intpart >> 17;
 		int64_t hms = intpart % (1 << 17);
 		int64_t ym = ymd >> 5;
-		int64_t tm = META::dateTime::createDate(static_cast<uint32_t>(ym / 13), ym % 13, ymd % (1 << 5), static_cast<uint32_t>(hms >> 12),
+		int64_t tm = META::DateTime::createDate(static_cast<uint32_t>(ym / 13), ym % 13, ymd % (1 << 5), static_cast<uint32_t>(hms >> 12),
 			(hms >> 6) % (1 << 6), hms % (1 << 6), frac);
 		if (newOrOld)
 			record->setFixedColumn(colMeta->m_columnIndex, tm);
@@ -531,7 +531,7 @@ namespace DATA_SOURCE {
 		data += my_datetime_binary_length(colMeta->m_precision);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_DATETIME(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_DATETIME(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		int64_t rawTime = *(int64_t*)(data);
@@ -539,7 +539,7 @@ namespace DATA_SOURCE {
 		uint32_t low = rawTime % 100000000;
 		uint16_t lowH = low / 10000;
 		uint16_t lowL = low % 10000;
-		int64_t tm = META::dateTime::createDate(high / 100, high % 100, lowH / 100, lowH % 100, lowL / 100, lowL % 100, 0);
+		int64_t tm = META::DateTime::createDate(high / 100, high % 100, lowH / 100, lowH % 100, lowL / 100, lowL % 100, 0);
 		if (newOrOld)
 			record->setFixedColumn(colMeta->m_columnIndex, tm);
 		else
@@ -547,7 +547,7 @@ namespace DATA_SOURCE {
 		data += 8;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_TIME2(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_TIME2(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		int64_t intpart;
@@ -565,7 +565,7 @@ namespace DATA_SOURCE {
 		data += my_time_binary_length(colMeta->m_decimals);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_NEWDATE(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_NEWDATE(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t intpart = uint3korr((const uint8_t*)data);
@@ -577,7 +577,7 @@ namespace DATA_SOURCE {
 		data += 3;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_YEAR(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_YEAR(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (newOrOld)
@@ -587,7 +587,7 @@ namespace DATA_SOURCE {
 		data += 1;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_STRING(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_STRING(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (colMeta->m_size >= 0xffu)
@@ -608,13 +608,13 @@ namespace DATA_SOURCE {
 		}
 		return 0;
 	}
-	uint32_t lengthOf_MYSQL_TYPE_BIT(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	uint32_t lengthOf_MYSQL_TYPE_BIT(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		return (colMeta->m_size + 7) >> 3;
 	}
 
-	int parse_MYSQL_TYPE_BIT(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_BIT(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint64_t bitValue;
@@ -628,7 +628,7 @@ namespace DATA_SOURCE {
 		data += bitSize;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_VAR_STRING(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_VAR_STRING(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t size = colMeta->m_size;
@@ -649,7 +649,7 @@ namespace DATA_SOURCE {
 		data += size;
 		return 0;
 	}
-	int parse_MYSQL_TYPE_BLOB(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_BLOB(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t size;
@@ -683,7 +683,7 @@ namespace DATA_SOURCE {
 	}
 	uint64_t  bjson2Str(const char* bjson, uint64_t bjsonSize, char* jsonStr);
 
-	int parse_MYSQL_TYPE_JSON(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_JSON(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t size = *(const uint32_t*)(data);
@@ -694,7 +694,7 @@ namespace DATA_SOURCE {
 		data += size + sizeof(uint32_t);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_SET(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_SET(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint8_t bitmapSize = 0;
@@ -713,7 +713,7 @@ namespace DATA_SOURCE {
 		else
 			return -1;
 	}
-	int parse_MYSQL_TYPE_ENUM(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_ENUM(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		uint32_t enumValueIndex = 0;
@@ -733,7 +733,7 @@ namespace DATA_SOURCE {
 			record->setFixedUpdatedColumn(colMeta->m_columnIndex, enumValueIndex);
 		return 0;
 	}
-	int parse_MYSQL_TYPE_GEOMETRY(const META::columnMeta* colMeta, DATABASE_INCREASE::DMLRecord* record,
+	int parse_MYSQL_TYPE_GEOMETRY(const META::ColumnMeta* colMeta, RPC::DMLRecord* record,
 		const char*& data, bool newOrOld)
 	{
 		if (newOrOld)
@@ -923,7 +923,7 @@ namespace DATA_SOURCE {
 			int64_t ymd = intpart >> 17;
 			int64_t hms = intpart % (1 << 17);
 			int64_t ym = ymd >> 5;
-			META::dateTime tm;
+			META::DateTime tm;
 			tm.set(static_cast<uint32_t>(ym / 13), ym % 13, ymd % (1 << 5), static_cast<uint32_t>(hms >> 12),
 				(hms >> 6) % (1 << 6), hms % (1 << 6), frac);
 			jsonStr[0] = '"'; /* purecov: inspected */
@@ -936,7 +936,7 @@ namespace DATA_SOURCE {
 			uint64_t intpart = (*(uint64_t*)(data + 1 + n)) >> 24;
 			int64_t ymd = intpart >> 17;
 			int64_t ym = ymd >> 5;
-			META::dateTime tm;
+			META::DateTime tm;
 			tm.set(static_cast<uint32_t>(ym / 13), ym % 13, ymd % (1 << 5), 0,
 				0, 0, 0);
 			jsonStr[0] = '"'; /* purecov: inspected */
@@ -949,7 +949,7 @@ namespace DATA_SOURCE {
 			int64_t intpart = (*(int64_t*)(data + 1 + n)) >> 24;
 			int frac = (*(uint64_t*)(data + 1 + n)) & 0xffffff;
 			int64_t hms = intpart % (1 << 17);
-			META::dateTime tm;
+			META::DateTime tm;
 			tm.set(intpart > 0 ? 0 : -1, 0, 0, static_cast<uint32_t>(hms >> 12),
 				(hms >> 6) % (1 << 6), hms % (1 << 6), frac);
 			jsonStr[0] = '"'; /* purecov: inspected */

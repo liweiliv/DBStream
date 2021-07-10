@@ -75,14 +75,14 @@ int testSingleThreadPopMultiThreadPush()
 
 int main()
 {
-	uint64_t t1 = timer::getNowTimestamp();
+	uint64_t t1 = Timer::getNowTimestamp();
 	testSingleThreadPopPush();
-	uint64_t t2 = timer::getNowTimestamp();
+	uint64_t t2 = Timer::getNowTimestamp();
 	testSingleThreadPopPushWithCond();
-	uint64_t t3 = timer::getNowTimestamp();
+	uint64_t t3 = Timer::getNowTimestamp();
 	testSingleThreadPopMultiThreadPush();
-	uint64_t t4 = timer::getNowTimestamp();
-	printf("%s\n%s\n%s\n", timer::timestamp::delta(t2, t1).toString().c_str(), timer::timestamp::delta(t3, t2).toString().c_str()
-		, timer::timestamp::delta(t4, t3).toString().c_str());
+	uint64_t t4 = Timer::getNowTimestamp();
+	printf("%s\n%s\n%s\n", Timer::Timestamp::delta(t2, t1).toString().c_str(), Timer::Timestamp::delta(t3, t2).toString().c_str()
+		, Timer::Timestamp::delta(t4, t3).toString().c_str());
 	return 0;
 }

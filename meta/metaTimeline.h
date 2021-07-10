@@ -74,7 +74,7 @@ namespace META {
 			m->startPos = originCheckPoint;
 			m->meta = meta;
 			if (meta != nullptr)
-				meta->m_id = tableMeta::genTableId(m_id, m_version++);
+				meta->m_id = TableMeta::genTableId(m_id, m_version++);
 			if (m_current == nullptr)
 			{
 				barrier;

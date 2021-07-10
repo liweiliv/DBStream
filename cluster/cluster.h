@@ -9,10 +9,10 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 namespace DATABASE {
-	class database;
+	class Database;
 }
 namespace META {
-	struct tableMeta;
+	struct TableMeta;
 }
 namespace CLUSTER
 {

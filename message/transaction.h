@@ -7,14 +7,14 @@
 #include <stdlib.h>
 #include "record.h"
 #include <atomic>
-namespace DATABASE_INCREASE
+namespace RPC
 {
 struct transaction{
     void * userData;
     transaction * next;
     std::atomic<uint32_t> blockingRecordCount;
     uint16_t recordCount;
-    record *records[1];
+    Record *records[1];
     inline DMLRecord *DML(uint16_t index)
     {
         return records[index]->head->type<=REPLACE?static_cast<DMLRecord*>(records[index]):NULL;

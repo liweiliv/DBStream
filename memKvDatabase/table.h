@@ -13,10 +13,10 @@ namespace KVDB
 	class tableInterface {
 	protected:
 		std::string m_name;
-		META::tableMeta* m_meta;
+		META::TableMeta* m_meta;
 		std::mutex m_lock;
 	public:
-		tableInterface(const char* name, META::tableMeta* meta) :m_name(name), m_meta(meta) {}
+		tableInterface(const char* name, META::TableMeta* meta) :m_name(name), m_meta(meta) {}
 		virtual ~tableInterface() {}
 		virtual DS select(bufferPool* pool, clientHandle* client, const version *& result) = 0;
 		virtual DS insert(bufferPool* pool, clientHandle* client) = 0;
@@ -43,7 +43,7 @@ namespace KVDB
 		return s.hash();
 	}
 	template<>
-	inline size_t hashWrap<META::binaryType>::hash(const META::binaryType& s)const
+	inline size_t hashWrap<META::BinaryType>::hash(const META::BinaryType& s)const
 	{
 		return s.hash();
 	}
@@ -55,7 +55,7 @@ namespace KVDB
 	private:
 		inline void destroyKey(T& key, bool afterCopy) {}
 		inline void copyKeyValueFromRecord(bufferPool* pool, T& key) {}
-		inline void createKey(bufferPool* pool, const DATABASE_INCREASE::DMLRecord* record, T& key)
+		inline void createKey(bufferPool* pool, const RPC::DMLRecord* record, T& key)
 		{
 			key = *(const T*)record->column(m_meta->m_primaryKey->columnInfo[0].columnId);
 		}
@@ -67,7 +67,7 @@ namespace KVDB
 			dsOk();
 		}
 	public:
-		table(const char* name, META::tableMeta* m_meta):tableInterface(name,m_meta){};
+		table(const char* name, META::TableMeta* m_meta):tableInterface(name,m_meta){};
 		~table()
 		{
 			clear();
@@ -145,7 +145,7 @@ namespace KVDB
 	};
 
 	template<>
-	inline void table<META::unionKey>::createKey(bufferPool* pool, const DATABASE_INCREASE::DMLRecord* record, META::unionKey& key)
+	inline void table<META::unionKey>::createKey(bufferPool* pool, const RPC::DMLRecord* record, META::unionKey& key)
 	{
 		key.meta = m_meta->m_primaryKey;
 		uint16_t size = META::unionKey::memSize(record, key.meta, false);
@@ -154,7 +154,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline void table<META::binaryType>::createKey(bufferPool* pool, const DATABASE_INCREASE::DMLRecord* record, META::binaryType& key)
+	inline void table<META::BinaryType>::createKey(bufferPool* pool, const RPC::DMLRecord* record, META::BinaryType& key)
 	{
 		uint16_t id = m_meta->m_primaryKey->columnInfo[0].columnId;
 		key.size = record->varColumnSize(id);
@@ -162,7 +162,7 @@ namespace KVDB
 	}
 
 	template<>
-	inline void table<META::binaryType>::copyKeyValueFromRecord(bufferPool* pool, META::binaryType& key)
+	inline void table<META::BinaryType>::copyKeyValueFromRecord(bufferPool* pool, META::BinaryType& key)
 	{
 		if (key.data == nullptr || key.size == 0)
 			return;
@@ -178,14 +178,14 @@ namespace KVDB
 	}
 
 	template<>
-	inline void table<META::binaryType>::destroyKey(META::binaryType& key, bool afterCopy)
+	inline void table<META::BinaryType>::destroyKey(META::BinaryType& key, bool afterCopy)
 	{
 		if (afterCopy)
 			bufferPool::free((char*)key.data);
 	}
 
 	template<>
-	inline DS table<META::binaryType>::createKeyFromCondition(bufferPool* pool, META::binaryType& key, const rowImage* condition)
+	inline DS table<META::BinaryType>::createKeyFromCondition(bufferPool* pool, META::BinaryType& key, const rowImage* condition)
 	{
 		if (condition->count != 1 || condition->columnChanges[0].columnId != m_meta->m_primaryKey->columnInfo[0].columnId)
 			dsFailedAndLogIt(errorCode::KEY_COLUMN_NOT_MATCH, "condition must be primary key column", WARNING);
@@ -212,7 +212,7 @@ namespace KVDB
 		char* ptr = ((char*)key.key) + (m_meta->m_primaryKey->fixed ? 0 : sizeof(uint16_t));
 		for (int i = 0; i < m_meta->m_primaryKey->columnCount; i++)
 		{
-			const META::uniqueKeyTypePair& columnMeta = m_meta->m_primaryKey->columnInfo[i];
+			const META::UniqueKeyTypePair& columnMeta = m_meta->m_primaryKey->columnInfo[i];
 			uint16_t cid = columnIds[columnMeta.columnId];
 			if (cid == 0xffffu)
 			{

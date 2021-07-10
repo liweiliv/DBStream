@@ -16,7 +16,7 @@ namespace REPLICATOR {
 		int64_t m_sqlBufferPos;
 		std::string m_txnTableSqlHead;
 	public:
-		mysqlApplier(uint32_t id,config * conf):applier(id,conf),m_connect(nullptr),m_connector(conf), m_sqlBufferPos(0)
+		mysqlApplier(uint32_t id,Config * conf):applier(id,conf),m_connect(nullptr),m_connector(conf), m_sqlBufferPos(0)
 		{
 			m_defaultSqlBuffer = new char[m_defaultSqlBufferSize = 1024 * 32];
 			if (!m_txnTable.empty())
@@ -49,8 +49,8 @@ namespace REPLICATOR {
 			}
 			return 0;
 		}
-		void createTxnTableSql(char * sqlBuffer,const DATABASE_INCREASE::record* record);
-		int addColumnValue(char* sqlBuffer, const META::columnMeta* column, DATABASE_INCREASE::DMLRecord* dml, bool newOrOld);
+		void createTxnTableSql(char * sqlBuffer,const RPC::Record* record);
+		int addColumnValue(char* sqlBuffer, const META::ColumnMeta* column, RPC::DMLRecord* dml, bool newOrOld);
 		inline void reallocSqlBuf(char*& buffer, int64_t needed)
 		{
 			char* newBuffer = (char*)malloc(m_sqlBufferSize = (m_sqlBufferSize + needed + m_sqlBufferSize));
@@ -74,7 +74,7 @@ namespace REPLICATOR {
 		int createMergedDMLSql(replicatorRecord* record, char*& sqlBuffer);
 		int createDDLSql(replicatorRecord* record, char*& sqlBuffer)
 		{
-			const DATABASE_INCREASE::DDLRecord* ddl = static_cast<const DATABASE_INCREASE::DDLRecord*>(record->record);
+			const RPC::DDLRecord* ddl = static_cast<const RPC::DDLRecord*>(record->record);
 			if (ddl->databaseSize() > 0)
 			{
 				memcpy(sqlBuffer+ m_sqlBufferPos, "USE `", sizeof("USE `") - 1);
@@ -91,7 +91,7 @@ namespace REPLICATOR {
 		}
 		int createSingleDMLSql(replicatorRecord* record, char*& sqlBuffer);
 		int optimize(transaction* t, char*& sqlBuffer);
-		int createWhereConditionInSql(char*& sqlBuffer, DATABASE_INCREASE::DMLRecord* dml);
+		int createWhereConditionInSql(char*& sqlBuffer, RPC::DMLRecord* dml);
 		int createDMLSql(replicatorRecord* record, char*& sqlBuffer)
 		{
 			if (record->mergeNext == nullptr)
@@ -137,13 +137,13 @@ namespace REPLICATOR {
 			m_sqlBufferSize = m_defaultSqlBufferSize;
 			m_sqlBufferPos = 0;
 
-			if (t->recordCount > 1|| t->mergeNext!=nullptr||(!m_txnTable.empty()&& !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))))
+			if (t->recordCount > 1|| t->mergeNext!=nullptr||(!m_txnTable.empty()&& !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL))))
 			{
 				createBegin();
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))
 					return -1;
 			}
-			if (!m_txnTable.empty() && !(t->recordCount == 1 && t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL)))
+			if (!m_txnTable.empty() && !(t->recordCount == 1 && t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL)))
 			{
 				createTxnTableSql(sqlBuffer, t->firstRecord->record);
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))
@@ -158,7 +158,7 @@ namespace REPLICATOR {
 					{
 						if (record->mergeNext == nullptr || record->mergeNext->record->head->recordId > record->mergePrev->record->head->recordId)
 						{
-							if (record->record->head->minHead.type <= static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE))
+							if (record->record->head->minHead.type <= static_cast<uint8_t>(RPC::RecordType::R_REPLACE))
 							{
 								if (0 != createDMLSql(record, sqlBuffer))
 								{
@@ -166,7 +166,7 @@ namespace REPLICATOR {
 									return -1;
 								}
 							}
-							else if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))
+							else if (record->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL))
 							{
 
 							}
@@ -180,7 +180,7 @@ namespace REPLICATOR {
 				}
 				current = t->mergeNext;
 			}
-			if (t->recordCount > 1 || t->mergeNext != nullptr || (!m_txnTable.empty() && !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL))))
+			if (t->recordCount > 1 || t->mergeNext != nullptr || (!m_txnTable.empty() && !(t->firstRecord->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DDL))))
 			{
 				createCommit(sqlBuffer);
 				if (!m_batchCommit && unlikely(runSql(sqlBuffer) != 0))
@@ -191,7 +191,7 @@ namespace REPLICATOR {
 			return 0;
 		}
 	};
-	extern "C" DLL_EXPORT  applier * instance(int id,config * conf)
+	extern "C" DLL_EXPORT  applier * instance(int id,Config * conf)
 	{
 		LOG(INFO) << "create new mysqlApplier,id:" << id;
 		return new mysqlApplier(id,conf);

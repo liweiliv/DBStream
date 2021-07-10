@@ -56,7 +56,7 @@ namespace SHELL {
 	};
 	struct fieldsInfo :public sqlBasicInfo {
 		uint64_t tableId;
-		const META::tableMeta* table;
+		const META::TableMeta* table;
 		tableNameInfo alias;
 	};
 	struct joinInfo :public sqlBasicInfo {

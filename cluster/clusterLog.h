@@ -33,7 +33,7 @@ namespace CLUSTER
 		}
 		DLL_EXPORT void close();
 		DLL_EXPORT DS init(const logIndexInfo& lastCommited);
-		DLL_EXPORT DS append(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS append(const logEntryRpcBase* LogEntry);
 		DLL_EXPORT class iterator {
 		private:
 			clusterLog* m_log;
@@ -43,8 +43,8 @@ namespace CLUSTER
 		public:
 			iterator(clusterLog* log, const logIndexInfo& logIndex) :m_log(log), m_logIndex(logIndex), m_currentLogFile(nullptr), m_iter() {}
 			DLL_EXPORT DS seek(const logIndexInfo& logIndex);
-			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry);
-			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry, uint32_t outTime);
+			DLL_EXPORT DS next(const logEntryRpcBase*& LogEntry);
+			DLL_EXPORT DS next(const logEntryRpcBase*& LogEntry, uint32_t outTime);
 		};
 	};
 }

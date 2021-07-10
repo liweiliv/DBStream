@@ -31,14 +31,14 @@ namespace DATABASE
 		uint64_t iopsNow;
 
 		uint64_t prevTid;
-		timer::timestamp now;
+		Timer::Timestamp now;
 		std::string name;
 		statistic(const char * name) :startCheckpoint(0), endCheckPoint(0), startTimestamp(0), endTimestamp(0), recordCount(0), diskUsedSize(0), rawDataSize(0),
 			rps(0), tps(0), iops(0), rpsNow(0), tpsNow(0), iopsNow(0), prevTid(0),name(name)
 		{
 			now.time = GLOBAL::currentTime.time;
 		}
-		inline void newRecord(const DATABASE_INCREASE::record* record)
+		inline void newRecord(const RPC::Record* record)
 		{
 			if (unlikely(GLOBAL::currentTime.seconds > now.seconds)) {
 				now.time = GLOBAL::currentTime.time;
@@ -52,37 +52,37 @@ namespace DATABASE
 			recordCount++;
 			rpsNow ++;
 			iopsNow += record->head->minHead.size;
-			if (prevTid != record->head->txnId)
+			if (prevTid != record->head->checkpoint.txnId)
 			{
 				tpsNow++;
-				prevTid = record->head->txnId;
+				prevTid = record->head->checkpoint.txnId;
 			}
 			if (unlikely(startCheckpoint == 0))
 			{
-				startCheckpoint = record->head->logOffset;
-				startTimestamp = record->head->timestamp;
+				startCheckpoint = record->head->checkpoint.logOffset;
+				startTimestamp = record->head->checkpoint.timestamp;
 			}
 
-			if (endTimestamp < record->head->timestamp)
-				endTimestamp = record->head->timestamp;
-			endCheckPoint = record->head->logOffset;
+			if (endTimestamp < record->head->checkpoint.timestamp)
+				endTimestamp = record->head->checkpoint.timestamp;
+			endCheckPoint = record->head->checkpoint.logOffset;
 		}
-		inline void newBlock(const block* b)
+		inline void newBlock(const Block* b)
 		{
 			blockCount++;
 		}
-		inline void newSolidBlockFile(const block* b)
+		inline void newSolidBlockFile(const Block* b)
 		{
 			diskUsedSize += b->m_fileSize;
 		}
-		inline void loadFile(const block* b)
+		inline void loadFile(const Block* b)
 		{
 			blockCount++;
 			diskUsedSize += b->m_fileSize;
 			rawDataSize += b->m_rawSize;
 			recordCount += b->m_recordCount;
 		}
-		inline void purgeSolidBlock(const block* b)
+		inline void purgeSolidBlock(const Block* b)
 		{
 			blockCount--;
 			diskUsedSize -= b->m_fileSize;

@@ -15,6 +15,8 @@
 #include "util/winString.h"
 #include "sqlParser/sqlParser.h"
 #include "meta/ddl.h"
+#include "gtid.h"
+
 #define ROWS_MAPID_OFFSET    0
 #define ROWS_FLAGS_OFFSET    6
 #define ROWS_VHLEN_OFFSET    8
@@ -117,12 +119,12 @@ namespace DATA_SOURCE {
 #endif
 
 	}
-	BinlogEventParser::BinlogEventParser(META::metaDataCollection* metaDataManager, ringBuffer* memPool) :
+	BinlogEventParser::BinlogEventParser(META::MetaDataCollection* metaDataManager, ringBuffer* memPool) :
 		m_metaDataManager(metaDataManager), m_currentFileID(0), m_currentOffset(0), m_threadID(0), m_memPool(memPool), m_parsedRecordCount(0), m_parsedRecordBegin(0)
 	{
 		m_descEvent = new formatEvent(4, "5.6.16");
 		initColumnTypeInfo();
-		m_parsedRecords = new DATABASE_INCREASE::record * [M_PARSER_RECORD_CACHE_VOLUMN];
+		m_parsedRecords = new RPC::Record * [M_PARSER_RECORD_CACHE_VOLUMN];
 		m_sqlParser = new SQL_PARSER::sqlParser();
 	}
 	BinlogEventParser::~BinlogEventParser()
@@ -151,8 +153,7 @@ namespace DATA_SOURCE {
 	{
 		m_instance = instance;
 	}
-	DS BinlogEventParser::createDescEvent(
-		const char* logEvent, size_t size)
+	DS BinlogEventParser::createDescEvent(const char* logEvent, size_t size)
 	{
 		if (m_descEvent != NULL)
 			delete m_descEvent;
@@ -190,8 +191,10 @@ namespace DATA_SOURCE {
 		dsOk();;
 	}
 
-	DS BinlogEventParser::parseDDL(const char* logEvent, size_t size)
+	DS BinlogEventParser::parseDDL(const LogEntry* entry)
 	{
+		const char* logEvent = entry->getRealData();
+		size_t size = entry->dataSize();
 		const char* sql;
 		uint32_t sqlSize = 0;
 		QueryEvent::getQuery(logEvent, size, m_descEvent, sql, sqlSize);
@@ -203,7 +206,7 @@ namespace DATA_SOURCE {
 		{
 			LOG(ERROR) << "parse ddl :[" << sql << "] failed";
 			((char*)sql)[sqlSize] = end;
-			dsReturn(ddl(logEvent, size));//now ignore ddl parse failed 
+			dsReturn(ddl(entry));//now ignore ddl parse failed 
 		}
 		((char*)sql)[sqlSize] = end;
 		DS rtv = 0;
@@ -212,24 +215,27 @@ namespace DATA_SOURCE {
 			switch (static_cast<META::ddl*>(handle->userData)->m_type)
 			{
 			case META::BEGIN:
-				rtv = begin(logEvent, size);
+				rtv = begin(entry);
 				break;
 			case META::COMMIT:
-				rtv = commit(logEvent, size);
+				rtv = commit(entry);
 				break;
 			case META::ROLLBACK:
-				rtv = rollback(logEvent, size);
+				rtv = rollback(entry);
 				break;
 			default:
-				rtv = ddl(logEvent, size);
+				rtv = ddl(entry);
 				break;
 			}
 		}
 		delete handle;
 		dsReturn(rtv);
 	}
-	DS BinlogEventParser::parseQuery(const char* logEvent, size_t size)
+
+	DS BinlogEventParser::parseQuery(const LogEntry* entry)
 	{
+		const char* logEvent = entry->getRealData();
+		size_t size = entry->dataSize();
 		const char* query = nullptr;
 		uint32_t querySize = 0;
 		if (0 != QueryEvent::getQuery(logEvent, size, m_descEvent, query, querySize))
@@ -237,61 +243,58 @@ namespace DATA_SOURCE {
 		if (query == nullptr)
 			return ParseStatus::OK;
 		if (querySize == 5 && memcmp(query, "BEGIN", 5) == 0)
-			return begin(logEvent, size);
+			return begin(entry);
 		else if (querySize == 6 && memcmp(query, "COMMIT", 6) == 0)
-			return commit(logEvent, size);
-		else if (querySize == 8 && memcmp(query, "ROLLBACK", querySize) == 0)
-			return rollback(logEvent, size);
+			return commit(entry);
+		else if (querySize == 8 && memcmp(query, "ROLLBACK", 8) == 0)
+			return rollback(entry);
 		else
-			return parseDDL(logEvent, size);
+			return parseDDL(entry);
 	}
-	DS BinlogEventParser::parseTableMap(const char* logEvent, size_t size)
+
+	static inline void setRecordBasicInfo(const commonMysqlBinlogEventHeader_v4* header, RPC::Record* r)
 	{
-		m_tableMap.init(m_descEvent, logEvent, size);
-		dsOk();
-	}
-	static inline void setRecordBasicInfo(const commonMysqlBinlogEventHeader_v4* header, DATABASE_INCREASE::record* r)
-	{
-		r->head->minHead.headSize = DATABASE_INCREASE::recordHeadSize;
-		r->head->timestamp = META::timestamp::create(header->timestamp, 0);
 		r->head->txnId = 0;
 	}
-	DS BinlogEventParser::rollback(const char* logEvent, size_t size)
+
+	DS BinlogEventParser::rollback(const LogEntry* entry)
 	{
-		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)logEvent;
-		DATABASE_INCREASE::record* r = (DATABASE_INCREASE::record*)m_memPool->alloc(DATABASE_INCREASE::recordSize);
-		r->init(((char*)r) + sizeof(DATABASE_INCREASE::record));
+		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)entry->getRealData();
+		RPC::Record* r = (RPC::Record*)m_memPool->alloc(RPC::recordSize);
+		r->init(((char*)r) + sizeof(RPC::Record), entry->getCheckpoint());
 		setRecordBasicInfo(header, r);
-		r->head->minHead.size = DATABASE_INCREASE::recordRealSize;
-		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->minHead.type = static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_ROLLBACK);
+		r->head->minHead.size = r->head->minHead.headSize;
+		r->head->minHead.type = static_cast<uint8_t>(RPC::RecordType::R_ROLLBACK);
 		PUSH_RECORD(r);
 		dsOk();
 	}
-	DS BinlogEventParser::ddl(const char* logEvent, size_t size)
+
+	DS BinlogEventParser::ddl(const LogEntry* entry)
 	{
-		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)logEvent;
-		QueryEvent query(logEvent, size, m_descEvent);
+		commonMysqlBinlogEventHeader_v4* header = (commonMysqlBinlogEventHeader_v4*)entry->getRealData();
+		QueryEvent query(entry->getRealData(), entry->dataSize(), m_descEvent);
 		LOG(INFO) << "ddl:" << query.query;
-		DATABASE_INCREASE::DDLRecord* r = (DATABASE_INCREASE::DDLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DDLRecord) + DATABASE_INCREASE::DDLRecord::allocSize(query.db.size(), query.query.size() + 1));
-		r->create(((char*)r) + sizeof(DATABASE_INCREASE::DDLRecord), query.charset_inited ? query.charset : nullptr, query.sql_mode, query.db.c_str(), query.query.c_str(), query.query.size());
+		RPC::DDLRecord* r = (RPC::DDLRecord*)m_memPool->alloc(sizeof(RPC::DDLRecord) + RPC::DDLRecord::allocSize(query.db.size(), query.query.size() + 1));
+		r->create(((char*)r) + sizeof(RPC::DDLRecord), entry->getCheckpoint(), query.charset_inited ? query.charset : nullptr, query.sql_mode, query.db.c_str(), query.query.c_str(), query.query.size());
 		setRecordBasicInfo(header, r);
-		r->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
-		r->head->minHead.type = static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DDL);
+		r->head->minHead.type = static_cast<uint8_t>(RPC::RecordType::R_DDL);
 		PUSH_RECORD(r);
-		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty() ? nullptr : query.db.c_str(), r->head->logOffset);
+		m_metaDataManager->processDDL(query.query.c_str(), query.db.empty() ? nullptr : query.db.c_str(), r->head->checkpoint.logOffset);
 		dsOk();
 	}
-	DS BinlogEventParser::begin(const char* logEvent, size_t size)
+
+	DS BinlogEventParser::begin(const LogEntry* entry)
 	{
-		m_threadID = le32toh(*(uint32_t*)(logEvent + sizeof(commonMysqlBinlogEventHeader_v4)));//update thread id
+		m_threadID = le32toh(*(uint32_t*)(entry->getRealData() + sizeof(commonMysqlBinlogEventHeader_v4)));//update thread id
 		dsReturnCode(ParseStatus::BEGIN);
 	}
-	DS BinlogEventParser::commit(const char* logEvent, size_t size)
+
+	DS BinlogEventParser::commit(const LogEntry* entry)
 	{
 		m_threadID = 0;
 		dsReturnCode(ParseStatus::COMMIT);
 	}
+
 	void BinlogEventParser::parseRowLogEventHeader(const char*& logevent, uint64_t size, uint64_t& tableId, const uint8_t*& columnBitMap, const uint8_t*& updatedColumnBitMap)
 	{
 		uint8_t const commonHeaderLen = m_descEvent->common_header_len;
@@ -338,6 +341,7 @@ namespace DATA_SOURCE {
 		}
 		logevent = (const char*)ptrAfterWidth;
 	}
+
 	static inline uint8_t getRealType(uint8_t tableDefType, uint8_t metaType, const unsigned char* meta)
 	{
 		switch (tableDefType)
@@ -363,7 +367,8 @@ namespace DATA_SOURCE {
 			return tableDefType;
 		}
 	}
-	DS BinlogEventParser::parseRowData(DATABASE_INCREASE::DMLRecord* record,
+
+	DS BinlogEventParser::parseRowData(RPC::DMLRecord* record,
 		const char*& data, size_t size, bool newORold, const uint8_t* columnBitmap)
 	{
 		uint32_t metaIndex = 0;
@@ -371,7 +376,7 @@ namespace DATA_SOURCE {
 		data += BYTES_FOR_BITS(m_tableMap.columnCount);
 		for (uint32_t idx = 0; idx < m_tableMap.columnCount; idx++)
 		{
-			const META::columnMeta* columnMeta = record->meta->getColumn(idx);
+			const META::ColumnMeta* columnMeta = record->meta->getColumn(idx);
 			int ctype = getRealType(m_tableMap.types[idx], columnMeta->m_srcColumnType, m_tableMap.metaInfo + metaIndex);
 			if (!TEST_BITMAP(columnBitmap, idx) || NULL_BIT(nullBitMap, idx))
 			{
@@ -401,6 +406,7 @@ namespace DATA_SOURCE {
 		}
 		dsOk();
 	}
+
 	uint64_t BinlogEventParser::getTableID(const char* data,
 		Log_event_type event_type)
 	{
@@ -417,9 +423,11 @@ namespace DATA_SOURCE {
 		}
 	}
 
-	DS BinlogEventParser::parseRowLogevent(
-		const char* logEvent, size_t size, DATABASE_INCREASE::RecordType type)
+	DS BinlogEventParser::parseRowLogevent(const LogEntry* entry,
+		RPC::RecordType type)
 	{
+		const char* logEvent = entry->getRealData();
+		size_t size = entry->dataSize();
 		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		if (m_descEvent->alg != BINLOG_CHECKSUM_ALG_OFF && m_descEvent->alg != BINLOG_CHECKSUM_ALG_UNDEF)
 			size = size - BINLOG_CHECKSUM_LEN;
@@ -428,7 +436,7 @@ namespace DATA_SOURCE {
 		const char* parsePos = logEvent, * end = logEvent + size;
 		parseRowLogEventHeader(parsePos, size, tableID, columnBitmap, updatedColumnBitMap);
 		assert(m_tableMap.tableID == tableID);
-		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID, m_currentOffset));
+		META::TableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID, m_currentOffset));
 		if (meta == nullptr)
 		{
 			dsFailedAndLogIt(ParseStatus::NO_META,
@@ -441,10 +449,9 @@ namespace DATA_SOURCE {
 		}
 		while (parsePos < end)
 		{
-			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DMLRecord) + DATABASE_INCREASE::recordHeadSize + header->eventSize * 4);
-			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, type);
+			RPC::DMLRecord* record = (RPC::DMLRecord*)m_memPool->alloc(sizeof(RPC::DMLRecord) + entry->getCheckpoint()->checkpointSize() + RPC::recordHeadSize + header->eventSize * 4);
+			record->initRecord(((char*)record) + sizeof(RPC::DMLRecord), meta, entry->getCheckpoint(), type);
 			setRecordBasicInfo(header, record);
-			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 			dsReturnIfFailed(parseRowData(record, parsePos, end - parsePos, true, columnBitmap));
 			record->finishedSet();
 			PUSH_RECORD(record);
@@ -457,14 +464,32 @@ namespace DATA_SOURCE {
 		return ParseStatus::OK;
 	}
 
-	DS BinlogEventParser::parseTraceID(const char* logEvent,
-		size_t size)
+	DS BinlogEventParser::parseTraceID(const LogEntry* entry)
 	{
 		dsOk();
 	}
 
-	DS BinlogEventParser::parseUpdateRowLogevent(const char* logEvent, size_t size)
+	DS BinlogEventParser::parsePreviousGtidsEvent(const LogEntry* entry)
 	{
+		previousGtidsEvent event;
+		dsReturnIfFailed(event.parse(entry->getRealData() + sizeof(commonMysqlBinlogEventHeader_v4) + m_descEvent->post_header_len[PREVIOUS_GTIDS_LOG_EVENT - 1],
+			entry->dataSize() - (sizeof(commonMysqlBinlogEventHeader_v4) + m_descEvent->post_header_len[PREVIOUS_GTIDS_LOG_EVENT - 1])));
+		for (int i = 0; i < event.serverCount; i++)
+		{
+			serverGtidSets *sets = event.gtids[i];
+			GtidInfo* gtid = m_gtids.getGtid(sets->uuid);
+			if (gtid == nullptr)
+			{
+
+			}
+		}
+		dsOk();
+	}
+
+	DS BinlogEventParser::parseUpdateRowLogevent(const LogEntry* entry)
+	{
+		size_t size = entry->dataSize();
+		const char* logEvent = entry->getRealData();
 		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		if (m_descEvent->alg != BINLOG_CHECKSUM_ALG_OFF && m_descEvent->alg != BINLOG_CHECKSUM_ALG_UNDEF)
 			size = size - BINLOG_CHECKSUM_LEN;
@@ -473,7 +498,7 @@ namespace DATA_SOURCE {
 		const char* parsePos = logEvent, * end = logEvent + size;
 		parseRowLogEventHeader(parsePos, size, tableID, columnBitmap, updatedColumnBitMap);
 		assert(m_tableMap.tableID == tableID);
-		META::tableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID, m_currentOffset));
+		META::TableMeta* meta = m_metaDataManager->get(m_tableMap.dbName, m_tableMap.tableName, createMysqlRecordOffset(m_currentFileID, m_currentOffset));
 
 		if (meta == nullptr)
 		{
@@ -488,10 +513,9 @@ namespace DATA_SOURCE {
 
 		while (parsePos < end)
 		{
-			DATABASE_INCREASE::DMLRecord* record = (DATABASE_INCREASE::DMLRecord*)m_memPool->alloc(sizeof(DATABASE_INCREASE::DMLRecord) + DATABASE_INCREASE::recordHeadSize + header->eventSize * 4);
-			record->initRecord(((char*)record) + sizeof(DATABASE_INCREASE::DMLRecord), meta, DATABASE_INCREASE::RecordType::R_UPDATE);
+			RPC::DMLRecord* record = (RPC::DMLRecord*)m_memPool->alloc(sizeof(RPC::DMLRecord) + RPC::recordHeadSize + header->eventSize * 4);
+			record->initRecord(((char*)record) + sizeof(RPC::DMLRecord), meta, entry->getCheckpoint(), RPC::RecordType::R_UPDATE);
 			setRecordBasicInfo(header, record);
-			record->head->logOffset = createMysqlRecordOffset(m_currentFileID, m_currentOffset);
 			dsReturnIfFailed(parseRowData(record, parsePos, end - parsePos, true, columnBitmap));
 			record->startSetUpdateOldValue();
 			dsReturnIfFailed(parseRowData(record, parsePos, end - parsePos, false, updatedColumnBitMap));
@@ -506,39 +530,46 @@ namespace DATA_SOURCE {
 		dsOk();
 	}
 
-	DS BinlogEventParser::parser(const char* logEvent, size_t size)
+	DS BinlogEventParser::parser(const LogEntry* entry)
 	{
+		const char* logEvent = entry->getRealData();
 		if (unlikely(m_parsedRecordCount > m_parsedRecordBegin))
 			return ParseStatus::REMAIND_RECORD_UNREAD;
 		m_parsedRecordCount = m_parsedRecordBegin = 0;
 		const commonMysqlBinlogEventHeader_v4* header = (const commonMysqlBinlogEventHeader_v4*)(logEvent);
 		m_currentOffset = header->eventOffset;
-		DS rtv = 0;
 		switch (header->type)
 		{
 		case WRITE_ROWS_EVENT:
 		case WRITE_ROWS_EVENT_V1:
-			dsReturn(parseRowLogevent(logEvent, size, DATABASE_INCREASE::RecordType::R_INSERT));
+			dsReturn(parseRowLogevent(entry, RPC::RecordType::R_INSERT));
 		case UPDATE_ROWS_EVENT:
 		case UPDATE_ROWS_EVENT_V1:
-			dsReturn(parseUpdateRowLogevent(logEvent, size));
+			dsReturn(parseUpdateRowLogevent(entry));
 			break;
 		case DELETE_ROWS_EVENT:
 		case DELETE_ROWS_EVENT_V1:
-			dsReturn(parseRowLogevent(logEvent, size, DATABASE_INCREASE::RecordType::R_DELETE));
+			dsReturn(parseRowLogevent(entry, RPC::RecordType::R_DELETE));
 		case QUERY_EVENT:
-			dsReturn(parseQuery(logEvent, size));
+			dsReturn(parseQuery(entry));
 		case TABLE_MAP_EVENT:
-			dsReturn(parseTableMap(logEvent, size));
+			m_tableMap.init(m_descEvent, logEvent, entry->dataSize());
+			dsOk();
+		case GTID_LOG_EVENT:
+		case ANONYMOUS_GTID_LOG_EVENT:
+			m_gtids.addGtid(gtidEvent::getGtidFromEvent(logEvent + sizeof(commonMysqlBinlogEventHeader_v4) + m_descEvent->post_header_len[header->type - 1]));
+			dsOk();
 		case XID_EVENT:
-			dsReturn(commit(logEvent, size));
+			dsReturn(commit(entry));
 		case ROTATE_EVENT:
-			dsReturn(updateFile(logEvent, size));
+			dsReturn(updateFile(logEvent, entry->dataSize()));
 			break;
 		case ROWS_QUERY_LOG_EVENT:
-			dsReturn(parseTraceID(logEvent, size));
+			dsReturn(parseTraceID(entry));
 		case FORMAT_DESCRIPTION_EVENT:
-			dsReturn(createDescEvent(logEvent, size));
+			dsReturn(createDescEvent(logEvent, entry->dataSize()));
+		case PREVIOUS_GTIDS_LOG_EVENT:
+			dsReturn(parsePreviousGtidsEvent(entry));
 		default:
 			dsOk();
 		}

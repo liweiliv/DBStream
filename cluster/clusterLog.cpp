@@ -4,9 +4,9 @@
 #include "meta/metaData.h"
 
 namespace CLUSTER {
-	DLL_EXPORT DS clusterLog::append(const logEntryRpcBase* logEntry)
+	DLL_EXPORT DS clusterLog::append(const logEntryRpcBase* LogEntry)
 	{
-		DS s = m_currentLogFile->append(logEntry);
+		DS s = m_currentLogFile->append(LogEntry);
 		if (!dsCheck(s))
 		{
 			switch (-s)
@@ -14,29 +14,29 @@ namespace CLUSTER {
 			case errorCode::full:
 			{
 				dsReturnIfFailed(m_currentLogFile->finish());
-				dsReturnIfFailed(createNewFile(logEntry->logIndex));
-				dsReturn(append(logEntry));
+				dsReturnIfFailed(createNewFile(LogEntry->logIndex));
+				dsReturn(append(LogEntry));
 			}
 			case errorCode::rollback:
 			{
-				dsReturnIfFailed(rollback(logEntry->logIndex));
-				dsReturn(append(logEntry));
+				dsReturnIfFailed(rollback(LogEntry->logIndex));
+				dsReturn(append(LogEntry));
 			}
 			default:
 				dsReturn(s);
 			}
 		}
-		if (logEntry->logIndex.term > m_logIndex.term)
+		if (LogEntry->logIndex.term > m_logIndex.term)
 		{
-			if (logEntry->logIndex.term != m_logIndex.term + 1)
+			if (LogEntry->logIndex.term != m_logIndex.term + 1)
 			{
 				dsFailedAndLogIt(errorCode::prevNotMatch, "", ERROR);
 			}
 		}
-		if (logEntry->leaderCommitIndex > m_commitLogIndex.logIndex)
+		if (LogEntry->leaderCommitIndex > m_commitLogIndex.logIndex)
 		{
 			//	dsReturnIfFailed(m_currentLogFile->writeCurrentBlock());
-			m_commitLogIndex.logIndex = m_logIndex.logIndex > logEntry->leaderCommitIndex ? logEntry->leaderCommitIndex : m_logIndex.logIndex;
+			m_commitLogIndex.logIndex = m_logIndex.logIndex > LogEntry->leaderCommitIndex ? LogEntry->leaderCommitIndex : m_logIndex.logIndex;
 		}
 		dsOk();
 	}
@@ -245,11 +245,11 @@ namespace CLUSTER {
 		dsOk();
 	}
 
-	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& logEntry, uint32_t outTime)
+	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& LogEntry, uint32_t outTime)
 	{
-		logEntry = nullptr;
+		LogEntry = nullptr;
 		do {
-			DS rtv = m_iter.next(logEntry, 10);
+			DS rtv = m_iter.next(LogEntry, 10);
 			if (unlikely(!dsCheck(rtv)))
 			{
 				if (rtv == -errorCode::endOfFile)
@@ -268,18 +268,18 @@ namespace CLUSTER {
 					dsReturn(rtv);
 				}
 			}
-			if (logEntry == nullptr)
+			if (LogEntry == nullptr)
 				outTime -= 10;
 			else
 				dsOk();
 		} while (outTime > 0);
 		dsOk();
 	}
-	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& logEntry)
+	DLL_EXPORT DS clusterLog::iterator::next(const logEntryRpcBase*& LogEntry)
 	{
-		logEntry = nullptr;
+		LogEntry = nullptr;
 		do {
-			DS rtv = m_iter.next(logEntry);
+			DS rtv = m_iter.next(LogEntry);
 			if (unlikely(!dsCheck(rtv)))
 			{
 				if (rtv == -errorCode::endOfFile)

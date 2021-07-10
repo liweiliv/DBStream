@@ -2,15 +2,15 @@
 #include "util/winDll.h"
 namespace GLOBAL
 {
-	timer::timestamp currentTime;
-	DLL_EXPORT timer globalTimer;
+	Timer::Timestamp currentTime;
+	DLL_EXPORT Timer globalTimer;
 	static void timerAction (uint64_t nowTime, void* nptr)
 	{
 		currentTime.time = nowTime;
 	}
 	DLL_EXPORT void init()
 	{
-		currentTime.time = timer::getNowTimestamp();
+		currentTime.time = Timer::getNowTimestamp();
 		globalTimer.start();
 		globalTimer.addTimer(nullptr, timerAction, 1000000);
 	}

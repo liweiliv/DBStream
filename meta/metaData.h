@@ -20,7 +20,7 @@
 #include "util/status.h"
 #include "util/sparsepp/spp.h"
 #include "util/unorderMapUtil.h"
-namespace DATABASE_INCREASE {
+namespace RPC {
 	struct TableMetaMessage;
 }
 namespace META {
@@ -109,18 +109,18 @@ namespace META {
 		}
 
 	};
-	struct defaultValue
+	struct DefaultValue
 	{
 		void* m_defaultValue;
 		COLUMN_TYPE  m_defaultValueType;
 		uint32_t m_defaultValueSize;
-		defaultValue() :m_defaultValue(nullptr), m_defaultValueType(COLUMN_TYPE::T_MAX_TYPE), m_defaultValueSize(0) {}
-		~defaultValue()
+		DefaultValue() :m_defaultValue(nullptr), m_defaultValueType(COLUMN_TYPE::T_MAX_TYPE), m_defaultValueSize(0) {}
+		~DefaultValue()
 		{
 			if (m_defaultValue != nullptr)
 				free(m_defaultValue);
 		}
-		defaultValue(const defaultValue& v) :m_defaultValue(nullptr), m_defaultValueType(v.m_defaultValueType), m_defaultValueSize(v.m_defaultValueSize)
+		DefaultValue(const DefaultValue& v) :m_defaultValue(nullptr), m_defaultValueType(v.m_defaultValueType), m_defaultValueSize(v.m_defaultValueSize)
 		{
 			if (v.m_defaultValue != nullptr && v.m_defaultValueSize > 0)
 			{
@@ -128,7 +128,7 @@ namespace META {
 				memcpy(m_defaultValue, v.m_defaultValue, m_defaultValueSize);
 			}
 		}
-		defaultValue& operator=(const defaultValue& v)
+		DefaultValue& operator=(const DefaultValue& v)
 		{
 			m_defaultValueSize = v.m_defaultValueSize;
 			m_defaultValueType = v.m_defaultValueType;
@@ -143,7 +143,7 @@ namespace META {
 			}
 			return *this;
 		}
-		bool operator==(const defaultValue& v) const
+		bool operator==(const DefaultValue& v) const
 		{
 			if (m_defaultValueType != v.m_defaultValueType)
 				return false;
@@ -155,7 +155,7 @@ namespace META {
 				return false;
 			return memcmp(m_defaultValue, v.m_defaultValue, m_defaultValueSize) == 0;
 		}
-		bool operator!=(const defaultValue& v) const
+		bool operator!=(const DefaultValue& v) const
 		{
 			return !(*this == (v)); 
 		}
@@ -168,7 +168,7 @@ namespace META {
 #define COL_FLAG_GENERATED  0x20
 #define COL_FLAG_HIDDEN  0x40
 
-	struct columnMeta
+	struct ColumnMeta
 	{
 		COLUMN_TYPE m_columnType; //type in DBStream
 		uint8_t m_srcColumnType;// type in database
@@ -177,7 +177,7 @@ namespace META {
 		uint16_t m_columnIndex;  //column id in table
 		std::string m_columnName;
 		std::string m_alias;
-		defaultValue m_default;
+		DefaultValue m_default;
 		std::string m_collate;
 		const charsetInfo* m_charset;
 		uint32_t m_size;
@@ -185,10 +185,10 @@ namespace META {
 		uint32_t m_decimals;
 		stringArray m_setAndEnumValueList;
 		uint32_t m_flag;
-		columnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_segmentCount(0), m_segmentStartId(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
+		ColumnMeta() :m_columnType(COLUMN_TYPE::T_MAX_TYPE), m_srcColumnType(0), m_segmentCount(0), m_segmentStartId(0), m_columnIndex(0), m_charset(nullptr), m_size(0), m_precision(0), m_decimals(0),
 			m_setAndEnumValueList(), m_flag(0)
 		{}
-		columnMeta& operator =(const columnMeta& c)
+		ColumnMeta& operator =(const ColumnMeta& c)
 		{
 			m_columnType = c.m_columnType;
 			m_srcColumnType = c.m_srcColumnType;
@@ -206,7 +206,7 @@ namespace META {
 			m_flag = c.m_flag;
 			return *this;
 		}
-		bool operator==(const columnMeta& c)const
+		bool operator==(const ColumnMeta& c)const
 		{
 			if (m_columnType != c.m_columnType ||
 				m_srcColumnType != c.m_srcColumnType ||
@@ -226,7 +226,7 @@ namespace META {
 				return false;
 			return true;
 		}
-		bool operator!=(const columnMeta& c) const
+		bool operator!=(const ColumnMeta& c) const
 		{
 			return !(*this == c);
 		}
@@ -248,8 +248,8 @@ namespace META {
 		}
 		std::string toString()const;
 	};
-	typedef spp::sparse_hash_map<const char*, columnMeta*, StrHash, StrCompare> tableColMap;
-	struct DLL_EXPORT tableMeta
+	typedef spp::sparse_hash_map<const char*, ColumnMeta*, StrHash, StrCompare> tableColMap;
+	struct DLL_EXPORT TableMeta
 	{
 		std::string  m_dbName;
 		//for postgresql
@@ -257,7 +257,7 @@ namespace META {
 		std::string  m_tableName;
 		const charsetInfo* m_charset;
 		std::string m_collate;
-		columnMeta* m_columns;
+		ColumnMeta* m_columns;
 		uint16_t* m_realIndexInRowFormat;
 		uint16_t* m_fixedColumnOffsetsInRecord;
 		uint16_t m_fixedColumnCount;
@@ -267,13 +267,13 @@ namespace META {
 		uint64_t m_objectIdInDB;//object id of table in source database,now used in oracle
 		uint32_t m_subObjectIdInDBListSize;
 		uint64_t* m_subObjectIdInDBList;//sub object id of table (like partition id) in source database,now used in oracle
-		unionKeyMeta* m_primaryKey;
+		UnionKeyMeta* m_primaryKey;
 		std::string m_primaryKeyName;
 		uint16_t m_uniqueKeysCount;
-		unionKeyMeta** m_uniqueKeys;
+		UnionKeyMeta** m_uniqueKeys;
 		std::string* m_uniqueKeyNames;
 		uint16_t m_indexCount;
-		unionKeyMeta** m_indexs;
+		UnionKeyMeta** m_indexs;
 		std::string* m_indexNames;
 		uint16_t* m_unusedColumnIds;
 		uint16_t m_unusedColumnIdCount;
@@ -292,20 +292,20 @@ namespace META {
 		{
 			return (tableid << 16) | version;
 		}
-		tableMeta(bool caseSensitive);
-		tableMeta(DATABASE_INCREASE::TableMetaMessage* msg);
+		TableMeta(bool caseSensitive);
+		TableMeta(RPC::TableMetaMessage* msg);
 		const char* createTableMetaRecord()const;
 		void clean();
-		~tableMeta();
-		tableMeta& operator =(const tableMeta& t);
-		inline const columnMeta* getColumn(uint16_t idx) const
+		~TableMeta();
+		TableMeta& operator =(const TableMeta& t);
+		inline const ColumnMeta* getColumn(uint16_t idx) const
 		{
 			if (idx > m_columnsCount)
 				return nullptr;
 			return &m_columns[idx];
 		}
 
-		inline const columnMeta* getColumn(const char* columnName) const
+		inline const ColumnMeta* getColumn(const char* columnName) const
 		{
 			if (m_columnsCount < 5)
 			{
@@ -334,7 +334,7 @@ namespace META {
 			}
 			return -1;
 		}
-		inline unionKeyMeta* getUniqueKey(const char* UniqueKeyname)const
+		inline UnionKeyMeta* getUniqueKey(const char* UniqueKeyname)const
 		{
 			int id = getUniqueKeyId(UniqueKeyname);
 			if (id > 0)
@@ -351,7 +351,7 @@ namespace META {
 			}
 			return -1;
 		}
-		inline unionKeyMeta* getIndex(const char* indexName)const
+		inline UnionKeyMeta* getIndex(const char* indexName)const
 		{
 			int id = getIndexId(indexName);
 			if (id > 0)
@@ -363,30 +363,30 @@ namespace META {
 		{
 			return m_nameCompare.compare(database, m_dbName.c_str()) == 0 && m_nameCompare.compare(table, m_tableName.c_str()) == 0;
 		}
-		unionKeyMeta* createUnionKey(uint16_t keyId, KEY_TYPE keyType, const uint16_t* columnIds, uint16_t columnCount);
+		UnionKeyMeta* createUnionKey(uint16_t keyId, KEY_TYPE keyType, const uint16_t* columnIds, uint16_t columnCount);
 
-		DS prepareUnionKey(unionKeyMeta* key);
+		DS prepareUnionKey(UnionKeyMeta* key);
 
 		void buildColumnOffsetList();
 		void updateKeysWhenColumnUpdate(int from, int to, COLUMN_TYPE newType);
 		int dropColumn(uint32_t columnIndex);//todo ,update key;
 		int dropColumn(const char* column);
 		int renameColumn(const char* oldName, const char* newName);
-		int modifyColumn(const columnMeta* column, bool first, const char* addAfter);
-		int changeColumn(const columnMeta* newColumn, const char* columnName, bool first, const char* addAfter);
-		int addColumn(const columnMeta* column, const char* addAfter = nullptr, bool first = false);
+		int modifyColumn(const ColumnMeta* column, bool first, const char* addAfter);
+		int changeColumn(const ColumnMeta* newColumn, const char* columnName, bool first, const char* addAfter);
+		int addColumn(const ColumnMeta* column, const char* addAfter = nullptr, bool first = false);
 		int dropPrimaryKey();
 		int createPrimaryKey(const std::list<std::string>& columns);
 		int dropUniqueKey(const char* ukName);
-		int _addIndex(uint16_t& count, unionKeyMeta**& indexs, std::string*& indexNames, unionKeyMeta* index, const char* indexName);
+		int _addIndex(uint16_t& count, UnionKeyMeta**& indexs, std::string*& indexNames, UnionKeyMeta* index, const char* indexName);
 		int addIndex(const char* indexName, const std::list<std::string>& columns, KEY_TYPE keyType);
-		int _dropIndex(int idx, uint16_t& indexCount, unionKeyMeta**& indexs, std::string*& indexNames, KEY_TYPE keyType);
+		int _dropIndex(int idx, uint16_t& indexCount, UnionKeyMeta**& indexs, std::string*& indexNames, KEY_TYPE keyType);
 		int dropIndex(const char* indexName);
 		int renameIndex(const char* oldName, const char* newName);
 		int defaultCharset(const charsetInfo* charset, const char* collationName);
 		int convertDefaultCharset(const charsetInfo* charset, const char* collationName);
-		bool operator==(const tableMeta& dest)const;
-		bool operator!=(const tableMeta& dest)const;
+		bool operator==(const TableMeta& dest)const;
+		bool operator!=(const TableMeta& dest)const;
 		std::string toString()const;
 	};
 }

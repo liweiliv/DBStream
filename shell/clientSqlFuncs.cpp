@@ -42,7 +42,7 @@ namespace SHELL {
 		}
 		return values;
 	}
-	META::metaDataCollection* shellMetaCenter;
+	META::MetaDataCollection* shellMetaCenter;
 	threadLocal<uint8_t> typeListBuffer;
 	static inline Field* createFieldFromSqlValue(SQL_PARSER::SQLValue* value, selectSqlInfo* select, bool isSelectedColumn);
 	static inline uint8_t* getTypeListBuf()
@@ -52,7 +52,7 @@ namespace SHELL {
 			typeListBuffer.set(buffer = new uint8_t[1024]);
 		return buffer;
 	}
-	static inline const META::tableMeta* getMeta(SQL_PARSER::handle* h, const SQL_PARSER::SQLTableNameValue* table)
+	static inline const META::TableMeta* getMeta(SQL_PARSER::handle* h, const SQL_PARSER::SQLTableNameValue* table)
 	{
 		char db[256], tb[256];
 		const char* database = nullptr;
@@ -114,7 +114,7 @@ namespace SHELL {
 	static inline Field* SQLValue2Column(SQL_PARSER::SQLValue* value, selectSqlInfo* sql, bool isSelectedColumn)
 	{
 		SQL_PARSER::SQLColumnNameValue* columnValue = static_cast<SQL_PARSER::SQLColumnNameValue*>(value);
-		const META::columnMeta* columnMeta;
+		const META::ColumnMeta* columnMeta;
 		columnFiled* field = nullptr;
 		if (columnValue->database.empty() && columnValue->table.empty())
 		{
@@ -138,7 +138,7 @@ namespace SHELL {
 		{
 			if (nullptr == (columnMeta = sql->table->getColumn(columnValue->columnName.c_str())))
 				return nullptr;
-			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::tableMeta::tableID(sql->table->m_id)))
+			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::TableMeta::tableID(sql->table->m_id)))
 				return nullptr;
 
 			field = (columnFiled*)shellGlobalBufferPool->alloc(sizeof(columnFiled*));
@@ -148,7 +148,7 @@ namespace SHELL {
 		{
 			if (nullptr == (columnMeta = sql->joinedTables.list[tableId]->getColumn(columnValue->columnName.c_str())))
 				return nullptr;
-			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::tableMeta::tableID(sql->joinedTables.list[tableId]->m_id)))
+			if (isSelectedColumn && sql->groupByColumnNames.size > 0 && !sql->isGroupColumn(columnValue->columnName.c_str(), META::TableMeta::tableID(sql->joinedTables.list[tableId]->m_id)))
 				return nullptr;
 			field = (columnFiled*)shellGlobalBufferPool->alloc(sizeof(columnFiled*));
 			field->init(sql->joinedTables.list[tableId], columnMeta, tableId);
@@ -324,7 +324,7 @@ namespace SHELL {
 	{
 		selectSqlInfo* sql = getSelectSqlInfoFromHandle(h);
 		assert(value->type == SQL_PARSER::SQLValueType::TABLE_NAME_TYPE);
-		const META::tableMeta* meta = getMeta(h, static_cast<SQL_PARSER::SQLTableNameValue*>(value));
+		const META::TableMeta* meta = getMeta(h, static_cast<SQL_PARSER::SQLTableNameValue*>(value));
 		if (meta == nullptr)
 		{
 			return SQL_PARSER::INVALID;

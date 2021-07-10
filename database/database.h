@@ -28,7 +28,7 @@
 #include "statistic.h"
 namespace DATABASE
 {
-	constexpr auto C_STORE_SCTION = "store";
+	constexpr auto C_INSTANCE_SCTION = "instance";
 	constexpr auto C_LOG_DIR = ".logDir";
 	constexpr auto C_LOG_PREFIX = ".logPrefix";
 	constexpr auto C_REDO = ".redo";
@@ -50,15 +50,15 @@ namespace DATABASE
 #endif
 #define REAL_CONF_STRING(c) std::string(m_confPrefix).append(c).c_str()
 #define MAX_FLUSH_THREAD 32
-	class appendingBlock;
-	class block;
-	class database
+	class AppendingBlock;
+	class Block;
+	class Database
 	{
-		friend class databaseIterator;
-		friend class databaseTimestampIterator;
-		friend class databaseCheckpointIterator;
-		friend class databaseRecordIdIterator;
-		friend class threadPool<database, void>;
+		friend class DatabaseIterator;
+		friend class DatabaseTimestampIterator;
+		friend class DatabaseCheckpointIterator;
+		friend class DatabaseRecordIdIterator;
+		friend class threadPool<Database, void>;
 	public:
 		enum class BLOCK_MANAGER_STATUS {
 			BM_RUNNING,
@@ -70,17 +70,17 @@ namespace DATABASE
 	private:
 		BLOCK_MANAGER_STATUS m_status;
 		const char* m_confPrefix;
-		pageTable<block*> m_blocks;
+		pageTable<Block*> m_blocks;
 		std::atomic<int> m_lastFlushedFileID;
 		uint64_t m_maxBlockID;
-		config* m_config;
-		block* m_last;
-		appendingBlock* m_current;
+		Config* m_config;
+		Block* m_last;
+		AppendingBlock* m_current;
 
 		bufferPool* m_pool;
-		META::metaDataBaseCollection* m_metaDataCollection;
+		META::MetaDataBaseCollection* m_metaDataCollection;
 		std::condition_variable m_toSolodBlockCond;
-		ringFixedQueue<appendingBlock*> m_unflushedBlocks;
+		ringFixedQueue<AppendingBlock*> m_unflushedBlocks;
 		/*-------------------------static-----------------------*/
 		char m_logDir[256];
 		char m_logPrefix[256];
@@ -95,7 +95,7 @@ namespace DATABASE
 		uint32_t m_fileSysPageSize;
 		shared_mutex m_blockLock;//all read ,write thread use shared lock,purge thread use mutex lock,avoid the aba problem
 		std::mutex m_flushLock;
-		threadPool<database, void> m_threadPool;
+		threadPool<Database, void> m_threadPool;
 		std::atomic<uint32_t> m_firstBlockId;
 		std::atomic<uint32_t> m_lastBlockId;
 		std::atomic_int m_currentFlushThreadCount;
@@ -104,28 +104,28 @@ namespace DATABASE
 		globalLockDualLinkList m_pageLru;
 		statistic m_statistic;
 	public:
-		DLL_EXPORT database(const char* confPrefix, config* conf, bufferPool* pool, META::metaDataBaseCollection* metaDataCollection);
-		DLL_EXPORT ~database();
+		DLL_EXPORT Database(const char* confPrefix, Config* conf, bufferPool* pool, META::MetaDataBaseCollection* metaDataCollection);
+		DLL_EXPORT ~Database();
 		DLL_EXPORT std::string updateConfig(const char* key, const char* value);
 	private:
-		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t, block*>& recoveried);
-		int pickRedo(std::map<uint32_t, block*>& recoveried, block* from, block* to);
-		block* getBlock(uint32_t blockId);
-		int checkSolidBlock(block* b);
-		block* getBasciBlock(uint32_t blockId);
+		int recoveryFromRedo(std::set<uint64_t>& redos, std::map<uint32_t, Block*>& recoveried);
+		int pickRedo(std::map<uint32_t, Block*>& recoveried, Block* from, Block* to);
+		Block* getBlock(uint32_t blockId);
+		int checkSolidBlock(Block* b);
+		Block* getBasciBlock(uint32_t blockId);
 		int initConfig();
-		int finishAppendingBlock(appendingBlock* b);
+		int finishAppendingBlock(AppendingBlock* b);
 		bool createNewBlock();
-		int flush(appendingBlock* block);
+		int flush(AppendingBlock* block);
 		void flushThread();
 		int purge();
-		int removeBlock(block* b);
+		int removeBlock(Block* b);
 		int compaction(uint64_t from,uint64_t to,bool keepHistory);
-		static void purgeThread(database* m);
+		static void purgeThread(Database* m);
 	public:
 		DLL_EXPORT int fullGc();
 		DLL_EXPORT const statistic* getStatistic();
-		DLL_EXPORT int insert(DATABASE_INCREASE::record* r);
+		DLL_EXPORT int insert(RPC::Record* r);
 		DLL_EXPORT inline void begin()
 		{
 			if (0 == (++m_tnxId))
@@ -145,7 +145,7 @@ namespace DATABASE
 		DLL_EXPORT int stop();
 		DLL_EXPORT int load();
 		DLL_EXPORT int flushLogs();
-		DLL_EXPORT page* allocPage(uint64_t size);
+		DLL_EXPORT Page* allocPage(uint64_t size);
 		DLL_EXPORT inline void* allocMem(size_t size)
 		{
 #ifdef VLGRIND_TEST
@@ -154,18 +154,18 @@ namespace DATABASE
 			return m_pool->alloc(size);
 #endif
 		}
-		DLL_EXPORT inline void freePage(page* p)
+		DLL_EXPORT inline void freePage(Page* p)
 		{
 			if (p->pageData != nullptr)
 				m_pool->free(p->pageData);
 			m_pool->free(p);
 		}
-		DLL_EXPORT void* allocMemForRecord(META::tableMeta* table, size_t size);
+		DLL_EXPORT void* allocMemForRecord(META::TableMeta* table, size_t size);
 		DLL_EXPORT bool checkpoint(uint64_t& timestamp, uint64_t& logOffset);
-		DLL_EXPORT iterator* createIndexIterator(uint32_t flag, const META::tableMeta* table, META::KEY_TYPE type, int keyId);
-		DLL_EXPORT char* getRecord(const META::tableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
+		DLL_EXPORT Iterator* createIndexIterator(uint32_t flag, const META::TableMeta* table, META::KEY_TYPE type, int keyId);
+		DLL_EXPORT char* getRecord(const META::TableMeta* table, META::KEY_TYPE type, int keyId, const void* key);
 	};
-	class databaseIterator : public iterator
+	class DatabaseIterator : public Iterator
 	{
 	protected:
 		enum class DB_ITER_TYPE {
@@ -173,18 +173,18 @@ namespace DATABASE
 			CHECKPOINT_TYPE,
 			RECORD_ID_TYPE,
 		};
-		block* m_current;
-		iterator* m_blockIter;
-		database* m_database;
+		Block* m_current;
+		Iterator* m_blockIter;
+		Database* m_database;
 		DB_ITER_TYPE m_iterType;
 	public:
-		DLL_EXPORT databaseIterator(uint32_t flag, DB_ITER_TYPE type, filter* filter, database* db);
-		DLL_EXPORT virtual ~databaseIterator();
+		DLL_EXPORT DatabaseIterator(uint32_t flag, DB_ITER_TYPE type, Filter* filter, Database* db);
+		DLL_EXPORT virtual ~DatabaseIterator();
 		DLL_EXPORT inline bool valid()
 		{
 			return m_database != nullptr && m_current != nullptr && m_blockIter != nullptr;
 		}
-		DLL_EXPORT status next();
+		DLL_EXPORT Status next();
 		DLL_EXPORT inline const void* value()
 		{
 			return m_blockIter->value();
@@ -198,34 +198,34 @@ namespace DATABASE
 			return m_blockIter == nullptr ? true : m_blockIter->end();
 		}
 	};
-	class databaseTimestampIterator :public databaseIterator
+	class DatabaseTimestampIterator :public DatabaseIterator
 	{
 	public:
-		databaseTimestampIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::TIMESTAMP_TYPE, filter, db)
+		DatabaseTimestampIterator(uint32_t flag, Filter* filter, Database* db) :DatabaseIterator(flag, DB_ITER_TYPE::TIMESTAMP_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_TIMESTAMP;
 		}
-		~databaseTimestampIterator() {}
+		~DatabaseTimestampIterator() {}
 		DLL_EXPORT bool seek(const void* key);
 	};
-	class databaseCheckpointIterator :public databaseIterator
+	class DatabaseCheckpointIterator :public DatabaseIterator
 	{
 	public:
-		databaseCheckpointIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::CHECKPOINT_TYPE, filter, db)
+		DatabaseCheckpointIterator(uint32_t flag, Filter* filter, Database* db) :DatabaseIterator(flag, DB_ITER_TYPE::CHECKPOINT_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 		}
-		~databaseCheckpointIterator() {}
+		~DatabaseCheckpointIterator() {}
 		DLL_EXPORT bool seek(const void* key);
 	};
-	class databaseRecordIdIterator :public databaseIterator
+	class DatabaseRecordIdIterator :public DatabaseIterator
 	{
 	public:
-		databaseRecordIdIterator(uint32_t flag, filter* filter, database* db) :databaseIterator(flag, DB_ITER_TYPE::RECORD_ID_TYPE, filter, db)
+		DatabaseRecordIdIterator(uint32_t flag, Filter* filter, Database* db) :DatabaseIterator(flag, DB_ITER_TYPE::RECORD_ID_TYPE, filter, db)
 		{
 			m_keyType = META::COLUMN_TYPE::T_UINT64;
 		}
-		~databaseRecordIdIterator() {}
+		~DatabaseRecordIdIterator() {}
 		DLL_EXPORT bool seek(const void* key);
 	};
 }

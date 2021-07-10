@@ -1,5 +1,7 @@
 #include "dataSource.h"
 #include "dataSourceConf.h"
+#include "dataSourceReader.h"
+#include "dataSourceParser.h"
 #include "localLogFileCache/localLogFileCache.h"
 #include "glog/logging.h"
 #include "util/config.h"
@@ -8,36 +10,41 @@
 #include <dlfcn.h>
 #endif
 namespace DATA_SOURCE {
-	DLL_EXPORT dataSource::dataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store) :m_conf(conf), m_metaDataCollection(metaDataCollection), m_store(store), m_dllHandle(nullptr)
+	DLL_EXPORT dataSource::dataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance) :m_conf(conf), m_metaDataCollection(metaDataCollection), m_instance(instance), m_dllHandle(nullptr)
 	{
-		m_localFielCache = new localLogFileCache(conf);
+		m_localFielCache = new LocalLogFileCache(conf);
 		
 	}
 
 	DLL_EXPORT dataSource::~dataSource()
 	{
+		if (m_reader != nullptr)
+		{
+			if (m_reader->isRunning())
+				m_reader->stop();
+			delete m_reader;
+			m_reader = nullptr;
+		}
+		if (m_parser != nullptr)
+		{
+			if (m_parser->isRunning())
+				m_parser->stop();
+			delete m_parser;
+			m_parser = nullptr;
+		}
+		if (m_localFielCache != nullptr)
+		{
+			delete m_localFielCache;
+			m_localFielCache = nullptr;
+		}
 	}
 
 	DLL_EXPORT bool dataSource::running()
 	{
-		if (m_readerAndParserIndependent)
-		{
-			if (!m_readThreadIsRunning)
-				return false;
-			if (m_asyncRead)
-			{
-				if (!m_parserThreadIsRunning)
-					return false;
-			}
-			return true;
-		}
-		else
-		{
-			if (m_asyncRead)
-				return m_parserThreadIsRunning;
-			else
-				return true;
-		}
+		if (!m_reader->isRunning())
+			return false;
+		if (!m_parser->isRunning())
+			return false;
 	}
 
 	DLL_EXPORT  DS dataSource::initByConf()
@@ -49,7 +56,7 @@ namespace DATA_SOURCE {
 
 
 #ifdef OS_LINUX
-	dataSource* dataSource::loadFromDll(const char* fileName, config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
+	dataSource* dataSource::loadFromDll(const char* fileName, Config* conf, META::metaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance)
 	{
 		void* dllHandle;
 		if (checkFileExist(fileName, 0) != 0)
@@ -60,14 +67,14 @@ namespace DATA_SOURCE {
 			LOG(ERROR) << "load shared lib:" << fileName << " failed for " << dlerror();
 			return nullptr;
 		}
-		dataSource* (*_instance)(config*, META::metaDataCollection*, STORE::store*) = (dataSource * (*)(config*, META::metaDataCollection*, STORE::store*)) dlsym(dllHandle, "instance");
+		dataSource* (*_instance)(Config*, META::metaDataCollection*, DB_INSTANCE::store*) = (dataSource * (*)(Config*, META::metaDataCollection*, DB_INSTANCE::DatabaseInstance*)) dlsym(dllHandle, "instance");
 		if (_instance == nullptr)
 		{
 			LOG(ERROR) << "load func " << "[instance]" << " from :" << fileName << " failed for " << dlerror();
 			dlclose(dllHandle);
 			return nullptr;
 		}
-		dataSource* ds = _instance(conf, metaDataCollection, store);
+		dataSource* ds = _instance(conf, metaDataCollection, instance);
 		if (ds == nullptr)
 		{
 			LOG(ERROR) << "call func " << "[instance]" << " from :" << fileName << " failed ";
@@ -79,7 +86,7 @@ namespace DATA_SOURCE {
 	}
 #endif
 #ifdef OS_WIN
-	dataSource* dataSource::loadFromDll(const char* fileName, config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
+	dataSource* dataSource::loadFromDll(const char* fileName, Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance)
 	{
 		HINSTANCE dllHandle;
 		dllHandle = LoadLibraryEx(fileName, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -88,14 +95,14 @@ namespace DATA_SOURCE {
 			LOG(ERROR) << "load shared lib:" << fileName << " failed for " << GetLastError() << "," << strerror(GetLastError());
 			return nullptr;
 		}
-		dataSource* (*_instance)(config*, META::metaDataCollection*, STORE::store*) = (dataSource * (*)(config*, META::metaDataCollection*, STORE::store*)) GetProcAddress(dllHandle, "instance");
+		dataSource* (*_instance)(Config*, META::MetaDataCollection*, DB_INSTANCE::DatabaseInstance*) = (dataSource * (*)(Config*, META::MetaDataCollection*, DB_INSTANCE::DatabaseInstance*)) GetProcAddress(dllHandle, "instance");
 		if (_instance == nullptr)
 		{
 			LOG(ERROR) << "load func " << "[instance]" << " from :" << fileName << " failed  " << GetLastError() << "," << strerror(GetLastError());
 			FreeLibrary(dllHandle);
 			return nullptr;
 		}
-		dataSource* ds = _instance(conf, metaDataCollection, store);
+		dataSource* ds = _instance(conf, metaDataCollection, instance);
 		if (ds == nullptr)
 		{
 			LOG(ERROR) << "call func " << "[instance]" << " from :" << fileName << " failed ";
@@ -106,7 +113,7 @@ namespace DATA_SOURCE {
 		return ds;
 	}
 #endif
-	DLL_EXPORT dataSource* dataSource::loadDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
+	DLL_EXPORT dataSource* dataSource::loadDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* store)
 	{
 		std::string dataSourceType = conf->get(SECTION, DATASOURCE_TYPE);
 		if (dataSourceType.empty())

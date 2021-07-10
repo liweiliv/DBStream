@@ -1,0 +1,6 @@
+ADD_EXECUTABLE(testMysqlDataCreater mysqlDataCreater.cpp)
+target_include_directories(testMysqlDataCreater PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
+TARGET_LINK_LIBRARIES(testMysqlDataCreater  util ${GLOG} ${MYSQL_CLIENT})
+IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
+	TARGET_LINK_LIBRARIES(testMysqlDataCreater pthread ssl crypto rt z dl)
+ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")

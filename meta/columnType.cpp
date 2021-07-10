@@ -5,23 +5,23 @@
 #include "message/record.h"
 #include "meta/metaData.h"
 namespace META {
-	DLL_EXPORT binaryType::binaryType() :size(0), data(nullptr) {
+	DLL_EXPORT BinaryType::BinaryType() :size(0), data(nullptr) {
 
 	}
-	DLL_EXPORT binaryType::binaryType(const char* _data, uint16_t _size) : size(_size), data(_data) {
+	DLL_EXPORT BinaryType::BinaryType(const char* _data, uint16_t _size) : size(_size), data(_data) {
 
 	}
-	DLL_EXPORT binaryType::binaryType(const binaryType& dest) : size(dest.size), data(dest.data)
+	DLL_EXPORT BinaryType::BinaryType(const BinaryType& dest) : size(dest.size), data(dest.data)
 	{
 	}
 
-	DLL_EXPORT binaryType binaryType::operator=(const binaryType& dest)
+	DLL_EXPORT BinaryType BinaryType::operator=(const BinaryType& dest)
 	{
 		data = dest.data;
 		size = dest.size;
 		return *this;
 	}
-	DLL_EXPORT int binaryType::compare(const binaryType& dest) const
+	DLL_EXPORT int BinaryType::compare(const BinaryType& dest) const
 	{
 		if (size == dest.size)
 			return memcmp(data, dest.data, size);
@@ -115,7 +115,7 @@ namespace META {
 			case META::COLUMN_TYPE::T_STRING:
 			case META::COLUMN_TYPE::T_BLOB:
 			{
-				binaryType s(srcKey + sizeof(uint16_t), *(uint16_t*)srcKey), d(destKey + sizeof(uint16_t), *(uint16_t*)destKey);
+				BinaryType s(srcKey + sizeof(uint16_t), *(uint16_t*)srcKey), d(destKey + sizeof(uint16_t), *(uint16_t*)destKey);
 				int c = s.compare(d);
 				if (c != 0)
 					return c;
@@ -137,7 +137,7 @@ namespace META {
 		}
 		return 0;
 	}
-	DLL_EXPORT uint16_t unionKey::memSize(const DATABASE_INCREASE::DMLRecord* r, const META::unionKeyMeta* meta, bool keyUpdated)
+	DLL_EXPORT uint16_t unionKey::memSize(const RPC::DMLRecord* r, const META::UnionKeyMeta* meta, bool keyUpdated)
 	{
 		if (!meta->fixed)
 		{
@@ -159,7 +159,7 @@ namespace META {
 			return meta->size;
 		}
 	}
-	DLL_EXPORT void unionKey::initKey(char* key, uint16_t size, const META::unionKeyMeta* keyMeta, const DATABASE_INCREASE::DMLRecord* r, bool keyUpdated)
+	DLL_EXPORT void unionKey::initKey(char* key, uint16_t size, const META::UnionKeyMeta* keyMeta, const RPC::DMLRecord* r, bool keyUpdated)
 	{
 		char* ptr = key;
 		if (!keyMeta->fixed)
@@ -167,10 +167,10 @@ namespace META {
 			*(uint16_t*)key = size;
 			ptr += sizeof(uint16_t);
 		}
-		if (r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_INSERT) ||
-				r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE) ||
-			((r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_UPDATE) ||
-					r->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_REPLACE)) && !keyUpdated))
+		if (r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_INSERT) ||
+				r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DELETE) ||
+			((r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_UPDATE) ||
+					r->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_REPLACE)) && !keyUpdated))
 		{
 			for (uint16_t i = 0; i < keyMeta->columnCount; i++)
 			{

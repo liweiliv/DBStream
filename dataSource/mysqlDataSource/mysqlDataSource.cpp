@@ -4,7 +4,7 @@
 #include "BinlogEventParser.h"
 #include "glog/logging.h"
 #include "memory/ringBuffer.h"
-#include "store/store.h"
+#include "databaseInstance/databaseInstance.h"
 #include "mysqlRecordOffset.h"
 #include "initMetaData.h"
 #include <thread>
@@ -15,41 +15,40 @@ namespace DATA_SOURCE {
 #define mysqlParserTree "..\\..\\..\\..\\sqlParser\\ParseTree"
 #endif
 #ifdef OS_LINUX
-	#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
-	#define mysqlParserTree "sqlParser/ParseTree"
+#define mysqlFuncLib "lib/libmysqlParserFuncs.so"
+#define mysqlParserTree "sqlParser/ParseTree"
 #endif
 
-	static  DATABASE_INCREASE::record  BEGIN_RECORD;
-	static  DATABASE_INCREASE::record * BEGIN_RECORD_PTR = &BEGIN_RECORD;
+	static  RPC::Record  BEGIN_RECORD;
+	static  RPC::Record* BEGIN_RECORD_PTR = &BEGIN_RECORD;
 
-	static  DATABASE_INCREASE::record  COMMIT_RECORD;
-	static  DATABASE_INCREASE::record * COMMIT_RECORD_PTR = &COMMIT_RECORD;
+	static  RPC::Record  COMMIT_RECORD;
+	static  RPC::Record* COMMIT_RECORD_PTR = &COMMIT_RECORD;
 
 
 	static constexpr auto ASYNC = "async";
-	#define asyncPushRecord(r)	while (unlikely(!m_outputQueue.pushWithCond((r), 1000)))\
+#define asyncPushRecord(r)	while (unlikely(!m_outputQueue.pushWithCond((r), 1000)))\
 	{\
 		if (unlikely(!m_running))\
 			break;\
 	}
-	void mysqlDataSource::initByConf()
+	DS mysqlDataSource::initByConf()
 	{
 		std::string rtv = m_connector->initByConf();
 		if (!rtv.empty())
-		{
-			LOG(ERROR) << rtv;
-		}
+			dsFailedAndLogIt(1, rtv, ERROR);
+		dsOk();
 	}
 	void mysqlDataSource::updateConf(const char* key, const char* value)
 	{
 
 	}
-	mysqlDataSource::mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store):dataSource(conf,metaDataCollection,store),m_async(false),m_running(false)
+	mysqlDataSource::mysqlDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance) :dataSource(conf, metaDataCollection, instance), m_async(false), m_running(false)
 	{
 		m_recordBufferPool = new ringBuffer();
 		m_connector = new mysqlConnector(conf);
 		m_metaDataCollection = metaDataCollection;
-		m_store = store;
+		m_instance = instance;
 		m_reader = new mysqlBinlogReader(m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 		m_currentRecord = nullptr;
@@ -68,7 +67,7 @@ namespace DATA_SOURCE {
 		{
 			const char* logEvent;
 			size_t size;
-			if(unlikely(m_reader->readBinlog(logEvent, size)!= mysqlBinlogReader::READ_OK|| logEvent == nullptr))
+			if (unlikely(m_reader->readBinlog(logEvent, size) != mysqlBinlogReader::READ_OK || logEvent == nullptr))
 				goto FAILED;
 			if (!dsCheck(parseStatus = m_parser->parser(logEvent, size)))
 			{
@@ -79,7 +78,7 @@ namespace DATA_SOURCE {
 			{
 			case BinlogEventParser::ParseStatus::OK:
 			{
-				DATABASE_INCREASE::record* record;
+				RPC::Record* record;
 				do {
 					if (nullptr != (record = m_parser->getRecord()))
 					{
@@ -107,30 +106,30 @@ namespace DATA_SOURCE {
 		m_running = false;
 		return;
 	}
-	DATABASE_INCREASE::record* mysqlDataSource::asyncRead()
+	RPC::Record* mysqlDataSource::asyncRead()
 	{
 		static int i = 0;
-		DATABASE_INCREASE::record* record = nullptr;
+		RPC::Record* record = nullptr;
 		do {
 			if (m_outputQueue.popWithCond(record, 1000))
 			{
 				if (record == BEGIN_RECORD_PTR)
-					m_store->begin();
+					m_instance->begin();
 				else if (record == COMMIT_RECORD_PTR)
-					m_store->commit();
+					m_instance->commit();
 				else
 				{
-					if((++i&0xffff) == 0)
-						LOG(ERROR)<<record->head->logOffset;
+					if ((++i & 0xffff) == 0)
+						LOG(ERROR) << record->head->logOffset;
 					return record;
 				}
 			}
 		} while (likely(m_running));
 		return nullptr;
 	}
-	DATABASE_INCREASE::record* mysqlDataSource::syncRead()
+	RPC::Record* mysqlDataSource::syncRead()
 	{
-		DATABASE_INCREASE::record* record;
+		RPC::Record* record;
 		if (nullptr != (record = m_parser->getRecord()))
 			return record;
 		const char* logEvent = nullptr;
@@ -151,10 +150,10 @@ namespace DATA_SOURCE {
 			case BinlogEventParser::ParseStatus::FILTER:
 				break;
 			case BinlogEventParser::ParseStatus::BEGIN:
-				m_store->begin();
+				m_instance->begin();
 				break;
 			case BinlogEventParser::ParseStatus::COMMIT:
-				m_store->commit();
+				m_instance->commit();
 				break;
 			default:
 				m_lastError = m_parser->getError();
@@ -163,7 +162,7 @@ namespace DATA_SOURCE {
 		} while (likely(m_running));
 		return nullptr;
 	}
-	DATABASE_INCREASE::record* mysqlDataSource::read()
+	RPC::Record* mysqlDataSource::read()
 	{
 		if (likely(m_currentRecord != nullptr))
 			m_recordBufferPool->freeMem(m_currentRecord);
@@ -171,10 +170,10 @@ namespace DATA_SOURCE {
 		if (m_currentRecord == nullptr)
 			return nullptr;
 #if 0
-		if(m_currentRecord->head->minHead.type>=4)
-			vSave(m_currentRecord,m_currentRecord->head->minHead.size+sizeof(DATABASE_INCREASE::DMLRecord));
+		if (m_currentRecord->head->minHead.type >= 4)
+			vSave(m_currentRecord, m_currentRecord->head->minHead.size + sizeof(RPC::DMLRecord));
 		else
-			vSave(m_currentRecord,m_currentRecord->head->minHead.size+sizeof(DATABASE_INCREASE::DDLRecord));
+			vSave(m_currentRecord, m_currentRecord->head->minHead.size + sizeof(RPC::DDLRecord));
 #endif
 		return m_currentRecord;
 	}
@@ -188,14 +187,14 @@ namespace DATA_SOURCE {
 		if (!rtv.empty())
 			dsFailedAndLogIt(1, "mysqlDataSource init from conf failed for:" << rtv, ERROR);
 		uint64_t timestamp = 0, logOffset = 0;
-		if (!m_store->checkpoint(timestamp, logOffset))
+		if (!m_instance->checkpoint(timestamp, logOffset))
 		{
 			timestamp = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_TIMESTAMP).c_str(), 0, 0, 0x0fffffffffffffffull);
 			logOffset = m_conf->getLong(SECTION, std::string(CHECKPOINT_SECTION).append(START_LOGPOSITION).c_str(), 0, 0, 0x0fffffffffffffffull);
 		}
 		else
 		{
-			META::timestamp t;
+			META::Timestamp t;
 			t.time = timestamp;
 			timestamp = t.seconds;
 		}
@@ -236,7 +235,7 @@ namespace DATA_SOURCE {
 		}
 		else
 			m_async = false;
-		if(0 != m_parser->init(mysqlFuncLib,mysqlParserTree))
+		if (0 != m_parser->init(mysqlFuncLib, mysqlParserTree))
 		{
 			dsFailedAndLogIt(1, "init binlog parser failed", ERROR);
 		}
@@ -253,9 +252,9 @@ namespace DATA_SOURCE {
 	{
 		return m_running;
 	}
-	extern "C" DLL_EXPORT dataSource* instance(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store)
+	extern "C" DLL_EXPORT dataSource * instance(Config * conf, META::MetaDataCollection * metaDataCollection, DB_INSTANCE::DatabaseInstance * instance)
 	{
-		return new mysqlDataSource(conf,metaDataCollection,store);
+		return new mysqlDataSource(conf, metaDataCollection, instance);
 	}
 
 }

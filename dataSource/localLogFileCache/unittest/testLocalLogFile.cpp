@@ -3,8 +3,8 @@ namespace DATA_SOURCE
 {
 	int test()
 	{
-		config conf;
-		localLogFileCache cache(&conf);
+		Config conf;
+		LocalLogFileCache cache(&conf);
 		if (!dsCheck(cache.init()))
 		{
 			LOG(ERROR) << getLocalStatus().toString();
@@ -14,9 +14,9 @@ namespace DATA_SOURCE
 		logFile* f;
 		cache.createNextLogFile(1, f);
 		std::thread w([&cache,&f]()->void {
-			for (int i = 0; i < 1000000; i++)
+			for (int i = 0; i < 10000000; i++)
 			{
-				logEntry * e = cache.allocNextRecord(128);
+				LogEntry * e = cache.allocNextRecord(128);
 				memset(e, 0, 128);
 				e->size = 128;
 				e->getCheckpoint()->srcPosition = i + 1;
@@ -25,8 +25,8 @@ namespace DATA_SOURCE
 			});
 		
 		std::thread r([&cache]()->void {
-			logEntry* e;
-			localLogFileCache::iterator iter(&cache);
+			LogEntry* e;
+			LocalLogFileCache::iterator iter(&cache);
 			uint64_t id = 0;
 
 			if (!dsCheck(iter.seekToBegin(e)))
@@ -47,7 +47,7 @@ namespace DATA_SOURCE
 						LOG(ERROR) << "log id is not" << id + 1;
 						abort();
 					}
-					if (++id == 1000000)
+					if (++id == 10000000)
 						break;
 					cache.setPurgeTo(e->getCheckpoint()->seqNo.seqNo);
 				}

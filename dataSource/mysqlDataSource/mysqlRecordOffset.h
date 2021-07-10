@@ -1,5 +1,9 @@
 #pragma once
 #include <stdint.h>
+#include <string>
+#include <glog/logging.h>
+#include "util/status.h"
+#include "dataSource/localLogFileCache/logEntry.h"
 namespace DATA_SOURCE
 {
 	static constexpr uint8_t LP_OFFSET = 44;

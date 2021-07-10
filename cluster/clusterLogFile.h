@@ -125,13 +125,13 @@ namespace CLUSTER
 			uint32_t writedSize;
 			block* next;
 			ref<block> m_ref;
-			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* logEntry);
+			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, uint32_t defaultBlockSize, uint32_t offset, const logEntryRpcBase* LogEntry);
 			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, const index& i);
 			DLL_EXPORT block(std::function<DS (block*)>& loadFunc, const index& i, char* data, uint32_t volumn, uint32_t size);
 			DLL_EXPORT ~block();
 			DLL_EXPORT void close();
 			uint32_t find(const logIndexInfo& logIndex);
-			void append(const logEntryRpcBase* logEntry);
+			void append(const logEntryRpcBase* LogEntry);
 		};
 	private:
 		std::string m_filePath;
@@ -180,8 +180,8 @@ namespace CLUSTER
 		DLL_EXPORT DS load();
 	private:
 		DLL_EXPORT DS loadFile(clusterLogFile* logFile);
-		DS _append(const logEntryRpcBase* logEntry);
-		DLL_EXPORT DS appendToNewBlock(const logEntryRpcBase* logEntry);
+		DS _append(const logEntryRpcBase* LogEntry);
+		DLL_EXPORT DS appendToNewBlock(const logEntryRpcBase* LogEntry);
 		DLL_EXPORT block* findBlock(const logIndexInfo& logIndex);
 		DLL_EXPORT DS loadBlock(block* b);
 	public:
@@ -193,7 +193,7 @@ namespace CLUSTER
 		DLL_EXPORT void close();
 		DLL_EXPORT DS finish();
 		DLL_EXPORT DS writeCurrentBlock();
-		DLL_EXPORT DS append(const logEntryRpcBase* logEntry);
+		DLL_EXPORT DS append(const logEntryRpcBase* LogEntry);
 		DLL_EXPORT DS clear();
 		DLL_EXPORT DS rollback(const logIndexInfo& logIndex);
 		DLL_EXPORT DS flush();
@@ -223,8 +223,8 @@ namespace CLUSTER
 			DLL_EXPORT DS setLogFile(clusterLogFile* file);
 			DLL_EXPORT DS attachToNextLogFile(clusterLogFile* file);
 			DLL_EXPORT DS search(const logIndexInfo& logIndex);
-			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry);
-			DLL_EXPORT DS next(const logEntryRpcBase*& logEntry, long outTime);
+			DLL_EXPORT DS next(const logEntryRpcBase*& LogEntry);
+			DLL_EXPORT DS next(const logEntryRpcBase*& LogEntry, long outTime);
 		};
 	};
 }

@@ -16,7 +16,7 @@ namespace DATABASE {
 #define		FL_COMMON_COLUMN	0x08
 #define		FL_RECORD_TYPE		0x10
 #define		FL_MULTI_TABLE		0x20
-	struct filter {
+	struct Filter {
 		uint32_t m_filterType;
 		uint64_t m_startCheckpoint;
 		uint64_t m_endCheckpoint;
@@ -24,8 +24,8 @@ namespace DATABASE {
 		uint32_t m_tableIdWhiteListSize;
 		uint64_t* m_tableIdBlackList;
 		uint32_t m_tableIdBlackListSize;
-		uint8_t m_typeBitmap[(static_cast<uint8_t>(DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE) >> 3) + (static_cast<uint8_t>(DATABASE_INCREASE::RecordType::MAX_RECORD_TYPE) & 0x7) ? 1 : 0];
-		filter(uint32_t filterType) :m_filterType(filterType) {
+		uint8_t m_typeBitmap[(static_cast<uint8_t>(RPC::RecordType::MAX_RECORD_TYPE) >> 3) + (static_cast<uint8_t>(RPC::RecordType::MAX_RECORD_TYPE) & 0x7) ? 1 : 0];
+		Filter(uint32_t filterType) :m_filterType(filterType) {
 
 		}
 		int init(const char* filters)
@@ -53,12 +53,12 @@ namespace DATABASE {
 		}
 		inline bool filterByRecord(const char* record)
 		{
-			DATABASE_INCREASE::recordHead* h = (DATABASE_INCREASE::recordHead*)record;
+			RPC::RecordHead* h = (RPC::RecordHead*)record;
 			if (!TEST_BITMAP(m_typeBitmap, h->minHead.type))
 				return false;
-			if ((m_filterType & FL_CHECKPOINT) && (m_startCheckpoint > h->logOffset || m_endCheckpoint < h->logOffset))
+			if ((m_filterType & FL_CHECKPOINT) && (m_startCheckpoint > h->checkpoint.logOffset || m_endCheckpoint < h->checkpoint.logOffset))
 				return false;
-			if (m_filterType & FL_TABLE_ID && !filterByTableID(DATABASE_INCREASE::DMLRecord::tableId(record)))
+			if (m_filterType & FL_TABLE_ID && !filterByTableID(RPC::DMLRecord::tableId(record)))
 				return false;
 			return true;
 		}

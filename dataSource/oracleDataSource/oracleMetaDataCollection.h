@@ -14,10 +14,10 @@
 namespace DATA_SOURCE
 {
 	struct indexInfo;
-	typedef std::map<std::string, META::columnMeta*> tableColumnsMap;
+	typedef std::map<std::string, META::ColumnMeta*> tableColumnsMap;
 	typedef std::map<uint64_t, tableColumnsMap*> userColumnsList;
 	typedef std::map<uint64_t, userColumnsList*> allUserColumnsList;
-	class oracleMetaDataCollection :public META::metaDataCollection
+	class oracleMetaDataCollection :public META::MetaDataCollection
 	{
 	private:
 		occiConnect* m_connector;
@@ -28,7 +28,7 @@ namespace DATA_SOURCE
 		std::string m_ncharCharset;
 		CHARSET m_charsetId;
 		std::string m_charset;
-		spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::tableMeta>*> m_tables;
+		spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::TableMeta>*> m_tables;
 		DS createConnect();
 	private:
 		static DS connect(occiConnect* connector, oracle::occi::Connection*& conn);
@@ -40,11 +40,11 @@ namespace DATA_SOURCE
 
 		DS translateCharset(const std::string& src, CHARSET& dest);
 
-		void setCharset(META::columnMeta* meta, int charsetForm);
+		void setCharset(META::ColumnMeta* meta, int charsetForm);
 
 		DS getDbCharset();
 
-		META::columnMeta* readColumnInfo(oracle::occi::ResultSet* rs);
+		META::ColumnMeta* readColumnInfo(oracle::occi::ResultSet* rs);
 
 		DS getColumns(std::map<uint64_t, std::string>& tables, userColumnsList* userColumns);
 
@@ -63,7 +63,7 @@ namespace DATA_SOURCE
 	public:
 		DLL_EXPORT oracleMetaDataCollection(occiConnect* connector, const tableList* whiteList, const tableList* blackList);
 		DLL_EXPORT ~oracleMetaDataCollection();
-		DLL_EXPORT inline META::tableMeta* getMetaByObjectId(uint64_t objectId, uint64_t originCheckPoint = 0xffffffffffffffffULL);
-		DLL_EXPORT DS init(META::metaDataCollection* collection);
+		DLL_EXPORT inline META::TableMeta* getMetaByObjectId(uint64_t objectId, uint64_t originCheckPoint = 0xffffffffffffffffULL);
+		DLL_EXPORT DS init(META::MetaDataCollection* collection);
 	};
 }

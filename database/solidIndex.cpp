@@ -9,14 +9,14 @@
 namespace DATABASE
 {
 	template<>
-	DLL_EXPORT int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const
+	DLL_EXPORT int varSolidIndex::find(const META::BinaryType& d, bool equalOrGreater)const
 	{
 		int32_t s = 0, e = head->keyCount - 1, m = 0;
 		while (s <= e)
 		{
 			m = (s + e) >> 1;
 			const char* idx = ((const char*)head) + ((uint32_t*)(((const char*)head) + sizeof(solidIndexHead)))[m];
-			META::binaryType _m(idx + sizeof(uint16_t), *(uint16_t*)idx);
+			META::BinaryType _m(idx + sizeof(uint16_t), *(uint16_t*)idx);
 			int c = d.compare(_m);
 			if (c > 0)
 			{

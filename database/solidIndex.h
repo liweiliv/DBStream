@@ -16,9 +16,9 @@ namespace DATABASE {
 	};
 #pragma pack()
 	struct varSolidIndex {
-		page* p;
+		Page* p;
 		solidIndexHead* head;
-		varSolidIndex(page* p) :p(p), head((solidIndexHead*)p->pageData) {}
+		varSolidIndex(Page* p) :p(p), head((solidIndexHead*)p->pageData) {}
 		varSolidIndex(const varSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
 		varSolidIndex& operator=(const varSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
 		virtual ~varSolidIndex()
@@ -74,14 +74,14 @@ namespace DATABASE {
 		}
 	};
 	template<>
-	DLL_EXPORT int varSolidIndex::find(const META::binaryType& d, bool equalOrGreater)const;
+	DLL_EXPORT int varSolidIndex::find(const META::BinaryType& d, bool equalOrGreater)const;
 	template<>
 	DLL_EXPORT int varSolidIndex::find(const META::unionKey& d, bool equalOrGreater)const;
 	struct fixedSolidIndex
 	{
-		page* p;
+		Page* p;
 		solidIndexHead* head;
-		fixedSolidIndex(page* p) : p(p), head((solidIndexHead*)p->pageData) {}
+		fixedSolidIndex(Page* p) : p(p), head((solidIndexHead*)p->pageData) {}
 		fixedSolidIndex(const fixedSolidIndex& index) :p(index.p), head(index.head) { p->use(); }
 		fixedSolidIndex& operator=(const fixedSolidIndex& index) { p = index.p; head = index.head; p->use(); return *this; }
 		virtual ~fixedSolidIndex()
@@ -188,12 +188,12 @@ namespace DATABASE {
 	DLL_EXPORT int fixedSolidIndex::find(const double& d, bool equalOrGreater)const;
 
 	template<class T, class INDEX_TYPE>
-	class solidIndexIterator :public indexIterator<INDEX_TYPE>
+	class solidIndexIterator :public IndexIterator<INDEX_TYPE>
 	{
 	private:
 		uint32_t indexId;
 	public:
-		solidIndexIterator(uint32_t flag, INDEX_TYPE* index) :indexIterator<INDEX_TYPE>(flag, index, static_cast<META::COLUMN_TYPE>(index->head->type)), indexId(0)
+		solidIndexIterator(uint32_t flag, INDEX_TYPE* index) :IndexIterator<INDEX_TYPE>(flag, index, static_cast<META::COLUMN_TYPE>(index->head->type)), indexId(0)
 		{
 		}
 		virtual ~solidIndexIterator()

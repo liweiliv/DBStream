@@ -1,7 +1,7 @@
 #include "../config.h"
 int main()
 {
-	config conf(nullptr);
+	Config conf(nullptr);
 	conf.set("a","test1","123456");
 	conf.set("A","test1","1234567");
 	conf.set("a","test12","12345678");

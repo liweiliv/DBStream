@@ -50,11 +50,11 @@ namespace KVDB
 		database* db = iter->second;
 		switch (handle->m_change->type)
 		{
-		case DATABASE_INCREASE::RecordType::R_INSERT:
+		case RPC::RecordType::R_INSERT:
 			dsReturnWithOp(db->insert(m_pool, handle), m_lock.unlock_shared());
-		case DATABASE_INCREASE::RecordType::R_UPDATE:
+		case RPC::RecordType::R_UPDATE:
 			dsReturnWithOp(db->update(m_pool, handle), m_lock.unlock_shared());
-		case DATABASE_INCREASE::RecordType::R_DELETE:
+		case RPC::RecordType::R_DELETE:
 			dsReturnWithOp(db->drop(m_pool, handle), m_lock.unlock_shared());
 		default:
 			m_lock.unlock_shared();

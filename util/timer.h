@@ -8,12 +8,12 @@
 #ifdef OS_WIN
 #include <Windows.h>
 #endif
-class timer
+class Timer
 {
 public:
 
 #pragma pack(1)
-	struct timestamp
+	struct Timestamp
 	{
 		union
 		{
@@ -24,11 +24,11 @@ public:
 			};
 			uint64_t time;
 		};
-		timestamp() :time(0) {}
-		timestamp(uint64_t t) :time(t) {}
-		timestamp(uint64_t s, uint32_t ns) :nanoSeconds(ns), seconds(s) {}
-		timestamp(const timestamp& t) :time(t.time) {}
-		timestamp& operator=(const timestamp& t)
+		Timestamp() :time(0) {}
+		Timestamp(uint64_t t) :time(t) {}
+		Timestamp(uint64_t s, uint32_t ns) :nanoSeconds(ns), seconds(s) {}
+		Timestamp(const Timestamp& t) :time(t.time) {}
+		Timestamp& operator=(const Timestamp& t)
 		{
 			time = t.time;
 			return *this;
@@ -46,14 +46,14 @@ public:
 			}
 			seconds += second;
 		}
-		inline void add(timestamp time)
+		inline void add(Timestamp time)
 		{
 			add(time.seconds, time.nanoSeconds);
 		}
-		static timestamp delta(uint64_t s, uint64_t d)
+		static Timestamp delta(uint64_t s, uint64_t d)
 		{
-			timestamp st(s), dt(d);
-			timestamp v;
+			Timestamp st(s), dt(d);
+			Timestamp v;
 			if (st.nanoSeconds > dt.nanoSeconds)
 			{
 				v.seconds = st.seconds - dt.seconds;
@@ -84,7 +84,7 @@ public:
 	};
 	struct timerTask
 	{
-		timestamp cycle;
+		Timestamp cycle;
 		void* userData;
 		void (*action)(uint64_t, void*);
 	};
@@ -97,7 +97,7 @@ private:
 public:
 	inline static uint64_t getNowTimestamp()
 	{
-		timestamp time;
+		Timestamp time;
 #ifdef OS_WIN
 		FILETIME ct;
 		GetSystemTimeAsFileTime(&ct);
@@ -114,8 +114,8 @@ public:
 #endif
 		return time.time;
 	}
-	timer() :running(false) {}
-	~timer()
+	Timer() :running(false) {}
+	~Timer()
 	{
 		stop();
 		clear();
@@ -156,7 +156,7 @@ public:
 		task->cycle.time = cycle;
 		task->userData = userData;
 		task->action = action;
-		timestamp tm;
+		Timestamp tm;
 		tm.time = getNowTimestamp();;
 		tm.add(task->cycle);
 		lock.lock();
@@ -170,7 +170,7 @@ public:
 		lock.unlock();
 		return true;
 	}
-	static void _timerThread(timer* _timer)
+	static void _timerThread(Timer* _timer)
 	{
 		_timer->timerThread();
 	}
@@ -189,7 +189,7 @@ public:
 					timerTask* task = iter->second;
 					task->action(nowTime, task->userData);
 					tasks.erase(iter++);
-					timestamp tm;
+					Timestamp tm;
 					tm.time = nowTime;
 					tm.add(task->cycle);
 					tasks.insert(std::pair<uint64_t, timerTask*>(tm.time, task));

@@ -6,7 +6,7 @@
 namespace DATABASE
 {
 	template<class INDEX_TYPE>
-	class indexIterator
+	class IndexIterator
 	{
 	protected:
 		uint32_t flag;
@@ -16,18 +16,18 @@ namespace DATABASE
 		uint32_t idChildCount;
 		uint32_t innerIndexId;
 	public:
-		indexIterator(uint32_t flag, INDEX_TYPE* index, META::COLUMN_TYPE type) :flag(flag), index(index), type(type), recordIds(nullptr), idChildCount(0), innerIndexId(0)
+		IndexIterator(uint32_t flag, INDEX_TYPE* index, META::COLUMN_TYPE type) :flag(flag), index(index), type(type), recordIds(nullptr), idChildCount(0), innerIndexId(0)
 		{
 		}
-		indexIterator(const indexIterator& iter) :flag(iter.flag), index(iter.index), type(iter.type), recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}
-		indexIterator& operator=(const indexIterator& iter)
+		IndexIterator(const IndexIterator& iter) :flag(iter.flag), index(iter.index), type(iter.type), recordIds(iter.recordIds), idChildCount(iter.idChildCount), innerIndexId(iter.innerIndexId) {}
+		IndexIterator& operator=(const IndexIterator& iter)
 		{
 			key = iter.key;
 			index = iter.index;
 			innerIndexId = iter.innerIndexId;
 			return *this;
 		}
-		virtual ~indexIterator() {}
+		virtual ~IndexIterator() {}
 		virtual bool begin() = 0;
 		virtual bool rbegin() = 0;
 		virtual bool seek(const void* key) = 0;

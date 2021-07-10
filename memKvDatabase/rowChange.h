@@ -15,7 +15,7 @@ namespace KVDB
 	};
 	struct rowChange {
 		const char* sql;
-		DATABASE_INCREASE::RecordType type;
+		RPC::RecordType type;
 		rowImage columns;
 		rowImage condition;
 		std::string database;

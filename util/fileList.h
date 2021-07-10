@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "String.h"
 #include <map>
 #include <string.h>
 #include <vector>
@@ -29,5 +30,5 @@ public:
 	{
 		return files;
 	}
-	DLL_EXPORT static DS getFileList(const std::string &filePath, std::vector<std::string>& files);
+	DLL_EXPORT static DS getFileList(const std::string &filePath, std::vector<String>& files);
 };

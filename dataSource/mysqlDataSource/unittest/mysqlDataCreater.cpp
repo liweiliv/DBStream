@@ -78,7 +78,7 @@ int create(MYSQL *conn) {
 }
 int main()
 {
-	config conf(nullptr);
+	Config conf(nullptr);
 	conf.set("dataSource","host","192.168.52.131");
 	conf.set("dataSource","port","3306");
 	conf.set("dataSource","user","mtest");

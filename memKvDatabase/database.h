@@ -61,7 +61,7 @@ namespace KVDB
 			dsOk();
 		}
 
-		DS createTable(clientHandle* client, META::tableMeta* meta)
+		DS createTable(clientHandle* client, META::TableMeta* meta)
 		{
 			if (meta->m_primaryKey == nullptr)
 				dsFailedAndLogIt(errorCode::PRIMARYKEY_NOT_EXIST, "table must have primary key", WARNING);
@@ -79,7 +79,7 @@ namespace KVDB
 					t = new table<int64_t>(meta->m_tableName.c_str(), meta);
 					break;
 				case META::COLUMN_TYPE::T_STRING:
-					t = new table<META::binaryType>(meta->m_tableName.c_str(), meta);
+					t = new table<META::BinaryType>(meta->m_tableName.c_str(), meta);
 					break;
 				case META::COLUMN_TYPE::T_UINT32:
 					t = new table<uint32_t>(meta->m_tableName.c_str(), meta);
@@ -102,7 +102,7 @@ namespace KVDB
 				case META::COLUMN_TYPE::T_JSON:
 				case META::COLUMN_TYPE::T_XML:
 				case META::COLUMN_TYPE::T_BIG_NUMBER:
-					t = new table<META::binaryType>(meta->m_tableName.c_str(), meta);
+					t = new table<META::BinaryType>(meta->m_tableName.c_str(), meta);
 					break;
 				case META::COLUMN_TYPE::T_DATE:
 				case META::COLUMN_TYPE::T_TIME:

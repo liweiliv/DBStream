@@ -98,7 +98,7 @@ namespace DATA_SOURCE
 		urowId = 208,
 		timestampWithTimeLocalZone = 231
 	};
-	static inline META::COLUMN_TYPE translateType(META::columnMeta* col)
+	static inline META::COLUMN_TYPE translateType(META::ColumnMeta* col)
 	{
 		switch (static_cast<ORACLE_COLUMN_TYPE>(col->m_srcColumnType))
 		{

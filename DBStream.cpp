@@ -1,7 +1,7 @@
 #include "dataSource/dataSource.h"
 #include "message/record.h"
 #include "meta/metaDataCollection.h"
-#include "store/store.h"
+#include "databaseInstance/databaseInstance.h"
 #include "util/config.h"
 #include "glog/logging.h"
 #include "sqlParser/sqlParserUtil.h"
@@ -21,11 +21,11 @@ static bool running;
 static DATA_SOURCE::dataSource* ds = nullptr;
 static void sigHandler(int s)
 {
-	if(s == 15)
+	if (s == 15)
 	{
-		LOG(WARNING)<<"receive signal:"<<s<<",exit";
+		LOG(WARNING) << "receive signal:" << s << ",exit";
 		running = false;
-		if(ds != nullptr)
+		if (ds != nullptr)
 			ds->stop();
 	}
 }
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 		confPath = "d.cnf";
 	else
 		confPath = argv[1];
-	config conf(confPath);
+	Config conf(confPath);
 	if (conf.load() != 0)
 	{
 		LOG(ERROR) << "load config failed";
@@ -50,21 +50,21 @@ int main(int argc, char* argv[])
 	}
 	initKeyWords();
 	GLOBAL::init();
-	STORE::store store(&conf);
-	META::metaDataCollection collection("utf8",true,nullptr);
-	if(0!=collection.initSqlParser(mysqlParserTree,mysqlFuncLib))
+	DB_INSTANCE::DatabaseInstance instance(&conf);
+	META::MetaDataCollection collection("utf8", true, nullptr);
+	if (0 != collection.initSqlParser(mysqlParserTree, mysqlFuncLib))
 	{
-		LOG(ERROR)<<"init sqlparser failed";
+		LOG(ERROR) << "init sqlparser failed";
 		return -1;
 	}
-	if ((ds = DATA_SOURCE::dataSource::loadDataSource(&conf, &collection, &store)) == nullptr)
+	if ((ds = DATA_SOURCE::dataSource::loadDataSource(&conf, &collection, &instance)) == nullptr)
 	{
 		LOG(ERROR) << "load dataSource failed";
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	LOG(INFO) << "dataSource load success";
-	if (0 != store.start())
+	if (0 != instance.start())
 	{
 		LOG(ERROR) << "start store failed";
 		google::ShutdownGoogleLogging();
@@ -74,33 +74,34 @@ int main(int argc, char* argv[])
 	if (!ds->start())
 	{
 		LOG(ERROR) << "start data source failed";
-		store.stop();
+		instance.stop();
 		google::ShutdownGoogleLogging();
 		return -1;
 	}
 	LOG(INFO) << "dataSource started";
 	running = true;
 
-	signal(15,sigHandler);
-	while (likely(ds->running()&&running))
+	signal(15, sigHandler);
+	while (likely(ds->running() && running))
 	{
-		DATABASE_INCREASE::record* record = ds->read();
+
+		RPC::Record* record = ds->read();
 		if (record != nullptr)
 		{
-			if (0 != store.insert(record))
+			if (0 != instance.insert(record))
 			{
 				LOG(ERROR) << "insert record to store failed";
 				break;
 			}
 		}
-		else if(!ds->getLastError().empty())
+		else if (!ds->getLastError().empty())
 		{
 			LOG(ERROR) << "read record from dataSource failed";
 			break;
 		}
 	}
 	ds->stop();
-	store.stop();
+	instance.stop();
 	DATA_SOURCE::dataSource::destroyDataSource(ds);
 	google::ShutdownGoogleLogging();
 	GLOBAL::close();

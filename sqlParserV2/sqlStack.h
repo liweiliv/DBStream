@@ -57,8 +57,8 @@ namespace SQL_PARSER
 		sqlStack<operatorSymbol*> opStack;
 		sqlStack<token*> valueStack;
 
-		sqlStack<META::tableMeta*> allocedTables;
-		sqlStack<META::columnMeta*> allocedColumns;
+		sqlStack<META::TableMeta*> allocedTables;
+		sqlStack<META::ColumnMeta*> allocedColumns;
 
 		leveldb::Arena arena;
 		inline void clear()

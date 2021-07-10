@@ -97,7 +97,7 @@ namespace SQL_PARSER
 
 	struct createTableDDL : public sql {
 		identifier* table;
-		META::tableMeta* tableDefine;
+		META::TableMeta* tableDefine;
 		inline void init(const char* currentDatabase)
 		{
 			sql::init(SQL_TYPE::CREATE_TABLE,currentDatabase);
@@ -110,13 +110,13 @@ namespace SQL_PARSER
 			{
 				if (currentDatabase == nullptr)
 					dsFailed(1, "No database selected");
-				tableDefine = new META::tableMeta(true);
+				tableDefine = new META::TableMeta(true);
 				tableDefine->m_dbName.assign(currentDatabase);
 				tableDefine->m_tableName.assign(table->identifiers[0].pos, table->identifiers[0].size);
 			}
 			else if (table->count == 2)
 			{
-				tableDefine = new META::tableMeta(true);
+				tableDefine = new META::TableMeta(true);
 				tableDefine->m_dbName.assign(table->identifiers[0].pos, table->identifiers[0].size);
 				tableDefine->m_tableName.assign(table->identifiers[1].pos, table->identifiers[1].size);
 			}
@@ -124,7 +124,7 @@ namespace SQL_PARSER
 			{
 				if (handle->instance->type == DATABASE_TYPE::POSTGRESQL)
 				{
-					tableDefine = new META::tableMeta(true);
+					tableDefine = new META::TableMeta(true);
 					tableDefine->m_dbName.assign(table->identifiers[0].pos, table->identifiers[0].size);
 					tableDefine->m_schemaName.assign(table->identifiers[1].pos, table->identifiers[1].size);
 					tableDefine->m_tableName.assign(table->identifiers[2].pos, table->identifiers[2].size);
@@ -223,13 +223,13 @@ namespace SQL_PARSER
 		AlterTableOperatorType opType;
 	};
 	struct alterTableAddColumnOp :public alterTableOperator {
-		META::columnMeta * col;
+		META::ColumnMeta * col;
 		identifier* afterColumn;
 		bool first;
 		DS init(sqlHandle* handle)
 		{
 			opType = AlterTableOperatorType::ADD_COLUMN;
-			col = new META::columnMeta;
+			col = new META::ColumnMeta;
 			if (unlikely(!handle->stack->allocedColumns.push(col)))
 				dsFailed(1, "column over limit");
 			afterColumn = nullptr;
@@ -238,7 +238,7 @@ namespace SQL_PARSER
 	};
 
 	struct alterTableAddColumnsOp :public alterTableOperator {
-		arrayList<META::columnMeta> cols;
+		arrayList<META::ColumnMeta> cols;
 		inline void init(sqlHandle* handle)
 		{
 			cols.init(handle);
@@ -246,7 +246,7 @@ namespace SQL_PARSER
 		}
 		inline DS add(sqlHandle* handle)
 		{
-			META::columnMeta* col = new META::columnMeta;
+			META::ColumnMeta* col = new META::ColumnMeta;
 			if (unlikely(!handle->stack->allocedColumns.push(col)))
 			{
 				delete col;

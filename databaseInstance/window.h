@@ -1,6 +1,6 @@
 #pragma once
 #include "stream.h"
-namespace STORE {
+namespace DB_INSTANCE {
 	class window :public DBStream {
 	public:
 		enum windowType {

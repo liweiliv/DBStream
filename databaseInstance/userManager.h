@@ -16,9 +16,9 @@
 #include <assert.h>
 #include "filter.h"
 #include "userHandle.h"
-#include "storeError.h"
+#include "instanceError.h"
 #include <glog/logging.h>
-namespace STORE{
+namespace DB_INSTANCE{
 #define ROLE_READER 0x01
 #define ROLE_GRANTER 0x02
 #define ROLE_STREAM 0x04

@@ -7,7 +7,7 @@ int test()
 {
 	char tstr[128] = { 0 }, tstrd[128] = { 0 };
 
-	META::timestamp timestamp;
+	META::Timestamp timestamp;
 	timestamp.seconds = 0x3ffffffffULL;
 	timestamp.nanoSeconds = 999999999;
 	assert(timestamp.seconds == 0x3ffffffffULL);
@@ -16,7 +16,7 @@ int test()
 	timestamp.toString(tstrd);
 	assert(strcmp(tstr, tstrd) == 0);
 
-	META::dateTime datetime;
+	META::DateTime datetime;
 	datetime.set(0x1ffff, 12, 31, 24, 60, 60, 999999);
 	assert(datetime.year = 0x1ffff);
 	assert(datetime.month = 12);

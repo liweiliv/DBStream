@@ -19,7 +19,7 @@ namespace SHELL {
 	class CONCAT_FUNC :public rowFunction {
 	public:
 		CONCAT_FUNC() :rowFunction(2, META::COLUMN_TYPE::T_STRING) {}
-		virtual void* exec(Field** const valueList, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void* exec(Field** const valueList, const RPC::DMLRecord** const row)const
 		{
 			varLenValue* src = static_cast<varLenValue*>(valueList[0]->getValue(row));
 			varLenValue* dest = static_cast<varLenValue*>(valueList[1]->getValue(row));
@@ -42,11 +42,11 @@ namespace SHELL {
 	class NOW_FUNC :public rowFunction {
 	public:
 		NOW_FUNC() :rowFunction(0, META::COLUMN_TYPE::T_TIMESTAMP) {}
-		virtual void* exec(Field** const argvs, const DATABASE_INCREASE::DMLRecord** const row) const
+		virtual void* exec(Field** const argvs, const RPC::DMLRecord** const row) const
 		{
 			struct timespec tm;
 			clock_gettime(CLOCK_REALTIME, &tm);
-			return (void*)META::timestamp::create(tm.tv_sec, tm.tv_nsec);
+			return (void*)META::Timestamp::create(tm.tv_sec, tm.tv_nsec);
 		}
 	};
 	/*****************************************************inner functions********************************************************/
@@ -60,7 +60,7 @@ namespace SHELL {
 		MAX_FUNC(META::COLUMN_TYPE typeCode) :rowFunction(2, typeCode)
 		{
 		}
-		virtual void* exec(Field** const argvs, const DATABASE_INCREASE::DMLRecord** const row) const
+		virtual void* exec(Field** const argvs, const RPC::DMLRecord** const row) const
 		{
 			void* s = argvs[0]->getValue(row), * d = argvs[1]->getValue(row);
 			if (*static_cast<T*>((void*)&s) > * static_cast<T*>((void*)&d))
@@ -79,7 +79,7 @@ namespace SHELL {
 		MIN_FUNC(META::COLUMN_TYPE typeCode) :rowFunction(2, typeCode)
 		{
 		}
-		virtual void* exec(Field** const argvs, const DATABASE_INCREASE::DMLRecord** const row) const
+		virtual void* exec(Field** const argvs, const RPC::DMLRecord** const row) const
 		{
 			void* s = argvs[0]->getValue(row), * d = argvs[1]->getValue(row);
 			if (*static_cast<T*>((void*)&s) < *static_cast<T*>((void*)&d))
@@ -98,7 +98,7 @@ namespace SHELL {
 		ABS_FUNC(META::COLUMN_TYPE typeCode) :rowFunction(1, typeCode)
 		{
 		}
-		virtual void* exec(Field** const valueList, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void* exec(Field** const valueList, const RPC::DMLRecord** const row)const
 		{
 			void* s = valueList[0]->getValue(row);
 			if (*static_cast<T*>(s) < (T)0)
@@ -121,7 +121,7 @@ namespace SHELL {
 		GROUP_MAX_FUNC(META::COLUMN_TYPE typeCode) :groupFunction(1, typeCode)
 		{
 		}
-		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const RPC::DMLRecord** const row)const
 		{
 			void* s = valueList[0]->getValue(row);
 			if (count == 0 || *static_cast<T*>((void*)&historyValue) < *static_cast<T*>((void*)&s))
@@ -144,7 +144,7 @@ namespace SHELL {
 		GROUP_MIN_FUNC(META::COLUMN_TYPE typeCode) :groupFunction(1, typeCode)
 		{
 		}
-		virtual void exec(Field** const argvs, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void exec(Field** const argvs, void*& historyValue, uint32_t& count, const RPC::DMLRecord** const row)const
 		{
 			void* s = argvs[0]->getValue(row);
 			if (count == 0 || *static_cast<T*>((void*)&historyValue) > * static_cast<T*>((void*)&s))
@@ -166,7 +166,7 @@ namespace SHELL {
 		GROUP_AVG_FUNC(META::COLUMN_TYPE typeCode) :groupFunction(1, typeCode)
 		{
 		}
-		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const RPC::DMLRecord** const row)const
 		{
 			void* s = valueList[0]->getValue(row);
 			if (count == 0)
@@ -194,7 +194,7 @@ namespace SHELL {
 		GROUP_SUM_FUNC(META::COLUMN_TYPE typeCode) :groupFunction(1, typeCode)
 		{
 		}
-		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const RPC::DMLRecord** const row)const
 		{
 			void* s = valueList[0]->getValue(row);
 			if (count == 0)
@@ -221,7 +221,7 @@ namespace SHELL {
 		GROUP_COUNT_FUNC() :groupFunction(1, META::COLUMN_TYPE::T_UINT32)
 		{
 		}
-		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const DATABASE_INCREASE::DMLRecord** const row)const
+		virtual void exec(Field** const valueList, void*& historyValue, uint32_t& count, const RPC::DMLRecord** const row)const
 		{
 			count++;
 		}

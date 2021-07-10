@@ -34,7 +34,7 @@ namespace REPLICATOR
 		}
 		return 0;
 	}
-	void mysqlApplier::createTxnTableSql(char * sqlBuf,const DATABASE_INCREASE::record* record)
+	void mysqlApplier::createTxnTableSql(char * sqlBuf,const RPC::Record* record)
 	{
 		memcpy(sqlBuf + m_sqlBufferPos, m_txnTableSqlHead.c_str(), m_txnTableSqlHead.size());
 		m_sqlBufferPos += u32toa_sse2(m_id, sqlBuf + m_sqlBufferPos);
@@ -47,9 +47,9 @@ namespace REPLICATOR
 		m_sqlBufferPos += sizeof(TXN_TABLE_TAIL) - 1;
 	}
 	/*pic an unique key which all columns of it are not null*/
-	static const META::unionKeyMeta* picUniqueKey(const tableInfo* table, const DATABASE_INCREASE::DMLRecord* dml,bool newOrOld)
+	static const META::UnionKeyMeta* picUniqueKey(const tableInfo* table, const RPC::DMLRecord* dml,bool newOrOld)
 	{
-		const META::unionKeyMeta* prev = nullptr;
+		const META::UnionKeyMeta* prev = nullptr;
 		for (int idx = 0; idx < table->destMeta->m_uniqueKeysCount; idx++)
 		{
 			if (table->destMeta->m_uniqueKeys[idx]->columnCount == 1)
@@ -97,16 +97,16 @@ namespace REPLICATOR
 		}
 		return prev;
 	}
-	int mysqlApplier::createWhereConditionInSql(char*& sqlBuffer, DATABASE_INCREASE::DMLRecord* dml)
+	int mysqlApplier::createWhereConditionInSql(char*& sqlBuffer, RPC::DMLRecord* dml)
 	{
 		const tableInfo* table = static_cast<const tableInfo*>(dml->meta->userData);
 		memcpy(sqlBuffer + m_sqlBufferPos, " WHERE ", sizeof(" WHERE ") - 1);
 		m_sqlBufferPos += sizeof(" WHERE ") - 1;
-		const META::unionKeyMeta* key = nullptr;
+		const META::UnionKeyMeta* key = nullptr;
 		if (table->destMeta->m_primaryKey != nullptr)
 			key = table->destMeta->m_primaryKey;
 		else if (table->destMeta->m_uniqueKeysCount > 0)
-			key = picUniqueKey(table, dml, dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE));
+			key = picUniqueKey(table, dml, dml->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DELETE));
 		if (key != nullptr)
 		{
 			for (int idx = 0; idx < key->columnCount; idx++)
@@ -127,7 +127,7 @@ namespace REPLICATOR
 				else
 				{
 					sqlBuffer[m_sqlBufferPos++] = '=';
-					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[key->columnInfo[idx].columnId]], dml,dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE)))
+					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[key->columnInfo[idx].columnId]], dml,dml->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DELETE)))
 					{
 						return -1;
 					}
@@ -164,7 +164,7 @@ RESET:
 				else
 				{
 					sqlBuffer[m_sqlBufferPos++] = '=';
-					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[idx]], dml, dml->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE)))
+					if (0 != addColumnValue(sqlBuffer, &dml->meta->m_columns[table->columnMap[idx]], dml, dml->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DELETE)))
 					{
 						return -1;
 					}
@@ -184,11 +184,11 @@ RESET:
 
 	int mysqlApplier::createSingleDMLSql(replicatorRecord* record, char*& sqlBuffer)
 	{
-		DATABASE_INCREASE::DMLRecord* dml = static_cast<DATABASE_INCREASE::DMLRecord*>(record->record);
+		RPC::DMLRecord* dml = static_cast<RPC::DMLRecord*>(record->record);
 		const tableInfo* table = static_cast<const tableInfo*>(dml->meta->userData);
 		if (m_sqlBufferPos + record->record->head->minHead.size * 3 < m_sqlBufferSize)
 			reallocSqlBuf(sqlBuffer, record->record->head->minHead.size * 3);
-		if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_INSERT))
+		if (record->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_INSERT))
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "INSERT INTO ", sizeof("INSERT INTO ") - 1);
 			m_sqlBufferPos += sizeof("INSERT INTO ") - 1;
@@ -217,7 +217,7 @@ RESET:
 			m_sqlBufferPos--;//delete last [,]
 			return 0;
 		}
-		else if (record->record->head->minHead.type == static_cast<uint8_t>(DATABASE_INCREASE::RecordType::R_DELETE))
+		else if (record->record->head->minHead.type == static_cast<uint8_t>(RPC::RecordType::R_DELETE))
 		{
 			memcpy(sqlBuffer + m_sqlBufferPos, "DELETE ", sizeof("DELETE ") - 1);
 			m_sqlBufferPos += sizeof("DELETE ") - 1;
@@ -268,7 +268,7 @@ RESET:
 	{
 		return 0;
 	}
-	int mysqlApplier::addColumnValue(char* sqlBuffer, const META::columnMeta* column, DATABASE_INCREASE::DMLRecord* dml,bool newOrOld)
+	int mysqlApplier::addColumnValue(char* sqlBuffer, const META::ColumnMeta* column, RPC::DMLRecord* dml,bool newOrOld)
 	{
 		const char* value = newOrOld ? dml->column(column->m_columnIndex) : dml->oldColumnOfUpdateType(column->m_columnIndex);
 		switch (column->m_columnType)
@@ -291,14 +291,14 @@ RESET:
 		case META::COLUMN_TYPE::T_DATETIME:
 		case META::COLUMN_TYPE::T_DATETIME_ZERO_TZ://todo
 		{
-			META::dateTime t;
+			META::DateTime t;
 			t.time = *(const int64_t*)value;
 			m_sqlBufferPos += t.toString(sqlBuffer + m_sqlBufferPos);
 			break;
 		}
 		case META::COLUMN_TYPE::T_TIMESTAMP:
 		{
-			META::timestamp t;
+			META::Timestamp t;
 			t.time = *(const uint64_t*)value;
 			memcpy(sqlBuffer + m_sqlBufferPos, "FROM_UNIXTIME(", sizeof("FROM_UNIXTIME(") - 1);
 			m_sqlBufferPos += sizeof("FROM_UNIXTIME(") - 1;

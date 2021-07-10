@@ -9,7 +9,7 @@
 #include "thread/spinlock.h"
 namespace DATABASE {
 #pragma pack(1)
-	struct page {
+	struct Page {
 		uint32_t pageId;
 		uint32_t pageUsedSize;
 		uint32_t pageSize;

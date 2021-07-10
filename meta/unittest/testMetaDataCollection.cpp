@@ -24,7 +24,7 @@
 class metaShell
 {
 	SQL_PARSER::sqlParser parser;
-	META::metaDataCollection m;
+	META::MetaDataCollection m;
 	std::string usedDb;
 	void parserDdl(const char* ddl)
 	{
@@ -77,8 +77,8 @@ public:
 #define FAILED 		{printf("test %s failed @%d\n", __FUNCTION__, __LINE__);return -1;}
 int test()
 {
-	META::metaDataCollection m("utf8");
-	META::metaDataCollection m1("utf8");
+	META::MetaDataCollection m("utf8");
+	META::MetaDataCollection m1("utf8");
 	if (0 != m.initSqlParser(mysqlParserTree, mysqlFuncLib) || 0 != m1.initSqlParser(mysqlParserTree, mysqlFuncLib))
 		FAILED;
 	m.processDDL("create database test",nullptr,1);

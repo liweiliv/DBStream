@@ -143,6 +143,6 @@ DLL_EXPORT void setFailed(int code, const std::string& errMsg, dsStatus::stackIn
 
 #define dsCheckButIgnore(status) do{if(unlikely(!dsCheck(status))){LOG(WARNING)<<getLocalStatus().toString(); resetStatus();}}while(0)
 
-#define dsTest(status) do{if(unlikely(!dsCheck(__s))){LOG(ERROR)<<getLocalStatus().toString();abort();}}while(0);
+#define dsTest(status) do{if(unlikely(!dsCheck(status))){LOG(ERROR)<<getLocalStatus().toString();abort();}}while(0);
 
 

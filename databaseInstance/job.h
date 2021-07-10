@@ -3,16 +3,16 @@
 #include "schedule.h"
 #include "thread/threadLocal.h"
 #include "thread/runable.h"
-namespace STORE {
+namespace DB_INSTANCE {
         extern thread_local job* currentJob;
 	class jobProcess {
 	public:
 		virtual bool process() = 0;
 	};
 	class job :public runable {
-		friend class schedule;
+		friend class Schedule;
 	public:
-		schedule * m_sc;
+		Schedule * m_sc;
 		uint32_t m_vtime;
 		uint16_t m_nice;
 		uint64_t checkpoint;

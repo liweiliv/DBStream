@@ -16,25 +16,25 @@ namespace DATA_SOURCE
 		static constexpr auto NAME = "mysql";
 		bool m_async;
 		bool m_running;
-		arrayQueue<DATABASE_INCREASE::record*> m_outputQueue;
+		arrayQueue<RPC::Record*> m_outputQueue;
 		mysqlBinlogReader * m_reader;
 		BinlogEventParser * m_parser;
 		mysqlConnector * m_connector;
 		ringBuffer* m_recordBufferPool;
-		DATABASE_INCREASE::record* m_currentRecord;
-		void initByConf();
+		RPC::Record* m_currentRecord;
+		DS initByConf();
 		void updateConf(const char *key,const char *value);
 		void readThread();
-		DATABASE_INCREASE::record* syncRead();
-		DATABASE_INCREASE::record* asyncRead();
+		RPC::Record* syncRead();
+		RPC::Record* asyncRead();
 		std::thread m_readerThread;
 	public:
-		mysqlDataSource(config* conf, META::metaDataCollection* metaDataCollection, STORE::store* store);
+		mysqlDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::store* store);
 		virtual DS start();
 		virtual DS stop();
 		virtual bool running() const;
 		virtual ~mysqlDataSource();
-		virtual DS read(DATABASE_INCREASE::record*&);
+		virtual DS read(RPC::Record*&);
 		virtual const char* dataSourceName() const;
 	};
 }

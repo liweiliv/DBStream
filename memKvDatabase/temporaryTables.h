@@ -13,19 +13,19 @@ namespace KVDB {
 	};
 	struct joinTableInfo {
 		uint16_t tableCount;
-		const META::tableMeta *joinTables[MAX_JOIN_TABLE_COUNT];
+		const META::TableMeta *joinTables[MAX_JOIN_TABLE_COUNT];
 		joinColumnMap columnMap[1];
 	};
 
-	typedef spp::sparse_hash_map<uint64_t, META::tableMeta*> tableMap;
+	typedef spp::sparse_hash_map<uint64_t, META::TableMeta*> tableMap;
 	class temporaryTables {
 	private:
 		tableMap m_tables;
 		bool m_caseSensitive;
 	public:
-		META::tableMeta* createJoinTable(const joinTableInfo* info)
+		META::TableMeta* createJoinTable(const joinTableInfo* info)
 		{
-			META::tableMeta* meta = new META::tableMeta(m_caseSensitive);
+			META::TableMeta* meta = new META::TableMeta(m_caseSensitive);
 
 		}
 	};

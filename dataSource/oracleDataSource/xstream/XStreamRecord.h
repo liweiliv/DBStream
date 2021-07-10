@@ -150,7 +150,7 @@ namespace DATA_SOURCE
 	struct XStreamRecord
 	{
 		void* lcr;
-		DATABASE_INCREASE::RecordType recordType;
+		RPC::RecordType recordType;
 		lcrHeader m_lcrHeader;
 		columnValuesInfo m_newColumns;
 		columnValuesInfo m_oldColumns;

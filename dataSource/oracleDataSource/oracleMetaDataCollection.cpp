@@ -6,7 +6,7 @@ namespace DATA_SOURCE
 		uint64_t indexObjectId;
 		uint64_t tableObjectId;
 		std::string indexName;
-		META::unionKeyMeta* keyMeta;
+		META::UnionKeyMeta* keyMeta;
 		indexInfo() :indexObjectId(0), tableObjectId(0), keyMeta(nullptr) {}
 		~indexInfo()
 		{
@@ -160,7 +160,7 @@ namespace DATA_SOURCE
 		dsOk();
 	}
 
-	void oracleMetaDataCollection::setCharset(META::columnMeta* meta, int charsetForm)
+	void oracleMetaDataCollection::setCharset(META::ColumnMeta* meta, int charsetForm)
 	{
 		switch (static_cast<ORACLE_COLUMN_TYPE>(meta->m_srcColumnType))
 		{
@@ -207,9 +207,9 @@ namespace DATA_SOURCE
 		dsOk();
 	}
 
-	META::columnMeta* oracleMetaDataCollection::readColumnInfo(oracle::occi::ResultSet* rs)
+	META::ColumnMeta* oracleMetaDataCollection::readColumnInfo(oracle::occi::ResultSet* rs)
 	{
-		META::columnMeta* col = new META::columnMeta();
+		META::ColumnMeta* col = new META::ColumnMeta();
 		col->m_columnIndex = rs->getInt(2) - 1;
 		col->m_segmentStartId = rs->getInt(3);
 		col->m_size = rs->getInt(4);
@@ -275,11 +275,11 @@ namespace DATA_SOURCE
 				[&userColumns, this](oracle::occi::ResultSet* rs) ->DS {
 					do {
 						uint64_t objectId = (uint64_t)rs->getNumber(1).operator long();
-						META::columnMeta* col = readColumnInfo(rs);
+						META::ColumnMeta* col = readColumnInfo(rs);
 						userColumnsList::iterator iter = userColumns->find(objectId);
 						tableColumnsMap* t = (iter == userColumns->end()) ?
 							userColumns->insert(std::pair<uint64_t, tableColumnsMap*>(objectId, new tableColumnsMap())).first->second : iter->second;
-						t->insert(std::pair<std::string, META::columnMeta*>(col->m_columnName, col));
+						t->insert(std::pair<std::string, META::ColumnMeta*>(col->m_columnName, col));
 					} while (rs->next());
 					dsOk();
 				}, sql), clearUserColumnsList(userColumns));
@@ -303,10 +303,10 @@ namespace DATA_SOURCE
 			int realColumnCount = 0;
 			int maxColumnId = 0;
 			std::list<int> hiddenColumnSegIds;
-			META::columnMeta* cols[2048] = { 0 };
+			META::ColumnMeta* cols[2048] = { 0 };
 			for (auto citer : *iter.second)
 			{
-				META::columnMeta* col = citer.second;
+				META::ColumnMeta* col = citer.second;
 				if (col->m_columnIndex < 0)//unused columns
 				{
 					hiddenColumnSegIds.push_back(col->m_segmentStartId);
@@ -360,12 +360,12 @@ namespace DATA_SOURCE
 				clearUserColumnsList(&userColumns);
 				dsFailedAndLogIt(1, "table:" << ownerName << "." << tableName << " column count " << realColumnCount << "and max column id " << maxColumnId + 1 << "is not match", ERROR);
 			}
-			META::tableMeta* table = new META::tableMeta(true);
+			META::TableMeta* table = new META::TableMeta(true);
 			table->m_charset = &charsets[static_cast<int>(m_charsetId)];
 			table->m_dbName = ownerName;
 			table->m_tableName = tableName;
 			table->m_columnsCount = realColumnCount;
-			table->m_columns = new META::columnMeta[realColumnCount];
+			table->m_columns = new META::ColumnMeta[realColumnCount];
 			for (int i = 0; i < realColumnCount; i++)
 			{
 				table->m_columns[i] = *cols[i];
@@ -373,8 +373,8 @@ namespace DATA_SOURCE
 			}
 			table->buildColumnOffsetList();
 			put(table->m_dbName.c_str(), table->m_tableName.c_str(), table, 0);
-			META::MetaTimeline<META::tableMeta>* tableInfo = _getTableInfo(table->m_dbName.c_str(), table->m_tableName.c_str());
-			m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::tableMeta>*>(titer->first, tableInfo));
+			META::MetaTimeline<META::TableMeta>* tableInfo = _getTableInfo(table->m_dbName.c_str(), table->m_tableName.c_str());
+			m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::TableMeta>*>(titer->first, tableInfo));
 		}
 		clearUserColumnsList(&userColumns);
 		dsOk();
@@ -384,17 +384,17 @@ namespace DATA_SOURCE
 	{
 		for (auto iter : partitionList)
 		{
-			META::tableMeta* t = get(owner.c_str(), iter.first.c_str());
+			META::TableMeta* t = get(owner.c_str(), iter.first.c_str());
 			if (t == nullptr)
 				dsFailedAndLogIt(1, "can not find table " << owner << "." << iter.first << " in metadata collecton", ERROR);
-			spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::tableMeta>*>::const_iterator titer = m_tables.find(t->m_objectIdInDB);
+			spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::TableMeta>*>::const_iterator titer = m_tables.find(t->m_objectIdInDB);
 			if (titer == m_tables.end())
 				dsFailedAndLogIt(1, "can not find table " << owner << "." << iter.first << " in metadata collecton", ERROR);
 			t->m_subObjectIdInDBList = new uint64_t[iter.second->size()];
 			for (auto id : *iter.second)
 			{
 				t->m_subObjectIdInDBList[t->m_subObjectIdInDBListSize++] = id;
-				m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::tableMeta>*>(id, titer->second));
+				m_tables.insert(std::pair<uint64_t, META::MetaTimeline<META::TableMeta>*>(id, titer->second));
 			}
 		}
 		dsOk();
@@ -455,7 +455,7 @@ namespace DATA_SOURCE
 							dsFailedAndLogIt(1, "can not find index " << index->indexObjectId << "of table:" << owner << "." << tIter->second << " in index list", ERROR);
 						index->indexName = iIter->second;
 						int columnCount = rs->getInt(3);
-						index->keyMeta = new (malloc(sizeof(META::unionKeyMeta) + columnCount * sizeof(META::uniqueKeyTypePair))) META::unionKeyMeta(columnCount);
+						index->keyMeta = new (malloc(sizeof(META::UnionKeyMeta) + columnCount * sizeof(META::UniqueKeyTypePair))) META::UnionKeyMeta(columnCount);
 						index->keyMeta->keyType = TID(keyType);
 						neededIndexs.insert(std::pair<uint64_t, indexInfo*>(index->indexObjectId, index));
 						auto tiIter = tableIndexInfo.find(index->tableObjectId);
@@ -518,7 +518,7 @@ namespace DATA_SOURCE
 		for (auto iter : tableIndexInfo)
 		{
 			int pkCount = 0, ukCount = 0, indexCount = 0;
-			META::tableMeta* meta = getMetaByObjectId(iter.first);
+			META::TableMeta* meta = getMetaByObjectId(iter.first);
 			if (meta == nullptr)
 			{
 				clearIndexList(neededIndexs);
@@ -543,12 +543,12 @@ namespace DATA_SOURCE
 			if (ukCount > 0)
 			{
 				meta->m_uniqueKeyNames = new std::string[ukCount];
-				meta->m_uniqueKeys = new  META::unionKeyMeta * [ukCount];
+				meta->m_uniqueKeys = new  META::UnionKeyMeta * [ukCount];
 			}
 			if (indexCount > 0)
 			{
 				meta->m_indexNames = new std::string[indexCount];
-				meta->m_indexs = new  META::unionKeyMeta * [indexCount];
+				meta->m_indexs = new  META::UnionKeyMeta * [indexCount];
 			}
 
 			for (auto titer : iter.second)
@@ -577,7 +577,7 @@ namespace DATA_SOURCE
 		dsOk();
 	}
 
-	DLL_EXPORT oracleMetaDataCollection::oracleMetaDataCollection(occiConnect* connector, const tableList* whiteList, const tableList* blackList) :metaDataCollection("utf8", true, nullptr, nullptr),
+	DLL_EXPORT oracleMetaDataCollection::oracleMetaDataCollection(occiConnect* connector, const tableList* whiteList, const tableList* blackList) :MetaDataCollection("utf8", true, nullptr, nullptr),
 		m_connector(connector), m_conn(nullptr), m_whiteList(whiteList), m_blackList(blackList)
 	{
 	}
@@ -586,14 +586,14 @@ namespace DATA_SOURCE
 		if (m_conn != nullptr)
 			m_connector->close(m_conn);
 	}
-	DLL_EXPORT inline META::tableMeta* oracleMetaDataCollection::getMetaByObjectId(uint64_t objectId, uint64_t originCheckPoint)
+	DLL_EXPORT inline META::TableMeta* oracleMetaDataCollection::getMetaByObjectId(uint64_t objectId, uint64_t originCheckPoint)
 	{
-		spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::tableMeta>*>::const_iterator titer = m_tables.find(objectId);
+		spp::sparse_hash_map<uint64_t, META::MetaTimeline<META::TableMeta>*>::const_iterator titer = m_tables.find(objectId);
 		if (titer == m_tables.end())
 			return nullptr;
 		return titer->second->get(originCheckPoint);
 	}
-	DLL_EXPORT DS oracleMetaDataCollection::init(META::metaDataCollection* collection)
+	DLL_EXPORT DS oracleMetaDataCollection::init(META::MetaDataCollection* collection)
 	{
 		DS s;
 		createConnect();

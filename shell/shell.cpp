@@ -1,4 +1,4 @@
-#include "store/store.h"
+#include "databaseInstance/databaseInstance.h"
 #include "sqlParser/sqlParser.h"
 #include "thread/threadPool.h"
 #include "util/ringFixedQueue.h"
@@ -7,7 +7,7 @@ namespace SHELL {
 	class shell {
 	private:
 		SQL_PARSER::sqlParser* m_sql;
-		STORE::store* m_store;
+		DB_INSTANCE::DatabaseInstance* m_instance;
 		threadPool<shell, void> m_threadPool;
 		ringFixedQueue<userHandle*> m_preProcessList;
 		bool m_running;

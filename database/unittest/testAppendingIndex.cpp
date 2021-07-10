@@ -16,8 +16,8 @@
 #define mysqlParserTree "sqlParser/ParseTree"
 #endif
 
-	META::metaDataCollection* dbs;
-	DATABASE::database* db;
+	META::MetaDataCollection* dbs;
+	DATABASE::Database* db;
 	uint64_t ckp = 1;
 	uint64_t rid = 1;
 	int testAppendingIndex()
@@ -25,7 +25,7 @@
 		dbs->processDDL("drop database if exists test ",nullptr, ckp++);
 		dbs->processDDL("create database test ", nullptr, ckp++);
 		dbs->processDDL("create table test1(a int primary key,b char(20),c int)", "test", ckp++);
-		META::tableMeta* t1 = dbs->get("test", "test1");
+		META::TableMeta* t1 = dbs->get("test", "test1");
 		assert(t1 != nullptr);
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
@@ -33,10 +33,10 @@
 		for (int i = 1; i < 20000; i++)
 		{
 			int k = rand()%200000;
-			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-			r.head->logOffset = ckp++;
+			RPC::DMLRecord r(rbuf, t1, RPC::RecordType::R_INSERT);
+			r.head->checkpoint.logOffset = ckp++;
 			r.head->recordId = i;
-			r.head->timestamp = 1573438210 + i;
+			r.head->checkpoint.timestamp = 1573438210 + i;
 			r.head->txnId = i;
 			r.setFixedColumn(0, k);
 			r.setVarColumn(1, "dwadfw", 6);
@@ -58,7 +58,7 @@
 			aiter.nextKey();
 		}
 		const char * solidIndx = idx.toString<int>();
-		DATABASE::page p;
+		DATABASE::Page p;
 		p.pageId = 1;
 		p.pageData= (char*)solidIndx;
 		DATABASE::fixedSolidIndex fsi(&p);
@@ -81,7 +81,7 @@
 		dbs->processDDL("drop database if exists test ", nullptr, ckp++);
 		dbs->processDDL("create database test ", nullptr, ckp++);
 		dbs->processDDL("create table test2(a int,b char(20),c varchar(30),d int ,primary key(a,b,c))", "test", ckp++);
-		META::tableMeta* t1 = dbs->get("test", "test2");
+		META::TableMeta* t1 = dbs->get("test", "test2");
 		assert(t1 != nullptr);
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
@@ -90,10 +90,10 @@
 		{
 			int k = rand()%200000;
 			char sbuf[30] = { 0 };
-			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-			r.head->logOffset = ckp++;
+			RPC::DMLRecord r(rbuf, t1, RPC::RecordType::R_INSERT);
+			r.head->checkpoint.logOffset = ckp++;
 			r.head->recordId = i;
-			r.head->timestamp = 1573438210 + i;
+			r.head->checkpoint.timestamp = 1573438210 + i;
 			r.head->txnId = i;
 			r.setFixedColumn(0, k);
 			sprintf(sbuf, "%d__AS_sdf_%dw", k, k * 123);
@@ -126,7 +126,7 @@
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
-		DATABASE::page p;
+		DATABASE::Page p;
 		p.pageId = 1;
 		p.pageData= (char*)solidIndx;
 		DATABASE::varSolidIndex fsi(&p);
@@ -160,7 +160,7 @@
 		dbs->processDDL("drop database if exists test ", nullptr, ckp++);
 		dbs->processDDL("create database test ", nullptr, ckp++);
 		dbs->processDDL("create table test2(a int,b bigint,c smallint,d int ,primary key(a,b,c))", "test", ckp++);
-		META::tableMeta* t1 = dbs->get("test", "test2");
+		META::TableMeta* t1 = dbs->get("test", "test2");
 		assert(t1 != nullptr);
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<int, int> t1Kv;
@@ -170,10 +170,10 @@
 			int k = rand()%200000;
 			int64_t b = k * k;
 			short c = k;
-			DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-			r.head->logOffset = ckp++;
+			RPC::DMLRecord r(rbuf, t1, RPC::RecordType::R_INSERT);
+			r.head->checkpoint.logOffset = ckp++;
 			r.head->recordId = i;
-			r.head->timestamp = 1573438210 + i;
+			r.head->checkpoint.timestamp = 1573438210 + i;
 			r.head->txnId = i;
 			r.setFixedColumn(0, k);
 			r.setFixedColumn(1, b);
@@ -202,7 +202,7 @@
 			aiter.nextKey();
 		}
 		const char* solidIndx = idx.toString<META::unionKey>();
-		DATABASE::page p;
+		DATABASE::Page p;
 		p.pageId = 1;
 		p.pageData= (char*)solidIndx;
 		DATABASE::fixedSolidIndex fsi(&p);
@@ -234,7 +234,7 @@
 		dbs->processDDL("drop database if exists test ", nullptr, ckp++);
 		dbs->processDDL("create database test ", nullptr, ckp++);
 		dbs->processDDL("create table test3(a char(30),b int ,primary key(a))", "test", ckp++);
-		META::tableMeta* t1 = dbs->get("test", "test3");
+		META::TableMeta* t1 = dbs->get("test", "test3");
 		assert(t1 != nullptr);
 		DATABASE::appendingIndex idx(t1->m_primaryKey, t1);
 		std::map<std::string, int> t1Kv;
@@ -249,10 +249,10 @@
 			{
 				char* rbuf = new char[256];
 				buflist.push_back(rbuf);
-				DATABASE_INCREASE::DMLRecord r(rbuf, t1, DATABASE_INCREASE::RecordType::R_INSERT);
-				r.head->logOffset = ckp++;
+				RPC::DMLRecord r(rbuf, t1, RPC::RecordType::R_INSERT);
+				r.head->checkpoint.logOffset = ckp++;
 				r.head->recordId = i;
-				r.head->timestamp = 1573438210 + i;
+				r.head->checkpoint.timestamp = 1573438210 + i;
 				r.head->txnId = i;
 				r.setVarColumn(0, sbuf, strlen(sbuf));
 				r.setFixedColumn(1, i);
@@ -261,31 +261,31 @@
 				idx.append(&r, i);
 			}
 		}
-		DATABASE::appendingIndex::iterator<META::binaryType> aiter(0, &idx);
+		DATABASE::appendingIndex::iterator<META::BinaryType> aiter(0, &idx);
 		assert(aiter.begin());
 		for (std::map<std::string, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
 		{
 			std::string k = iter->first;
-			META::binaryType b(k.c_str(),k.size());
-			assert(idx.find<META::binaryType>(&b) == iter->second);
+			META::BinaryType b(k.c_str(),k.size());
+			assert(idx.find<META::BinaryType>(&b) == iter->second);
 			uint32_t v = aiter.value();
 			assert(v == (uint32_t)iter->second);
 			aiter.nextKey();
 		}
-		const char* solidIndx = idx.toString<META::binaryType>();
-		DATABASE::page p;
+		const char* solidIndx = idx.toString<META::BinaryType>();
+		DATABASE::Page p;
 		p.pageId = 1;
 		p.pageData= (char*)solidIndx;
 		DATABASE::varSolidIndex fsi(&p);
-		DATABASE::solidIndexIterator<META::binaryType, DATABASE::varSolidIndex> siter(0, &fsi);
+		DATABASE::solidIndexIterator<META::BinaryType, DATABASE::varSolidIndex> siter(0, &fsi);
 		assert(siter.begin());
 		for (std::map<std::string, int>::iterator iter = t1Kv.begin(); iter != t1Kv.end(); iter++)
 		{
 			std::string k = iter->first;
-			META::binaryType b(k.c_str(), k.size());
-			const char* ffk = (const char*)fsi.getKey(fsi.find<META::binaryType>(b, true));
-			META::binaryType ukf(ffk+sizeof(uint16_t) ,*(uint16_t*)ffk);
-			META::binaryType uk1((char*)siter.key()+sizeof(uint16_t), *(uint16_t*)siter.key());
+			META::BinaryType b(k.c_str(), k.size());
+			const char* ffk = (const char*)fsi.getKey(fsi.find<META::BinaryType>(b, true));
+			META::BinaryType ukf(ffk+sizeof(uint16_t) ,*(uint16_t*)ffk);
+			META::BinaryType uk1((char*)siter.key()+sizeof(uint16_t), *(uint16_t*)siter.key());
 			assert(uk1 == b);
 			assert(ukf == b);
 
@@ -300,7 +300,7 @@
 int main()
 {
 	initKeyWords();
-	dbs = new META::metaDataCollection("utf8");
+	dbs = new META::MetaDataCollection("utf8");
 	if (0 != dbs->initSqlParser(mysqlParserTree, mysqlFuncLib))
 	{
 		printf("load sqlparser failed");

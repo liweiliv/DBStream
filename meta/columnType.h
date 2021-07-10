@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
-namespace DATABASE_INCREASE {
+namespace RPC {
 	struct DMLRecord;
 }
 namespace META {
@@ -107,12 +107,12 @@ namespace META {
 		UNIQUE_KEY,
 		INDEX
 	};
-	struct uniqueKeyTypePair
+	struct UniqueKeyTypePair
 	{
 		uint8_t type;
 		uint16_t columnId;
 	};
-	struct unionKeyMeta
+	struct UnionKeyMeta
 	{
 		uint16_t columnCount;
 		uint16_t size;
@@ -120,12 +120,12 @@ namespace META {
 		uint8_t keyType;
 		uint8_t keyId;
 		uint8_t varColumnCount;
-		uniqueKeyTypePair columnInfo[1];
+		UniqueKeyTypePair columnInfo[1];
 		static inline uint32_t memSize(uint16_t keyCount)
 		{
-			return sizeof(unionKeyMeta) + sizeof(uniqueKeyTypePair) * (keyCount - 1);
+			return sizeof(UnionKeyMeta) + sizeof(UniqueKeyTypePair) * (keyCount - 1);
 		}
-		unionKeyMeta(int columnCount = 0):columnCount(columnCount), size(0), fixed(1), keyType(static_cast<int>(KEY_TYPE::INDEX)), keyId(0), varColumnCount(0)
+		UnionKeyMeta(int columnCount = 0):columnCount(columnCount), size(0), fixed(1), keyType(static_cast<int>(KEY_TYPE::INDEX)), keyId(0), varColumnCount(0)
 		{
 			for (int i = 0; i < columnCount; i++)
 			{
@@ -133,23 +133,23 @@ namespace META {
 				columnInfo[i].columnId = 0;
 			}
 		}
-		unionKeyMeta(const unionKeyMeta& dest)
+		UnionKeyMeta(const UnionKeyMeta& dest)
 		{
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
 		}
-		unionKeyMeta& operator=(const unionKeyMeta& dest)
+		UnionKeyMeta& operator=(const UnionKeyMeta& dest)
 		{
 			memcpy(&columnCount, &dest.columnCount, memSize(dest.columnCount));
 			return *this;
 		}
-		inline bool operator==(const unionKeyMeta& dest)
+		inline bool operator==(const UnionKeyMeta& dest)
 		{
 			if (columnCount != dest.columnCount || memcmp(&columnCount, &dest.columnCount, memSize(columnCount) != 0))
 				return false;
 			else
 				return true;
 		}
-		inline bool operator!=(const unionKeyMeta& dest)
+		inline bool operator!=(const UnionKeyMeta& dest)
 		{
 			return !(*this == dest);
 		}
@@ -203,40 +203,40 @@ namespace META {
 			}
 		}
 	};
-	struct binaryType {
+	struct BinaryType {
 		uint16_t size;
 		const char* data;
-		DLL_EXPORT binaryType();
-		DLL_EXPORT binaryType(const char* _data, uint16_t _size);
-		DLL_EXPORT binaryType(const binaryType& dest);
-		DLL_EXPORT binaryType operator=(const binaryType& dest);
+		DLL_EXPORT BinaryType();
+		DLL_EXPORT BinaryType(const char* _data, uint16_t _size);
+		DLL_EXPORT BinaryType(const BinaryType& dest);
+		DLL_EXPORT BinaryType operator=(const BinaryType& dest);
 		inline uint32_t hash() const
 		{
 			return hashBinary(data, size);
 		}
-		inline bool operator< (const binaryType& dest) const
+		inline bool operator< (const BinaryType& dest) const
 		{
 			return  compare(dest) < 0;
 		}
-		inline bool operator==(const binaryType& dest) const
+		inline bool operator==(const BinaryType& dest) const
 		{
 			return compare(dest) == 0;
 		}
-		inline bool operator!=(const binaryType& dest) const
+		inline bool operator!=(const BinaryType& dest) const
 		{
 			return compare(dest) != 0;
 		}
-		DLL_EXPORT int compare(const binaryType& dest) const;
-		inline bool operator> (const binaryType& dest) const
+		DLL_EXPORT int compare(const BinaryType& dest) const;
+		inline bool operator> (const BinaryType& dest) const
 		{
 			return  compare(dest) > 0;
 		}
 	};
 	struct unionKey {
 		const char* key;
-		const META::unionKeyMeta* meta;
+		const META::UnionKeyMeta* meta;
 		DLL_EXPORT unionKey();
-		DLL_EXPORT unionKey(const char* key, const META::unionKeyMeta* meta) :key(key), meta(meta) {};
+		DLL_EXPORT unionKey(const char* key, const META::UnionKeyMeta* meta) :key(key), meta(meta) {};
 		DLL_EXPORT unionKey(const unionKey& dest);
 		DLL_EXPORT int compare(const unionKey& dest) const;
 		inline bool operator> (const unionKey& dest) const
@@ -264,7 +264,7 @@ namespace META {
 		{
 			return !(*this == dest);
 		}
-		static inline int externSize(const META::unionKeyMeta* meta)
+		static inline int externSize(const META::UnionKeyMeta* meta)
 		{
 			return meta->varColumnCount * sizeof(uint16_t);
 		}
@@ -294,10 +294,11 @@ namespace META {
 		{
 			return meta->fixed ? hashBinary(key, meta->size) : hashBinary(key, *(uint16_t*)key);
 		}
-		DLL_EXPORT static uint16_t memSize(const DATABASE_INCREASE::DMLRecord* r, const META::unionKeyMeta* meta, bool keyUpdated);
-		DLL_EXPORT static void initKey(char* key, uint16_t size, const META::unionKeyMeta* keyMeta, const DATABASE_INCREASE::DMLRecord* r, bool keyUpdated = false);
+		DLL_EXPORT static uint16_t memSize(const RPC::DMLRecord* r, const META::UnionKeyMeta* meta, bool keyUpdated);
+		DLL_EXPORT static void initKey(char* key, uint16_t size, const META::UnionKeyMeta* keyMeta, const RPC::DMLRecord* r, bool keyUpdated = false);
 	};
-	struct timestamp
+
+	struct Timestamp
 	{
 		union
 		{
@@ -310,7 +311,7 @@ namespace META {
 		};
 		static inline uint64_t create(uint64_t seconds, uint32_t nanoSeconds)
 		{
-			timestamp t;
+			Timestamp t;
 			t.seconds = seconds;
 			t.nanoSeconds = nanoSeconds;
 			return t.time;
@@ -331,8 +332,9 @@ namespace META {
 				return len;
 		}
 	};
+
 	/*[20byte usec][6 byte second][6 byte min][5 byte hour][5 byte day][4 byte month][18 bit year]*/
-	struct dateTime
+	struct DateTime
 	{
 		union
 		{
@@ -348,14 +350,14 @@ namespace META {
 				int32_t year : 18;
 			};
 		};
-		dateTime() {}
-		dateTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
+		DateTime() {}
+		DateTime(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
 		{
 			set(year, month, day, hour, mi, sec, usec);
 		}
 		static inline int64_t createDate(int32_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi, uint8_t sec, uint32_t usec)
 		{
-			dateTime d(year, month, day, hour, mi, sec, usec);
+			DateTime d(year, month, day, hour, mi, sec, usec);
 			return d.time;
 		}
 		inline void set(int32_t _year, uint8_t _month, uint8_t _day, uint8_t _hour, uint8_t _mi, uint8_t _sec, uint32_t _usec)

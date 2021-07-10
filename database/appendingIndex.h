@@ -85,10 +85,10 @@ namespace DATABASE {
 		}
 	};
 	template <>
-	struct keyComparator<META::binaryType>
+	struct keyComparator<META::BinaryType>
 	{
 		keyComparator() {}
-		inline int operator()(const KeyTemplate<META::binaryType>* a, const KeyTemplate<META::binaryType>* b) const
+		inline int operator()(const KeyTemplate<META::BinaryType>* a, const KeyTemplate<META::BinaryType>* b) const
 		{
 			return a->key.compare(b->key);
 		}
@@ -97,16 +97,16 @@ namespace DATABASE {
 	private:
 		META::COLUMN_TYPE m_type;
 		void* m_index;
-		const META::tableMeta* m_meta;
-		const META::unionKeyMeta* m_ukMeta;
+		const META::TableMeta* m_meta;
+		const META::UnionKeyMeta* m_ukMeta;
 		leveldb::Arena* m_arena;
 		bool m_localArena;
 		uint32_t m_allCount;
 		uint32_t m_keyCount;
 		uint32_t m_varSize;
-		typedef void(*appendIndexFunc) (appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate);
+		typedef void(*appendIndexFunc) (appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate);
 		template <typename T>
-		static inline bool appendIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, KeyTemplate<T>* c, uint32_t id, bool keyUpdated = false)
+		static inline bool appendIndex(appendingIndex* index, const RPC::DMLRecord* r, KeyTemplate<T>* c, uint32_t id, bool keyUpdated = false)
 		{
 			bool newKey = true;
 			KeyTemplate<T>* k = nullptr;
@@ -142,7 +142,7 @@ namespace DATABASE {
 		}
 
 		template<class T>
-		static void appendIndexByType(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate)
+		static void appendIndexByType(appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate)
 		{
 			KeyTemplate<T> c;
 			c.key = *(T*)r->column(index->m_ukMeta->columnInfo[0].columnId);
@@ -153,12 +153,12 @@ namespace DATABASE {
 				appendIndex(index, r, &c, id, true);
 			}
 		}
-		static inline void appendBinaryIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate);
-		static inline void appendUnionIndex(appendingIndex* index, const DATABASE_INCREASE::DMLRecord* r, uint32_t id, bool keyUpdate);
+		static inline void appendBinaryIndex(appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate);
+		static inline void appendUnionIndex(appendingIndex* index, const RPC::DMLRecord* r, uint32_t id, bool keyUpdate);
 	public:
 		static appendIndexFunc m_appendIndexFuncs[];
 	public:
-		DLL_EXPORT appendingIndex(const META::unionKeyMeta* ukMeta, const META::tableMeta* meta, leveldb::Arena* arena = nullptr);
+		DLL_EXPORT appendingIndex(const META::UnionKeyMeta* ukMeta, const META::TableMeta* meta, leveldb::Arena* arena = nullptr);
 		DLL_EXPORT ~appendingIndex();
 		inline uint32_t getKeyCount()
 		{
@@ -168,10 +168,10 @@ namespace DATABASE {
 		{
 			return m_type;
 		}
-		inline  const META::unionKeyMeta* getUkMeta() {
+		inline  const META::UnionKeyMeta* getUkMeta() {
 			return m_ukMeta;
 		}
-		inline const META::tableMeta* getMeta() {
+		inline const META::TableMeta* getMeta() {
 			return m_meta;
 		}
 		template<typename T>
@@ -188,13 +188,13 @@ namespace DATABASE {
 			int count = k.child.count;
 			return k.child.subArray[count - 1];
 		}
-		DLL_EXPORT void append(const DATABASE_INCREASE::DMLRecord* r, uint32_t id);
+		DLL_EXPORT void append(const RPC::DMLRecord* r, uint32_t id);
 		template <typename T>
-		class iterator :public indexIterator<appendingIndex> {
+		class iterator :public IndexIterator<appendingIndex> {
 		private:
 			typename leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >::Iterator m_iter;
 		public:
-			iterator(uint32_t flag, appendingIndex* index) :indexIterator<appendingIndex>(flag, index, index->m_type), m_iter(static_cast<leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >*>(index->m_index))
+			iterator(uint32_t flag, appendingIndex* index) :IndexIterator<appendingIndex>(flag, index, index->m_type), m_iter(static_cast<leveldb::SkipList< KeyTemplate<T>*, keyComparator<T> >*>(index->m_index))
 			{
 			}
 			inline bool begin()
@@ -401,7 +401,7 @@ namespace DATABASE {
 	template<>
 	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::unionKey>(char* data, appendingIndex::iterator<META::unionKey>& iter);
 	template<>
-	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::binaryType>(char* data, appendingIndex::iterator<META::binaryType>& iter);
+	DLL_EXPORT void appendingIndex::createVarSolidIndex<META::BinaryType>(char* data, appendingIndex::iterator<META::BinaryType>& iter);
 }
 #endif /* APPENDINGINDEX_H_ */
 

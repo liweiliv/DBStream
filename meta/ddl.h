@@ -112,7 +112,7 @@ namespace META {
 	};
 	struct createTableDDL :public tableDdl
 	{
-		tableMeta tableDef;
+		TableMeta tableDef;
 		addKey primaryKey;
 		std::list<addKey> uniqueKeys;
 		std::list<addKey> indexs;
@@ -152,18 +152,18 @@ namespace META {
 	};
 	struct addColumn :public alterTableHead
 	{
-		columnMeta column;
+		ColumnMeta column;
 		bool first;
 		std::string afterColumnName;
 		addColumn() :alterTableHead(ALTER_TABLE_ADD_COLUMN), first(false) {}
 	};
 	struct addColumns :public alterTableHead
 	{
-		std::list<columnMeta*> columns;
+		std::list<ColumnMeta*> columns;
 		addColumns() :alterTableHead(ALTER_TABLE_ADD_COLUMNS) {}
 		~addColumns()
 		{
-			for (std::list<columnMeta*>::iterator iter = columns.begin(); iter != columns.end(); iter++)
+			for (std::list<ColumnMeta*>::iterator iter = columns.begin(); iter != columns.end(); iter++)
 				delete* iter;
 			columns.clear();
 		}

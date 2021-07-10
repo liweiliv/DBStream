@@ -198,16 +198,16 @@ target_include_directories(memKvDatabase PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCL
 #metaCollection
 add_library(metaCollection SHARED meta/metaDataCollection.cpp)
 TARGET_LINK_LIBRARIES(metaCollection meta database util thread sqlParser ${GLOG})
-#store
-aux_source_directory(store storeDir)
-add_library(store SHARED ${storeDir})
-TARGET_LINK_LIBRARIES(store  util globalInfo thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
-target_include_directories(store PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
+#database instance
+aux_source_directory(databaseInstance databaseInstanceDir)
+add_library(databaseInstance SHARED ${databaseInstanceDir})
+TARGET_LINK_LIBRARIES(databaseInstance  util globalInfo thread memory meta metaCollection database ${LZ4} ${GLOG} ${GFLAGS})
+target_include_directories(databaseInstance PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 #shell
 aux_source_directory(shell shellDir)
 add_library(shell SHARED ${shellDir})
-TARGET_LINK_LIBRARIES(shell store util memory meta ${LZ4} ${GLOG} ${GFLAGS})
+TARGET_LINK_LIBRARIES(shell databaseInstance util memory meta ${LZ4} ${GLOG} ${GFLAGS})
 target_include_directories(shell PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 
@@ -224,7 +224,7 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 #main
 ADD_EXECUTABLE(DBStream  DBStream.cpp)
-TARGET_LINK_LIBRARIES(DBStream util globalInfo sqlParser dataSource store meta metaCollection memory)
+TARGET_LINK_LIBRARIES(DBStream util globalInfo sqlParser dataSource databaseInstance meta metaCollection memory)
 target_include_directories(DBStream PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -323,15 +323,6 @@ IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
         TARGET_LINK_LIBRARIES(testSpinlock pthread)
 ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-
-
-
-ADD_EXECUTABLE(testMysqlDataCreater dataSource/mysqlDataSource/unittest/mysqlDataCreater.cpp)
-target_include_directories(testMysqlDataCreater PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH} ${MYSQL_INCLUDE_PATH})
-TARGET_LINK_LIBRARIES(testMysqlDataCreater  util ${GLOG} ${MYSQL_CLIENT})
-IF (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	TARGET_LINK_LIBRARIES(testMysqlDataCreater pthread ssl crypto rt z dl)
-ENDIF (CMAKE_SYSTEM_NAME MATCHES "Linux")
 
 ADD_EXECUTABLE(testMemChannel  cluster/unittest/testMemChannel.cpp)
 TARGET_LINK_LIBRARIES(testMemChannel util thread memory)

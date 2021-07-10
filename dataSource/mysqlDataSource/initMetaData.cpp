@@ -9,11 +9,11 @@
 #include "util/unorderMapUtil.h"
 #include "meta/mysqlTypes.h"
 namespace DATA_SOURCE {
-	static constexpr auto SELECT_ALL_COLUMNS  = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_CONSTRAINT = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_KEY_COLUMN = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_TABLE = "select TABLE_SCHEMA,TABLE_NAME,TABLE_TYPE,ENGINE,TABLE_COLLATION from information_schema.TABLES where TABLE_SCHEMA in (%s)";
-	static constexpr auto SELECT_ALL_SCHEMA = "select SCHEMA_NAME ,DEFAULT_CHARACTER_SET_NAME from information_schema.SCHEMATA where SCHEMA_NAME in (%s) and SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
+	static constexpr auto SELECT_ALL_COLUMNS = "select COLUMN_NAME,ORDINAL_POSITION,DATA_TYPE,TABLE_SCHEMA,TABLE_NAME,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION,CHARACTER_SET_NAME, COLUMN_TYPE,GENERATION_EXPRESSION,CHARACTER_OCTET_LENGTH FROM information_schema.columns where TABLE_SCHEMA in ";
+	static constexpr auto SELECT_ALL_CONSTRAINT = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where TABLE_SCHEMA in ";
+	static constexpr auto SELECT_ALL_KEY_COLUMN = "select CONSTRAINT_SCHEMA,CONSTRAINT_NAME,TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,ORDINAL_POSITION from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA in ";
+	static constexpr auto SELECT_ALL_TABLE = "select TABLE_SCHEMA,TABLE_NAME,TABLE_TYPE,ENGINE,TABLE_COLLATION from information_schema.TABLES where TABLE_SCHEMA in ";
+	static constexpr auto SELECT_ALL_SCHEMA = "select SCHEMA_NAME ,DEFAULT_CHARACTER_SET_NAME from information_schema.SCHEMATA where SCHEMA_NAME in ";
 	static constexpr auto SELECT_ALL_USER_SCHEMA = "select SCHEMA_NAME  from information_schema.SCHEMATA where SCHEMA_NAME not in('mysql','information_schema','performance_schema','sys')";
 
 	initMetaData::initMetaData(mysqlConnector* connector) :m_connector(connector), m_conn(nullptr)
@@ -25,28 +25,28 @@ namespace DATA_SOURCE {
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("bigint", MYSQL_TYPE_LONGLONG));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("decimal", MYSQL_TYPE_NEWDECIMAL));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("float", MYSQL_TYPE_FLOAT));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("double",  MYSQL_TYPE_DOUBLE));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("double", MYSQL_TYPE_DOUBLE));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("bit", MYSQL_TYPE_BIT));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("datetime", MYSQL_TYPE_DATETIME2));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("timestamp", MYSQL_TYPE_TIMESTAMP2));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("time", MYSQL_TYPE_TIME2));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("date",  MYSQL_TYPE_NEWDATE));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("date", MYSQL_TYPE_NEWDATE));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("year", MYSQL_TYPE_YEAR));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("char", MYSQL_TYPE_STRING));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("varchar", MYSQL_TYPE_VARCHAR));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("binary",  MYSQL_TYPE_STRING));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("binary", MYSQL_TYPE_STRING));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("varbinary", MYSQL_TYPE_VAR_STRING));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("tinytext", MYSQL_TYPE_TINY_BLOB));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("mediumtext", MYSQL_TYPE_MEDIUM_BLOB));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("text", MYSQL_TYPE_BLOB));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("longtext",MYSQL_TYPE_LONG_BLOB));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("tinyblob",  MYSQL_TYPE_TINY_BLOB));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("longtext", MYSQL_TYPE_LONG_BLOB));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("tinyblob", MYSQL_TYPE_TINY_BLOB));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("mediumblob", MYSQL_TYPE_MEDIUM_BLOB));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("blob", MYSQL_TYPE_BLOB));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("longblob", MYSQL_TYPE_LONG_BLOB));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("json",MYSQL_TYPE_JSON));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("enum",  MYSQL_TYPE_ENUM));
-		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("set",MYSQL_TYPE_SET));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("json", MYSQL_TYPE_JSON));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("enum", MYSQL_TYPE_ENUM));
+		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("set", MYSQL_TYPE_SET));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("geometry", MYSQL_TYPE_GEOMETRY));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("point", MYSQL_TYPE_GEOMETRY));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("linestring", MYSQL_TYPE_GEOMETRY));
@@ -56,7 +56,7 @@ namespace DATA_SOURCE {
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("multipolygon", MYSQL_TYPE_GEOMETRY));
 		m_mysqlTyps.insert(std::pair<const char*, enum_field_types>("geomcollection", MYSQL_TYPE_GEOMETRY));
 	}
-	static int parseEnumOrSetValueList(META::columnMeta* column, const char* values)
+	static int parseEnumOrSetValueList(META::ColumnMeta* column, const char* values)
 	{
 		const char* pos = strchr(values, '\'') + 1;
 		if (pos == nullptr)
@@ -94,7 +94,7 @@ namespace DATA_SOURCE {
 			pos++;
 		}
 		column->m_setAndEnumValueList.m_count = 0;
-		column->m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*)* valueList.size());
+		column->m_setAndEnumValueList.m_array = (char**)malloc(sizeof(char*) * valueList.size());
 		for (std::vector<std::string>::const_iterator iter = valueList.begin(); iter != valueList.end(); iter++)
 		{
 			column->m_setAndEnumValueList.m_array[column->m_setAndEnumValueList.m_count] = (char*)malloc((*iter).size() + 1);
@@ -104,10 +104,10 @@ namespace DATA_SOURCE {
 		}
 		return 0;
 	}
-	int initMetaData::getColumnInfo(META::columnMeta* column, MYSQL_ROW row)
+	int initMetaData::getColumnInfo(META::ColumnMeta* column, MYSQL_ROW row)
 	{
 		column->m_columnName = row[0];
-		column->m_columnIndex = atoi(row[1])-1;
+		column->m_columnIndex = atoi(row[1]) - 1;
 		MYSQL_TYPE_TREE::const_iterator iter = m_mysqlTyps.find(row[2]);
 		if (iter == m_mysqlTyps.end())
 		{
@@ -136,107 +136,103 @@ namespace DATA_SOURCE {
 			column->m_srcColumnType == MYSQL_TYPE_INT24 || column->m_srcColumnType == MYSQL_TYPE_LONG || column->m_srcColumnType == MYSQL_TYPE_LONGLONG)
 		{
 			if (row[9] != nullptr && strstr(row[9], "unsigned"))
-				column->m_signed = false;
+				column->unsetFlag(COL_FLAG_SIGNED);
 			else
-				column->m_signed = true;
+				column->setFlag(COL_FLAG_SIGNED);
 		}
 		if (row[10] != nullptr && strlen(row[10]) > 0)
-			column->m_generated = true;
+			column->setFlag(COL_FLAG_GENERATED);
 		if (row[11] != nullptr && !META::columnInfos[TID(column->m_columnType)].fixed)
 			column->m_size = (uint64_t)atol(row[11]);
 		return 0;
 	}
-	int initMetaData::loadAllColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases)
+
+	static void clearAllColumns(std::map < std::string, std::map<std::string, std::map<int, META::ColumnMeta*>* >* >& allColumns)
 	{
-		int ret = 0;
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_COLUMNS, databases);
-		if (rs == nullptr)
+		for (auto& iter : allColumns)
 		{
-			LOG(ERROR) << "load column failed";
-			return -1;
+			for (auto tableIter : *iter.second)
+			{
+				for (auto& columnIter : *tableIter.second)
+					delete columnIter.second;
+				delete tableIter.second;
+			}
+			delete iter.second;
 		}
-		std::map < std::string, std::map<std::string, std::map<int, META::columnMeta*>* >* > allColumns;
+	}
+
+	DS initMetaData::loadAllColumns(META::MetaDataCollection* collection, const std::vector<std::string>& databases)
+	{
+		mysqlResWrap rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_COLUMNS, databases, rs));
+		std::map < std::string, std::map<std::string, std::map<int, META::ColumnMeta*>* >* > allColumns;
 		MYSQL_ROW row;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 		{
-			META::tableMeta* meta = collection->get(row[3], row[4], 1);
+			META::TableMeta* meta = collection->get(row[3], row[4], 1);
 			if (meta == nullptr)
 				continue;
-			META::columnMeta* column = new META::columnMeta();
-			if (0 != getColumnInfo(column, row))
-			{
-				LOG(ERROR) << "create column define failed";
-				delete column;
-				ret = -1;
-				break;
-			}
-			std::map < std::string, std::map<std::string, std::map<int, META::columnMeta*>* >* >::iterator databaseIter = allColumns.find(row[3]);
-			std::map < std::string, std::map<int, META::columnMeta*>*>* database;
+			META::ColumnMeta* column = new META::ColumnMeta();
+			dsReturnIfFailedWithOp(getColumnInfo(column, row), do { delete column; clearAllColumns(allColumns); } while (0));
+
+			std::map < std::string, std::map<std::string, std::map<int, META::ColumnMeta*>* >* >::iterator databaseIter = allColumns.find(row[3]);
+			std::map < std::string, std::map<int, META::ColumnMeta*>*>* database;
 			if (databaseIter == allColumns.end())
 			{
-				database = new std::map < std::string, std::map<int, META::columnMeta*>*>();
-				allColumns.insert(std::pair<std::string, std::map<std::string, std::map<int, META::columnMeta*>* >*>(row[3], database));
+				database = new std::map < std::string, std::map<int, META::ColumnMeta*>*>();
+				allColumns.insert(std::pair<std::string, std::map<std::string, std::map<int, META::ColumnMeta*>* >*>(row[3], database));
 			}
 			else
 				database = databaseIter->second;
-			std::map< std::string, std::map<int, META::columnMeta*>*>::iterator tableIter = database->find(row[4]);
-			std::map<int, META::columnMeta*> * table;
+			std::map< std::string, std::map<int, META::ColumnMeta*>*>::iterator tableIter = database->find(row[4]);
+			std::map<int, META::ColumnMeta*>* table;
 			if (tableIter == database->end())
 			{
-				table = new std::map<int, META::columnMeta*> ();
-				database->insert(std::pair<std::string, std::map<int, META::columnMeta*>*>(row[4], table));
+				table = new std::map<int, META::ColumnMeta*>();
+				database->insert(std::pair<std::string, std::map<int, META::ColumnMeta*>*>(row[4], table));
 			}
 			else
 				table = tableIter->second;
-			if (!table->insert(std::pair<int, META::columnMeta*>(column->m_columnIndex, column)).second)
+			if (!table->insert(std::pair<int, META::ColumnMeta*>(column->m_columnIndex, column)).second)
 			{
-				LOG(ERROR) << "column:" << row[3] << "." << row[4] << "." << row[0] << " has the same column id :" << column->m_columnIndex <<
+				String errInfo;
+				errInfo = errInfo << "column:" << row[3] << "." << row[4] << "." << row[0] << " has the same column id :" << column->m_columnIndex <<
 					" with column:" << table->find(column->m_columnIndex)->second->m_columnName;
 				delete column;
-				ret = -1;
-				break;
+				clearAllColumns(allColumns);
+				dsFailedAndLogIt(1, errInfo, ERROR);
 			}
 		}
-		mysql_free_result(rs);
-		for (std::map < std::string, std::map<std::string, std::map<int, META::columnMeta*>* >* >::iterator databaseIter = allColumns.begin();
-			databaseIter != allColumns.end(); databaseIter++)
+		for (auto& iter : allColumns)
 		{
-			for (std::map< std::string, std::map<int, META::columnMeta*>*>::iterator tableIter = databaseIter->second->begin(); tableIter != databaseIter->second->end(); tableIter++)
+			for (auto tableIter : *iter.second)
 			{
-				if (ret == 0)
-				{
-					META::tableMeta* meta = collection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
-					meta->m_columns = new META::columnMeta[tableIter->second->size()];
-					for (std::map<int, META::columnMeta*>::iterator columnIter = tableIter->second->begin(); columnIter != tableIter->second->end(); columnIter++)
-						meta->m_columns[meta->m_columnsCount++] = *columnIter->second;
-					meta->buildColumnOffsetList();
-				}
-				for (std::map<int, META::columnMeta*>::iterator columnIter = tableIter->second->begin(); columnIter != tableIter->second->end(); columnIter++)
-					delete columnIter->second;
-				delete tableIter->second;
+				META::TableMeta* meta = collection->get(iter.first.c_str(), tableIter.first.c_str(), 1);
+				meta->m_columns = new META::ColumnMeta[tableIter.second->size()];
+				for (auto& columnIter : *tableIter.second)
+					meta->m_columns[meta->m_columnsCount++] = *columnIter.second;
+				meta->buildColumnOffsetList();
 			}
-			delete databaseIter->second;
 		}
-		return ret;
+		clearAllColumns(allColumns);
+		dsOk();
 	}
+
 	struct keyInfo {
 		std::map<int, uint16_t> columns;
 		META::KEY_TYPE type;
 	};
-	int initMetaData::loadAllKeyColumns(META::metaDataCollection* collection,const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > &constraints)
+
+	int initMetaData::loadAllKeyColumns(META::MetaDataCollection* collection, const std::vector<std::string>& databases, std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >& constraints)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_KEY_COLUMN, databases);
-		if (rs == nullptr)
-		{
-			LOG(ERROR) << "load key column failed";
-			return -1;
-		}
+		mysqlResWrap  rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_KEY_COLUMN, databases, rs));
 		MYSQL_ROW row;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 		{
-			META::tableMeta* meta = collection->get(row[2], row[3], 1);
-			META::columnMeta* column;
-			if (meta == nullptr || (column = (META::columnMeta*)meta->getColumn(row[4])) == nullptr)
+			META::TableMeta* meta = collection->get(row[2], row[3], 1);
+			META::ColumnMeta* column;
+			if (meta == nullptr || (column = (META::ColumnMeta*)meta->getColumn(row[4])) == nullptr)
 				continue;
 			std::map < std::string, std::map<std::string, std::map<std::string, keyInfo* >* >* >::iterator databaseIter
 				= constraints.find(row[2]);
@@ -256,77 +252,79 @@ namespace DATA_SOURCE {
 				continue;
 			keyIter->second->columns.insert(std::pair<int, uint16_t>(atoi(row[5]), column->m_columnIndex));
 		}
-		mysql_free_result(rs);
-		return 0;
+		dsOk();
 	}
-	MYSQL_RES* initMetaData::doQuery(const char* _sql, const std::vector<std::string>& databases)
+
+	DS initMetaData::doQuery(const char* _sql, const std::vector<std::string>& databases, mysqlResWrap& result)
 	{
-		if (m_conn == nullptr && (m_conn = m_connector->getConnect())==nullptr)
-		{
-			LOG(ERROR) << "can not create connect to mysql server";
-			return nullptr;
-		}
-		std::string dbList;
+		if (m_conn == nullptr)
+			dsReturnIfFailed(m_connector->getConnect(m_conn));
+		std::string sql(_sql);
+		sql.append("(");
 		char escapeBuffer[512] = { 0 };
 		for (std::vector<std::string>::const_iterator iter = databases.begin(); iter != databases.end(); iter++)
 		{
 			if (iter != databases.begin())
-				dbList.append(",");
-			dbList.append("'");
+				sql.append(",");
+			sql.append("'");
 			uint32_t size = mysql_real_escape_string_quote(m_conn, escapeBuffer, (*iter).c_str(), (*iter).size(), '\'');
-			dbList.append(escapeBuffer, size);
-			dbList.append("'");
+			sql.append(escapeBuffer, size);
+			sql.append("'");
 		}
-		char* sql = new char[dbList.size() + strlen(_sql)+1];
-		sprintf(sql, _sql, dbList.c_str());
+		sql.append(")");
 		MYSQL_RES* rs = nullptr;
+		String errInfo;
 		for (int retry = 0; retry < 10; retry++)
 		{
-			if (0 != mysql_query(m_conn, sql))
+			if (0 != mysql_query(m_conn, sql.c_str()))
 			{
-				LOG(ERROR) << "sql:" << sql << " query failed for:" << mysql_errno(m_conn) << "," << mysql_error(m_conn);
+				errInfo.clear();
+				errInfo = errInfo << "sql:" << sql << " query failed for:" << mysql_errno(m_conn) << "," << mysql_error(m_conn);
+				LOG(ERROR) << errInfo;
 				goto CHECK_ERROR;
 			}
 			rs = mysql_store_result(m_conn);
 			if (rs == nullptr)
 			{
-				LOG(ERROR) << "can not get any result from database";
+				errInfo = "can not get any result from database";
+				LOG(ERROR) << errInfo;
 				goto CHECK_ERROR;
 			}
-			delete []sql;
-			return rs;
+			result.rs = rs;
+			dsOk();
 		CHECK_ERROR:
-			if (mysql_errno(m_conn) == 2003 || mysql_errno(m_conn) == 2006 || mysql_errno(m_conn) == 2013)
-			{
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-				mysql_close(m_conn);
-				if (nullptr == (m_conn = m_connector->getConnect()))
-				{
-					LOG(ERROR) << "can not create connect to mysql server";
-					return nullptr;
-				}
-				continue;
-			}
-			else
+			if (!(mysql_errno(m_conn) == 2003 || mysql_errno(m_conn) == 2006 || mysql_errno(m_conn) == 2013))
 				break;
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			mysql_close(m_conn);
+			dsReturnIfFailed(m_connector->getConnect(m_conn));
 		}
-		delete []sql;
-		return nullptr;
+		dsFailedAndLogIt(1, errInfo, ERROR);
 	}
-	int initMetaData::loadAllConstraint(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+
+	static void clearConstrains(std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >& constraints)
 	{
-		int ret = 0;
-		std::map < std::string, std::map<std::string, std::map<std::string,  keyInfo*>* >* > constraints;
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_CONSTRAINT, databases);
-		if (rs == nullptr)
+		for (auto& databaseIter : constraints)
 		{
-			LOG(ERROR) << "load constraint failed";
-			return -1;
+			for (auto& tableIter : *databaseIter.second)
+			{
+				for (auto& keyIter : *tableIter.second)
+					delete keyIter.second;
+				delete tableIter.second;
+			}
+			delete databaseIter.second;
 		}
+	}
+
+	int initMetaData::loadAllConstraint(META::MetaDataCollection* collection, const std::vector<std::string>& databases)
+	{
+		std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* > constraints;
+		mysqlResWrap  rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_CONSTRAINT, databases, rs));
 		MYSQL_ROW row;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 		{
-			META::tableMeta* meta = collection->get(row[2], row[3], 1);
+			META::TableMeta* meta = collection->get(row[2], row[3], 1);
 			if (meta == nullptr)
 				continue;
 			META::KEY_TYPE type = META::KEY_TYPE::PRIMARY_KEY;
@@ -358,7 +356,7 @@ namespace DATA_SOURCE {
 			std::map<std::string, keyInfo* >* table;
 			if (tableIter == database->end())
 			{
-				table = new  std::map<std::string, keyInfo* > ();
+				table = new  std::map<std::string, keyInfo* >();
 				database->insert(std::pair<std::string, std::map<std::string, keyInfo* >*  >(row[3], table));
 			}
 			else
@@ -367,57 +365,47 @@ namespace DATA_SOURCE {
 			key->type = type;
 			table->insert(std::pair<std::string, keyInfo*>(row[1], key));
 		}
-		mysql_free_result(rs);
-		if (loadAllKeyColumns(collection, databases, constraints) != 0)
-			ret = -1;
+		dsReturnIfFailedWithOp(loadAllKeyColumns(collection, databases, constraints), clearConstrains(constraints));
 		uint16_t keyIdxs[256];
-		for (std::map < std::string, std::map<std::string, std::map<std::string, keyInfo*>* >* >::iterator databaseIter = constraints.begin();
-			databaseIter != constraints.end(); databaseIter++)
+		for (auto& databaseIter : constraints)
 		{
-			for (std::map<std::string, std::map<std::string, keyInfo*>* >::iterator tableIter = databaseIter->second->begin(); tableIter != databaseIter->second->end(); tableIter++)
+			for (auto& tableIter : *databaseIter.second)
 			{
-				if (ret == 0)
+				META::TableMeta* table = collection->get(databaseIter.first.c_str(), tableIter.first.c_str(), 1);
+				if (table != nullptr)
 				{
-					META::tableMeta* table = collection->get(databaseIter->first.c_str(), tableIter->first.c_str(), 1);
-					if (table != nullptr)
+					if (table->m_uniqueKeysCount > 0)
+						table->m_uniqueKeys = (META::UnionKeyMeta**)malloc(sizeof(META::UnionKeyMeta*) * table->m_uniqueKeysCount);
+					table->m_uniqueKeyNames = new std::string[table->m_uniqueKeysCount];
+					if (table->m_indexCount > 0)
+						table->m_indexs = (META::UnionKeyMeta**)malloc(sizeof(META::UnionKeyMeta*) * table->m_indexCount);
+					table->m_indexNames = new std::string[table->m_indexCount];
+					uint16_t ukCount = 0, indexCount = 0;
+					for (auto& keyIter: *tableIter.second)
 					{
-						if (table->m_uniqueKeysCount > 0)
-							table->m_uniqueKeys = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_uniqueKeysCount);
-						table->m_uniqueKeyNames = new std::string[table->m_uniqueKeysCount];
-						if (table->m_indexCount > 0)
-							table->m_indexs = (META::unionKeyMeta**)malloc(sizeof(META::unionKeyMeta*) * table->m_indexCount);
-						table->m_indexNames = new std::string[table->m_indexCount];
-						uint16_t ukCount = 0, indexCount = 0;
-						for (std::map<std::string, keyInfo*>::iterator keyIter = tableIter->second->begin(); keyIter != tableIter->second->end(); keyIter++)
-						{
-							int keyCount = 0;
-							for (std::map<int, uint16_t>::const_iterator columnIter = keyIter->second->columns.begin(); columnIter != keyIter->second->columns.end(); columnIter++)
-								keyIdxs[keyCount++] = columnIter->second;
+						int keyCount = 0;
+						for (std::map<int, uint16_t>::const_iterator columnIter = keyIter.second->columns.begin(); columnIter != keyIter.second->columns.end(); columnIter++)
+							keyIdxs[keyCount++] = columnIter->second;
 
-							if (keyIter->second->type == META::KEY_TYPE::PRIMARY_KEY)
-							{
-								table->m_primaryKey = table->createUnionKey(0,META::KEY_TYPE::PRIMARY_KEY,keyIdxs,keyCount);
-							}
-							else if (keyIter->second->type == META::KEY_TYPE::UNIQUE_KEY)
-							{
-								table->m_uniqueKeys[ukCount] = table->createUnionKey(ukCount, META::KEY_TYPE::UNIQUE_KEY, keyIdxs, keyCount);
-								table->m_uniqueKeyNames[ukCount++] = keyIter->first;
-							}
-							else
-							{
-								table->m_indexs[indexCount] = table->createUnionKey(ukCount,META::KEY_TYPE::INDEX,keyIdxs,keyCount);
-								table->m_indexNames[indexCount++] = keyIter->first;
-							}
+						if (keyIter.second->type == META::KEY_TYPE::PRIMARY_KEY)
+						{
+							table->m_primaryKey = table->createUnionKey(0, META::KEY_TYPE::PRIMARY_KEY, keyIdxs, keyCount);
+						}
+						else if (keyIter.second->type == META::KEY_TYPE::UNIQUE_KEY)
+						{
+							table->m_uniqueKeys[ukCount] = table->createUnionKey(ukCount, META::KEY_TYPE::UNIQUE_KEY, keyIdxs, keyCount);
+							table->m_uniqueKeyNames[ukCount++] = keyIter.first;
+						}
+						else
+						{
+							table->m_indexs[indexCount] = table->createUnionKey(ukCount, META::KEY_TYPE::INDEX, keyIdxs, keyCount);
+							table->m_indexNames[indexCount++] = keyIter.first;
 						}
 					}
 				}
-				for (std::map<std::string, keyInfo*>::iterator keyIter = tableIter->second->begin(); keyIter != tableIter->second->end(); keyIter++)
-					delete keyIter->second;
-				delete tableIter->second;
 			}
-			delete databaseIter->second;
 		}
-		return ret;
+		dsOk();
 	}
 	static std::string getCharsetFromCollation(const char* collation)
 	{
@@ -427,26 +415,19 @@ namespace DATA_SOURCE {
 		else
 			return collation;
 	}
-	int initMetaData::loadAllDataBases(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+
+	DS initMetaData::loadAllDataBases(META::MetaDataCollection* collection, const std::vector<std::string>& databases)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_SCHEMA, databases);
-		if (rs == nullptr)
-		{
-			LOG(ERROR) << "load database failed";
-			return -1;
-		}
+		mysqlResWrap rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_SCHEMA, databases, rs));
 		MYSQL_ROW row;
 		const charsetInfo* charset;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 		{
 			if (row[1] != nullptr && strlen(row[1]) > 0)
 			{
 				if (nullptr == (charset = getCharset(row[1])))
-				{
-					LOG(ERROR) << "unkonw charset:" << row[1] << " of database " << row[0];
-					mysql_free_result(rs);
-					return -1;
-				}
+					dsFailedAndLogIt(1, "unkonw charset:" << row[1] << " of database " << row[0], ERROR);
 			}
 			else
 			{
@@ -454,31 +435,23 @@ namespace DATA_SOURCE {
 			}
 			collection->put(row[0], charset, 0);
 		}
-		mysql_free_result(rs);
-		return 0;
+		dsOk();
 	}
-	int initMetaData::loadAllTables(META::metaDataCollection* collection, const std::vector<std::string>& databases)
+
+	DS initMetaData::loadAllTables(META::MetaDataCollection* collection, const std::vector<std::string>& databases)
 	{
-		MYSQL_RES  *rs = doQuery(SELECT_ALL_TABLE, databases);
-		if (rs == nullptr)
-		{
-			LOG(ERROR) << "load table failed";
-			return -1;
-		}
+		mysqlResWrap rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_TABLE, databases, rs));
 		MYSQL_ROW row;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 		{
-			META::tableMeta* meta = new META::tableMeta(true);//todo
+			META::TableMeta* meta = new META::TableMeta(true);//todo
 			meta->m_dbName = row[0];
 			meta->m_tableName = row[1];
 			if (row[4] != nullptr && strlen(row[4]) > 0)
 			{
 				if (nullptr == (meta->m_charset = getCharset(getCharsetFromCollation(row[4]).c_str())))
-				{
-					LOG(ERROR) << "unkonw charset:" << row[1] << " of table " << row[0]<<"."<<row[1];
-					mysql_free_result(rs);
-					return -1;
-				}
+					dsFailedAndLogIt(1, "unkonw charset:" << row[1] << " of table " << row[0] << "." << row[1], ERROR);
 			}
 			else
 			{
@@ -486,61 +459,35 @@ namespace DATA_SOURCE {
 			}
 			collection->put(row[0], row[1], meta, 0);
 		}
-		mysql_free_result(rs);
-		return 0;
+		dsOk();
 	}
-	int initMetaData::getAllUserDatabases(std::vector<std::string>& databases)
+
+	DS initMetaData::getAllUserDatabases(std::vector<std::string>& databases)
 	{
 		databases.clear();
-		MYSQL_RES* rs = doQuery(SELECT_ALL_USER_SCHEMA, databases);
-		if (rs == nullptr)
-		{
-			LOG(ERROR) << "get database list failed";
-			return -1;
-		}
+		mysqlResWrap rs;
+		dsReturnIfFailed(doQuery(SELECT_ALL_USER_SCHEMA, databases, rs));
 		MYSQL_ROW row;
-		while (nullptr!=(row = mysql_fetch_row(rs)))
-		{
+		while (nullptr != (row = mysql_fetch_row(rs.rs)))
 			databases.push_back(row[0]);
-		}
-		mysql_free_result(rs);
-		return 0;
+		dsOk();
 	}
-	int initMetaData::loadMeta(META::metaDataCollection* collection,const std::vector<std::string>& databases)
+
+	DS initMetaData::loadMeta(META::MetaDataCollection* collection, const std::vector<std::string>& databases)
 	{
 		std::string charset;
 		if (!mysqlConnector::getVariables(m_conn, "character_set_server", charset))
-		{
-			LOG(ERROR) << "load meta failed for can not get variable :'character_set_server' from database";
-			return -1;
-		}
+			dsFailedAndLogIt(1, "load meta failed for can not get variable :'character_set_server' from database", ERROR);
+
 		const charsetInfo* defaultCharset = getCharset(charset.c_str());
 		if (defaultCharset == nullptr)
-		{
-			LOG(ERROR) << "load meta failed for unspport charset:"<< charset;
-			return -1;
-		}
+			dsFailedAndLogIt(1, "load meta failed for unspport charset:" << charset, ERROR);
+
 		collection->setDefaultCharset(defaultCharset);
-		if (0 != loadAllDataBases(collection, databases))
-		{
-			LOG(ERROR) << "load meta failed for load database list failed:";
-			return -1;
-		}
-		if (0 != loadAllTables(collection, databases))
-		{
-			LOG(ERROR) << "load meta failed for load table list failed:";
-			return -1;
-		}
-		if (0 != loadAllColumns(collection, databases))
-		{
-			LOG(ERROR) << "load meta failed for load column failed:";
-			return -1;
-		}
-		if (0 != loadAllConstraint(collection, databases))
-		{
-			LOG(ERROR) << "load meta failed for load constraint list failed:";
-			return -1;
-		}
-		return 0;
+		dsReturnIfFailed(loadAllDataBases(collection, databases));
+		dsReturnIfFailed(loadAllTables(collection, databases));
+		dsReturnIfFailed(loadAllColumns(collection, databases));
+		dsReturnIfFailed(loadAllConstraint(collection, databases));
+		dsOk();
 	}
 }

@@ -16,7 +16,7 @@ namespace SHELL {
 		if (unlikely(nullptr == (valueStack = localValueStack.get())))
 			localValueStack.set(valueStack = new void* [MAX_EXPRESSION_LENGTH]);
 	}
-	inline void * getNextValueInStack(int16_t &valueStackSize,void** valueStack,int16_t &fieldStackSize,Field** fieldStack,const DATABASE_INCREASE::DMLRecord** const row)
+	inline void * getNextValueInStack(int16_t &valueStackSize,void** valueStack,int16_t &fieldStackSize,Field** fieldStack,const RPC::DMLRecord** const row)
 	{
 		return valueStackSize>0?valueStack[--valueStackSize]:(fieldStackSize > 0?fieldStack[--fieldStackSize]->getValue(row):(abort(),nullptr));
 	}
@@ -87,7 +87,7 @@ namespace SHELL {
 		shellGlobalBufferPool->free(exp->list);
 	}
 	#define _getNextValueInStack getNextValueInStack(valueStackSize,valueStack,fieldStackSize,fieldStack,row)
-	void* expressionField::_getValue(Field* field, const DATABASE_INCREASE::DMLRecord** const row)
+	void* expressionField::_getValue(Field* field, const RPC::DMLRecord** const row)
 	{
 		const expressionField* exp = static_cast<const expressionField*>(field);
 		Field** fieldStack;

@@ -10,16 +10,16 @@ int64_t idx = 0;
 template<typename LOCK>
 void testLock(LOCK* lock,int cnt)
 {
-	timer::timestamp t, t1;
+	Timer::Timestamp t, t1;
 	getThreadLocalWrap().idle();
-	t.time = timer::getNowTimestamp();
+	t.time = Timer::getNowTimestamp();
 	for (int i = 0; i < cnt; i++)
 	{
 		lock->lock();
 		idx++;
 		lock->unlock();
 	}
-	t1.time = timer::getNowTimestamp();
+	t1.time = Timer::getNowTimestamp();
 	printf("---------%s--------\n", __func__);
 	printf("%lu.%u\n", t.seconds, t.nanoSeconds);
 	printf("%lu.%u\n", t1.seconds, t1.nanoSeconds);

@@ -37,7 +37,7 @@ constexpr static auto GET_THREAD_INFO_SQL = "select THREAD#, STATUS, ENABLED, IN
 		std::map<int, nodeInfo> m_allNodes;
 		bool m_isScanIp;
 	public:
-		DLL_EXPORT oracleConnectBase(config* conf)
+		DLL_EXPORT oracleConnectBase(Config* conf)
 		{
 			m_host = conf->get(SECTION, HOST);
 			m_port = conf->get(SECTION, PORT);

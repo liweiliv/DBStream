@@ -1,5 +1,5 @@
 /*
- * config.h
+ * Config.h
  *
  *  Created on: 2019年1月18日
  *	  Author: liwei
@@ -20,7 +20,7 @@
 #include "util/winString.h"
 typedef spp::sparse_hash_map<std::string, std::string, StrHash, StrCompare> SECTION_TYPE;
 typedef spp::sparse_hash_map<std::string, SECTION_TYPE*, StrHash, StrCompare> CONFIG_TYPE;
-class config {
+class Config {
 private:
 	CONFIG_TYPE m_sections;
 	std::string m_filePath;
@@ -38,10 +38,10 @@ public:
 			return false;
 		return true;
 	}
-	config(const char* path = nullptr) :m_filePath(path == nullptr ? "" : path)
+	Config(const char* path = nullptr) :m_filePath(path == nullptr ? "" : path)
 	{
 	}
-	~config()
+	~Config()
 	{
 		for (CONFIG_TYPE::iterator siter = m_sections.begin(); siter != m_sections.end(); siter++)
 		{

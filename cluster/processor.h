@@ -7,8 +7,8 @@ namespace CLUSTER
 	enum class ROLE {
 		DATABASE_LOG_READER,
 		REPLICATOR,
-		MASTER_STORE,
-		SLAVE_STORE
+		MASTER_INSTANCE,
+		SLAVE_INSTANCE
 	};
 	struct processorInfo {
 		ROLE role;

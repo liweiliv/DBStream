@@ -9,7 +9,7 @@
 #define USERHANDLE_H_
 #include <string>
 #include <stdint.h>
-namespace STORE{
+namespace DB_INSTANCE{
 struct user;
 class userHandle{
 public:
