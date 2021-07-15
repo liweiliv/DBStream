@@ -1,8 +1,7 @@
 #datasource
 aux_source_directory(. dataSourceDir)
 aux_source_directory(./localLogFileCache logFile)
-aux_source_directory(./transactionCache transCache)
-add_library(dataSource SHARED ${dataSourceDir} ${logFile} ${transCache})
+add_library(dataSource SHARED ${dataSourceDir} ${logFile})
 TARGET_LINK_LIBRARIES(dataSource  util databaseInstance meta ${GLOG} ${GFLAGS})
 target_include_directories(dataSource PUBLIC ${BASE_INCLUDE_PATH} ${GLOG_INCLUDE_PATH} ${GLFAG_INCLUDE_PATH})
 IF (CMAKE_SYSTEM_NAME MATCHES "Linux")

@@ -66,7 +66,9 @@ namespace DATA_SOURCE
 		DS startDumpByCheckpoint(const RPC::Checkpoint*ckp);
 		formatEvent* getFmtDescEvent();
 		DS startFrom(RPC::Checkpoint* ckp);
-
+	protected:
+		virtual std::string getName();
+		virtual void run();
 	public:
 		mysqlBinlogReader(LocalLogFileCache* localLog, Config* conf, mysqlConnector* mysqlConnector);
 		~mysqlBinlogReader();

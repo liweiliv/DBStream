@@ -14,6 +14,7 @@ namespace DATA_SOURCE
 		bool m_running;
 		std::thread m_readThread;
 		shared_mutex m_lock;
+		dsStatus m_error;
 	protected:
 		virtual void run() = 0;
 		virtual std::string getName() = 0;
@@ -41,9 +42,15 @@ namespace DATA_SOURCE
 			if (m_readThread.joinable())
 				m_readThread.join();
 		}
+
 		virtual DS isRunning()
 		{
 			return m_running;
+		}
+
+		virtual dsStatus& getError()
+		{
+			return m_error;
 		}
 	};
 }

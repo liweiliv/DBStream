@@ -165,6 +165,7 @@ namespace DATA_SOURCE
 				delete[]fragments;
 			}
 		}
+
 		bool match(const char* str) const
 		{
 			const char* pos = str;
@@ -175,12 +176,14 @@ namespace DATA_SOURCE
 			}
 			return true;
 		}
+
 		static bool hasShardingRule(const char* rule)
 		{
 			int shardingRuleFragCount = 0, strFragCount = 0;
 			getFragmentCount(rule, shardingRuleFragCount, strFragCount);
 			return shardingRuleFragCount > 0;
 		}
+
 		static DS loadFormat(const char * name, const jsonObject * json, shardingRuleFormat *& format)
 		{
 			format = nullptr;
@@ -194,8 +197,8 @@ namespace DATA_SOURCE
 			}
 			dsOk();
 		}
-
 	};
+
 	class tableList
 	{
 	private:
@@ -219,6 +222,7 @@ namespace DATA_SOURCE
 				dsOk();
 			}
 		};
+
 		typedef spp::sparse_hash_map<const char*, tableInfo*, StrHash, StrCompare> tableHashMap;
 		struct schemaInfo
 		{
@@ -242,10 +246,12 @@ namespace DATA_SOURCE
 				tables.clear();
 				useRuleTableList.clear();
 			}
+
 			~schemaInfo()
 			{
 				clear();
 			}
+
 			bool containTable(const char* tableName) const 
 			{
 				if (needAllTable)
@@ -306,6 +312,7 @@ namespace DATA_SOURCE
 				dsOk();
 			}
 		};
+
 		typedef spp::sparse_hash_map<const char*, schemaInfo*, StrHash, StrCompare> schemaHashMap;
 		struct dbInfo :public schemaInfo
 		{
@@ -325,6 +332,7 @@ namespace DATA_SOURCE
 				}
 				return iter->second;
 			}
+
 			void clear()
 			{
 				schemaInfo::clear();
@@ -341,6 +349,7 @@ namespace DATA_SOURCE
 				schemas.clear();
 				useRuleSchemaList.clear();
 			}
+
 			bool contain(const char* schemaName, const char* tableName) const 
 			{
 				if (needAllTable)
@@ -350,6 +359,7 @@ namespace DATA_SOURCE
 					return false;
 				return schema->containTable(tableName);
 			}
+
 			DS loadAttr(jsonObjectMap::const_iterator& iter)
 			{
 				if (iter->first.compare(SCHEMA) == 0)
@@ -378,6 +388,7 @@ namespace DATA_SOURCE
 				}
 				dsOk();
 			}
+
 			DS load(jsonObject* json)
 			{
 				if (json->get(SCHEMA) != nullptr && json->get(TABLE) != nullptr)
@@ -411,10 +422,12 @@ namespace DATA_SOURCE
 		tableList() :m_needAllTables(false)
 		{
 		}
+
 		~tableList()
 		{
 			clear();
 		}
+
 		void clear()
 		{
 			for (DBHashMap::iterator iter = m_dbList.begin(); iter != m_dbList.end(); iter++)
@@ -429,12 +442,14 @@ namespace DATA_SOURCE
 			m_dbList.clear();
 			m_useRuleDbList.clear();
 		}
+
 		bool contain(const char* dbName) const
 		{
 			if (m_needAllTables)
 				return true;
 			return matchDb(dbName) != nullptr;
 		}
+
 		bool contain(const char* dbName, const char* tableName) const
 		{
 			if (m_needAllTables)
@@ -444,6 +459,7 @@ namespace DATA_SOURCE
 				return false;
 			return db->containTable(tableName);
 		}
+
 		bool contain(const char* dbName, const char* schemaname, const char* tableName) const //for PostgreSQL
 		{
 			if (m_needAllTables)
@@ -453,6 +469,7 @@ namespace DATA_SOURCE
 				return false;
 			return db->contain(schemaname, tableName);
 		}
+
 		DS init(const char* jsonRule)
 		{
 			jsonValue* json;

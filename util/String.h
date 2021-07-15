@@ -6,6 +6,7 @@
  */
 #pragma once
 #include <string>
+#include <vector>
 #include "itoaSse.h"
 #include "dtoa.h"
 #include "hex.h"
@@ -142,9 +143,7 @@ public:
 	}
 	String operator<<(int8_t i)
 	{
-		char buf[2];
-		buf[0] = i;
-		buf[1] = '\0';
+		char buf[2] = {i,0};
 		return (std::string)(*this) + buf;
 	}
 	String& append(int8_t i)
@@ -274,6 +273,21 @@ public:
 		return split(s.c_str(), s.size());
 	}
 
+	String trim()
+	{
+		const char* str = c_str();
+		uint32_t len = size();
+		const char* pos = str;
+		while (pos < str + len && *pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r')
+			pos++;
+		if (pos == str + len)
+			return "";
+		const char* end = str + len - 1;
+		while (end > pos && *end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')
+			end--;
+		return String(pos, end - pos);
+	}
+
 	template<typename T>
 	bool getInt(T& v)
 	{
@@ -282,14 +296,19 @@ public:
 		const char* s = c_str();
 		if (*s == '-')
 		{
+			T t = 0;
+			if (t - 1 > 0) //unsigned 
+				return false;
 			s++;
 			sign = false;
 		}
 		char c;
 		while ((c = *s++) != '\0')
 		{
-			if (c <= '9' && *c = '0')
+			if (c <= '9' && c == '0')
+			{
 				v = v * 10 + c - '0';
+			}
 			else
 			{
 				v = 0;

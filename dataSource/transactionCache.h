@@ -9,7 +9,7 @@
 #include "util/fileList.h"
 #include "util/String.h"
 #include "lz4/lib/lz4.h"
-#include "../localLogFileCache/logEntry.h"
+#include "localLogFileCache/logEntry.h"
 namespace DATA_SOURCE
 {
 	constexpr static int MAX_RECORD_LIST_SIZE = 512;
@@ -20,9 +20,11 @@ namespace DATA_SOURCE
 
 	struct TransId
 	{
+		TransId() {}
+		TransId(const TransId &tid) {}
 		virtual TransId& operator=(const TransId& t) = 0;
 		virtual size_t hash() const = 0;
-		virtual bool compare(const TransId & t) const = 0;
+		virtual bool compare(const TransId& t) const = 0;
 		virtual std::string toString() const = 0;
 	};
 
@@ -30,12 +32,12 @@ namespace DATA_SOURCE
 	{
 		uint64_t tid;
 		ULongTid(uint64_t tid) :tid(tid) {}
-		ULongTid(const TransId& t):tid(static_cast<const ULongTid&>(t).tid)
+		ULongTid(const TransId& t) :tid(static_cast<const ULongTid&>(t).tid)
 		{}
 		ULongTid& operator=(const TransId& t)
 		{
 			tid = static_cast<const ULongTid&>(t).tid;
-			return *this; 
+			return *this;
 		}
 		inline size_t hash() const
 		{
@@ -56,10 +58,10 @@ namespace DATA_SOURCE
 	struct StrTid :public TransId
 	{
 		char* tid;
-		StrTid():tid(nullptr) {}
+		StrTid() :tid(nullptr) {}
 		StrTid(const TransId& t)
 		{
-			const char * ttid = static_cast<const StrTid&>(t).tid;
+			const char* ttid = static_cast<const StrTid&>(t).tid;
 			if (ttid == nullptr)
 				return;
 			uint16_t size = strlen(ttid);
@@ -70,11 +72,11 @@ namespace DATA_SOURCE
 		~StrTid()
 		{
 			if (tid != nullptr)
-				delete []tid;
+				delete[]tid;
 		}
 		StrTid& operator=(const TransId& t)
 		{
-			if(tid != nullptr)
+			if (tid != nullptr)
 				delete[]tid;
 			const char* ttid = static_cast<const StrTid&>(t).tid;
 			if (ttid != nullptr)
@@ -104,13 +106,36 @@ namespace DATA_SOURCE
 		}
 	};
 
+	class TidMemBufImp
+	{
+	public:
+		virtual TransId* alloc(const TransId& tid) = 0;
+		virtual void free(TransId* t) = 0;
+	};
+
+	template<typename T>
+	class TidMemBuf :public TidMemBufImp
+	{
+	private:
+		SimpleMemCache<T> cache;
+	public:
+		inline TransId* alloc(const TransId& tid)
+		{
+			return cache.alloc(tid);
+		}
+		inline void free(TransId* tid)
+		{
+			return cache.free(tid);
+		}
+	};
+
 	struct DataBuf
 	{
 		char* m_dataBuf;
 		uint32_t dataBufSize;
 		char* compressBuf;
 		uint32_t compressBufSize;
-		DataBuf(uint32_t dataBufSize = MAX_RECORD_LIST_SIZE):dataBufSize(dataBufSize), compressBufSize(LZ4_COMPRESSBOUND(dataBufSize))
+		DataBuf(uint32_t dataBufSize = MAX_RECORD_LIST_SIZE) :dataBufSize(dataBufSize), compressBufSize(LZ4_COMPRESSBOUND(dataBufSize))
 		{
 			m_dataBuf = new char[dataBufSize];
 			compressBuf = new char[compressBufSize];
@@ -118,7 +143,7 @@ namespace DATA_SOURCE
 		~DataBuf()
 		{
 			delete[]m_dataBuf;
-			delete []compressBuf;
+			delete[]compressBuf;
 		}
 	};
 
@@ -129,7 +154,7 @@ namespace DATA_SOURCE
 		uint16_t recordCount;
 		RecordList* next;
 		uint32_t memUsed;
-		RecordList():buf(nullptr), recordCount(0), next(nullptr), memUsed(0)
+		RecordList() :buf(nullptr), recordCount(0), next(nullptr), memUsed(0)
 		{
 		}
 
@@ -160,7 +185,7 @@ namespace DATA_SOURCE
 			}
 		}
 
-		DS flush(fileHandle fd, DataBuf &m_dataBuf)
+		DS flush(fileHandle fd, DataBuf& m_dataBuf)
 		{
 			char* realDataBuf;
 			if (m_dataBuf.dataBufSize >= memUsed)
@@ -259,7 +284,7 @@ namespace DATA_SOURCE
 		uint64_t lastSeqNo;
 		uint64_t memUsed;
 	public:
-		Transaction(TransId* tid, LogEntry* entry): tid(tid), recordListHead(nullptr), recordListEnd(nullptr),next(nullptr)
+		Transaction(TransId* tid, LogEntry* entry) : tid(tid), recordListHead(nullptr), recordListEnd(nullptr), next(nullptr)
 		{
 			memcpy(&startCheckpoint, entry->getCheckpoint(), sizeof(startCheckpoint) - 1);
 		}
@@ -270,7 +295,7 @@ namespace DATA_SOURCE
 
 
 
-		inline void clearMem(SimpleMemCache<RecordList>& recordListCache, SimpleMemCache<TransId>* transIdCache)
+		inline void clearMem(SimpleMemCache<RecordList>& recordListCache, TidMemBufImp* transIdCache)
 		{
 			if (tid != nullptr)
 			{
@@ -286,7 +311,7 @@ namespace DATA_SOURCE
 			recordListEnd = nullptr;
 		}
 
-		void clear(SimpleMemCache<RecordList>& recordListCache, SimpleMemCache<TransId>* transIdCache, std::string& cacheFileDir)
+		void clear(SimpleMemCache<RecordList>& recordListCache, TidMemBufImp* transIdCache, std::string& cacheFileDir)
 		{
 			if (flushedSize > 0)
 			{
@@ -297,7 +322,7 @@ namespace DATA_SOURCE
 					if (checkFileExist(file.c_str(), F_OK) == 0)
 					{
 						if (0 != remove(file.c_str()) || checkFileExist(file.c_str(), F_OK) == 0)
-							LOG(WARNING)<<"remove exist transaction file " << file << " failed for " << errno << "," << strerror(errno);
+							LOG(WARNING) << "remove exist transaction file " << file << " failed for " << errno << "," << strerror(errno);
 					}
 				}
 			}
@@ -330,6 +355,16 @@ namespace DATA_SOURCE
 			return memUsed - flushedSize;
 		}
 
+		inline uint64_t getMemUse()
+		{
+			return memUsed;
+		}
+
+		inline uint64_t getLastSeqNo()
+		{
+			return lastSeqNo;
+		}
+
 		inline void dropFromChain()
 		{
 			if (next != nullptr)
@@ -338,7 +373,7 @@ namespace DATA_SOURCE
 				prev->next = next;
 		}
 
-		void add(SimpleMemCache<RecordList> &recordListCache, LogEntry* e)
+		void add(SimpleMemCache<RecordList>& recordListCache, LogEntry* e)
 		{
 			if (unlikely(recordListEnd == nullptr))
 			{
@@ -360,7 +395,7 @@ namespace DATA_SOURCE
 			lastSeqNo = e->getCheckpoint()->seqNo.seqNo;
 		}
 
-		DS flush(SimpleMemCache<RecordList>& recordListCache, std::string &cacheFileDir, DataBuf &m_dataBuf)
+		DS flush(SimpleMemCache<RecordList>& recordListCache, std::string& cacheFileDir, DataBuf& m_dataBuf)
 		{
 			fileHandle fd;
 			String file(cacheFileDir);
@@ -374,7 +409,7 @@ namespace DATA_SOURCE
 				}
 			}
 			if (INVALID_HANDLE_VALUE == (fd = openFile(file.c_str(), true, true, true)))
-				dsFailedAndLogIt(1, "open file " << file << " failed for:" << errno << "," << strerror(errno),ERROR);
+				dsFailedAndLogIt(1, "open file " << file << " failed for:" << errno << "," << strerror(errno), ERROR);
 			int64_t startPos = seekFile(fd, 0, SEEK_END);
 			if (startPos < 0)
 			{
@@ -387,7 +422,7 @@ namespace DATA_SOURCE
 			{
 				dsReturnIfFailedWithOp(l->flush(fd, m_dataBuf), do {
 					truncateFile(fd, startPos); closeFile(fd); fd = INVALID_HANDLE_VALUE;
-				}while(0));
+				} while (0));
 				l = l->next;
 			}
 			flushedSize = memUsed;
@@ -402,25 +437,87 @@ namespace DATA_SOURCE
 			recordListEnd = nullptr;
 			dsOk();
 		}
-
-		static DS loadTransAndCheck(TransId* tid,DataBuf &m_dataBuf, SimpleMemCache<RecordList>& recordListMemCache, const std::string& fileName, Transaction*& t)
+#define CLEAR_TRANS_LOAD_INFO  do { closeFile(fd); if(recordList!=nullptr){recordListMemCache.free(recordList); recordList = nullptr;} if (t != nullptr) { delete t; t = nullptr; } } while (0)
+		static DS loadTransAndCheck(TransId* tid, DataBuf& m_dataBuf, SimpleMemCache<RecordList>& recordListMemCache, const std::string& fileName,
+			Transaction*& t, uint64_t beginSeqNo, uint64_t endSeqNo)
 		{
+			t = nullptr;
 			fileHandle fd;
 			if (INVALID_HANDLE_VALUE == (fd = openFile(fileName.c_str(), true, true, true)))
 				dsFailedAndLogIt(1, "open file " << fileName << " failed for:" << errno << "," << strerror(errno), ERROR);
-			RecordList *recordList = recordListMemCache.alloc();
-			dsReturnIfFailedWithOp(recordList->load(fd, m_dataBuf), do { closeFile(fd); recordListMemCache.free(recordList); recordList = nullptr; } while (0));
-			if (recordList->memUsed < sizeof(LogEntry))
+			int64_t fileSize = getFileSize(fd);
+			if (fileSize < 0)
+			{
+				int errNo = errno;
+				closeFile(fd);
+				dsFailedAndLogIt(1, "get size of file " << fileName << " failed for:" << errNo << "," << strerror(errNo), ERROR);
+			}
+			if (fileSize <= 8)
 			{
 				closeFile(fd);
-				recordListMemCache.free(recordList);
-				dsFailedAndLogIt(1, "invald record list in trans " << tid->toString(), ERROR);
+				dsFailedAndLogIt(1, "size " << fileSize << " of file " << fileName << " is less than size of RecordList head", ERROR);
 			}
-			t = new Transaction(tid, (LogEntry*)recordList->buf);
-			recordListMemCache.free(recordList);
-			t->memUsed += recordList->memUsed;
-			t->flushedSize += recordList->memUsed;
-			while
+			RecordList* recordList = nullptr;
+			while (true)
+			{
+				int64_t offset = seekFile(fd, 0, SEEK_CUR);
+				if (offset < 0)
+				{
+					int errNo = errno;
+					CLEAR_TRANS_LOAD_INFO;
+					dsFailedAndLogIt(1, "get offset of file " << fileName << " failed for:" << errNo << "," << strerror(errNo), ERROR);
+				}
+				if (offset == fileSize)
+					break;
+				recordList = recordListMemCache.alloc();
+				if (!dsCheck(recordList->load(fd, m_dataBuf)))
+				{
+					if (t->lastSeqNo >= endSeqNo)
+					{
+						LOG(WARNING) << "read record list from "<< fileName<<" failed, but we have read to end seqNo "<<endSeqNo<<", truncate this file";
+						getLocalStatus().clear();
+						if (0 != truncateFile(fd, offset)) 
+						{
+							int errNo = errno;
+							CLEAR_TRANS_LOAD_INFO;
+							dsFailedAndLogIt(1, "truncate file " << fileName << " failed for:" << errNo << "," << strerror(errNo), ERROR);
+						}
+						recordListMemCache.free(recordList);
+						break;
+					}
+					else
+					{
+						CLEAR_TRANS_LOAD_INFO;
+						dsReturn(getLocalStatus().code);
+					}
+				}
+				dsReturnIfFailedWithOp(recordList->load(fd, m_dataBuf), CLEAR_TRANS_LOAD_INFO);
+				if (recordList->memUsed < sizeof(LogEntry))
+				{
+					CLEAR_TRANS_LOAD_INFO;
+					dsFailedAndLogIt(1, "invald record list in trans " << tid->toString(), ERROR);
+				}
+				if (t == nullptr)
+					t = new Transaction(tid, (LogEntry*)recordList->buf);
+				t->memUsed += recordList->memUsed;
+				t->flushedSize += recordList->memUsed;
+				const char* pos = recordList->buf;
+				while (pos < recordList->buf + recordList->memUsed)
+				{
+					t->lastSeqNo = ((const LogEntry*)pos)->getCheckpoint()->seqNo.seqNo;
+					pos += ((const LogEntry*)pos)->size;
+				}
+				recordListMemCache.free(recordList);
+				recordList = nullptr;
+			}
+			closeFile(fd);
+			if (t == nullptr || t->lastSeqNo < endSeqNo)
+			{
+				uint64_t lastSeqNo = (t == nullptr ? 0 : t->lastSeqNo);
+				if (t != nullptr)
+					delete t;
+				dsFailedAndLogIt(1, "last seqNo of " << tid->toString() << " is " << lastSeqNo << ", less than trans end seqNo " << endSeqNo << " in index file", ERROR);
+			}
 			dsOk();
 		}
 
@@ -437,8 +534,8 @@ namespace DATA_SOURCE
 			fileHandle fd;
 			DataBuf& m_dataBuf;
 		public:
-			Iterator(Transaction* t, SimpleMemCache<RecordList>& recordListMemCache,DataBuf &m_dataBuf) :t(t), offset(0), recordOffset(0), recordList(nullptr),
-				listLoadFromFile(false), recordListMemCache(recordListMemCache), fd(INVALID_HANDLE_VALUE), m_dataBuf(m_dataBuf){}
+			Iterator(Transaction* t, SimpleMemCache<RecordList>& recordListMemCache, DataBuf& m_dataBuf) :t(t), offset(0), recordOffset(0), recordList(nullptr),
+				listLoadFromFile(false), recordListMemCache(recordListMemCache), fd(INVALID_HANDLE_VALUE), m_dataBuf(m_dataBuf) {}
 			~Iterator()
 			{
 				if (fd != INVALID_HANDLE_VALUE)
@@ -450,7 +547,7 @@ namespace DATA_SOURCE
 				}
 			}
 
-			DS init(std::string &cacheFileDir)
+			DS init(std::string& cacheFileDir)
 			{
 				if (t->flushedSize > 0)
 				{
@@ -459,7 +556,7 @@ namespace DATA_SOURCE
 					if (INVALID_HANDLE_VALUE == (fd = openFile(file.c_str(), true, false, false)))
 						dsFailedAndLogIt(1, "failed to open transaction file:" << file << ", error:" << errno << "," << strerror(errno), ERROR);
 					recordList = recordListMemCache.alloc();
-					dsReturnIfFailedWithOp(recordList->load(fd, m_dataBuf), do {recordListMemCache.free(recordList); recordList = nullptr;}while(0));
+					dsReturnIfFailedWithOp(recordList->load(fd, m_dataBuf), do { recordListMemCache.free(recordList); recordList = nullptr; } while (0));
 					listLoadFromFile = true;
 					offset = recordList->memUsed;
 				}
@@ -515,6 +612,57 @@ namespace DATA_SOURCE
 		};
 	};
 
+	struct TransIndexInfo {
+		TransId* tid;
+		uint64_t beginSeqNo;
+		uint64_t lastSeqNo;
+		TransIndexInfo() :tid(nullptr), beginSeqNo(0), lastSeqNo(0) {}
+		TransIndexInfo(const TransIndexInfo& tii) :tid(tii.tid), beginSeqNo(tii.beginSeqNo), lastSeqNo(tii.lastSeqNo) {}
+		TransIndexInfo& operator=(const TransIndexInfo& tii) {
+			tid = tii.tid; 
+			beginSeqNo = tii.beginSeqNo; 
+			lastSeqNo = tii.lastSeqNo;
+			return *this;
+		}
+		bool appendToBuf(char*& str, uint32_t size)
+		{
+			std::string s = tid->toString();
+			if (s.size() + 64 > size)
+				return false;
+			memcpy(str, s.c_str(), s.size());
+			str += s.size();
+			*str = ':';
+			str++;
+			str += u64toa_sse2(beginSeqNo, str);
+			*str++ = '-';
+			str += u64toa_sse2(lastSeqNo, str);
+			*str = '\n';
+			str++;
+			return true;
+		}
+		DS load(const char* buf, std::function<DS(const char*, TransId*&)> loadTransIdFunc)
+		{
+			String _s(buf);
+			String s = _s.trim();
+			size_t size = strlen(buf);
+			if (s.size() == 0)
+				dsOk();
+			int32_t tidOffset = size - 1;
+			while (tidOffset > 0 && buf[tidOffset] == ':')
+				tidOffset--;
+			if (tidOffset <= 0)
+				dsFailedAndLogIt(1, "invalid trans info " << buf, ERROR);
+			String line(buf + tidOffset);
+			std::vector<String> fields = line.split("-");
+			if (fields.size() != 2)
+				dsFailedAndLogIt(1, "invalid trans info " << buf, ERROR);
+			String tidRaw(buf, tidOffset);
+			if(!fields.at(0).trim().getInt(beginSeqNo) || !fields.at(1).trim().getInt(lastSeqNo))
+				dsFailedAndLogIt(1, "invalid trans info " << buf, ERROR);
+			dsReturn(loadTransIdFunc(tidRaw.trim().c_str(), tid));
+		}
+	};
+
 	class TransactionCache
 	{
 	private:
@@ -526,12 +674,12 @@ namespace DATA_SOURCE
 		uint64_t m_minSeqNo;
 		uint64_t m_flushedTo;
 		uint64_t m_firstUnflushedSeqNo;
-		uint64_t m_memUsed;
+		uint64_t m_dataSize;
 		uint64_t m_flushedSize;
 		uint64_t m_maxMemSize;
 		SimpleMemCache<Transaction> m_transMemCache;
 		SimpleMemCache<RecordList> m_recordListMemCache;
-		SimpleMemCache<TransId>* m_transIdCache;
+		TidMemBufImp* m_transIdCache;
 		DataBuf m_dataBuf;
 	private:
 		DS setHeadFileInfo(uint64_t seqNo)
@@ -548,10 +696,10 @@ namespace DATA_SOURCE
 				dsFailedAndLogIt(1, "create transaction tmp index file " << tmpFile << " failed for " << errno << "," << strerror(errno), ERROR);
 			char* headBuf = m_dataBuf.m_dataBuf;
 			char* pos = headBuf;
-			for (auto &iter : m_trans)
+			for (auto& iter : m_trans)
 			{
 				std::string s = iter.first->toString();
-				if (pos + s.size() + 32 >= headBuf + m_dataBuf.dataBufSize)
+				if (pos + s.size() + 64 >= headBuf + m_dataBuf.dataBufSize)
 				{
 					if (pos - headBuf != writeFile(fd, headBuf, pos - headBuf))
 					{
@@ -567,6 +715,8 @@ namespace DATA_SOURCE
 				*pos = ':';
 				pos++;
 				pos += u64toa_sse2(iter.second->getStartCheckpoint().seqNo.seqNo, pos);
+				*pos++ = '-';
+				pos += u64toa_sse2(iter.second->getLastSeqNo(), pos);
 				*pos = '\n';
 				pos++;
 			}
@@ -599,7 +749,7 @@ namespace DATA_SOURCE
 			if (seqNo == m_flushedTo)
 				dsOk();
 			dsReturnIfFailed(setHeadFileInfo(seqNo));
-			for (auto &iter : m_trans)
+			for (auto& iter : m_trans)
 			{
 				Transaction* t = iter.second;
 				if (t->getRealMemUse() == 0)
@@ -611,9 +761,16 @@ namespace DATA_SOURCE
 			m_flushedTo = seqNo;
 		}
 	public:
-		TransactionCache(const char* cacheFileDir) :m_cacheFileDir(cacheFileDir) {}
+		TransactionCache(const char* cacheFileDir, TidMemBufImp* transIdCache) :m_cacheFileDir(cacheFileDir), m_transIdCache(transIdCache)
+		{
+		}
 
-		~TransactionCache() { clearMem(); }
+		~TransactionCache()
+		{
+			clearMem(); 
+			if (m_transIdCache != nullptr)
+				delete m_transIdCache;
+		}
 
 		void clearMem()
 		{
@@ -641,7 +798,7 @@ namespace DATA_SOURCE
 				TransId* txId = nullptr;
 				if (!dsCheck(loadTransIdFunc(tidStr.c_str(), txId)))
 					getLocalStatus().clear();
-				if (txId == nullptr ||m_trans.contains(txId))
+				if (txId == nullptr || m_trans.contains(txId))
 					continue;
 				std::string src = m_cacheFileDir + "/" + fileName;
 				std::string dest = src + ".expire";
@@ -651,7 +808,7 @@ namespace DATA_SOURCE
 			}
 		}
 
-		DS loadTransInfoFromIndexFile(const std::string & selectFile, uint64_t safeSeqNo, std::list<std::pair<TransId*,uint64_t> > &transIds, std::function<DS(const char*, TransId*&)> loadTransIdFunc)
+		DS loadTransInfoFromIndexFile(const std::string& selectFile, uint64_t safeSeqNo, std::list<TransIndexInfo>& transIds, std::function<DS(const char*, TransId*&)> loadTransIdFunc)
 		{
 			std::string idxFile = m_cacheFileDir + "/" + selectFile;
 			FILE* fp = fopen(idxFile.c_str(), "r");
@@ -660,48 +817,25 @@ namespace DATA_SOURCE
 			char buf[1024] = { 0 };
 			while (nullptr != fgets(buf, sizeof(buf) - 1, fp))
 			{
-				size_t size = strlen(buf);
-				while (size > 0 && (buf[size - 1] == '\n' || buf[size - 1] == '\r' || buf[size - 1] == ' ' || buf[size - 1] == '\t'))
-					buf[--size] = '\0';
-				if (size == 0)
-					continue;
-				size_t seqNoPos = size - 1;
-				while (seqNoPos > 0 && (buf[seqNoPos] >= '0' && buf[seqNoPos] <= '9'))
-					seqNoPos--;
-				if (seqNoPos == size - 1 || seqNoPos == 0)
+				TransIndexInfo tii;
+				dsReturnIfFailed(tii.load(buf, loadTransIdFunc));
+				if (tii.beginSeqNo < safeSeqNo)
 				{
-					fclose(fp);
-					dsFailedAndLogIt(1, "invalid trans info " << buf << " in " << idxFile, ERROR);
-				}
-				uint64_t seqNo = atoll(buf + seqNoPos);
-				seqNoPos--;
-				while (seqNoPos > 0 && (buf[seqNoPos] == '\n' || buf[seqNoPos] == '\r' || buf[seqNoPos] == ' ' || buf[seqNoPos] == '\t'))
-					buf[seqNoPos--] = '\0';
-				if (seqNoPos == 0 || buf[seqNoPos] != ':')
-				{
-					fclose(fp);
-					dsFailedAndLogIt(1, "invalid trans info " << buf << " in " << idxFile, ERROR);
-				}
-				buf[seqNoPos] = '\0';
-				TransId* tid;
-				dsReturnIfFailed(loadTransIdFunc(buf, tid));
-				if (seqNo < safeSeqNo)
-				{
-					LOG(INFO) << "ignore trans:" << tid->toString() << ", seqNo:" << seqNo;
-					delete tid;
+					LOG(INFO) << "ignore trans:" << tii.tid->toString() << ", seqNo:" << tii.beginSeqNo;
+					delete tii.tid;
 					continue;
 				}
-				LOG(INFO) << "get trans:" << tid->toString() << ", seqNo:" << seqNo;
-				transIds.push_back(std::pair< TransId*, uint64_t>(tid, seqNo));
+				LOG(INFO) << "get trans:" << tii.tid->toString() << ", seqNo:" << tii.beginSeqNo << "-" << tii.lastSeqNo;
+				transIds.push_back(tii);
 			}
 			int errNo = errno;
 			fclose(fp);
-			if (errno != 0)
+			if (errNo != 0)
 				dsFailedAndLogIt(1, "read trans cache index file:" << idxFile << " failed for " << errNo << ", " << strerror(errNo), ERROR);
 			dsOk();
 		}
 
-		DS load(uint64_t seqNo, uint64_t safeSeqNo,std::function<DS(const char *, TransId *&)> loadTransIdFunc)
+		DS load(uint64_t seqNo, uint64_t safeSeqNo, std::function<DS(const char*, TransId*&)> loadTransIdFunc)
 		{
 			std::vector<String> files;
 			dsReturnIfFailed(fileList::getFileList(m_cacheFileDir, files));
@@ -731,22 +865,28 @@ namespace DATA_SOURCE
 				renameUnusedTransFile(loadTransIdFunc);
 				dsOk();
 			}
-			std::list<std::pair<TransId*, uint64_t> > transIds;
+			std::list<TransIndexInfo> transIds;
+			std::map<uint64_t, Transaction*> transMap;
 			dsReturnIfFailedWithOp(loadTransInfoFromIndexFile(selectFile, safeSeqNo, transIds, loadTransIdFunc), do {
 				for (auto& iter : transIds)
-					delete iter.first;
-			}while(0));
+					delete iter.tid;
+			} while (0));
 			bool failed = false;
 			for (auto& iter : transIds)
 			{
 				if (failed)
-					delete iter.first;
-				std::string fileName = m_cacheFileDir + "/" + iter.first->toString() + TXN_FILE_NAME;
+					delete iter.tid;
+				std::string fileName = m_cacheFileDir + "/" + iter.tid->toString() + TXN_FILE_NAME;
 				Transaction* t = nullptr;
-				if (!dsCheck(Transaction::loadTrans(iter.first, m_dataBuf, m_recordListMemCache, fileName, t)))
+				if (!dsCheck(Transaction::loadTransAndCheck(iter.tid, m_dataBuf, m_recordListMemCache, fileName, t,iter.beginSeqNo,iter.lastSeqNo)))
 				{
-					delete iter.first;
+					delete iter.tid;
 					failed = true;
+				}
+				else
+				{
+					m_trans.insert(std::pair<TransId*, Transaction*>(iter.tid, t));
+					transMap.insert(std::pair<uint64_t, Transaction*>(t->getStartCheckpoint().seqNo.seqNo, t));
 				}
 			}
 			if (failed)
@@ -755,10 +895,26 @@ namespace DATA_SOURCE
 				dsReturn(getLocalStatus().code);
 			}
 			renameUnusedTransFile(loadTransIdFunc);
+			for (auto& iter : transMap)
+			{
+				if (m_head == nullptr)
+					m_head = iter.second;
+				else
+					iter.second->addAfter(m_last);
+				m_last = iter.second;
+				m_dataSize += iter.second->getMemUse();
+				if (m_flushedTo < iter.second->getLastSeqNo())
+					m_flushedTo = iter.second->getLastSeqNo();
+			}
+			if (m_head != nullptr)
+			{
+				m_minSeqNo = m_head->getStartCheckpoint().seqNo.seqNo;
+				m_flushedSize = m_dataSize;
+			}
 			dsOk();
 		}
 
-		inline Transaction* commit(TransId & tid)
+		inline Transaction* commit(TransId& tid)
 		{
 			m_trans.erase(&tid);
 			auto iter = m_trans.find(&tid);
@@ -795,13 +951,14 @@ namespace DATA_SOURCE
 			m_transMemCache.free(t);
 		}
 
-		inline DS add(TransId &tid, LogEntry* entry)
+		inline DS add(TransId& tid, LogEntry* entry)
 		{
 			Transaction* t;
 			auto iter = m_trans.find(&tid);
 			if (iter == m_trans.end())
 			{
-				t = m_transMemCache.alloc(m_transMemCache.alloc(tid), entry);
+				TransId* _tid = m_transIdCache->alloc(tid);
+				t = m_transMemCache.alloc(_tid, entry);
 				if (m_last == nullptr)
 				{
 					m_last = m_head = t;
@@ -814,13 +971,13 @@ namespace DATA_SOURCE
 				m_trans.insert(std::pair<TransId*, Transaction*>(&tid, t));
 			}
 			t->add(m_recordListMemCache, entry);
-			if ((m_memUsed += entry->size) - m_flushedSize >= m_maxMemSize)
+			if ((m_dataSize += entry->size) - m_flushedSize >= m_maxMemSize)
 			{
 				dsReturnIfFailed(flush(entry->getCheckpoint()->seqNo.seqNo));
 			}
 			else
 			{
-				if(m_firstUnflushedSeqNo == 0)
+				if (m_firstUnflushedSeqNo == 0)
 					m_firstUnflushedSeqNo = entry->getCheckpoint()->seqNo.seqNo;
 			}
 			dsOk();

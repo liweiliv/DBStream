@@ -4,7 +4,7 @@
 #include "databaseInstance/databaseInstance.h"
 #include "thread/shared_mutex.h"
 #include "localLogFileCache/localLogFileCache.h"
-#include "transactionCache/transactionCache.h"
+#include "transactionCache.h"
 namespace DATA_SOURCE
 {
 	class DataSourceParser

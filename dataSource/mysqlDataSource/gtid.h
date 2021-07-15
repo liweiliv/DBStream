@@ -185,12 +185,10 @@ namespace DATA_SOURCE
 	constexpr static int IMMEDIATE_SERVER_VERSION_LENGTH = 4;
 	constexpr static int LT_TTYPE_OFFSET = 25;
 	constexpr static int IMD_TIME_OFFSET = 48;
-	constexpr static int IMD_TIME_OFFSET = 48;
 	constexpr static int IMMEDIATE_COMMIT_TIMESTAMP_LENGTH = 7;
 	constexpr static int ORIGINAL_COMMIT_TIMESTAMP_LENGTH = 7;
 	constexpr static int ENCODED_SERVER_VERSION_LENGTH = 31;
 	constexpr static int ORIGINAL_SERVER_VERSION_LENGTH = 4;
-	constexpr static int IMMEDIATE_SERVER_VERSION_LENGTH = 4;
 
 	struct gtidEvent
 	{

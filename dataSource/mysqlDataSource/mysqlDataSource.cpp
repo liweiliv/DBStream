@@ -43,16 +43,18 @@ namespace DATA_SOURCE {
 	{
 
 	}
+
 	mysqlDataSource::mysqlDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* instance) :dataSource(conf, metaDataCollection, instance), m_async(false), m_running(false)
 	{
 		m_recordBufferPool = new ringBuffer();
 		m_connector = new mysqlConnector(conf);
 		m_metaDataCollection = metaDataCollection;
 		m_instance = instance;
-		m_reader = new mysqlBinlogReader(m_connector);
+		m_reader = new mysqlBinlogReader(m_localFielCache, conf, m_connector);
 		m_parser = new BinlogEventParser(m_metaDataCollection, m_recordBufferPool);
 		m_currentRecord = nullptr;
 	}
+
 	mysqlDataSource::~mysqlDataSource()
 	{
 		delete m_reader;
@@ -181,6 +183,7 @@ namespace DATA_SOURCE {
 	{
 		return NAME;
 	}
+
 	DS mysqlDataSource::start()
 	{
 		std::string rtv = m_connector->initByConf();

@@ -29,7 +29,7 @@ namespace DATA_SOURCE
 		RPC::Record* asyncRead();
 		std::thread m_readerThread;
 	public:
-		mysqlDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::store* store);
+		mysqlDataSource(Config* conf, META::MetaDataCollection* metaDataCollection, DB_INSTANCE::DatabaseInstance* dbInstance);
 		virtual DS start();
 		virtual DS stop();
 		virtual bool running() const;

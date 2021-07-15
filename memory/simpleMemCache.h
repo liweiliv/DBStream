@@ -32,8 +32,9 @@ public:
 		return t;
 	}
 
+
 	template<typename R>
-	inline T* alloc(R &r)
+	inline T* alloc(R r)
 	{
 		if (m_size == 0)
 			return new T(r);
@@ -43,16 +44,6 @@ public:
 		return t;
 	}
 
-	template<typename R1, typename R2>
-	inline T* alloc(R1 &r1, R2 r2)
-	{
-		if (m_size == 0)
-			return new T(r1, r2);
-
-		T* t = new (m_cache[m_size])T(r1, r2);
-		m_cache[m_size--] = nullptr;
-		return t;
-	}
 
 	template<typename R1, typename R2>
 	inline T* alloc(R1 r1, R2 r2)

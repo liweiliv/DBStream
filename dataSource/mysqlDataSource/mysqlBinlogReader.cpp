@@ -49,6 +49,11 @@ namespace DATA_SOURCE {
 		m_isTypeNeedParse[TABLE_MAP_EVENT] = true;
 		m_isTypeNeedParse[FORMAT_DESCRIPTION_EVENT] = true;
 		m_isTypeNeedParse[ROTATE_EVENT] = true;
+		m_isTypeNeedParse[GTID_LOG_EVENT] = true;
+		m_isTypeNeedParse[ANONYMOUS_GTID_LOG_EVENT] = true;
+		m_isTypeNeedParse[PREVIOUS_GTIDS_LOG_EVENT] = true;
+		m_isTypeNeedParse[XID_EVENT] = true;
+		m_isTypeNeedParse[XA_PREPARE_LOG_EVENT] = true;
 	}
 
 	mysqlBinlogReader::~mysqlBinlogReader()
@@ -782,5 +787,44 @@ namespace DATA_SOURCE {
 	formatEvent* mysqlBinlogReader::getFmtDescEvent()
 	{
 		return m_descriptionEvent;
+	}
+
+	std::string mysqlBinlogReader::getName()
+	{
+		return "mysqlBinlogReader";
+	}
+
+	void mysqlBinlogReader::run()
+	{
+		while (m_running)
+		{
+			char* event;
+			size_t size;
+			DS s = readBinlogWrap(event, size);
+			if (likely(s == 0))
+			{
+				uint32_t entrySize = LogEntry::allocSize(0, size);
+				LogEntry* entry = m_localLog->allocNextRecord(entrySize);
+				entry->size = entrySize;
+				RPC::Checkpoint* ckp = entry->getCheckpoint();
+				ckp->externSize = 0;
+				ckp->logOffset = createMysqlRecordOffset(m_currFileID, m_currentPos);
+				ckp->timestamp = META::Timestamp::create(((commonMysqlBinlogEventHeader_v4*)event)->timestamp, 0);
+				ckp->txnId = 0L;
+				entry->copyData(event, size);
+				m_localLog->recordSetted();
+			}
+			else if(s > 0)
+			{
+				if(s == )
+			}
+			else
+			{
+				m_error = getLocalStatus();
+				LOG(ERROR) << getName() << " run thread failed for:" << m_error.toString();
+				m_running = false;
+				break;
+			}
+		}
 	}
 }
